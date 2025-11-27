@@ -1,0 +1,71 @@
+from civerly.sboxcipher import SBoxCipher
+from civerly.component import SBox_CVL
+from sage.crypto.sboxes import GIFT as gift_S
+
+
+# cipher using sboxes with transition of non-integer weight
+class Toy9:
+    def __init__(self):
+        r"""
+
+        TESTS::
+
+            sage: from civerly.cipher_implementations.toy_ciphers.toy9 \
+            ....:   import Toy9
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: cipher = Toy9()
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     solver=SOLVER.GUROBI,
+            ....:     path=Path("./DOCTEST-Toy9-Models/")
+            ....: )
+            sage: cipher.analyse(model_options) # optional - gurobi # optional - espresso
+            36 variables and 85 constraints were written to
+            'DOCTEST-Toy9-Models/toy9.mps'
+            1.4150374993
+
+            sage: # optional - cryptominisat # optional - espresso
+            sage: from civerly.cipher_implementations.toy_ciphers.toy9 \
+            ....:   import Toy9
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: cipher = Toy9()
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     solver=SOLVER.CRYPTOMINISAT,
+            ....:     path=Path("./DOCTEST-Toy9-Models/")
+            ....: )
+            sage: cipher.analyse(model_options)
+            36 variables and 109 clauses were written to
+            'DOCTEST-Toy9-Models/toy9.cnf'
+            [  0 ,100] (trying w =  50) : SAT
+            [  0 , 50] (trying w =  25) : SAT
+            [  0 , 25] (trying w =  12) : SAT
+            [  0 , 12] (trying w =   6) : SAT
+            [  0 ,  6] (trying w =   3) : SAT
+            [  0 ,  3] (trying w =   1) : SAT
+            [  0 ,  1] (trying w =   0) : UNSAT
+            1
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Toy9-Models", ignore_errors=True)
+
+        """
+
+        cipher = SBoxCipher(4, 4, name="toy9")
+        s = SBox_CVL(gift_S, name="S")  # 4 -> 4
+        node = cipher.add_subcipher(s, [(cipher.IN, (i, i)) for i in range(4)])
+        cipher.add_output([(node, (i, i)) for i in range(4)])
+
+        self.cipher = cipher
+
+    def __new__(cls, *args, **kwargs):
+        instance = super(Toy9, cls).__new__(cls)
+        instance.__init__(*args, **kwargs)
+        return instance.cipher
