@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "civerly"
+version = "1.0.0"
+description = "CiVerLy -- The Cipher Verification Library"
+authors = [{ name="cryptosolutions GmbH", email="contact@cryptosolutions.de" }]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["civerly*"]
