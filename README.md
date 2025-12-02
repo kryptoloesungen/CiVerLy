@@ -16,4 +16,4 @@ As part of the effort to strengthen IT security, CiVerLy has been released as op
 See [docs/build/](docs/build/) for the reference manual (HTML and PDF).
 
 ## License
-This project is licensed under the EUROPEAN UNION PUBLIC LICENCE v. 1.2 with an additional non-endorsement clause; see [LICENSE](LICENSE) for details.
+This project is licensed under the EUROPEAN UNION PUBLIC LICENCE v. 1.2 (EUPL 1.2) with an additional non-endorsement clause; see [LICENSE](LICENSE) for details.
