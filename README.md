@@ -14,3 +14,6 @@ As part of the effort to strengthen IT security, CiVerLy has been released as op
 ## Installation and Documentation
 
 See [docs/build/](docs/build/) for the reference manual (HTML and PDF).
+
+## License
+This project is licensed under the MIT License; see [LICENSE.txt](LICENSE.txt) for details.
