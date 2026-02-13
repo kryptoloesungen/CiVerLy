@@ -133,6 +133,7 @@ class CRAFT_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options)
             7440 variables and 17201 clauses were written to
@@ -149,6 +150,8 @@ class CRAFT_CVL:
             Output file in: DOCTEST-CRAFT-Models/CRAFT.pdf
             sage: trail = str(craft.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True)
 
         Now with CaDiCaL as solver::
 
@@ -163,6 +166,7 @@ class CRAFT_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options)
             7440 variables and 17201 clauses were written to

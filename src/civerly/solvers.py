@@ -419,6 +419,14 @@ def optimize_sat(cnf_file_name, sat_file_name, model_options,
     return float(W_MIN/10**pr)
 
 
+def run_espresso(esp_file_in, esp_file_out):
+    r"""
+    Helper function to execute espresso.
+    """
+    os.popen(f"espresso -epos {esp_file_in} > {esp_file_out}").read()
+    return
+
+
 def _float_or_int(value):
     """
     Cast `value` to float or int if possible.
@@ -440,6 +448,8 @@ def _float_or_int(value):
     value = float(value)
     if value.is_integer() or abs(value - int(round(value))) < 1e-8:
         value = int(round(value))
+    else:
+        value = round(value, 10)
     return value
 
 

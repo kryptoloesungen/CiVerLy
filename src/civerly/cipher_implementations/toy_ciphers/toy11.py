@@ -25,6 +25,7 @@ class Toy11:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     solver=SOLVER.GUROBI,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy11-Models/")
             ....: )
             sage: cipher.analyse(model_options) # optional - gurobi # optional - espresso
@@ -45,6 +46,7 @@ class Toy11:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     solver=SOLVER.CADICAL,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy11-Models/")
             ....: )
             sage: cipher.analyse(model_options)

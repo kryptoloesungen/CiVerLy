@@ -1,11 +1,8 @@
-LIB_DIR = src/civerly/largesboxes/
+test:
+	sage -t src/civerly
 
-.PHONY: all clean
+test-%:
+	sage -t --optional=sage,$* --long src/civerly
 
-all: lib-largesboxes.so
-
-lib-largesboxes.so:
-	g++ -fPIC -shared -std=c++11 -o ${LIB_DIR}lib-largesboxes.so  ${LIB_DIR}lib-largesboxes.cpp
-
-clean:
-	rm -f ${LIB_DIR}lib-largesboxes.so
+test-no-gurobi:
+	sage -t --optional=sage,scip,glpk,espresso,cadical,cryptominisat --long src/civerly

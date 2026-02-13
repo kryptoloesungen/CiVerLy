@@ -837,17 +837,6 @@ class Cipher:
             edges = [(a, (x, y)) for y, (a, x) in enumerate(self.outputs)]
             Cipher.add_subcipher(self, self.OUT, edges)
 
-            # generate self.complist when the cipher is finished.
-            # (editing this cipher either makes it invalid again, or makes us
-            # recompute the complist)
-            # complist is the DFS-sorted list of components (not the indices!)
-            self.complist = [self.nodes[i] for i in self._dfs_traversal()[1]]
-
-            e = (
-                f"{len(self.complist) = } is different from "  # noqa: E202,E251
-                f"{len(self.nodes) = }"  # noqa: E202,E251
-            )
-            assert len(self.complist) == len(self.nodes), e
 
     def __eq__(self, other) -> bool:
         r"""
@@ -924,19 +913,13 @@ class Cipher:
             sage: from civerly.cipher_implementations.present import PRESENT_CVL
             sage: present = PRESENT_CVL(2)
             sage: latex(present)
-            \documentclass[runningheads]{llncs}
+            \documentclass{article}
             ...
             \end{document}
         """
-        STRING = "\\documentclass[runningheads]{llncs}\n"
-        STRING += "\\usepackage{amssymb}\n"
+        STRING = "\\documentclass{article}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
-        STRING += "\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n"
-        STRING += "\\usetikzlibrary{calc}\n"
-        STRING += "\\usetikzlibrary{positioning, fit, shapes.geometric}\n"
-        STRING += "\\usetikzlibrary{decorations.text}\n"
-        STRING += "\\usetikzlibrary{decorations.pathreplacing,calligraphy}\n"
-        STRING += "\\usetikzlibrary{patterns}\n\\usetikzlibrary{arrows}\n"
+        STRING += "\\usetikzlibrary{arrows}\n"
         STRING += "\\usepackage{graphicx}\n"
         STRING += "\\usepackage{calc}\n"
         STRING += "\\newsavebox{\\tempbox}\n"
@@ -1011,7 +994,7 @@ class Cipher:
             <BLANKLINE>
             <BLANKLINE>
         """
-        depths, dfs_list = self._dfs_traversal()
+        depths = self._dfs_traversal()
 
         STRING = ""
         name = self.name.replace('_', '\\_')
@@ -1024,7 +1007,7 @@ class Cipher:
 
         ctr = {dd: 0 for dd in set(depths)}
         # Draw each node
-        for i in range(len(dfs_list)):
+        for i in range(len(self.nodes)):
             if i == 0:
                 STRING += f"\t\\node[circle,draw] at ({maximal_count//2}, 0) "
                 STRING += f"(node{i}) {{ \\tiny \\texttt{{in}} }};\n"
@@ -1129,8 +1112,7 @@ class Cipher:
             ....:     edges = [(node, (i, i + 4*j)) for i in range(4)]
             ....:     cipher.add_output(edges)
             sage: cipher._dfs_traversal()
-            ([0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 3],
-             [0, 1, 2, 13, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 3]
         """
         if not self.is_valid:
             raise CipherNotValidException()
@@ -1156,7 +1138,7 @@ class Cipher:
         )
         assert depths[self.nodes.index(self.OUT)] == max(depths), e
 
-        return depths, dfs_order
+        return depths
 
     def model(self, model_options):
         """
@@ -1198,7 +1180,7 @@ class Cipher:
               :class:`civerly.model_options.MODEL_OPTIONS`
 
         We first generate a ``master_sat``, recursively iterate over
-        ``self.complist`` (and its subciphers) and collect the sub-SATs in
+        ``self.nodes`` (and its subciphers) and collect the sub-SATs in
         order to relabel and connect them correctly to one big SAT formula. To
         avoid redundancy, a caching-mechanism is implemented which checks if
         the currently modeled component was modeled before. If yes, the SAT
@@ -1245,15 +1227,9 @@ class Cipher:
         self.dictionaries_sat = [{} for _ in range(len(self.nodes))]
         self.inv_dictionaries_sat = [{} for _ in range(len(self.nodes))]
 
-        _, dfs = self._dfs_traversal()
-
-        assert len(self.complist) == len(self.nodes), (
-            f"{len(self.complist) = } != {len(self.nodes) = }" # noqa
-        )
-
-        for i_comp, comp in enumerate(self.complist):
+        for i_comp, comp in enumerate(self.nodes):
             # check if component was modeled before
-            for i_prev, prev in enumerate(self.complist[:i_comp]):
+            for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
                     # copy the component sat programs
                     sats.append(sats[i_prev])
@@ -1343,7 +1319,7 @@ class Cipher:
 
         # Connect the SATs with each other
         # --------------- set SAT_IN and SAT_OUT variables ---------------- #
-        for i_comp, comp in enumerate(self.complist):
+        for i_comp, comp in enumerate(self.nodes):
             if comp == self.IN:
                 for x in range(comp.input_length):
                     master_sat.add_clause((
@@ -1373,13 +1349,8 @@ class Cipher:
         branches = dict()
         # take the edges in the graph to combine the SATs
         for (a, b), (x, y) in self.edges:
-            # self.edges is sorted according to self.nodes, but the
-            # dictionaries are sorted according to self.complist
-            # self.nodes ----dfs----> self.complist
-            # I.e. self.nodes[dfs[i]] = self.complist[i] and therefore
-            # self.complist[dfs.index(j)] = self.nodes[j]
-            bINy = self.inv_dictionaries_sat[dfs.index(b)][y+1]
-            aOUTx = self.inv_dictionaries_sat[dfs.index(a)][
+            bINy = self.inv_dictionaries_sat[b][y+1]
+            aOUTx = self.inv_dictionaries_sat[a][
                 x + 1 + self.nodes[a].input_length]
             if aOUTx not in branches:
                 branches[aOUTx] = []
@@ -1432,7 +1403,7 @@ class Cipher:
                         pass  # skip OUT-nodes
                     else:
                         master_sat.add_clause(
-                            (-self.inv_dictionaries_sat[dfs.index(a)][x+1],)
+                            (-self.inv_dictionaries_sat[a][x+1],)
                         )
 
         model_options, model_options_ = model_options_, model_options
@@ -1517,20 +1488,24 @@ class Cipher:
                 )
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.model(model_options)
-            # if no solver has been selected, we generate all cnf-files
-            # for the given solve_range
-            optimize_sat(
-                model_options.path / (self.name + ".cnf"),
-                model_options.path / (self.name + ".sat"),
-                model_options=model_options,
-                time_limit=None)
-            if model_options.solver is None:
-                raise NoSolverWarning()
+            if self._return_immediately_:
+                return
             else:
-                return get_objective_value(
+                # if no solver has been selected, we generate all cnf-files
+                # for the given solve_range
+                optimize_sat(
+                    model_options.path / (self.name + ".cnf"),
                     model_options.path / (self.name + ".sat"),
-                    model_options.solver
-                )
+                    model_options=model_options,
+                    time_limit=None)
+
+                if model_options.solver is None:
+                    raise NoSolverWarning()
+                else:
+                    return get_objective_value(
+                        model_options.path / (self.name + ".sat"),
+                        model_options.solver
+                    )
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1538,7 +1513,7 @@ class Cipher:
 
     def _construct_grid(self, divide_by, input_side=True):
         r"""
-         In order to introduce some structure into the cipher (which initially
+        In order to introduce some structure into the cipher (which initially
         is just a DAG), we construct a grid of all components based on their
         depth, which is assigned via dfs-search.
 
@@ -1555,7 +1530,7 @@ class Cipher:
              - ``input_side`` -- bool; indicates whether grid shows the input
                (``True``) or output side (``False``)
         """
-        depths, dfs = self._dfs_traversal()
+        depths = self._dfs_traversal()
 
         # initialize grid
         grid_in = []
@@ -1621,7 +1596,7 @@ class Cipher:
                         offset_out[depth] += 1
 
         # Go backwards to find unreachable nodes (e.g. C_CVL) too
-        remaining_nodes = [node for node in dfs if not visited[node]]
+        remaining_nodes = [node for node in range(len(self.nodes)) if not visited[node]]
         # ----------------------------------------------------------
         for node in remaining_nodes:
             depth = depths[node]
@@ -1673,11 +1648,7 @@ class Cipher:
         STRING = "\\documentclass{article}\n"
         STRING += "\\usepackage{amssymb}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
-        STRING += "\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n"
-        STRING += "\\usetikzlibrary{calc, positioning, fit}\n"
-        STRING += "\\usetikzlibrary{shapes.geometric, decorations.text}\n"
-        STRING += "\\usetikzlibrary{decorations.pathreplacing, calligraphy}\n"
-        STRING += "\\usetikzlibrary{patterns, arrows}\n"
+        STRING += "\\usetikzlibrary{arrows}\n"
 
         # define as empty command, in order to 'renewcommand' throughout the
         # sections
@@ -1848,10 +1819,10 @@ class Cipher:
                 model_options.optimization, OPTIMIZATION
             )
 
-        depths, _ = self._dfs_traversal()
+        depths = self._dfs_traversal()
 
         # Recursively iterate through each subcipher
-        for comp_num, comp in enumerate(self.complist):
+        for comp_num, comp in enumerate(self.nodes):
             if isinstance(comp, Cipher):
                 sub_results = {}
                 for s, solution_bit_value in results.items():
@@ -1925,7 +1896,7 @@ class Cipher:
                 dictionaries = json.load(f)
 
         ##################################################
-        depths, dfs = self._dfs_traversal()
+        depths = self._dfs_traversal()
 
         # Amount of space (in tikz units) between:
         #   -> each of the layers
@@ -2049,7 +2020,7 @@ class Cipher:
                         raise error
 
                 translated_component = dictionaries[comp_num][str(s)]
-                comp = self.complist[comp_num]
+                comp = self.nodes[comp_num]
                 # Draw the input nodes of each component
                 bool1 = translated_component <= comp.input_length
                 # We also draw the output of the last component.
@@ -2069,20 +2040,20 @@ class Cipher:
                     current_index = translated_component - 1
 
                 bit_ind = _from_grid(
-                    dfs[comp_num], current_index, input_side=True
+                    comp_num, current_index, input_side=True
                 )
-                bits_in[depths[dfs[comp_num]]][bit_ind] = solution_bit_value
+                bits_in[depths[comp_num]][bit_ind] = solution_bit_value
             elif bool2:
                 if model_options.optimization == OPTIMIZATION.MILP:
                     current_index = _between_brackets(translated_component)
                 elif model_options.optimization == OPTIMIZATION.SAT:
                     current_index = translated_component - \
-                        self.complist[comp_num].input_length - 1
+                        self.nodes[comp_num].input_length - 1
 
                 bit_ind = _from_grid(
-                    dfs[comp_num], current_index, input_side=False
+                    comp_num, current_index, input_side=False
                 )
-                bits_out[depths[dfs[comp_num]]][bit_ind] = solution_bit_value
+                bits_out[depths[comp_num]][bit_ind] = solution_bit_value
 
         # realign bits_in, bits_out by removing any 'None' entries
         bits_in = [
@@ -2285,7 +2256,7 @@ class Cipher:
             self.dictionaries_sat = deepcopy(prev.dictionaries_sat)
             self.inv_dictionaries_sat = deepcopy(prev.inv_dictionaries_sat)
 
-        for i in range(1, len(self.complist)):
-            self.complist[i]._copy_over_dictionaries_recursively(
-                prev.complist[i], model_options
+        for i in range(1, len(self.nodes)):
+            self.nodes[i]._copy_over_dictionaries_recursively(
+                prev.nodes[i], model_options
             )

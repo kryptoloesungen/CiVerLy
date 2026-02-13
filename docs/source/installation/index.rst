@@ -9,3 +9,5 @@ Install
    dependencies
    civerly
    docker
+   appimage
+   versions

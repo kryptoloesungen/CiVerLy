@@ -79,12 +79,12 @@ class SBOX_MODELING(Enum):
       Based Differential and Division Trail Search
       (https://doi.org/10.1007/978-3-319-69284-5_11)
     - Logical conditioning (https://eprint.iacr.org/2021/213.pdf,
-      section 2.3.2) without espresso-reduction
+      section 2.3.2) without Espresso reduction
     - Christina Boura and Daniel Coggia: Efficient MILP Modelings for Sboxes
       and Linear Layers of SPN ciphers
       (https://doi.org/10.13154/tosc.v2020.i3.327-361)
     - Logical conditioning (https://eprint.iacr.org/2021/213.pdf,
-      section 2.3.2) with espresso-reduction
+      section 2.3.2) with Espresso reduction
       (see https://github.com/classabbyamp/espresso-logic)
 
     .. NOTE::
@@ -95,7 +95,7 @@ class SBOX_MODELING(Enum):
     CONVEX_HULL = 1
     LOGICAL_COND = 2
     DISTORTED_BALL = 3
-    LOGICAL_COND_ESPRESSO = 4
+    LOGICAL_COND_ESPRESSO = 4  # For both MILP / SAT
 
 
 class SOLVER(Enum):
@@ -134,6 +134,22 @@ class SOLVER(Enum):
     CADICAL = 5
 
 
+class MINIMIZER(Enum):
+    """
+    The minimizer to be (automatically) called by CiVerLy, to minimize
+    boolean formulas and therefore to simplify MILP or SAT models.
+    Of course, CiVerLy does not implement any minimizer but simply
+    calls the corresponding minimizer externally.
+
+    Supported minimizers:
+
+        - Espresso: Used throughout the literature for this purpose.
+          Freely available on https://github.com/classabbyamp/espresso-logic
+
+    """
+    ESPRESSO = 1
+
+
 @dataclass(init=True, repr=False)
 class MODEL_OPTIONS:
     """
@@ -165,6 +181,8 @@ class MODEL_OPTIONS:
 
         - ``write_to_file`` -- bool; decides if files are written or not
 
+        - ``espresso`` -- bool; decides if Espresso should be used or not
+
     Below we show how to use a valid configuration of the model options.
 
     EXAMPLES::
@@ -187,16 +205,20 @@ class MODEL_OPTIONS:
             -> linear_layer_modeling : CONVEX_HULL
             -> sbox_modeling : CONVEX_HULL
             -> solver : SCIP
+            -> minimizer : None
             -> solve_range : None
             -> sat_precision : 0
             -> path : CiVerLy-Models
     """
-    cryptanalysis: CRYPTANALYSIS
-    optimization: OPTIMIZATION
-    granularity: GRANULARITY
+
+    # specify types and default values
+    cryptanalysis: CRYPTANALYSIS = None
+    optimization: OPTIMIZATION = None
+    granularity: GRANULARITY = None
     linear_layer_modeling: LINEAR_LAYER_MODELING = None
     sbox_modeling: SBOX_MODELING = None
     solver: SOLVER = None
+    minimizer: MINIMIZER = None
     solve_range: tuple = None
     sat_precision: int = 0
     path: Path = None
@@ -367,7 +389,8 @@ class MODEL_OPTIONS:
 
         # optimization.milp & granularity.bitwise
         # ==>
-        # sbox_modeling.{None, convex_hull, logical_cond, logical_cond_espresso, distorted_ball}
+        # sbox_modeling.{None, convex_hull, logical_cond,
+        # logical_cond_espresso, distorted_ball}
         if self.optimization == OPTIMIZATION.MILP \
                 and self.granularity == GRANULARITY.BITWISE \
                 and self.sbox_modeling not in (

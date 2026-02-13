@@ -23,9 +23,16 @@ class Toy7:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(0, 8),
             ....:   path=Path("./DOCTEST-Toy7-Models/"))
             sage: cipher.analyse(model_options=model_options)
+            Using existing file DOCTEST-Toy7-Models/espresso-4ce399fb_out.pla,
+            make sure it is up to date!
+            Using existing file DOCTEST-Toy7-Models/espresso-4ce399fb_out.pla,
+            make sure it is up to date!
+            Using existing file DOCTEST-Toy7-Models/espresso-d3ba4659_out.pla,
+            make sure it is up to date!
             1356 variables and 3621 clauses were written to
             'DOCTEST-Toy7-Models/Toy7.cnf'
             [  0 ,  8] (trying w =   4) : SAT

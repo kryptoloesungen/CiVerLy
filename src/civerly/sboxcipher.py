@@ -20,7 +20,7 @@ from sage.numerical.mip import MixedIntegerLinearProgram
 
 from civerly.cipher import Cipher
 from civerly.component import SBox_CVL, LinearLayer_CVL, XOR_CVL
-from civerly.component import RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL
+from civerly.component import RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
 from civerly.util import _before_brackets, _between_brackets, suppress_output
 from civerly.util import translate_milp_constraint
 from civerly.model_options import OPTIMIZATION, GRANULARITY, CRYPTANALYSIS
@@ -44,7 +44,7 @@ class SBoxCipher(Cipher):
         """
         if isinstance(sub_cipher, (
             SBoxCipher, SBox_CVL, LinearLayer_CVL,
-            XOR_CVL, RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL
+            XOR_CVL, RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
         )):
             return super().add_subcipher(sub_cipher, edges)
         else:
@@ -64,7 +64,7 @@ class SBoxCipher(Cipher):
               :class:`civerly.model_options.MODEL_OPTIONS`
 
         We first generate a ``master_milp``, recursively iterate over
-        ``self.complist`` (and its subciphers) and collect the sub-milps in
+        ``self.nodes`` (and its subciphers) and collect the sub-milps in
         order to relabel and connect them correctly to one big milp. To avoid
         remodeling the same components multiple times, a caching-mechanism is
         implemented which checks if the currently modeled component was
@@ -187,15 +187,9 @@ class SBoxCipher(Cipher):
         self.dictionaries_milp = [{} for _ in range(len(self.nodes))]
         self.inv_dictionaries_milp = [{} for _ in range(len(self.nodes))]
 
-        _, dfs = self._dfs_traversal()
-
-        assert len(self.complist) == len(self.nodes), (
-            f"{len(self.complist) = } != {len(self.nodes) = }" # noqa
-        )
-
-        for i_comp, comp in enumerate(self.complist):
+        for i_comp, comp in enumerate(self.nodes):
             # check if component was modeled before
-            for i_prev, prev in enumerate(self.complist[:i_comp]):
+            for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
                     # copy the component milp programs
                     milps.append(milps[i_prev])
@@ -272,6 +266,7 @@ class SBoxCipher(Cipher):
                     val = asg[:asg.index("=")].strip(" ")
                     key = f"X{i_comp}[{ind}]"
                     self.dictionaries_milp[i_comp][key] = val
+                    # self.dictionaries_milp[i_comp][ind] = val
 
                 self.inv_dictionaries_milp[i_comp] = {
                     v: k for k, v in self.dictionaries_milp[i_comp].items()
@@ -304,7 +299,7 @@ class SBoxCipher(Cipher):
             __ASSERTION_CTR += 1
             # helper variable to make the code shorter
             cmi = self.inv_dictionaries_milp[
-                self.complist.index(self.IN)][f'OUT[{x}]']
+                self.nodes.index(self.IN)][f'OUT[{x}]']
             compMILP_INx = X[_before_brackets(cmi)][_between_brackets(cmi)]
             master_milp.add_constraint(self.MILP_IN[x] == compMILP_INx)
 
@@ -322,7 +317,7 @@ class SBoxCipher(Cipher):
         __ASSERTION_CTR = 0
         for y, (a, x) in set(output_arr):  # if comp is connected to output
             __ASSERTION_CTR += 1
-            out_string = self.inv_dictionaries_milp[dfs.index(a)][f'OUT[{x}]']
+            out_string = self.inv_dictionaries_milp[a][f'OUT[{x}]']
             out_string_index = _between_brackets(out_string)
 
             # if input is directly connected to output. Without this, there
@@ -331,9 +326,9 @@ class SBoxCipher(Cipher):
             # output directly.
             if a == self.nodes.index(self.IN):
                 cmi = self.inv_dictionaries_milp[
-                    self.complist.index(self.IN)][f'OUT[{x}]']
+                    self.nodes.index(self.IN)][f'OUT[{x}]']
             master_milp.add_constraint(
-                X[dfs.index(a)][out_string_index] == self.MILP_OUT[y]
+                X[a][out_string_index] == self.MILP_OUT[y]
             )
 
         assert __ASSERTION_CTR == self.output_length // divide_by, (
@@ -358,16 +353,14 @@ class SBoxCipher(Cipher):
         # take the (wordwise) edges in the graph to combine the MILPs
         for (a, b), (x, y) in edge_arr:
             # helper vars to shorten the code a bit
-            inv_dict_dfsa_outx = self.inv_dictionaries_milp[
-                dfs.index(a)][f'OUT[{x}]']
-            aOUTx = X[_before_brackets(inv_dict_dfsa_outx)][
-                _between_brackets(inv_dict_dfsa_outx)]
+            inv_dict_a_outx = self.inv_dictionaries_milp[a][f'OUT[{x}]']
+            aOUTx = X[_before_brackets(inv_dict_a_outx)][
+                _between_brackets(inv_dict_a_outx)]
 
             # helper vars to shorten the code a bit
-            inv_dict_dfsb_iny = self.inv_dictionaries_milp[
-                dfs.index(b)][f'IN[{y}]']
-            bINy = X[_before_brackets(inv_dict_dfsb_iny)][
-                _between_brackets(inv_dict_dfsb_iny)]
+            inv_dict_b_iny = self.inv_dictionaries_milp[b][f'IN[{y}]']
+            bINy = X[_before_brackets(inv_dict_b_iny)][
+                _between_brackets(inv_dict_b_iny)]
 
             if aOUTx not in branches:
                 branches[aOUTx] = []
@@ -458,7 +451,7 @@ class SBoxCipher(Cipher):
                     ) and not self.nodes[a].in_node:
                         pass  # skip OUT-nodes
                     else:
-                        tmp = self.inv_dictionaries_milp[dfs.index(a)][f'OUT[{x}]']
+                        tmp = self.inv_dictionaries_milp[a][f'OUT[{x}]']
                         master_milp.add_constraint(
                             X[_before_brackets(tmp)][_between_brackets(tmp)] == 0
                         )

@@ -50,6 +50,8 @@ def benchmark(CM=None, remove_files=False, only_models=False,
         sage: CM = [(aes, model_options)]
         sage: benchmark(CM) # optional - scip
         ...
+        sage: import shutil
+        sage: shutil.rmtree("DOCTEST-Benchmark-AES-Models", ignore_errors=True)
     """
     for ciphers, model_options in CM:
         optimization = model_options.optimization.name

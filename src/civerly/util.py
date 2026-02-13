@@ -27,7 +27,7 @@ import warnings
 import contextlib
 import sys
 import os
-import subprocess
+import zlib
 
 from sage.rings.integer_ring import ZZ
 from sage.rings.integer import Integer
@@ -357,7 +357,7 @@ def _generate_constraints_sum_leq_int_LS24(sat, sum_arr, num):
         ....:                   "The constraints don't assert correct bound!")
         ....:           else: break
         sage: import shutil
-        sage: shutil.rmtree(path)
+        sage: shutil.rmtree(path, ignore_errors=True)
 
     If everything works correctly, then a constraint system which requires
     :math:`w` many variables to be SAT only becomes possible to solve if we
@@ -409,34 +409,30 @@ def _generate_constraints_sum_leq_int_LS24(sat, sum_arr, num):
     return new_sat
 
 
-def _sat_get_clauses_espresso(posset):
+def _write_espresso_input(posset, esp_file_name, workdir_path):
     r"""
-    Invoke Espresso to produce a (close to) minimal set of CNF-clauses that
-    are only fulfilled for elements in ``posset``.
-
-    INPUT:
-
-        - ``posset`` -- list of lists/vectors; Contains all possible
-          transitions
-
-    OUTPUT: ``clauses`` -- a close to minimal set of CNF-clauses that describe
-    ``posset``
+    Helper function of :meth:`_get_clauses_espresso` to write
+    the list of clauses generated CiVerLy into a .pla file.
 
     TESTS::
 
-        sage: from civerly.util import _sat_get_clauses_espresso
-        sage: arr = [(0, 0, 0)]
-        sage: _sat_get_clauses_espresso(arr) # optional - espresso
-        [(-3,), (-2,), (-1,)]
-        sage: arr = [(0, 0, 0), (0, 1, 1)]
-        sage: _sat_get_clauses_espresso(arr) # optional - espresso
-        [(-2, 3), (2, -3), (-1,)]
+        sage: from civerly.util import _write_espresso_input
+        sage: from pathlib import Path
+        sage: import os
+        sage: path = Path("./DOCTEST-Espresso/")
+        sage: file_name = "espresso-input-doctest"
+        sage: posset = [(0, 0, 0)]
+        sage: _write_espresso_input(posset, file_name, path)
+        sage: os.path.exists(path / f"{file_name}_in.pla")
+        True
+        sage: import shutil
+        sage: shutil.rmtree("DOCTEST-Espresso", ignore_errors=True)
+
     """
-    if "CIVERLY_DISABLE_ESPRESSO" in os.environ:
-        raise ValueError(
-            "ESPRESSO was disabled by setting environment "
-            "variable CIVERLY_DISABLE_ESPRESSO"
-        )
+
+    # create directory and file
+    esp_file_in = workdir_path / f"{esp_file_name}_in.pla"
+    workdir_path.mkdir(parents=True, exist_ok=True)
 
     # create espresso input
     espresso_input = [f'.i {len(posset[0])}', '.o 1']
@@ -447,17 +443,46 @@ def _sat_get_clauses_espresso(posset):
     espresso_input.append('.e')
     espresso_input = '\n'.join(espresso_input) + '\n'
 
-    # execute espresso process
-    # ``-epos`` aims to only generate clauses that must be fulfilled (with
-    # '1' at the end of the line),
-    # which is what we need to generate a CNF for posset.
-    espresso_process = subprocess.run(
-        ['espresso', '-epos'],
-        input=espresso_input,
-        capture_output=True,
-        text=True
-    )
-    espresso_output = espresso_process.stdout.splitlines()
+    # write to file
+    with open(esp_file_in, "w") as f:
+        f.write(espresso_input)
+
+    return
+
+
+def _read_espresso_output(esp_file_out):
+    r"""
+    Helper function of :meth:`_get_clauses_espresso` to convert
+    the output .pla file into a usable list for CiVerLy.
+
+    TESTS::
+
+        sage: from civerly.util import _write_espresso_input
+        sage: from civerly.util import _read_espresso_output
+        sage: from pathlib import Path
+        sage: import os
+        sage: path = Path("./DOCTEST-Espresso/")
+        sage: file_name = "espresso-output-doctest"
+        sage: posset = [(0, 0, 0), (1, 1, 1)]
+        sage: _write_espresso_input(posset, file_name, path)
+        sage: assert os.path.exists(path / f"{file_name}_in.pla")
+        sage: clauses = _read_espresso_output(path / f"{file_name}_in.pla")
+        sage: posset_from_clauses = [
+        ....:   tuple((-1)**p[i-1] * i for i in [1, 2, 3])
+        ....:   for p in posset
+        ....: ]
+        sage: clauses == posset_from_clauses
+        True
+        sage: import shutil
+        sage: shutil.rmtree("DOCTEST-Espresso", ignore_errors=True)
+
+    Note that the clauses are not the correct ones describing posset,
+    as the flipping via Espresso's `-epos` is missing.
+    """
+
+    with open(esp_file_out) as f:
+        espresso_output = f.read().splitlines()
+    clause_length = int(espresso_output[0].split(" ")[1])
 
     clauses = []
     for line in espresso_output:
@@ -468,7 +493,7 @@ def _sat_get_clauses_espresso(posset):
             # NOTE: in post-processing, we must subtract -1 again
             clause = tuple(
                 (-1)**int(line[i]) * (i + 1)
-                for i in range(len(posset[0]))
+                for i in range(clause_length)
                 if line[i] != '-'
             )
             clauses.append(clause)
@@ -513,7 +538,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
             sum([ZZ(i) for i in comp.binary_matrix[-1]])
         )
     elif isinstance(comp, SBox_CVL):
-        file_name = ''.join([f'{s_entry:x}' for s_entry in comp.S])
+        file_name = f"{zlib.crc32(
+            "".join([f'{s_entry:x}' for s_entry in comp.S]).encode("utf-8")
+        ):x}"
     else:
         raise ValueError(
             "reduction_algorithm_ST17 can only be applied to "

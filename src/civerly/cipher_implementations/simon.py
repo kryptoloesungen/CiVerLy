@@ -84,6 +84,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -92,6 +93,8 @@ class SIMON_CVL:
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -103,6 +106,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -111,6 +115,8 @@ class SIMON_CVL:
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -122,6 +128,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -130,6 +137,8 @@ class SIMON_CVL:
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -141,6 +150,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -149,6 +159,8 @@ class SIMON_CVL:
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
         Models for linear cryptanalysis. The results are from Table 1 in
         https://eprint.iacr.org/2015/145.pdf, which uses squared
@@ -164,6 +176,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -173,6 +186,8 @@ class SIMON_CVL:
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -184,6 +199,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -193,6 +209,8 @@ class SIMON_CVL:
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -204,6 +222,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -213,6 +232,8 @@ class SIMON_CVL:
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -224,6 +245,7 @@ class SIMON_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -233,11 +255,8 @@ class SIMON_CVL:
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
-
-        Remove files::
             sage: import shutil
-            sage: shutil.rmtree(
-            ....:   "./DOCTEST-Simon-Models/", ignore_errors=True)
+            sage: shutil.rmtree("DOCTEST-Simon-Models", ignore_errors=True)
 
         """
         if name is None:

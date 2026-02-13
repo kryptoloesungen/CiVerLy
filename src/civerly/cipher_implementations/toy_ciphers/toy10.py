@@ -30,6 +30,7 @@ class Toy10:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     solver=SOLVER.CRYPTOMINISAT,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy10-Models/")
             ....: )
             sage: cipher.analyse(model_options)
@@ -43,6 +44,8 @@ class Toy10:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : UNSAT
             1
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Toy10-Models", ignore_errors=True)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy10 \
@@ -57,6 +60,7 @@ class Toy10:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     solver=SOLVER.CADICAL,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy10-Models/")
             ....: )
             sage: cipher.analyse(model_options)
@@ -70,6 +74,8 @@ class Toy10:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : UNSAT
             1
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Toy10-Models", ignore_errors=True)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy10 \
@@ -84,6 +90,7 @@ class Toy10:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     solver=SOLVER.CRYPTOMINISAT,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy10-Models/")
             ....: )
             sage: cipher.analyse(model_options)
@@ -110,6 +117,7 @@ class Toy10:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     solver=SOLVER.GUROBI,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy10-Models/")
             ....: )
             sage: cipher.analyse(model_options) # optional - gurobi # optional - espresso

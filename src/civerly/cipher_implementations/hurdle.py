@@ -267,6 +267,7 @@ class HURDLE_CVL:
         # ....:     granularity=GRANULARITY.BITWISE,
         # ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
         # ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+        # ....:     minimizer=MINIMIZER.ESPRESSO,
         # ....:     path=Path("./DOCTEST-HURDLE-Models/"))
         # sage: cipher.analyse(model_options)
 

@@ -25,6 +25,7 @@ class Toy4:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Toy4-Models/"))
             sage: cipher.analyse(model_options=model_options)
             288 variables and 1537 clauses were written to
@@ -54,6 +55,7 @@ class Toy4:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Toy4-Models/"))
             sage: cipher.analyse(model_options=model_options)
             360 variables and 897 clauses were written to

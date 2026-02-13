@@ -45,6 +45,7 @@ class DES_F_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(0, 4),
             ....:   path=Path("DOCTEST-DESF-Models"))
             sage: cipher.analyse(model_options=model_options)
@@ -53,6 +54,8 @@ class DES_F_CVL:
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : UNSAT
             2
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-DESF-Models", ignore_errors=True)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.des import DES_F_CVL
@@ -65,6 +68,7 @@ class DES_F_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(0, 4),
             ....:   path=Path("DOCTEST-DESF-Models"))
             sage: cipher.analyse(model_options=model_options)
@@ -86,6 +90,7 @@ class DES_F_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.GUROBI,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("DOCTEST-DESF-Models"))
             sage: # optional - gurobi # optional - espresso
             sage: cipher.analyse(model_options=model_options)
@@ -220,6 +225,7 @@ class DES_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(0, 10),
             ....:   path=Path("DOCTEST-DES-Models"))
             sage: cipher.analyse(model_options=model_options)

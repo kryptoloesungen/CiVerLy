@@ -36,6 +36,9 @@ class GIFT_CVL:
             2560 variables and 2849 constraints were written to
             'DOCTEST-GIFT-Models/GIFT.mps'
             3.4150374993
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True) # optional - scip
+
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -46,12 +49,16 @@ class GIFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.SCIP,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options) # optional - scip # optional - espresso
             2560 variables and 4161 constraints were written to
             'DOCTEST-GIFT-Models/GIFT.mps'
             3.4150374993
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True) # optional - scip # optional - espresso
+
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -69,7 +76,7 @@ class GIFT_CVL:
             'DOCTEST-GIFT-Models/GIFT.mps'
             3.4150374993
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models") # optional - gurobi
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True) # optional - scip
 
         Model the cipher with SAT using different values for ``sat_precision``:
 
@@ -85,6 +92,7 @@ class GIFT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options)
@@ -98,6 +106,8 @@ class GIFT_CVL:
             [  0 ,  3] (trying w =   1) : UNSAT
             [  2 ,  3] (trying w =   2) : UNSAT
             3
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
@@ -113,6 +123,7 @@ class GIFT_CVL:
             ....:   solve_range=(0, 10),
             ....:   sat_precision=1,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options)
@@ -127,7 +138,46 @@ class GIFT_CVL:
             [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
             3.4
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models")
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
+
+        Simulate external Espresso minimization::
+
+            sage: # optional - cryptominisat # optional - espresso
+            sage: from civerly.cipher_implementations.gift import GIFT_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: gift_cipher = GIFT_CVL(R=2)
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:   solve_range=(0, 10),
+            ....:   sat_precision=1,
+            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=None,
+            ....:   path=Path("./DOCTEST-GIFT-Models/")
+            ....: )
+            sage: gift_cipher.analyse(model_options)
+            Optimization problem for Espresso has been written to...
+            sage: import os
+            sage: _ = os.popen("espresso -epos "
+            ....: "DOCTEST-GIFT-Models/espresso-d1bda7a_in.pla > "
+            ....: "DOCTEST-GIFT-Models/espresso-d1bda7a_out.pla").read()
+            sage: gift_cipher.analyse(model_options)
+            Using existing file ..., make sure it is up to date!
+            2560 variables and 6401 clauses were written to 'DOCTEST-GIFT-Models/GIFT.cnf'
+            [ 0.0 ,10.0] (trying w =  5.0) : SAT
+            [ 0.0 , 5.0] (trying w =  2.5) : UNSAT
+            [ 2.6 , 5.0] (trying w =  3.8) : SAT
+            [ 2.6 , 3.8] (trying w =  3.2) : UNSAT
+            [ 3.3 , 3.8] (trying w =  3.5) : SAT
+            [ 3.3 , 3.5] (trying w =  3.4) : SAT
+            [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
+            3.4
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
 
         """
         if name is None:

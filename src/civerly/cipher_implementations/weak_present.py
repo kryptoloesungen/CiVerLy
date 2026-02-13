@@ -28,12 +28,13 @@ class WEAK_PRESENT_CVL:
             sage: weak_cipher = WEAK_PRESENT_CVL(R=2)
             sage: dir_name = "DOCTEST-WEAK_PRESENT-Models"
             sage: model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:     optimization=OPTIMIZATION.MILP,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     solver=SOLVER.GUROBI,
-            ....:     path=Path(dir_name)
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.MILP,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   solver=SOLVER.GUROBI,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   path=Path(dir_name)
             ....: )
             sage: weak_cipher.analyse(model_options) # optional - gurobi # optional - espresso
             2560 variables and 4417 constraints were written to ...
@@ -50,12 +51,13 @@ class WEAK_PRESENT_CVL:
             sage: weak_cipher = WEAK_PRESENT_CVL(R=2)
             sage: dir_name = "DOCTEST-WEAK_PRESENT-Models"
             sage: model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:     optimization=OPTIMIZATION.MILP,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     solver=SOLVER.GUROBI,
-            ....:     path=Path(dir_name)
+            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:   optimization=OPTIMIZATION.MILP,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   solver=SOLVER.GUROBI,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   path=Path(dir_name)
             ....: )
             sage: weak_cipher.analyse(model_options) # optional - gurobi # optional - espresso
             2560 variables and 4321 constraints were written to ...

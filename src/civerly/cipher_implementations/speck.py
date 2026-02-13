@@ -72,6 +72,7 @@ class SPECK_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Speck-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -97,6 +98,7 @@ class SPECK_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Speck-Models/"))
             sage: # optional - cadical
             sage: cipher.analyse(model_options=model_options)
@@ -125,6 +127,7 @@ class SPECK_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Speck-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -149,6 +152,7 @@ class SPECK_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Speck-Models/"))
             sage: # optional - cadical
             sage: cipher.analyse(model_options=model_options)

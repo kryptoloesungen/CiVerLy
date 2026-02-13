@@ -376,6 +376,7 @@ class SKINNY_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)
@@ -399,6 +400,7 @@ class SKINNY_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)
@@ -438,6 +440,7 @@ class SKINNY_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.GUROBI,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - gurobi # optional - espresso
             9264 variables and 10161 constraints were written to
@@ -454,12 +457,13 @@ class SKINNY_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.SCIP,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - scip # optional - espresso
             9264 variables and 10161 constraints were written to
             'DOCTEST-SKINNY-Models/bitwise-SKINNY-3.mps'
             5
-            sage: shutil.rmtree("DOCTEST-SKINNY-Models") # optional - scip
+            sage: shutil.rmtree("DOCTEST-SKINNY-Models") # optional - scip # optional - espresso
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -472,6 +476,7 @@ class SKINNY_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(4, 10),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)
@@ -494,6 +499,7 @@ class SKINNY_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CADICAL,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(4, 10),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)

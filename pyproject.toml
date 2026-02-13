@@ -6,7 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "civerly"
 version = "1.0.0"
 description = "CiVerLy -- The Cipher Verification Library"
-authors = [{ name="cryptosolutions GmbH", email="contact@cryptosolutions.de" }]
+authors = [{ name="cryptosolutions GmbH" }, { email="contact@cryptosolutions.de" }]
+license = "EUPL-1.2"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -15,3 +16,8 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["civerly*"]
+
+[[tool.setuptools.ext-modules]]
+name = "civerly.largesboxes"
+sources = ["src/civerly/largesboxes/lib-largesboxes.cpp"]
+language = "c++"

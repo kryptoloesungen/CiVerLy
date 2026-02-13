@@ -19,23 +19,19 @@ Rebuilding the Documentation
 The documentation of CiVerLy (this document) is build using Sphinx.
 To modify it, either edit the docstrings in the Python source files of CiVerLy
 or edit the files in ``civerly/docs/source``.
-In case you modified the Python sources, you first have to reinstall CiVerLy by running
+
+To build the HTML documentation, run the following command in the project root:
 
 .. code-block:: console
 
-   $ sage --python -m pip install --no-index --no-build-isolation .
+   $ nix build .#docs-html
 
-in the ``civerly`` directory.
-Now, change the directory to the ``civerly/docs`` directory.
-Then, to build the HTML documentation run:
-
-.. code-block:: console
-
-   $ sage -sh -c "make html"
+The result will be in ``result/``.
 
 To build the PDF version of the documentation run:
 
 .. code-block:: console
 
-   $ sage -sh -c "make pdf"
+   $ nix build .#docs-pdf
 
+The resulting PDF will be at ``result/civerly.pdf``.

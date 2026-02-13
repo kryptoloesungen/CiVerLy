@@ -21,6 +21,7 @@ class Toy9:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     solver=SOLVER.GUROBI,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy9-Models/")
             ....: )
             sage: cipher.analyse(model_options) # optional - gurobi # optional - espresso
@@ -40,6 +41,7 @@ class Toy9:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     solver=SOLVER.CRYPTOMINISAT,
+            ....:     minimizer=MINIMIZER.ESPRESSO,
             ....:     path=Path("./DOCTEST-Toy9-Models/")
             ....: )
             sage: cipher.analyse(model_options)

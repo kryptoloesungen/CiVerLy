@@ -1,5 +1,6 @@
 import ctypes
 import os.path
+from pathlib import Path
 
 
 def get_inequations(ddt, fixed_probability=None) -> list:
@@ -53,10 +54,9 @@ def get_inequations(ddt, fixed_probability=None) -> list:
             sage: largesboxes.verify_inequations(ineq, ddt, 2)
             True
     """
-    lib_path = os.path.dirname(os.path.abspath(__file__)) \
-        + os.path.sep + "lib-largesboxes.so"
-
     # Shared library responsible for computing the inequations
+    pkg_dir = Path(__file__).parent.parent
+    lib_path = next(pkg_dir.glob("largesboxes*.so"))
     lib = ctypes.CDLL(lib_path)
 
     lib.compute_inequations.argtypes = [

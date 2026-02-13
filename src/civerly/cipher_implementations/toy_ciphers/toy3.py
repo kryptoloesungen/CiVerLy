@@ -27,6 +27,7 @@ class Toy3:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Toy3-Models/"))
             sage: cipher.analyse(model_options)
             798 variables and 3591 clauses were written to
@@ -56,8 +57,11 @@ class Toy3:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Toy3-Models/"))
             sage: cipher.analyse(model_options)
+            Using existing file DOCTEST-Toy3-Models/espresso-5a255793_out.pla,
+            make sure it is up to date!
             812 variables and 3563 clauses were written to
             'DOCTEST-Toy3-Models/Toy3.cnf'
             [  0 ,100] (trying w =  50) : SAT
@@ -101,6 +105,46 @@ class Toy3:
             Output file in: DOCTEST-Toy3-Models/Toy3.pdf
             sage: import shutil
             sage: shutil.rmtree("DOCTEST-Toy3-Models", ignore_errors=True)
+
+        Test multi-step modeling with external Espresso reduction::
+
+            sage: # optional - cryptominisat
+            sage: from civerly.cipher_implementations.toy_ciphers.toy3 \
+            ....:   import Toy3
+            sage: from civerly.model_options import *
+            sage: cipher = Toy3()
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=None,
+            ....:   path=Path("./DOCTEST-Toy3-Models/"))
+            sage: cipher.analyse(model_options)
+            Optimization problem for Espresso has been written to...
+            sage: # optional - espresso
+            sage: import os
+            sage: _ = os.popen("espresso -epos "
+            ....: "DOCTEST-Toy3-Models/espresso-5a255793_in.pla > "
+            ....: "DOCTEST-Toy3-Models/espresso-5a255793_out.pla").read()
+            sage: cipher.analyse(model_options)
+            Using existing file DOCTEST-Toy3-Models/espresso-5a255793_out.pla,
+            make sure it is up to date!
+            812 variables and 3563 clauses were written to
+            'DOCTEST-Toy3-Models/Toy3.cnf'
+            [  0 ,100] (trying w =  50) : SAT
+            [  0 , 50] (trying w =  25) : SAT
+            [  0 , 25] (trying w =  12) : SAT
+            [  0 , 12] (trying w =   6) : UNSAT
+            [  7 , 12] (trying w =   9) : SAT
+            [  7 ,  9] (trying w =   8) : SAT
+            [  7 ,  8] (trying w =   7) : UNSAT
+            8
+            sage: import shutil
+            sage: shutil.rmtree("DOCTEST-Toy3-Models", ignore_errors=True)
+
 
         """
         cipher = SBoxCipher(32, 32, name="Toy3")

@@ -2,34 +2,25 @@
 Installation via Docker
 =======================
 
-Alternatively, you can install CiVerLy and its dependencies via docker.
-To build the docker image run the following command in the civerly
-directory. Notice that this will take some time.
+We provide prebuilt Docker Images on `GitHub <https://github.com/kryptoloesungen/CiVerLy/releases/latest/>`_.
+Of course, you need `Docker <https://www.docker.com/>`_ to run a Docker image.
+To do so, download the image and then run:
 
 .. code-block:: console
 
-   $ docker build -t civerly -f docker/Dockerfile .
+   $ # Linux
+   $ wget https://github.com/kryptoloesungen/CiVerLy/releases/latest/download/civerly-docker.tar.gz
+   $ docker load < civerly-docker.tar.gz
 
-To start a sage shell inside the container run:
+   $ # Mac
+   $ wget https://github.com/kryptoloesungen/CiVerLy/releases/latest/download/civerly-docker-mac.tar.gz
+   $ docker load < civerly-docker-mac.tar.gz
+
+Then, to start the container run:
 
 .. code-block:: console
 
    $ docker run -it civerly
 
-To start a bash shell inside the container run:
+This will drop you into a shell with CiVerLy and it dependencies available.
 
-.. code-block:: console
-
-   $ docker run -it --entrypoint bash civerly
-
-To share the docker image, save it to a file:
-
-.. code-block:: console
-
-   $ docker save civerly > civerly.tar
-
-This file can then be loaded again (on a different machine) with:
-
-.. code-block:: console
-
-   $ docker load < civerly.tar

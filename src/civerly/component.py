@@ -9,6 +9,7 @@ the SBox with which the component is initialized).
 """
 import os
 import json
+import zlib
 from math import log2, gcd, ceil
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -29,12 +30,15 @@ from sage.geometry.polyhedron.constructor import Polyhedron
 from civerly.util import vec_to_int, int_to_vec
 from civerly.util import list_of_predecessor_vector_indices
 from civerly.util import hw, hw_tau, suppress_output
-from civerly.util import _sat_get_clauses_espresso, reduction_algorithm_ST17
+from civerly.util import _write_espresso_input
+from civerly.util import _read_espresso_output
+from civerly.util import reduction_algorithm_ST17
 from civerly.util import translate_sat_clause
-from civerly.solvers import solve, _process_solution_file
+from civerly.solvers import solve, _process_solution_file, run_espresso
 from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
-from civerly.model_options import SBOX_MODELING, InvalidModelOptionException
+from civerly.model_options import SBOX_MODELING, MINIMIZER
+from civerly.model_options import InvalidModelOptionException
 from civerly.largesboxes import largesboxes
 
 
@@ -205,7 +209,9 @@ class Component(ABC):
                 continue
             elif isinstance(value, (MixedIntegerLinearProgram, DIMACS)):
                 continue
-            elif any([word in key for word in ["wordsize", "milp", "sat", "MILP", "SAT"]]):
+            elif any([word in key for word in [
+                "wordsize", "milp", "sat", "MILP", "SAT"
+            ]]):
                 continue
             elif isinstance(value, matrix_type):
                 liste.append((key, tuple([tuple(v) for v in value])))
@@ -1002,6 +1008,7 @@ class AND_CVL(Component):
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       solver=SOLVER.CRYPTOMINISAT,
+            ....:       minimizer=MINIMIZER.ESPRESSO,
             ....:       path=Path("./DOCTEST-ANDComponent-Models/"))
             ....:   with suppress_output():
             ....:       result = cipher.analyse(model_options)
@@ -1465,8 +1472,8 @@ class LinearLayer_CVL(Component):
 
             sage: from civerly.cipher import Cipher
             sage: from civerly.component import LinearLayer_CVL
+            sage: from civerly.solvers import optimize_sat
             sage: from civerly.model_options import *
-            sage: from civerly.solvers import *
             sage: from pathlib import Path
             sage: arr = [
             ....:   [1, 0, 0, 0],
@@ -2089,7 +2096,6 @@ class SBox_CVL(Component):
 
         # Contains the possible entries of ddt.
         set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
-        # set_ddt = sorted(list(set([d for dr in ddt for d in dr])))
 
         PROB = self.milp.new_variable(name="PROB", binary=True)
 
@@ -2100,7 +2106,7 @@ class SBox_CVL(Component):
             # number of equations used for the final model of the s-box.
 
             # Path to file for caching the original set of inequations
-            s_file_name = ''.join([hex(se)[2:] for se in self.S])
+            s_file_name = ''.join([f'{s_entry:x}' for s_entry in self.S])
             s_file_ineq = model_options.path / (s_file_name + ".ineq.json")
             # Load inequations if we computed them already
             if os.path.exists(s_file_ineq):
@@ -2183,7 +2189,7 @@ class SBox_CVL(Component):
                         maximization=False, solver="GLPK")  # Reduction MILP
                     Z = milp_to_minimize_milp.new_variable(
                         name="Z", binary=True)
-                    for point_index, point in enumerate(impossible_points):
+                    for point in impossible_points:
                         # Add a reduction inequation ensuring that each
                         # impossible point is removed by at least one
                         # inequation
@@ -2333,7 +2339,35 @@ class SBox_CVL(Component):
             elif model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND_ESPRESSO:
                 # Espresso minimization (logical conditioning)
                 # ----------------------------------------------------------------
-                clauses = _sat_get_clauses_espresso(posset)
+                esp_file_name = f"espresso-{zlib.crc32("".join([
+                    str(int("".join(map(str, pos)), 2))
+                    for pos in sorted(posset)
+                ]).encode("utf-8")):x}"  # rule for espresso file names
+                esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
+                esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
+
+                if os.path.exists(esp_file_out):
+                    print(
+                        f"Using existing file {esp_file_out}, "
+                        "make sure it is up to date!"
+                    )
+                else:
+                    _write_espresso_input(
+                        posset, esp_file_name, model_options.path
+                    )
+                    if model_options.minimizer is None:
+                        print(
+                            "Optimization problem for Espresso has been "
+                            f"written to {esp_file_in}.\n"
+                            "In order to minimize the clauses, execute:\n\n"
+                            "\t> espresso -epos "
+                            f"{esp_file_in} > {esp_file_out}"
+                        )
+                        self._return_immediately_ = True
+                        return
+                    elif model_options.minimizer == MINIMIZER.ESPRESSO:
+                        run_espresso(esp_file_in, esp_file_out)
+                clauses = _read_espresso_output(esp_file_out)
 
                 n_in, n_out = self.input_length, self.output_length
                 VAR = [self.MILP_IN[v] for v in range(n_in)] \
@@ -2384,6 +2418,7 @@ class SBox_CVL(Component):
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   path=Path("./DOCTEST-ToySingleSBoxCipher-Models/"))
             sage: # optional - cryptominisat # optional - espresso
             sage: with suppress_output(): cipher.analyse(model_options)
@@ -2439,7 +2474,7 @@ class SBox_CVL(Component):
                     # probability.
                     p_arr = [0 for _ in range(len(set_ddt))]
                     p_arr[set_ddt.index(ddt[i][o])] = 1
-                    posset.append(vec_to_int(i_binarr + o_binarr + p_arr))
+                    posset.append(tuple(i_binarr + o_binarr + p_arr))
 
         PROB = [self.sat.var() for _ in range(len(set_ddt))]
         SAT_VARS = self.SAT_IN + self.SAT_OUT + PROB
@@ -2447,8 +2482,37 @@ class SBox_CVL(Component):
         # espresso minimization
         # ------------------------------------------------------------
         if model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND_ESPRESSO:
-            posset = [int_to_vec(vec, len(SAT_VARS)) for vec in posset]
-            clauses = _sat_get_clauses_espresso(posset)
+            # Espresso minimization (logical conditioning)
+            # ----------------------------------------------------------------
+            esp_file_name = f"espresso-{zlib.crc32("".join([
+                str(int("".join(map(str, pos)), 2))
+                for pos in sorted(posset)
+            ]).encode("utf-8")):x}"  # rule for espresso file names
+            esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
+            esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
+
+            if os.path.exists(esp_file_out):
+                print(
+                    f"Using existing file {esp_file_out}, "
+                    "make sure it is up to date!"
+                )
+            else:
+                _write_espresso_input(
+                    posset, esp_file_name, model_options.path
+                )
+                if model_options.minimizer is None:
+                    print(
+                        "Optimization problem for Espresso has been "
+                        f"written to '{esp_file_in}'.\n"
+                        "In order to minimize the clauses, execute:\n\n"
+                        "\t$ espresso -epos "
+                        f"{esp_file_in} > {esp_file_out}"
+                    )
+                    self._return_immediately_ = True
+                    return
+                elif model_options.minimizer == MINIMIZER.ESPRESSO:
+                    run_espresso(esp_file_in, esp_file_out)
+            clauses = _read_espresso_output(esp_file_out)
 
             for clause in clauses:
                 self.sat.add_clause(translate_sat_clause(SAT_VARS, clause))

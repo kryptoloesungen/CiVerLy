@@ -32,6 +32,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(4, 10),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
@@ -54,6 +55,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(4, 10),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
@@ -76,6 +78,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(4, 10),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
@@ -98,6 +101,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(8, 16),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
@@ -124,6 +128,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(24, 26),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
@@ -145,6 +150,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(24, 26),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
@@ -166,6 +172,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(24, 26),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
@@ -194,6 +201,7 @@ class SIMON_Variants_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   minimizer=MINIMIZER.ESPRESSO,
             ....:   solve_range=(4, 8),
             ....:   path=Path("./DOCTEST-Simon-Variants-Models/"))
             sage: # optional - cryptominisat
