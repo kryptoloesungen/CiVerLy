@@ -1,0 +1,31 @@
+name: Run Basic Doctests
+
+on:
+  push:
+    branches:
+      - '*'
+
+# cancels pipeline runs from old commits if a new one is pushed
+concurrency:
+  group: run-basic-doctests_${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-basic-doctests:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Enable Nix Caching
+      uses: DeterminateSystems/magic-nix-cache-action@main
+      with:
+        use-flakehub: false
+
+    - name: Run Basic Doctests
+      run: nix develop --command make test

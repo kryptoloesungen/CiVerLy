@@ -1,0 +1,31 @@
+name: Run Full Doctests
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# cancels pipeline runs from old pull requests if a new one is pushed
+concurrency:
+  group: run-full-doctests_${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-full-doctests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Enable Nix Caching
+      uses: DeterminateSystems/magic-nix-cache-action@main
+      with:
+        use-flakehub: false
+
+    - name: Run Full Doctests (without gurobi)
+      run: nix develop --command make test-no-gurobi
