@@ -16,7 +16,7 @@ cryptosolutions GmbH now continues to develop and maintain the project.
 
 ## Documentation
 
-The full documentation is available at [docs.civerly.cryptosolutions.de](https://docs.civerly.cryptosolutions.de).
+The full documentation is available at [kryptoloesungen.github.io/CiVerLy](https://kryptoloesungen.github.io/CiVerLy).
 
 ## Installation
 
@@ -25,7 +25,7 @@ To install CiVerLy, simply run:
 sage -pip install git+https://github.com/kryptoloesungen/CiVerLy
 ```
 
-We also have prebuilt docker images and AppImages which come with solvers included. Check out the [documentation](https://docs.civerly.cryptosolutions.de/installation/civerly.html) for more information.
+We also have prebuilt docker images and AppImages which come with solvers included. Check out the [documentation](https://kryptoloesungen.github.io/CiVerLy/installation/docker.html) for more information.
 
 ## License
 This project is licensed under the EUROPEAN UNION PUBLIC LICENCE v. 1.2 (EUPL 1.2) with an additional non-endorsement clause; see [LICENSE](LICENSE) for details.
