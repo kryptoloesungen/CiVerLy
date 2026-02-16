@@ -8,13 +8,8 @@ To do so, download the image and then run:
 
 .. code-block:: console
 
-   $ # Linux
    $ wget https://github.com/kryptoloesungen/CiVerLy/releases/latest/download/civerly-docker.tar.gz
-   $ docker load < civerly-docker.tar.gz
-
-   $ # Mac
-   $ wget https://github.com/kryptoloesungen/CiVerLy/releases/latest/download/civerly-docker-mac.tar.gz
-   $ docker load < civerly-docker-mac.tar.gz
+   $ docker load < civerly-docker.tar.gz:<version>
 
 Then, to start the container run:
 

@@ -80,33 +80,6 @@ jobs:
         name: civerly-docker.tar.gz
         path: civerly-docker.tar.gz
 
-  build-docker-arm:
-    runs-on: macos-latest
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@main
-
-    - name: Enable Nix Caching
-      uses: DeterminateSystems/magic-nix-cache-action@main
-      with:
-        use-flakehub: false
-
-    - name: Build Docker Image (ARM)
-      run: nix build .#packages.aarch64-linux.docker
-
-    - name: Copy Artifact
-      run: cp result civerly-docker-mac.tar.gz
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: civerly-docker-mac.tar.gz
-        path: civerly-docker-mac.tar.gz
-
   build-appimage:
     runs-on: ubuntu-latest
 
@@ -135,7 +108,7 @@ jobs:
         path: civerly.AppImage
 
   create-release:
-    needs: [build-docker-x86, build-docker-arm, build-appimage]
+    needs: [build-docker-x86, build-appimage]
     runs-on: ubuntu-latest
 
     steps:
@@ -147,5 +120,4 @@ jobs:
       with:
         files: |
           civerly-docker.tar.gz/civerly-docker.tar.gz
-          civerly-docker-mac.tar.gz/civerly-docker-mac.tar.gz
           civerly.AppImage/civerly.AppImage
