@@ -9,13 +9,13 @@ To do so, download the image and then run:
 .. code-block:: console
 
    $ wget https://github.com/kryptoloesungen/CiVerLy/releases/latest/download/civerly-docker.tar.gz
-   $ docker load < civerly-docker.tar.gz:<version>
+   $ docker load < civerly-docker.tar.gz
 
 Then, to start the container run:
 
 .. code-block:: console
 
-   $ docker run -it civerly
+   $ docker run -it civerly:<version>
 
 This will drop you into a shell with CiVerLy and it dependencies available.
 
