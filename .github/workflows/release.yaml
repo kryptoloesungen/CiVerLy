@@ -1,0 +1,151 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release_${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Enable Nix Caching
+      uses: DeterminateSystems/magic-nix-cache-action@main
+      with:
+        use-flakehub: false
+
+    - name: Build Docs
+      run: nix build .#docs-html
+
+    - name: Upload Pages Artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: result
+
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+  build-docker-x86:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Enable Nix Caching
+      uses: DeterminateSystems/magic-nix-cache-action@main
+      with:
+        use-flakehub: false
+
+    - name: Build Docker Image
+      run: nix build .#docker
+
+    - name: Copy Artifact
+      run: cp result civerly-docker.tar.gz
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: civerly-docker.tar.gz
+        path: civerly-docker.tar.gz
+
+  build-docker-arm:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Enable Nix Caching
+      uses: DeterminateSystems/magic-nix-cache-action@main
+      with:
+        use-flakehub: false
+
+    - name: Build Docker Image (ARM)
+      run: nix build .#packages.aarch64-linux.docker
+
+    - name: Copy Artifact
+      run: cp result civerly-docker-mac.tar.gz
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: civerly-docker-mac.tar.gz
+        path: civerly-docker-mac.tar.gz
+
+  build-appimage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Enable Nix Caching
+      uses: DeterminateSystems/magic-nix-cache-action@main
+      with:
+        use-flakehub: false
+
+    - name: Build AppImage
+      run: nix build .#appimage
+
+    - name: Copy Artifact
+      run: cp result civerly.AppImage
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: civerly.AppImage
+        path: civerly.AppImage
+
+  create-release:
+    needs: [build-docker-x86, build-docker-arm, build-appimage]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          civerly-docker.tar.gz/civerly-docker.tar.gz
+          civerly-docker-mac.tar.gz/civerly-docker-mac.tar.gz
+          civerly.AppImage/civerly.AppImage
