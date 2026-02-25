@@ -2,7 +2,7 @@
 Automated Tests
 ===============
 
-Naturally, we also implemented automated testing which is a indispensable foothold of modern software development.
+Naturally, we also implemented automated testing which is an indispensable foothold of modern software development.
 On the one hand, these ensure that our models actually lead to the correct results.
 On the other hand, they also make it easy to detect if further additions to the CiVerLy code break any functionality that was working correctly before.
 Again, we mimic what ``sage`` does.
@@ -16,7 +16,7 @@ Tests involving external dependencies
 For obvious reasons, our tests must involve external tools like MILP and SAT solvers.
 This however comes with some pitfalls.
 For instance, consider a developer that wants to run all CiVerLy tests but who has not installed all solvers used by CiVerLy.
-Luckily, ``sage`` provides a solution for this as test can be marked as optional.
+Luckily, ``sage`` provides a solution for this as tests can be marked as optional.
 The implementations of ciphers in CiVerLy commonly feature tests like the following.
 
 .. code-block:: sage

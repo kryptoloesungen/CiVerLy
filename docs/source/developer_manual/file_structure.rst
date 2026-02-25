@@ -70,7 +70,7 @@ Project File
 
 LICENSE
 =======
-``LICENSE`` conatins the licence which is EUROPEAN UNION PUBLIC LICENCE v. 1.2 (EUPL 1.2) with an additional non-endorsement clause.
+``LICENSE`` contains the license which is EUROPEAN UNION PUBLIC LICENCE v. 1.2 (EUPL 1.2) with an additional non-endorsement clause.
 
 
 Nix
