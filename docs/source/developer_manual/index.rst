@@ -15,3 +15,4 @@ Of course, the source code of CiVerLy as well as the optional but highly recomme
    nix
    building_docs
    tests
+   contributing_docs

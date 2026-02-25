@@ -13,8 +13,8 @@ They include not only CiVerLy but also SageMath and most of the supported solver
 GLPK
 ====
 
-`GLPK <https://www.gnu.org/software/glpk/>`_, the GNU Linear Programming Kit, is as MILP solver.
-GLPK is is rather slow.
+`GLPK <https://www.gnu.org/software/glpk/>`_, the GNU Linear Programming Kit, is a MILP solver.
+GLPK is rather slow.
 If possible, use another MILP solver.
 GLPK is included in the Docker images and in the AppImage.
 
