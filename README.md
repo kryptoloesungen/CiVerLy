@@ -18,6 +18,63 @@ cryptosolutions GmbH now continues to develop and maintain the project.
 
 The full documentation is available at [kryptoloesungen.github.io/CiVerLy](https://kryptoloesungen.github.io/CiVerLy).
 
+## Quickstart (Sage session)
+
+The following example shows how to install CiVerLy, import the built‑in AES implementation, configure a simple model, and run an analysis in an interactive Sage session.
+
+1. **Install CiVerLy (inside Sage)**:
+
+   ```bash
+   sage -pip install git+https://github.com/kryptoloesungen/CiVerLy
+   ```
+
+2. **Start a Sage REPL**:
+
+   ```bash
+   sage
+   ```
+
+3. **Run a minimal AES analysis** (copy/paste into the Sage prompt):
+
+   ```python
+   from pathlib import Path
+
+   # Import the AES implementation and modeling options
+   from civerly.cipher_implementations.aes import AES_CVL
+   from civerly.model_options import *
+
+   # Instantiate a 10-round AES cipher
+   aes = AES_CVL(R=10, name="AES-10r")
+
+   # Configure a simple word-wise MILP model for differential cryptanalysis
+   model_options = MODEL_OPTIONS(
+       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+       optimization=OPTIMIZATION.MILP,
+       granularity=GRANULARITY.WORDWISE,
+       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+       solver=SOLVER.SCIP,  # requires SCIP to be installed
+       path=Path("./AES-Models/"),
+   )
+
+   # Generate the model and run the solver, printing the best trail weight
+   aes.analyse(model_options)
+   ```
+
+4. **Generate a PDF report from the solution**:
+
+   After a successful run of ``aes.analyse(model_options)``, you can create a
+   PDF visualization of the trail (requires a LaTeX installation, see the
+   documentation for details):
+
+   ```python
+   aes.generate_report(model_options)
+   ```
+
+   This writes a ``AES-10r.pdf`` report (and an intermediate ``.tex`` file)
+   into the same directory given by ``model_options.path`` (here: ``./AES-Models/``).
+
+This will write the MILP model files into `./AES-Models/` and print, among other information, the number of active S-boxes for 10-round AES. For more examples and configuration options, see the [user manual](https://kryptoloesungen.github.io/CiVerLy/user_manual/index.html) and the [AES documentation](https://kryptoloesungen.github.io/CiVerLy/documentation/implementations/aes.html).
+
 ## Installation
 
 To install CiVerLy, simply run:
