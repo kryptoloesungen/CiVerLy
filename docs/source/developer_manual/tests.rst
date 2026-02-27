@@ -34,7 +34,7 @@ More concretely,
 
 .. code-block:: console
 
-   env CIVERLY_DISABLE_GUROBI=1 sage -t --optional=sage,scip,glpk,cryptominisat,cadical,espresso civerly/src/civerly
+   env CIVERLY_DISABLE_GUROBI=1 sage -t --optional=sage,scip,glpk,cryptominisat,cadical,espresso src/civerly
 
 will run all tests in CiVerLy except for those that require Gurobi.
 If the tests invoke Gurobi anyway, CiVerLy will stop with an error.
@@ -43,7 +43,21 @@ If the tests invoke Gurobi anyway, CiVerLy will stop with an error.
 Running tests
 ^^^^^^^^^^^^^
 
-As the example above already shows, tests are executed using ``sage -t``.
+The quickest way to run the test suite is through the Makefile targets provided in the project root:
+
+.. code-block:: console
+
+   $ make test              # run all tests (no long-running tests, no solver flags)
+   $ make test-no-gurobi    # run all tests with all solvers except Gurobi (includes --long)
+
+The ``test-no-gurobi`` target is the same configuration used in CI for pull requests.
+For solvers beyond the predefined sets, use the generic pattern target, which passes the given name as an optional flag:
+
+.. code-block:: console
+
+   $ make test-scip         # equivalent to: sage -t --optional=sage,scip --long src/civerly
+
+Tests are executed using ``sage -t``.
 Extensive documentation for the ``sage`` doctesting framework is available `online <https://doc.sagemath.org/html/en/developer/doctesting.html>`_.
 Here, we want to highlight some useful options.
 First, we can mark doctests that will take long time as follows:
