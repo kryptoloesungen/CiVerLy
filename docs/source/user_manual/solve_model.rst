@@ -107,7 +107,7 @@ SAT
 As SAT is a decision and not an optimization problem, we need multiple SAT instances to find an optimal trail.
 To generate those, set the solver to ``None`` in the model options and then run the ``cipher.analyse`` function.
 This will generate model that encode the question whether there exists a trail with weight less or equal `W` for all `W` in the solve range, i.e., for `0 \leq W < 100` per default.
-You can tackle these SATs then with a SAT solver of you choice.
+You can tackle these SATs then with a SAT solver of your choice.
 Every time you solve a problem, your bound improves.
 That is, when you solve the problem for the weight bound `W`, you get either ``SAT`` or ``UNSAT``.
 If the result is ``SAT``, this means that the optimal trail has weight less or equal `W`.

@@ -21,7 +21,7 @@ If the cipher consists of subciphers, which in turn are cipher objects, we must 
 This is done recursively, by building up a tree structure of the subciphers and components, and subsequently using Breadth-First-Search to determine a fitting node ordering.
 
 Note that a priori, the internal structure of each subcipher is ignored, as only the input and output variables are displayed, while the other variables (possibly associated to components inside the subcipher) are treated as dummy variables with no particular meaning regarding the cipher structure.
-However, when the subcipher itself is modeled, we need to translate all the previously ignored variables correctly, as now they do in fact resemeble the subciphers structure.
+However, when the subcipher itself is modeled, we need to translate all the previously ignored variables correctly, as now they do in fact resemble the subciphers structure.
 In order to achieve this, CiVerLy generates translation dictionaries during the modeling step, one for each non-trivial subcipher.
 These dictionaries are stored as json files and will be applied during the report generation.
 
