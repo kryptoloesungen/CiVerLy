@@ -18,23 +18,21 @@ cryptosolutions GmbH now continues to develop and maintain the project.
 
 The full documentation is available at [kryptoloesungen.github.io/CiVerLy](https://kryptoloesungen.github.io/CiVerLy).
 
+## Installation
+
+See `docs/build/` for the reference manual (HTML/PDF). The installation instructions are part of that manual (e.g. `docs/build/html/installation/`).
+
 ## Quickstart (Sage session)
 
-The following example shows how to install CiVerLy, import the built‑in AES implementation, configure a simple model, and run an analysis in an interactive Sage session.
+The following example shows how to import the built‑in AES implementation, configure a simple model, and run an analysis in an interactive Sage session (after installing CiVerLy; see the docs in `docs/build/`).
 
-1. **Install CiVerLy (inside Sage)**:
-
-   ```bash
-   sage -pip install git+https://github.com/kryptoloesungen/CiVerLy
-   ```
-
-2. **Start a Sage REPL**:
+1. **Start a Sage REPL**:
 
    ```bash
    sage
    ```
 
-3. **Run a minimal AES analysis** (copy/paste into the Sage prompt):
+2. **Run a minimal AES analysis** (copy/paste into the Sage prompt):
 
    ```python
    from pathlib import Path
@@ -60,7 +58,7 @@ The following example shows how to install CiVerLy, import the built‑in AES im
    aes.analyse(model_options)
    ```
 
-4. **Generate a PDF report from the solution**:
+3. **Generate a PDF report from the solution**:
 
    After a successful run of ``aes.analyse(model_options)``, you can create a
    PDF visualization of the trail (requires a LaTeX installation, see the
@@ -74,15 +72,5 @@ The following example shows how to install CiVerLy, import the built‑in AES im
    into the same directory given by ``model_options.path`` (here: ``./AES-Models/``).
 
 This will write the MILP model files into `./AES-Models/` and print, among other information, the number of active S-boxes for 10-round AES. For more examples and configuration options, see the [user manual](https://kryptoloesungen.github.io/CiVerLy/user_manual/index.html) and the [AES documentation](https://kryptoloesungen.github.io/CiVerLy/documentation/implementations/aes.html).
-
-## Installation
-
-To install CiVerLy, simply run:
-```
-sage -pip install git+https://github.com/kryptoloesungen/CiVerLy
-```
-
-We also have prebuilt docker images and AppImages which come with solvers included. Check out the [documentation](https://kryptoloesungen.github.io/CiVerLy/installation/docker.html) for more information.
-
 ## License
 This project is licensed under the EUROPEAN UNION PUBLIC LICENCE v. 1.2 (EUPL 1.2) with an additional non-endorsement clause; see [LICENSE](LICENSE) for details.
