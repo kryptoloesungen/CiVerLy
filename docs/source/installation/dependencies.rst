@@ -27,8 +27,9 @@ SCIP is included in the Docker images and in the AppImage.
 
 Gurobi
 ======
-`Gurobi <https://www.gurobi.com/>`_ is commercial MILP solver.
+`Gurobi <https://www.gurobi.com/>`_ is a commercial MILP solver.
 That is, a licence is required to use it.
+Gurobi offers a `free academic licence <https://www.gurobi.com/academia/academic-program-and-licenses/>`_ for researchers at recognised academic institutions.
 Gurobi is non-free software and hence it is not included in the Docker images or in the AppImage.
 
 CryptoMiniSat

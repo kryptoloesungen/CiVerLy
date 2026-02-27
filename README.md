@@ -20,11 +20,11 @@ The full documentation is available at [kryptoloesungen.github.io/CiVerLy](https
 
 ## Installation
 
-See `docs/build/` for the reference manual (HTML/PDF). The installation instructions are part of that manual (e.g. `docs/build/html/installation/`).
+See the [online documentation](https://kryptoloesungen.github.io/CiVerLy/installation/) for installation instructions.
 
 ## Quickstart (Sage session)
 
-The following example shows how to import the built‑in AES implementation, configure a simple model, and run an analysis in an interactive Sage session (after installing CiVerLy; see the docs in `docs/build/`).
+The following example shows how to import the built‑in AES implementation, configure a simple model, and run an analysis in an interactive Sage session (after installing CiVerLy; see the [installation docs](https://kryptoloesungen.github.io/CiVerLy/installation/)).
 
 1. **Start a Sage REPL**:
 
