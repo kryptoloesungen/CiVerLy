@@ -20,7 +20,7 @@ CiVerLy then connects the individual models into one model for the complete ciph
 
 Choosing the Model Options
 ==========================
-Below, we give a exemplary code snippet that configures the model options for an CiVerLy analysis.
+Below, we give an exemplary code snippet that configures the model options for an CiVerLy analysis.
 
 .. code-block::
 
@@ -95,14 +95,14 @@ General Options
 * ``solve_range``
 
   This option sets the weight interval in which CiVerLy will generate SAT models.
-  For SAT this default to (0, 100), i.e., by default CiVerLy trails with weight 0 to 100 which is usually is a reasonable range.
+  For SAT this default to (0, 100), i.e., by default CiVerLy trails with weight 0 to 100 which is usually a reasonable range.
   Hence, you can mostly ignore this option for SAT.
   Ignore this options for MILP.
 
 * ``sat_precision``
 
   For certain S-boxes the SAT modeling in CiVerLy is an approximation. This integer parameter determines the precision, i.e., the number of decimal places that are used for the approximation.
-  This default to 0.
+  This defaults to 0.
   Increasing it will have a drastic impact on performance.
 
 Techniques to model Components
@@ -110,7 +110,7 @@ Techniques to model Components
 
 For certain components, namely linear layers and S-boxes, CiVerLy supports different modeling techniques.
 We list the corresponding keys below.
-Of course, if a cipher does not contain any S-box or no linear layer component, then the corresponding options does not have to be set.
+Of course, if a cipher does not contain any S-box or no linear layer component, then the corresponding option does not have to be set.
 
 * ``linear_layer_modeling``
 
@@ -136,7 +136,7 @@ Recommendations
 ===============
 
 Giving general recommendations is, of course, not easy.
-As every cipher is different, we must expect cases where the foloowing recommendations are non-optimal.
+As every cipher is different, we must expect cases where the following recommendations are non-optimal.
 Therefore, we strongly recommend to try different options on small instances of a cipher before modeling real instances.
 
 For AES-like ciphers, i.e., cipher consisting of an S-box layer, a step permuting the cells and a MixColumns step, we recommend to use wordwise MILP modeling with the ``GENERALIZED_WORDWISE`` linear layer modeling.

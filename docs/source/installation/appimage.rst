@@ -11,7 +11,7 @@ Download the image and make it executable:
    $ wget https://github.com/kryptoloesungen/CiVerLy/releases/latest/download/civerly.AppImage
    $ chmod +x civerly.AppImage
 
-Then, simply excecute the AppImage
+Then, simply execute the AppImage
 
 .. code-block:: console
 

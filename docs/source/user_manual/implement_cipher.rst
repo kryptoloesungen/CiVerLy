@@ -47,7 +47,7 @@ This is demonstrated with the code below.
 
 
 Next, we differentiate between ciphers containing only S-boxes as non-linear components, which are captured by the ``SBoxCipher`` class and its subclasses, respectively.
-We want to emphasize again that in constrast to SAT modeling, MILP modeling is only supported for instances of the ``SBoxCipher`` class and the classes inheriting from it, since ``SBox_CVL`` is the only non-linear component that may be modeled using MILP in CiVerLy.
+We want to emphasize again that in contrast to SAT modeling, MILP modeling is only supported for instances of the ``SBoxCipher`` class and the classes inheriting from it, since ``SBox_CVL`` is the only non-linear component that may be modeled using MILP in CiVerLy.
 Adding components which are not allowed causes an error directly when executing ``add_subcipher``:
 
 .. code-block::
@@ -65,7 +65,7 @@ Adding components which are not allowed causes an error directly when executing 
    # and is not allowed in SBoxCiphers.
    ciph.add_subcipher(modadd, [(ciph.IN, (i, i)) for i in range(16)])
 
-   # In constrast, this works:
+   # In contrast, this works:
    ciph.add_subcipher(sb, [(ciph.IN, (i, i)) for i in range(4)])
 
 
