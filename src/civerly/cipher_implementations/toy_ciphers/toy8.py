@@ -20,7 +20,7 @@ class Toy8:
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-Toy8-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)

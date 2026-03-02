@@ -311,6 +311,32 @@ def _before_brackets(st):
     return int(st[1: st.index('[')], 10)
 
 
+def _float_or_int(value):
+    """
+    Cast `value` to float or int if possible.
+
+    EXAMPLES::
+
+        sage: from civerly.solvers import _float_or_int
+        sage: _float_or_int(42.0)
+        42
+        sage: _float_or_int(42.5)
+        42.5
+        sage: _float_or_int("42.000")
+        42
+        sage: _float_or_int("42.001")
+        42.001
+        sage: _float_or_int("3.415037499300e+00")
+        3.4150374993
+    """
+    value = float(value)
+    if value.is_integer() or abs(value - int(round(value))) < 1e-8:
+        value = int(round(value))
+    else:
+        value = round(value, 10)
+    return value
+
+
 def _generate_constraints_sum_leq_int_LS24(sat, sum_arr, num):
     r"""
     Helper method to implement a sequential counter in SAT, in order to model
@@ -344,10 +370,10 @@ def _generate_constraints_sum_leq_int_LS24(sat, sum_arr, num):
         ....:           sat, [(1, cl) for cl in range(1, NUM_CLAUSES+1)], bound
         ....:       )
         ....:       _ = new_sat.write(path / 'constraints.cnf')
-        ....:       solve(
+        ....:       CRYPTOMINISAT_CVL().invoke(
         ....:           path / 'constraints.cnf',
         ....:           path / 'constraints.sat',
-        ....:           SOLVER.CRYPTOMINISAT)
+        ....:       )
         ....:       with open(path /'constraints.sat') as f:
         ....:           status = f.readlines()[0].strip('\n')
         ....:           f.close()
@@ -508,7 +534,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
     from civerly.component import SBox_CVL, LinearLayer_CVL
-    from civerly.solvers import solve, _process_solution_file
+    from civerly.solvers import NO_MILP_SOLVER_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
 
@@ -580,14 +606,13 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
         with suppress_output():
             milp_to_minimize_milp.write_mps(str(file_mps))
 
-        if model_options.solver:
-            solve(
+        if not isinstance(model_options.milp_solver, NO_MILP_SOLVER_CVL):
+            model_options.milp_solver.solve(
                 input_file_name=file_mps,
                 output_file_name=file_sol,
-                solver=model_options.solver
             )
         else:
-            # if there is no solver in model_options, the user has to solve
+            # if there is no milp_solver set in model_options, the user has to solve
             # the MILP manually
             if isinstance(comp, SBox_CVL):
                 comp_in_print = "SBox"
@@ -601,7 +626,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
             comp._return_immediately_ = True
             return
     final_choices = []  # solution of reduction algorithm
-    results, _ = _process_solution_file(file_sol, None)
+    results, _ = model_options.milp_solver.process_solution_file(file_sol)
 
     # STEP 3:
     # use the found solution to generate a minimial MILP that models the

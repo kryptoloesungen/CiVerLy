@@ -22,7 +22,7 @@ class Toy1:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-Toy1-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -50,7 +50,7 @@ class Toy1:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-Toy1-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -74,7 +74,7 @@ class Toy1:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-Toy1-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -104,31 +104,30 @@ class Toy1:
             sage: milp_model = cipher.model(model_options=model_options)
             474 variables and 346 constraints were written to
             'DOCTEST-Toy1-Models/Toy1.mps'
-            sage: from civerly.solvers import solve, get_objective_value
             sage: from pathlib import Path
-            sage: solve( # optional - gurobi
+            sage: GUROBI_CVL().solve( # optional - gurobi
             ....:   input_file_name=Path("DOCTEST-Toy1-Models/Toy1.mps"),
             ....:   output_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
-            ....:   solver=SOLVER.GUROBI)
-            sage: get_objective_value( # optional - gurobi
-            ....:   sol_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
-            ....:   solver=SOLVER.GUROBI)
+            ....: )
+            sage: GUROBI_CVL().process_solution_file( # optional - gurobi
+            ....:   solution_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....: )[1]
             0
-            sage: solve( # optional - scip
+            sage: SCIP_CVL().solve( # optional - scip
             ....:   input_file_name=Path("DOCTEST-Toy1-Models/Toy1.mps"),
             ....:   output_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
-            ....:   solver=SOLVER.SCIP)
-            sage: get_objective_value( # optional - scip
-            ....:   sol_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
-            ....:   solver=SOLVER.SCIP)
+            ....: )
+            sage: SCIP_CVL().process_solution_file( # optional - scip
+            ....:   solution_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....: )[1]
             0
-            sage: solve( # optional - glpk
+            sage: GLPK_CVL().solve( # optional - glpk
             ....:   input_file_name=Path("DOCTEST-Toy1-Models/Toy1.mps"),
             ....:   output_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
-            ....:   solver=SOLVER.GLPK)
-            sage: get_objective_value( # optional - glpk
-            ....:   sol_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
-            ....:   solver=SOLVER.GLPK)
+            ....: )
+            sage: GLPK_CVL().process_solution_file( # optional - glpk
+            ....:   solution_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....: )[1]
             0
 
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
@@ -139,7 +138,7 @@ class Toy1:
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   path=Path("./DOCTEST-Toy1-Models/"))
             sage: # optional - gurobi

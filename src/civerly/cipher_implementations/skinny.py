@@ -278,7 +278,7 @@ class SKINNY_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - scip
             22752 variables and 23505 constraints were written to
@@ -293,7 +293,7 @@ class SKINNY_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - scip
             7136 variables and 7361 constraints were written to
@@ -309,7 +309,7 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - scip
             9312 variables and 9585 constraints were written to
@@ -324,7 +324,7 @@ class SKINNY_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - gurobi
             22752 variables and 23505 constraints were written to
@@ -339,7 +339,7 @@ class SKINNY_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - gurobi
             7136 variables and 7361 constraints were written to
@@ -355,7 +355,7 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - gurobi
             9312 variables and 9585 constraints were written to
@@ -375,8 +375,8 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)
@@ -399,8 +399,8 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)
@@ -423,7 +423,7 @@ class SKINNY_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - gurobi
             7136 variables and 7521 constraints were written to
@@ -439,8 +439,8 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.GUROBI,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   milp_solver=GUROBI_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - gurobi # optional - espresso
             9264 variables and 10161 constraints were written to
@@ -456,8 +456,8 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.SCIP,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   milp_solver=SCIP_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options) # optional - scip # optional - espresso
             9264 variables and 10161 constraints were written to
@@ -475,8 +475,8 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(4, 10),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)
@@ -486,7 +486,7 @@ class SKINNY_CVL:
             [  4 ,  7] (trying w =   5) : SAT
             [  4 ,  5] (trying w =   4) : UNSAT
             5
-            sage: shutil.rmtree("DOCTEST-SKINNY-Models")
+            sage: shutil.rmtree("DOCTEST-SKINNY-Models") # optional - cryptominisat # optional - espresso
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -498,8 +498,8 @@ class SKINNY_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(4, 10),
             ....:   path=Path("./DOCTEST-SKINNY-Models/"))
             sage: skinny.analyse(model_options)
@@ -509,7 +509,7 @@ class SKINNY_CVL:
             [  4 ,  7] (trying w =   5) : SAT
             [  4 ,  5] (trying w =   4) : UNSAT
             5
-            sage: shutil.rmtree("DOCTEST-SKINNY-Models")
+            sage: shutil.rmtree("DOCTEST-SKINNY-Models") # optional - cadical # optional - espresso
 
         Remove the files:
 

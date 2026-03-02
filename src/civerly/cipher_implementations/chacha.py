@@ -37,7 +37,7 @@ class ChachaQRF_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   solve_range=(0, 8),
             ....:   path=Path("./DOCTEST-ChachaQRF-Models/"))
             sage: # optional - cryptominisat
@@ -62,7 +62,7 @@ class ChachaQRF_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CADICAL,
+            ....:   sat_solver=CADICAL_CVL(),
             ....:   solve_range=(0, 8),
             ....:   path=Path("./DOCTEST-ChachaQRF-Models/"))
             sage: # optional - cadical
@@ -87,7 +87,7 @@ class ChachaQRF_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-ChachaQRF-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -183,7 +183,7 @@ class Chacha_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   solve_range=(0, 4),
             ....:   path=Path("./DOCTEST-Chacha-Models/"))
             sage: # optional - cryptominisat
