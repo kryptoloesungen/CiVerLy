@@ -22,8 +22,8 @@ class Toy7:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(0, 8),
             ....:   path=Path("./DOCTEST-Toy7-Models/"))
             sage: cipher.analyse(model_options=model_options)

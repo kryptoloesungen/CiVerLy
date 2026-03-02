@@ -32,8 +32,8 @@ class WEAK_PRESENT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.GUROBI,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   milp_solver=GUROBI_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path(dir_name)
             ....: )
             sage: weak_cipher.analyse(model_options) # optional - gurobi # optional - espresso
@@ -41,6 +41,29 @@ class WEAK_PRESENT_CVL:
             3.4150374993
             sage: import shutil
             sage: shutil.rmtree(dir_name) # optional - gurobi
+
+        Use SCIP solver::
+
+            sage: from civerly.cipher_implementations.weak_present \
+            ....:     import WEAK_PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: weak_cipher = WEAK_PRESENT_CVL(R=2)
+            sage: dir_name = "DOCTEST-WEAK_PRESENT-Models"
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.MILP,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   milp_solver=SCIP_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
+            ....:   path=Path(dir_name)
+            ....: )
+            sage: weak_cipher.analyse(model_options) # optional - scip # optional - espresso
+            2560 variables and 4417 constraints were written to ...
+            3.4150374993
+            sage: import shutil
+            sage: shutil.rmtree(dir_name) # optional - scip # optional - espresso
 
         Now for linear cryptanalysis the cipher with MILP:
 
@@ -55,8 +78,8 @@ class WEAK_PRESENT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.GUROBI,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   milp_solver=GUROBI_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path(dir_name)
             ....: )
             sage: weak_cipher.analyse(model_options) # optional - gurobi # optional - espresso

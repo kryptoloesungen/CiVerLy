@@ -26,8 +26,8 @@ class Toy3:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-Toy3-Models/"))
             sage: cipher.analyse(model_options)
             798 variables and 3591 clauses were written to
@@ -56,8 +56,8 @@ class Toy3:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-Toy3-Models/"))
             sage: cipher.analyse(model_options)
             Using existing file DOCTEST-Toy3-Models/espresso-5a255793_out.pla,
@@ -92,7 +92,7 @@ class Toy3:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-Toy3-Models/"))
             sage: # optional - gurobi
             sage: cipher.analyse(model_options)
@@ -119,8 +119,8 @@ class Toy3:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=None,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=None,
             ....:   path=Path("./DOCTEST-Toy3-Models/"))
             sage: cipher.analyse(model_options)
             Optimization problem for Espresso has been written to...

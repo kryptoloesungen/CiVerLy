@@ -29,7 +29,7 @@ class GIFT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options) # optional - scip
@@ -37,7 +37,7 @@ class GIFT_CVL:
             'DOCTEST-GIFT-Models/GIFT.mps'
             3.4150374993
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True) # optional - scip
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
@@ -48,8 +48,8 @@ class GIFT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.SCIP,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   milp_solver=SCIP_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options) # optional - scip # optional - espresso
@@ -57,7 +57,7 @@ class GIFT_CVL:
             'DOCTEST-GIFT-Models/GIFT.mps'
             3.4150374993
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True) # optional - scip # optional - espresso
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
@@ -68,7 +68,7 @@ class GIFT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options) # optional - scip
@@ -76,7 +76,7 @@ class GIFT_CVL:
             'DOCTEST-GIFT-Models/GIFT.mps'
             3.4150374993
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True) # optional - scip
+            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
 
         Model the cipher with SAT using different values for ``sat_precision``:
 
@@ -91,8 +91,8 @@ class GIFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options)
@@ -122,8 +122,8 @@ class GIFT_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   solve_range=(0, 10),
             ....:   sat_precision=1,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options)
@@ -155,8 +155,8 @@ class GIFT_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   solve_range=(0, 10),
             ....:   sat_precision=1,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=None,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=None,
             ....:   path=Path("./DOCTEST-GIFT-Models/")
             ....: )
             sage: gift_cipher.analyse(model_options)

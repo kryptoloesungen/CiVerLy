@@ -24,8 +24,8 @@ class Toy4:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-Toy4-Models/"))
             sage: cipher.analyse(model_options=model_options)
             288 variables and 1537 clauses were written to
@@ -54,8 +54,8 @@ class Toy4:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-Toy4-Models/"))
             sage: cipher.analyse(model_options=model_options)
             360 variables and 897 clauses were written to
@@ -85,7 +85,7 @@ class Toy4:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.GUROBI, \
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-Toy4-Models/"))
             sage: # optional - gurobi
             sage: cipher.analyse(model_options)

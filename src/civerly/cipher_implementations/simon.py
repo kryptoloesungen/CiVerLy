@@ -83,8 +83,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -105,8 +105,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -127,8 +127,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -149,8 +149,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(16, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -175,8 +175,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -198,8 +198,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -221,8 +221,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)
@@ -244,8 +244,8 @@ class SIMON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(10, 20),
             ....:   path=Path("./DOCTEST-Simon-Models/"))
             sage: cipher.analyse(model_options=model_options)

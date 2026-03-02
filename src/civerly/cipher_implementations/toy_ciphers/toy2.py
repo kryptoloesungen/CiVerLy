@@ -22,7 +22,7 @@ class Toy2:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-Toy2-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -50,7 +50,7 @@ class Toy2:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-Toy2-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -77,7 +77,7 @@ class Toy2:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-Toy2-Models/"))
             sage: # optional - gurobi
             sage: cipher.analyse(model_options=model_options)

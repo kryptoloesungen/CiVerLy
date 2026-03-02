@@ -48,12 +48,10 @@ import glob
 from math import ceil, sqrt
 
 from civerly.component import Component
-from civerly.solvers import solve, get_objective_value
-from civerly.solvers import _process_solution_file, optimize_sat
 from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.model_options import CRYPTANALYSIS
 from civerly.model_options import InvalidModelOptionException
-from civerly.model_options import NoSolverWarning
+from civerly.solvers import NoSolverWarning
 from civerly.util import _before_brackets, _between_brackets
 from civerly.util import suppress_output, translate_sat_clause
 from civerly.trail import TrailNode
@@ -913,13 +911,19 @@ class Cipher:
             sage: from civerly.cipher_implementations.present import PRESENT_CVL
             sage: present = PRESENT_CVL(2)
             sage: latex(present)
-            \documentclass{article}
+            \documentclass[runningheads]{llncs}
             ...
             \end{document}
         """
-        STRING = "\\documentclass{article}\n"
+        STRING = "\\documentclass[runningheads]{llncs}\n"
+        STRING += "\\usepackage{amssymb}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
-        STRING += "\\usetikzlibrary{arrows}\n"
+        STRING += "\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n"
+        STRING += "\\usetikzlibrary{calc}\n"
+        STRING += "\\usetikzlibrary{positioning, fit, shapes.geometric}\n"
+        STRING += "\\usetikzlibrary{decorations.text}\n"
+        STRING += "\\usetikzlibrary{decorations.pathreplacing,calligraphy}\n"
+        STRING += "\\usetikzlibrary{patterns}\n\\usetikzlibrary{arrows}\n"
         STRING += "\\usepackage{graphicx}\n"
         STRING += "\\usepackage{calc}\n"
         STRING += "\\newsavebox{\\tempbox}\n"
@@ -1474,38 +1478,35 @@ class Cipher:
         """
         if model_options.optimization == OPTIMIZATION.MILP:
             self.model(model_options)
-            if model_options.solver is None:
+            if model_options.milp_solver is None:
                 raise NoSolverWarning()
             else:
-                solve(
+                model_options.milp_solver.solve(
                     input_file_name=model_options.path / (self.name + ".mps"),
-                    output_file_name=model_options.path / (self.name + ".sol"),
-                    solver=model_options.solver
+                    output_file_name=model_options.path / (self.name + ".sol")
                 )
-                return get_objective_value(
-                    model_options.path / (self.name + ".sol"),
-                    model_options.solver
-                )
+                return model_options.milp_solver.process_solution_file(
+                    model_options.path / (self.name + ".sol")
+                )[1]
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.model(model_options)
             if self._return_immediately_:
                 return
             else:
-                # if no solver has been selected, we generate all cnf-files
+                # if no sat_solver has been selected, we generate all cnf-files
                 # for the given solve_range
-                optimize_sat(
+                model_options.sat_solver.solve(
                     model_options.path / (self.name + ".cnf"),
                     model_options.path / (self.name + ".sat"),
                     model_options=model_options,
                     time_limit=None)
 
-                if model_options.solver is None:
+                if model_options.sat_solver is None:
                     raise NoSolverWarning()
                 else:
-                    return get_objective_value(
+                    return model_options.sat_solver.process_solution_file(
                         model_options.path / (self.name + ".sat"),
-                        model_options.solver
-                    )
+                    )[1]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1634,21 +1635,27 @@ class Cipher:
         if model_options.optimization == OPTIMIZATION.MILP:
             milp_or_sat = "MILP"
             solution_file_name = model_options.path / (self.name + ".sol")
+            results, objective_value = model_options.milp_solver.process_solution_file(
+                solution_file_name)
         elif model_options.optimization == OPTIMIZATION.SAT:
             milp_or_sat = "SAT"
             solution_file_name = model_options.path / (self.name + ".sat")
+            results, objective_value = model_options.sat_solver.process_solution_file(
+                solution_file_name)
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
             )
 
-        results, objective_value = _process_solution_file(
-            solution_file_name, model_options.solver)
 
         STRING = "\\documentclass{article}\n"
         STRING += "\\usepackage{amssymb}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
-        STRING += "\\usetikzlibrary{arrows}\n"
+        STRING += "\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n"
+        STRING += "\\usetikzlibrary{calc, positioning, fit}\n"
+        STRING += "\\usetikzlibrary{shapes.geometric, decorations.text}\n"
+        STRING += "\\usetikzlibrary{decorations.pathreplacing, calligraphy}\n"
+        STRING += "\\usetikzlibrary{patterns, arrows}\n"
 
         # define as empty command, in order to 'renewcommand' throughout the
         # sections
@@ -1748,16 +1755,19 @@ class Cipher:
         """
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file_name = model_options.path / (self.name + ".sol")
+            results = model_options.milp_solver.process_solution_file(
+                solution_file_name
+            )[0]
         elif model_options.optimization == OPTIMIZATION.SAT:
             solution_file_name = model_options.path / (self.name + ".sat")
+            results = model_options.sat_solver.process_solution_file(
+                solution_file_name
+            )[0]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
             )
 
-        results, _ = _process_solution_file(
-            solution_file_name, model_options.solver
-        )
         root_node = TrailNode(cipher_instance=self)
         self._draw_or_get_trail_rec(
             results, model_options, root_node, _report=False

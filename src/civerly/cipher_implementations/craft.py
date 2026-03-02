@@ -45,7 +45,7 @@ class CRAFT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options) # optional - scip
             5896 variables and 6121 constraints were written to
@@ -57,7 +57,7 @@ class CRAFT_CVL:
         modeling of the linear layer is useful. But first some cleanup::
 
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models") # optional - scip
+            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
 
         Now the improved modeling::
 
@@ -67,13 +67,13 @@ class CRAFT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options) # optional - scip
             5856 variables and 6041 constraints were written to
             'DOCTEST-CRAFT-Models/CRAFT.mps'
             36
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models") # optional - scip
+            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
 
         Indeed, 36 active S-boxes is a much better bound.
 
@@ -88,13 +88,13 @@ class CRAFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options) # optional - scip
             7440 variables and 9057 constraints were written to
             'DOCTEST-CRAFT-Models/CRAFT.mps'
             8
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models") # optional - scip
+            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
 
         Here the objective value is :math:`- \log_2(p)`, with :math:`p` being
         the differential probability (or respectively the linear correlation)
@@ -110,13 +110,13 @@ class CRAFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options) # optional - scip
             7728 variables and 8001 constraints were written to
             'DOCTEST-CRAFT-Models/CRAFT.mps'
             8
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models") # optional - scip
+            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
 
 
         It is also possible to use SAT to model the cipher. The results should
@@ -132,8 +132,8 @@ class CRAFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options)
             7440 variables and 17201 clauses were written to
@@ -165,8 +165,8 @@ class CRAFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-CRAFT-Models/"))
             sage: craft.analyse(model_options)
             7440 variables and 17201 clauses were written to

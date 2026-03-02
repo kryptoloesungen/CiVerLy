@@ -24,7 +24,7 @@ but the code below should be rather straightforward::
     ....:   optimization=OPTIMIZATION.MILP,
     ....:   granularity=GRANULARITY.WORDWISE,
     ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-    ....:   solver=SOLVER.SCIP,
+    ....:   milp_solver=SCIP_CVL(),
     ....:   path=Path("./DOCTEST-AES-Models/"))
 
 Notice that we set ``sbox_modeling`` to ``None``, as we do not have to model
@@ -54,7 +54,7 @@ of MixColumn which requires solving a MILP itself::
     ....:     optimization=OPTIMIZATION.MILP,
     ....:     granularity=GRANULARITY.WORDWISE,
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-    ....:     solver=SOLVER.SCIP,
+    ....:     milp_solver=SCIP_CVL(),
     ....:     path=Path("./DOCTEST-AES-Models/"))
     sage: aes.analyse(model_options) # doctest: +NORMALIZE_WHITESPACE
     2848 variables and 2977 constraints were written to
@@ -96,11 +96,10 @@ to the location specified above. As we cannot execute that step here,
 we simulate it to continue::
 
     sage: # optional - scip
-    sage: from civerly.solvers import solve
     sage: from pathlib import Path
     sage: input_file_name = Path("DOCTEST-AES-Models/MixColumn51845.mps")
     sage: output_file_name = Path("DOCTEST-AES-Models/MixColumn51845.sol")
-    sage: solve(input_file_name, output_file_name, SOLVER.SCIP)
+    sage: SCIP_CVL().solve(input_file_name, output_file_name)
 
 Notice that you do not have to keep the sage session alive while you
 solve the model externally. Again, this is something we have to
@@ -136,11 +135,10 @@ generating a report, you would copythe ``AES.sol`` file to the
 ``DOCTEST-AES-Models`` directory. Again, we have to simulate this::
 
     sage: # optional - scip
-    sage: from civerly.solvers import solve
     sage: from pathlib import Path
-    sage: solve(input_file_name=Path("DOCTEST-AES-Models/AES.mps"),
-    ....:       output_file_name=Path("DOCTEST-AES-Models/AES.sol"),
-    ....:       solver = SOLVER.SCIP)
+    sage: SCIP_CVL().solve(input_file_name=Path("DOCTEST-AES-Models/AES.mps"),
+    ....:       output_file_name=Path("DOCTEST-AES-Models/AES.sol")
+    ....: )
 
 And again, we simulate restarting CiVerLy::
 
@@ -154,9 +152,8 @@ Now, we first verify that the objective value is indeed 55::
     sage: from civerly.cipher_implementations.aes import AES_CVL
     sage: from civerly.model_options import *
     sage: from pathlib import Path
-    sage: from civerly.solvers import get_objective_value
     sage: sol_file_name = Path("DOCTEST-AES-Models/AES.sol")
-    sage: get_objective_value(sol_file_name, SOLVER.SCIP)
+    sage: SCIP_CVL().process_solution_file(sol_file_name)[1]
     55
 
 Which tells us that there are indeed 55 active S-boxes. To visualize
@@ -255,7 +252,7 @@ class AES_CVL:
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.WORDWISE,
                 ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:     solver=SOLVER.GLPK,
+                ....:     milp_solver=GLPK_CVL(),
                 ....:     path=path)
                 sage: aes.analyse(model_options) # optional - glpk
                 548 variables and 557 constraints were written to
@@ -267,7 +264,7 @@ class AES_CVL:
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.WORDWISE,
                 ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:     solver=SOLVER.GLPK,
+                ....:     milp_solver=GLPK_CVL(),
                 ....:     path=path)
                 sage: aes.analyse(model_options) # optional - glpk
                 544 variables and 545 constraints were written to
@@ -280,7 +277,7 @@ class AES_CVL:
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.WORDWISE,
                 ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:     solver=SOLVER.GUROBI,
+                ....:     milp_solver=GUROBI_CVL(),
                 ....:     path=path)
                 sage: aes.analyse(model_options) # optional - gurobi
                 2884 variables and 3085 constraints were written to
@@ -292,7 +289,7 @@ class AES_CVL:
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.WORDWISE,
                 ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:     solver=SOLVER.GUROBI,
+                ....:     milp_solver=GUROBI_CVL(),
                 ....:     path=path)
                 sage: aes.analyse(model_options) # optional - gurobi
                 2848 variables and 2977 constraints were written to
@@ -323,7 +320,7 @@ class AES_CVL:
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.WORDWISE,
                 ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:     solver=SOLVER.GUROBI,
+                ....:     milp_solver=GUROBI_CVL(),
                 ....:     path=path)
                 sage: # optional - gurobi
                 sage: cipher.analyse(model_options)

@@ -47,7 +47,7 @@ class PRESENT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options) # optional - scip
             1284 variables and 1341 constraints were written to
@@ -92,7 +92,7 @@ class PRESENT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options) # optional - scip
             5312 variables and 6081 constraints were written to
@@ -139,7 +139,7 @@ class PRESENT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: # optional - gurobi
             sage: present_cipher.analyse(model_options)
@@ -158,8 +158,8 @@ class PRESENT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.GUROBI,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   milp_solver=GUROBI_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: # optional - gurobi # optional - espresso
             sage: present_cipher.analyse(model_options)
@@ -178,7 +178,7 @@ class PRESENT_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: # optional - gurobi
             sage: present_cipher.analyse(model_options) # long
@@ -206,8 +206,8 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options)
             5312 variables and 13441 clauses were written to
@@ -235,8 +235,8 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options)
             5312 variables and 13441 clauses were written to
@@ -268,8 +268,8 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options)
             5312 variables and 12993 clauses were written to
@@ -297,8 +297,8 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options)
             5312 variables and 12993 clauses were written to
@@ -324,8 +324,8 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options)
             6512 variables and 16017 clauses were written to
@@ -356,8 +356,8 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=None,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=None,
             ....:   path=Path("./DOCTEST-PRESENT-Models/"))
             sage: present_cipher.analyse(model_options)
             Optimization problem for Espresso has been written to...
