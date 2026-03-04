@@ -15,7 +15,6 @@ from enum import Enum
 from sage.sat.solvers.dimacs import DIMACS
 from civerly.util import _generate_constraints_sum_leq_int_LS24
 from civerly.util import suppress_output, _float_or_int
-from civerly.util import _to_dict
 
 
 class SOLVER_CVL:
@@ -432,7 +431,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             name = line[:line.index(" ")]
             value = __string_to_int_gurobi(line[line.index(" ")+1:])
             results[name] = value
-        return _to_dict(results), objective_value
+        return results, objective_value
 
 
 class SCIP_CVL(MILP_SOLVER_CVL):
@@ -461,12 +460,8 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                 f"{output_file_name} "
                 "quit"
             ),
-            "-s", "scip_settings.set",
+            "-s", "scip_settings.set", "-l", str(log_file_name)
         ]
-        # only add -l flag when log_file_name is set
-        if log_file_name is not None:
-            command += ["-l", str(log_file_name)]
-
         with suppress_output():
             process = subprocess.Popen(command)
             errno = process.wait()
@@ -543,7 +538,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             name = line[:line.index("]")+1]
             results[name] = value
 
-        return _to_dict(results), objective_value
+        return results, objective_value
 
 
 class GLPK_CVL(MILP_SOLVER_CVL):
@@ -559,13 +554,9 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             input_file_name, output_file_name, log_file_name, time_limit
         )
         command = [
-            "glpsol", str(input_file_name),
+            "glpsol", str(input_file_name), "--log", str(log_file_name),
             "-o", str(output_file_name)
         ]
-        # only add --log flag when log_file_name is set
-        if log_file_name is not None:
-            command += ["--log", str(log_file_name)]
-
         if time_limit is not None:
             command.insert(2, "--tmlim")
             command.insert(3, str(time_limit))
@@ -665,7 +656,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             name = line[:i+1]
             value = line[i+1:i+2]
             results[name] = value
-        return _to_dict(results), objective_value
+        return results, objective_value
 
 
 class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):

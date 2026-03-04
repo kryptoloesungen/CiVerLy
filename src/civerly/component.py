@@ -2008,11 +2008,11 @@ class SBox_CVL(Component):
                 1
                 sage: in_diff  = vec_to_int(vector(
                 ....:   GF(2), 4,
-                ....:   [results['IN'][i] for i in range(4)]
+                ....:   [results[f"IN[{i}]"] for i in range(4)]
                 ....: ))
                 sage: out_diff = vec_to_int(vector(
                 ....:   GF(2), 4,
-                ....:   [results['OUT'][i] for i in range(4)]
+                ....:   [results[f"OUT[{i}]"] for i in range(4)]
                 ....: ))
                 sage: ddt = sb.difference_distribution_table()
                 sage: ddt[in_diff][out_diff]
@@ -2059,10 +2059,10 @@ class SBox_CVL(Component):
                 sage: objective_value
                 1
                 sage: in_diff  = vec_to_int(vector(
-                ....:   GF(2), 4, [results['IN'][i] for i in range(4)]
+                ....:   GF(2), 4, [results[f"IN[{i}]"] for i in range(4)]
                 ....: ))
                 sage: out_diff = vec_to_int(vector(
-                ....:   GF(2), 4, [results['OUT'][i] for i in range(4)]
+                ....:   GF(2), 4, [results[f"OUT[{i}]"] for i in range(4)]
                 ....: ))
                 sage: ddt = sb.difference_distribution_table()
                 sage: ddt[in_diff][out_diff]
@@ -2218,6 +2218,21 @@ class SBox_CVL(Component):
                 self._return_immediately_ = True
                 return
 
+            def _to_dict(res):
+                r"""
+                Instead of using a dictionary {'Z[0]': 1, 'Z[1]':2} use
+                {'Z':{0:1, 1:2}}, so we can easier iterate over
+                the Z[i]
+                """
+                my_res = dict()
+                for variable, value in res.items():
+                    var_name = variable.split("[")[0]
+                    var_index = variable.split("[")[1].split("]")[0]
+                    if var_name not in my_res:
+                        my_res[var_name] = dict()
+                    my_res[var_name][int(var_index)] = value
+                return my_res
+
             selected_inequations = {
                 prob: [] for prob in reduction_solution_files.keys()
             }
@@ -2228,6 +2243,7 @@ class SBox_CVL(Component):
                 )
 
                 results, _ = model_options.milp_solver.process_solution_file(s_file_sol)
+                results = _to_dict(results)
                 assert 'Z' in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "
                     f"Found {results.keys()}, expected 'Z'"
