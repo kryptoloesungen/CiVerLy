@@ -1799,10 +1799,6 @@ class Cipher:
             else:
                 dictionaries = self.dictionaries_milp
 
-            def check_condition(comp_num, s):
-                return ("IN" not in s and "OUT" not in s) and \
-                    _before_brackets(s) == comp_num
-
         elif model_options.optimization == OPTIMIZATION.SAT:
             if not hasattr(self, 'dictionaries_sat'):
                 with open(model_options.path / (self.name + "_d.json")) as f:
@@ -1824,13 +1820,28 @@ class Cipher:
         # Recursively iterate through each subcipher
         for comp_num, comp in enumerate(self.nodes):
             if isinstance(comp, Cipher):
-                sub_results = {}
-                for s, solution_bit_value in results.items():
-                    if check_condition(comp_num, s):
-                        # Translate the results using the corresponding
-                        # dictionaries
-                        sub_results[dictionaries[comp_num][s]] = \
+                if model_options.optimization == OPTIMIZATION.MILP:
+                    # Build nested sub_results for the sub-cipher directly
+                    # from the parent's nested results entry for this comp_num
+                    sub_results = {}
+                    var_name = f"X{comp_num}"
+                    for s_ind, solution_bit_value in \
+                            results.get(var_name, {}).items():
+                        translated = dictionaries[comp_num][
+                            f"{var_name}[{s_ind}]"
+                        ]
+                        tr_name, tr_rest = translated.split('[', 1)
+                        tr_ind = int(tr_rest.rstrip(']'))
+                        sub_results.setdefault(tr_name, {})[tr_ind] = \
                             solution_bit_value
+                else:  # SAT
+                    sub_results = {}
+                    for s, solution_bit_value in results.items():
+                        if check_condition(comp_num, s):
+                            # Translate the results using the corresponding
+                            # dictionaries
+                            sub_results[dictionaries[comp_num][s]] = \
+                                solution_bit_value
 
                 new_node = current_node.children[depths[comp_num]]
 
@@ -1985,21 +1996,36 @@ class Cipher:
         ]
 
         # Sort the (messy and unordered) variable values correctly
-        for s, solution_bit_value in results.items():
-
-            # recover comp_num and comp
-            if model_options.optimization == OPTIMIZATION.MILP:
-                if "IN" in s or "OUT" in s:
-                    # if s is MILP_IN or MILP_OUT, we skip it
+        if model_options.optimization == OPTIMIZATION.MILP:
+            for var_name, var_dict in results.items():
+                if var_name in ("IN", "OUT"):
+                    # if var_name is MILP_IN or MILP_OUT, we skip it
                     continue
-                comp_num, s_ind = _before_brackets(s), _between_brackets(s)
+                comp_num = int(var_name[1:])
+                for s_ind, solution_bit_value in var_dict.items():
+                    translated_component = dictionaries[comp_num][
+                        f"{var_name}[{s_ind}]"
+                    ]
+                    # Draw the input nodes of each component
+                    bool1 = "IN" in translated_component
+                    # We also draw the output of the last component.
+                    bool2 = "OUT" in translated_component
 
-                translated_component = dictionaries[comp_num][f"X{comp_num}[{s_ind}]"]
-                # Draw the input nodes of each component
-                bool1 = "IN" in translated_component
-                # We also draw the output of the last component.
-                bool2 = "OUT" in translated_component
-            elif model_options.optimization == OPTIMIZATION.SAT:
+                    if bool1 and comp_num != 0:  # dont draw self.IN.in
+                        current_index = _between_brackets(translated_component)
+                        bit_ind = _from_grid(
+                            comp_num, current_index, input_side=True
+                        )
+                        bits_in[depths[comp_num]][bit_ind] = solution_bit_value
+                    elif bool2:
+                        current_index = _between_brackets(translated_component)
+                        bit_ind = _from_grid(
+                            comp_num, current_index, input_side=False
+                        )
+                        bits_out[depths[comp_num]][bit_ind] = solution_bit_value
+        elif model_options.optimization == OPTIMIZATION.SAT:
+            # NOTE: SAT-vars start at 1 while grid-indexing starts at 0
+            for s, solution_bit_value in results.items():
                 if s <= self.input_length + self.output_length:
                     # if s is SAT_IN or SAT_OUT, we skip it
                     continue
@@ -2026,34 +2052,24 @@ class Cipher:
                 # We also draw the output of the last component.
                 bool2 = comp.input_length < translated_component and \
                     translated_component <= comp.input_length + comp.output_length
-            else:
-                raise InvalidModelOptionException(
-                    model_options.optimization, OPTIMIZATION
-                )
 
-            # NOTE: For SAT we offset by -1 because SAT-vars start at 1
-            # while grid-indexing starts at 0
-            if bool1 and comp_num != 0:  # dont draw self.IN.in
-                if model_options.optimization == OPTIMIZATION.MILP:
-                    current_index = _between_brackets(translated_component)
-                elif model_options.optimization == OPTIMIZATION.SAT:
+                if bool1 and comp_num != 0:  # dont draw self.IN.in
                     current_index = translated_component - 1
-
-                bit_ind = _from_grid(
-                    comp_num, current_index, input_side=True
-                )
-                bits_in[depths[comp_num]][bit_ind] = solution_bit_value
-            elif bool2:
-                if model_options.optimization == OPTIMIZATION.MILP:
-                    current_index = _between_brackets(translated_component)
-                elif model_options.optimization == OPTIMIZATION.SAT:
+                    bit_ind = _from_grid(
+                        comp_num, current_index, input_side=True
+                    )
+                    bits_in[depths[comp_num]][bit_ind] = solution_bit_value
+                elif bool2:
                     current_index = translated_component - \
                         self.nodes[comp_num].input_length - 1
-
-                bit_ind = _from_grid(
-                    comp_num, current_index, input_side=False
-                )
-                bits_out[depths[comp_num]][bit_ind] = solution_bit_value
+                    bit_ind = _from_grid(
+                        comp_num, current_index, input_side=False
+                    )
+                    bits_out[depths[comp_num]][bit_ind] = solution_bit_value
+        else:
+            raise InvalidModelOptionException(
+                model_options.optimization, OPTIMIZATION
+            )
 
         # realign bits_in, bits_out by removing any 'None' entries
         bits_in = [
