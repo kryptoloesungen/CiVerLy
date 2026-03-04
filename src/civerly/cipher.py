@@ -911,19 +911,13 @@ class Cipher:
             sage: from civerly.cipher_implementations.present import PRESENT_CVL
             sage: present = PRESENT_CVL(2)
             sage: latex(present)
-            \documentclass[runningheads]{llncs}
+            \documentclass{article}
             ...
             \end{document}
         """
-        STRING = "\\documentclass[runningheads]{llncs}\n"
-        STRING += "\\usepackage{amssymb}\n"
+        STRING = "\\documentclass{article}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
-        STRING += "\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n"
-        STRING += "\\usetikzlibrary{calc}\n"
-        STRING += "\\usetikzlibrary{positioning, fit, shapes.geometric}\n"
-        STRING += "\\usetikzlibrary{decorations.text}\n"
-        STRING += "\\usetikzlibrary{decorations.pathreplacing,calligraphy}\n"
-        STRING += "\\usetikzlibrary{patterns}\n\\usetikzlibrary{arrows}\n"
+        STRING += "\\usetikzlibrary{arrows}\n"
         STRING += "\\usepackage{graphicx}\n"
         STRING += "\\usepackage{calc}\n"
         STRING += "\\newsavebox{\\tempbox}\n"
@@ -1651,11 +1645,7 @@ class Cipher:
         STRING = "\\documentclass{article}\n"
         STRING += "\\usepackage{amssymb}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
-        STRING += "\\usepackage{pgfplots}\n\\pgfplotsset{compat=1.18}\n"
-        STRING += "\\usetikzlibrary{calc, positioning, fit}\n"
-        STRING += "\\usetikzlibrary{shapes.geometric, decorations.text}\n"
-        STRING += "\\usetikzlibrary{decorations.pathreplacing, calligraphy}\n"
-        STRING += "\\usetikzlibrary{patterns, arrows}\n"
+        STRING += "\\usetikzlibrary{arrows}\n"
 
         # define as empty command, in order to 'renewcommand' throughout the
         # sections
