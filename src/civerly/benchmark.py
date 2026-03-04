@@ -1,6 +1,5 @@
 r"""Benchmark CiVerLy."""
 
-from civerly.solvers import solve
 from civerly.solvers import SOLVING_STATUS
 from civerly.util import suppress_output
 from civerly.model_options import GRANULARITY
@@ -8,10 +7,6 @@ from civerly.model_options import OPTIMIZATION
 
 import shutil
 import time
-
-from civerly.solvers import get_objective_value
-from civerly.solvers import get_objective_bounds
-from civerly.solvers import optimize_sat
 
 
 def benchmark(CM=None, remove_files=False, only_models=False,
@@ -44,20 +39,21 @@ def benchmark(CM=None, remove_files=False, only_models=False,
         ....:   optimization=OPTIMIZATION.MILP,
         ....:   granularity=GRANULARITY.WORDWISE,
         ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-        ....:   solver=SOLVER.SCIP,
+        ....:   milp_solver=SCIP_CVL(),
         ....:   path=path)
         sage: aes = [AES_CVL(R=r, name=f"{r}r-AES") for r in range(1, 10)]
         sage: CM = [(aes, model_options)]
         sage: benchmark(CM) # optional - scip
         ...
-        sage: import shutil
-        sage: shutil.rmtree("DOCTEST-Benchmark-AES-Models", ignore_errors=True)
     """
     for ciphers, model_options in CM:
         optimization = model_options.optimization.name
         mode = model_options.cryptanalysis.name
         granularity = model_options.granularity.name
-        solver = model_options.solver.name
+        if model_options.optimization == OPTIMIZATION.MILP:
+            solver = model_options.milp_solver.name
+        elif model_options.optimization == OPTIMIZATION.SAT:
+            solver = model_options.sat_solver.name
         if model_options.linear_layer_modeling:
             ll = model_options.linear_layer_modeling.name
         else:
@@ -110,24 +106,21 @@ def benchmark(CM=None, remove_files=False, only_models=False,
                     solve_start = time.time()
 
                     if model_options.optimization == OPTIMIZATION.MILP:
-                        name = f"{cipher.name}_{model_options.solver.name}"
+                        name = f"{cipher.name}_{model_options.milp_solver.name}"
                         log_file_name = model_options.path / f"{name}.log"
                         sol_file_name = model_options.path / (cipher.name + ".sol")
-                        status = solve(model_options.path / (cipher.name + ".mps"),
+                        status = model_options.milp_solver.solve(model_options.path / (cipher.name + ".mps"),
                                        sol_file_name,
-                                       solver=model_options.solver,
                                        time_limit=solving_time_limit,
                                        log_file_name=log_file_name)
                         solve_stop = time.time()
                         solve_time = round(solve_stop - solve_start, 2)
                         if status is None:
-                            obj = get_objective_value(sol_file_name,
-                                                      model_options.solver)
+                            obj = model_options.milp_solver.process_solution_file(sol_file_name)[1]
                             solve_time = f"{solve_time}s"
                         elif status == SOLVING_STATUS.TIMEOUT:
                             solve_time = f"{solving_time_limit}s$^{{\\dagger}}$"
-                            bounds = get_objective_bounds(log_file_name,
-                                                          model_options.solver)
+                            bounds = model_options.milp_solver.get_objective_bounds(log_file_name)
                             if bounds == [None, None]:
                                 obj = "-"
                             else:
@@ -136,7 +129,7 @@ def benchmark(CM=None, remove_files=False, only_models=False,
                             pass
 
                     elif model_options.optimization == OPTIMIZATION.SAT:
-                        benchmarks = optimize_sat(
+                        benchmarks = model_options.sat_solver.solve(
                             model_options.path / (cipher.name + ".cnf"),
                             model_options.path / (cipher.name + ".sat"),
                             model_options=model_options,
@@ -174,9 +167,8 @@ def benchmark(CM=None, remove_files=False, only_models=False,
                             s += f"[{row["W_MIN"]}, {row["W_MAX"]}]"
                             s += " & \\\\*"
                         else:
-                            bound = get_objective_value(
-                                model_options.path / (cipher.name + ".sat"),
-                                model_options.solver)
+                            bound = model_options.sat_solver.process_solution_file(
+                                model_options.path / (cipher.name + ".sat"))[1]
                             s += " & "
                             s += f"{bound} & \\cmark \\\\*"
                         table.append(s)

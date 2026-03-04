@@ -5,6 +5,14 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from civerly.solvers import SOLVER_CVL, LOGIC_MINIMIZER_CVL
+from civerly.solvers import MILP_SOLVER_CVL, SAT_SOLVER_CVL, LOGIC_MINIMIZER_CVL
+
+from civerly.solvers import NO_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
+from civerly.solvers import NO_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
+from civerly.solvers import NO_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
+
+
 
 class CRYPTANALYSIS(Enum):
     """
@@ -98,58 +106,6 @@ class SBOX_MODELING(Enum):
     LOGICAL_COND_ESPRESSO = 4  # For both MILP / SAT
 
 
-class SOLVER(Enum):
-    """
-    The solver to be (automatically) used by CiVerLy. Of course, CiVerLy does
-    not implement any solver but simply calls the corresponding solver.
-
-    Supported MILP solvers:
-
-    - SCIP: Open Source and reasonable performance.
-    - GLPK: Open Source but only weak performance.
-    - Gurobi: Commercial solver (license needed). Best performance.
-
-    Supported SAT solvers:
-
-    - CryptoMiniSat: Open Source solver.
-    - CaDiCal: Open Source solver.
-
-    .. NOTE::
-
-        If you are going to solve all models by yourself (e.g. on a different
-        machine), you can set this to ``None``.
-
-    .. WARNING::
-
-        Pick a solver only if it is installed on the same machine you are
-        running CiVerLy on.
-    """
-    # MILP solvers
-    SCIP = 1
-    GLPK = 2
-    GUROBI = 3
-
-    # SAT solvers
-    CRYPTOMINISAT = 4
-    CADICAL = 5
-
-
-class MINIMIZER(Enum):
-    """
-    The minimizer to be (automatically) called by CiVerLy, to minimize
-    boolean formulas and therefore to simplify MILP or SAT models.
-    Of course, CiVerLy does not implement any minimizer but simply
-    calls the corresponding minimizer externally.
-
-    Supported minimizers:
-
-        - Espresso: Used throughout the literature for this purpose.
-          Freely available on https://github.com/classabbyamp/espresso-logic
-
-    """
-    ESPRESSO = 1
-
-
 @dataclass(init=True, repr=False)
 class MODEL_OPTIONS:
     """
@@ -169,7 +125,9 @@ class MODEL_OPTIONS:
         - ``sbox_modeling`` -- see
           :class:`civerly.model_options.SBOX_MODELING`
 
-        - ``solver`` -- see :class:`civerly.model_options.SOLVER`
+        - ``milp_solver`` -- see :class:`civerly.solvers.MILP_SOLVER_CVL`
+        
+        - ``sat_solver`` -- see :class:`civerly.solvers.MILP_SOLVER_CVL`
 
         - ``solve_range`` -- tuple; The range of weights for which CiVerLy
           should generate models and solve them
@@ -195,7 +153,7 @@ class MODEL_OPTIONS:
         ....:     granularity=GRANULARITY.BITWISE,
         ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
         ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-        ....:     solver=SOLVER.SCIP,
+        ....:     milp_solver=SCIP_CVL(),
         ....:     path=Path("./CiVerLy-Models/"))
         sage: model_options
         MODEL_OPTIONS:
@@ -204,8 +162,30 @@ class MODEL_OPTIONS:
             -> granularity : BITWISE
             -> linear_layer_modeling : CONVEX_HULL
             -> sbox_modeling : CONVEX_HULL
-            -> solver : SCIP
-            -> minimizer : None
+            -> milp_solver : <class 'civerly.solvers.SCIP_CVL'>
+            -> sat_solver : <class 'civerly.solvers.NO_SAT_SOLVER_CVL'>
+            -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
+            -> solve_range : None
+            -> sat_precision : 0
+            -> path : CiVerLy-Models
+        sage: model_options = MODEL_OPTIONS(
+        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+        ....:     optimization=OPTIMIZATION.MILP,
+        ....:     granularity=GRANULARITY.BITWISE,
+        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
+        ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+        ....:     milp_solver=None,
+        ....:     path=Path("./CiVerLy-Models/"))
+        sage: model_options
+        MODEL_OPTIONS:
+            -> cryptanalysis : DIFFERENTIAL
+            -> optimization : MILP
+            -> granularity : BITWISE
+            -> linear_layer_modeling : CONVEX_HULL
+            -> sbox_modeling : CONVEX_HULL
+            -> milp_solver : <class 'civerly.solvers.NO_MILP_SOLVER_CVL'>
+            -> sat_solver : <class 'civerly.solvers.NO_SAT_SOLVER_CVL'>
+            -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
             -> path : CiVerLy-Models
@@ -217,8 +197,9 @@ class MODEL_OPTIONS:
     granularity: GRANULARITY = None
     linear_layer_modeling: LINEAR_LAYER_MODELING = None
     sbox_modeling: SBOX_MODELING = None
-    solver: SOLVER = None
-    minimizer: MINIMIZER = None
+    milp_solver: MILP_SOLVER_CVL = None
+    sat_solver: SAT_SOLVER_CVL = None
+    logic_minimizer: LOGIC_MINIMIZER_CVL = None
     solve_range: tuple = None
     sat_precision: int = 0
     path: Path = None
@@ -229,6 +210,8 @@ class MODEL_OPTIONS:
         for attribute, value in self.__dict__.items():
             if isinstance(value, Enum):
                 string += f"\n\t-> {attribute} : {value.__dict__['_name_']}"
+            elif isinstance(value, SOLVER_CVL):
+                string += f"\n\t-> {attribute} : {type(value)}"
             elif not isinstance(value, bool):  # skip write_to_file
                 string += f"\n\t-> {attribute} : {value}"
         return string
@@ -237,6 +220,16 @@ class MODEL_OPTIONS:
         r"""
         This method will be executed right after the implicit __init__ method.
         """
+        # set self.{milp, sat}_solver to respective NoneSolver
+        if self.milp_solver is None:
+            self.milp_solver = NO_MILP_SOLVER_CVL()
+        
+        if self.sat_solver is None:
+            self.sat_solver = NO_SAT_SOLVER_CVL()
+        
+        if self.logic_minimizer is None:
+            self.logic_minimizer = NO_LOGIC_MINIMIZER_CVL()
+        
         if self.solve_range is None and self.optimization == OPTIMIZATION.SAT:
             self.solve_range = (0, 100)
         if self.path is None:
@@ -258,7 +251,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./CiVerLy-Models/"))
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -266,7 +259,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./CiVerLy-Models/"))
             Traceback (most recent call last):
             ...
@@ -281,7 +274,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SCIP_CVL(),
             ....:   path=Path("./CiVerLy-Models/"))
             Traceback (most recent call last):
             ...
@@ -427,36 +420,25 @@ class MODEL_OPTIONS:
                 "when using SAT modeling."
             )
 
-        # optimization.milp ==> solver.{None, gurobi, scip, glpk}
-        if self.optimization == OPTIMIZATION.MILP \
-                and self.solver not in (
-                    None,
-                    SOLVER.GUROBI,
-                    SOLVER.SCIP,
-                    SOLVER.GLPK
-                ):
+        # milp_solver.{None, gurobi, scip, glpk}
+        if not isinstance(self.milp_solver, MILP_SOLVER_CVL):
             raise InvalidModelOptionException(
-                self.solver,
+                self.milp_solver,
                 message="Solver modeling must be either None, "
-                "SOLVER.GUROBI, "
-                "SOLVER.SCIP or "
-                "SOLVER.GLPK "
+                "Gurobi, "
+                "Scip or "
+                "Glpk "
                 "when using MILP modeling."
             )
 
-        # optimization.sat ==> solver.{None, cadical, cryptominisat}
-        if self.optimization == OPTIMIZATION.SAT \
-                and self.solver not in (
-                    None,
-                    SOLVER.CRYPTOMINISAT,
-                    SOLVER.CADICAL
-                ):
+        # sat_solver.{None, cadical, cryptominisat}
+        if not isinstance(self.sat_solver, SAT_SOLVER_CVL):
             raise InvalidModelOptionException(
-                self.solver,
-                message="Solver modeling must be either None, "
-                "SOLVER.CRYPTOMINISAT or "
-                "SOLVER.CADICAL "
-                "when using MILP modeling."
+                self.sat_solver,
+                message="Solver must be either None, "
+                "CryptoMiniSat or "
+                "CaDiCal "
+                "when using SAT modeling."
             )
 
         # optimization.milp ==> sat_precision.None
@@ -464,8 +446,15 @@ class MODEL_OPTIONS:
                 and self.sat_precision != 0:
             raise InvalidModelOptionException(
                 self.sat_precision,
-                message="Sat precision is not unnecessary for "
+                message="Sat precision is unnecessary for "
                 "MILP optimization."
+            )
+
+        if not isinstance(self.logic_minimizer, LOGIC_MINIMIZER_CVL):
+            raise InvalidModelOptionException(
+                self.logic_minimizer,
+                message="logic_minimizer must be either NO_LOGIC_MINIMIZER_CVL or "
+                "ESPRESSO_CVL."
             )
 
         error = False
@@ -492,10 +481,6 @@ class MODEL_OPTIONS:
             error = True
             attr = self.sbox_modeling
             correct_enum = SBOX_MODELING
-        elif not isinstance(self.solver, (SOLVER, type(None))):
-            error = True
-            attr = self.solver
-            correct_enum = SOLVER
 
         if error:
             raise InvalidModelOptionException(
@@ -506,65 +491,10 @@ class MODEL_OPTIONS:
         return
 
 
-class NoSolverWarning(Warning):
-    r"""
-    Warning which will be thrown whenever :meth:`analyse` is called with
-    `model_options.solver = None`.
-
-    EXAMPLES::
-
-        sage: from civerly.model_options import *
-        sage: from civerly.util import suppress_output
-        sage: from civerly.cipher_implementations.aes import AES_CVL
-        sage: aes = AES_CVL(6)
-        sage: model_options = MODEL_OPTIONS(
-        ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-        ....:   optimization=OPTIMIZATION.MILP,
-        ....:   granularity=GRANULARITY.WORDWISE,
-        ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-        ....:   solver=None,
-        ....:   path=Path("./DOCTEST-ModelOptions/"))
-        sage: with suppress_output():
-        ....:   aes.analyse(model_options)
-        Traceback (most recent call last):
-        ...
-        NoSolverWarning: No solver has been selected.
-        CiVerLy will return without solving.
-
-        sage: import shutil
-        sage: shutil.rmtree("DOCTEST-ModelOptions")
-
-
-    """
-    def __init__(self):
-        super().__init__(
-            "No solver has been selected. "
-            "CiVerLy will return without solving."
-        )
-
-
 class InvalidModelOptionException(Exception):
     r"""
     Exception which will be thrown whenever an invalid model option is given
     by the user.
-
-    TESTS::
-
-        sage: from civerly.model_options import InvalidModelOptionException
-        sage: from civerly.model_options import SOLVER
-        sage: solver = "WRONG_SOLVER"
-        sage: raise InvalidModelOptionException(solver, SOLVER)
-        Traceback (most recent call last):
-        ...
-        InvalidModelOptionException: Invalid solver WRONG_SOLVER!
-        sage: solver = "WRONG_SOLVER"
-        sage: raise InvalidModelOptionException(
-        ....:   solver, message="This solver does not exist."
-        ....: )
-        Traceback (most recent call last):
-        ...
-        InvalidModelOptionException: This solver does not exist.
-
 
     """
     def __init__(self, model_option, model_option_type=None, message=None):
@@ -585,8 +515,12 @@ class InvalidModelOptionException(Exception):
                 string = "linear layer modeling option"
             elif model_option_type is SBOX_MODELING:
                 string = "sbox modeling option"
-            elif model_option_type is SOLVER:
-                string = "solver"
+            # elif model_option_type is MILP_SOLVER_CVL:
+            #     string = "milp_solver"
+            # elif model_option_type is SAT_SOLVER_CVL:
+            #     string = "sat_solver"
+            # elif model_option_type is LOGIC_MINIMIZER_CVL:
+            #     string = "logic_minimizer"
 
             message = f"Invalid {string} {model_option}!"
 

@@ -21,8 +21,8 @@ class Toy5:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-Toy5-Models/"))
             sage: cipher.analyse(model_options)
             2940 variables and 13997 clauses were written to
@@ -51,8 +51,8 @@ class Toy5:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-Toy5-Models/"))
             sage: cipher.analyse(model_options)
             Using existing file DOCTEST-Toy5-Models/espresso-5a255793_out.pla,
@@ -83,7 +83,7 @@ class Toy5:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=GUROBI_CVL(),
             ....:   path=Path("./DOCTEST-Toy5-Models/"))
             sage: cipher.analyse(model_options)
             3404 variables and 4177 constraints were written to
@@ -93,7 +93,6 @@ class Toy5:
             Output file in: DOCTEST-Toy5-Models/Toy5.pdf
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
-
             sage: import shutil
             sage: shutil.rmtree("DOCTEST-Toy5-Models", ignore_errors=True)
 

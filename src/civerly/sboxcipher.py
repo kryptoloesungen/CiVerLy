@@ -79,7 +79,6 @@ class SBoxCipher(Cipher):
                 sage: from civerly.component import SBox_CVL, XOR_CVL
                 sage: from civerly.component import RoundkeyXOR_CVL
                 sage: from civerly.model_options import *
-                sage: from civerly.solvers import solve, get_objective_value
                 sage: from sage.crypto.sboxes import PRESENT as present_S_sage
                 sage: from civerly.util import suppress_output
                 sage: name = "ToyFeistel"
@@ -114,14 +113,14 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=GUROBI_CVL(),
                 ....:   path=Path("./DOCTEST-ToyFeistelCipher-Models/"))
                 sage: # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
-                sage: get_objective_value(
+                sage: model_options.milp_solver.process_solution_file(
                 ....:   model_options.path / (cipher.name + ".sol"),
-                ....:   SOLVER.GUROBI)
+                ....: )[1]
                 0
                 sage: R = 2
                 sage: cipher = SBoxCipher(2*n, 2*n, name=name+"Cipher")
@@ -137,14 +136,14 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=GUROBI_CVL(),
                 ....:   path=Path("./DOCTEST-ToyFeistelCipher-Models/"))
                 sage: # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
-                sage: get_objective_value(
+                sage: model_options.milp_solver.process_solution_file(
                 ....:   model_options.path / (cipher.name + ".sol"),
-                ....:   SOLVER.GUROBI)
+                ....: )[1]
                 1
                 sage: import shutil
                 sage: shutil.rmtree(

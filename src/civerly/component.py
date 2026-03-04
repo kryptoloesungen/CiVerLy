@@ -34,12 +34,12 @@ from civerly.util import _write_espresso_input
 from civerly.util import _read_espresso_output
 from civerly.util import reduction_algorithm_ST17
 from civerly.util import translate_sat_clause
-from civerly.solvers import solve, _process_solution_file, run_espresso
 from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
-from civerly.model_options import SBOX_MODELING, MINIMIZER
+from civerly.model_options import SBOX_MODELING
 from civerly.model_options import InvalidModelOptionException
 from civerly.largesboxes import largesboxes
+from civerly.solvers import ESPRESSO_CVL, NO_MILP_SOLVER_CVL, NO_LOGIC_MINIMIZER_CVL
 
 
 class Component(ABC):
@@ -147,8 +147,9 @@ class Component(ABC):
         r"""Initialize empty MILP or SAT model for this component."""
         if model_options.optimization == OPTIMIZATION.MILP:
             self.sum_arr_milp = []
-            self.milp = MixedIntegerLinearProgram(maximization=False,
-                                                  solver="GLPK")
+            self.milp = MixedIntegerLinearProgram(
+                maximization=False, solver="GLPK"
+            )
             self.MILP_IN = self.milp.new_variable(name="IN", binary=True)
             self.MILP_OUT = self.milp.new_variable(name="OUT", binary=True)
         elif model_options.optimization == OPTIMIZATION.SAT:
@@ -1007,8 +1008,8 @@ class AND_CVL(Component):
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       solver=SOLVER.CRYPTOMINISAT,
-            ....:       minimizer=MINIMIZER.ESPRESSO,
+            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path("./DOCTEST-ANDComponent-Models/"))
             ....:   with suppress_output():
             ....:       result = cipher.analyse(model_options)
@@ -1472,7 +1473,6 @@ class LinearLayer_CVL(Component):
 
             sage: from civerly.cipher import Cipher
             sage: from civerly.component import LinearLayer_CVL
-            sage: from civerly.solvers import optimize_sat
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: arr = [
@@ -1491,7 +1491,7 @@ class LinearLayer_CVL(Component):
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   path=Path("./DOCTEST-LL-SAT/"))
             sage: cipher = Cipher(4, 8, name="LL-doctest")
             sage: node = cipher.add_subcipher(
@@ -1533,7 +1533,7 @@ class LinearLayer_CVL(Component):
             48 variables and 110 clauses were written to
             'DOCTEST-LL-SAT/LL-doctest.cnf'
             sage: # optional - cryptominisat
-            sage: optimize_sat(
+            sage: model_options.sat_solver.solve(
             ....:   Path('DOCTEST-LL-SAT/LL-doctest.cnf'),
             ....:   Path('DOCTEST-LL-SAT/LL-doctest.sat'),
             ....:   model_options)
@@ -1982,7 +1982,6 @@ class SBox_CVL(Component):
                 sage: from civerly.model_options import *
                 sage: from civerly.solvers import *
                 sage: from civerly.util import suppress_output, vec_to_int
-                sage: from civerly.solvers import _process_solution_file
                 sage: sb = SBox(
                 ....:   (4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15)
                 ....: )
@@ -1997,24 +1996,23 @@ class SBox_CVL(Component):
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=GUROBI_CVL(),
                 ....:   path=Path("./DOCTEST-ToySingleSBoxCipher-Models/"))
                 sage: # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
-                sage: results, objective_value = _process_solution_file(
-                ....:   model_options.path / (cipher.name + ".sol"),
-                ....:   SOLVER.GUROBI,
+                sage: results, objective_value = model_options.milp_solver.process_solution_file(
+                ....:   model_options.path / (cipher.name + ".sol")
                 ....: )
                 sage: objective_value
                 1
                 sage: in_diff  = vec_to_int(vector(
                 ....:   GF(2), 4,
-                ....:   [results[f"IN[{i}]"] for i in range(4)]
+                ....:   [results['IN'][i] for i in range(4)]
                 ....: ))
                 sage: out_diff = vec_to_int(vector(
                 ....:   GF(2), 4,
-                ....:   [results[f"OUT[{i}]"] for i in range(4)]
+                ....:   [results['OUT'][i] for i in range(4)]
                 ....: ))
                 sage: ddt = sb.difference_distribution_table()
                 sage: ddt[in_diff][out_diff]
@@ -2032,8 +2030,6 @@ class SBox_CVL(Component):
                 sage: from civerly.component import SBox_CVL
                 sage: from civerly.model_options import *
                 sage: from civerly.util import suppress_output, vec_to_int
-                sage: from civerly.solvers import solve
-                sage: from civerly.solvers import _process_solution_file
                 sage: sb = SBox(
                 ....:   (4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15)
                 ....: )
@@ -2048,27 +2044,25 @@ class SBox_CVL(Component):
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=GUROBI_CVL(),
                 ....:   path=Path("./DOCTEST-ToySingleSBoxCipher-Models/"))
                 sage:  # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.model(model_options)
-                sage: solve(
+                sage: model_options.milp_solver.solve(
                 ....:   input_file_name=model_options.path / (cipher.name + ".mps"),
                 ....:   output_file_name=model_options.path / (cipher.name + ".sol"),
-                ....:   solver=SOLVER.GUROBI
                 ....: )
-                sage: results, objective_value = _process_solution_file(
+                sage: results, objective_value = model_options.milp_solver.process_solution_file(
                 ....:   model_options.path / (cipher.name + ".sol"),
-                ....:   SOLVER.GUROBI
                 ....: )
                 sage: objective_value
                 1
                 sage: in_diff  = vec_to_int(vector(
-                ....:   GF(2), 4, [results[f"IN[{i}]"] for i in range(4)]
+                ....:   GF(2), 4, [results['IN'][i] for i in range(4)]
                 ....: ))
                 sage: out_diff = vec_to_int(vector(
-                ....:   GF(2), 4, [results[f"OUT[{i}]"] for i in range(4)]
+                ....:   GF(2), 4, [results['OUT'][i] for i in range(4)]
                 ....: ))
                 sage: ddt = sb.difference_distribution_table()
                 sage: ddt[in_diff][out_diff]
@@ -2078,7 +2072,7 @@ class SBox_CVL(Component):
                 sage: import shutil
                 sage: shutil.rmtree("./DOCTEST-ToySingleSBoxCipher-Models/")
         """
-        solver = model_options.solver
+        solver = model_options.milp_solver
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             ddt = self.S.difference_distribution_table()
@@ -2206,12 +2200,14 @@ class SBox_CVL(Component):
                     milp_to_minimize_milp.set_objective(sum(Z))
                     with suppress_output():  # to avoid doctest failure
                         milp_to_minimize_milp.write_mps(str(s_file_mps))
-                    if solver:
-                        solve(input_file_name=s_file_mps, output_file_name=s_file_sol, solver=solver)
+                    if not isinstance(solver, NO_MILP_SOLVER_CVL):
+                        solver.solve(
+                            input_file_name=s_file_mps, output_file_name=s_file_sol
+                        )
                     else:  # Remember filename so we can tell the user to solve it
                         new_mps_files.append(s_file_mps)
 
-            if not solver:
+            if isinstance(solver, NO_MILP_SOLVER_CVL):
                 print(
                     "SBox MILPs have been written to "
                     f"{', '.join(new_mps_files)}. "
@@ -2222,21 +2218,6 @@ class SBox_CVL(Component):
                 self._return_immediately_ = True
                 return
 
-            def _to_dict(res):
-                r"""
-                Instead of using a dictionary {'Z[0]': 1, 'Z[1]':2} use
-                {'Z':{0:1, 1:2}}, so we can easier iterate over
-                the Z[i]
-                """
-                my_res = dict()
-                for variable, value in res.items():
-                    var_name = variable.split("[")[0]
-                    var_index = variable.split("[")[1].split("]")[0]
-                    if var_name not in my_res:
-                        my_res[var_name] = dict()
-                    my_res[var_name][int(var_index)] = value
-                return my_res
-
             selected_inequations = {
                 prob: [] for prob in reduction_solution_files.keys()
             }
@@ -2246,8 +2227,7 @@ class SBox_CVL(Component):
                     "former check or generation"
                 )
 
-                results, _ = _process_solution_file(s_file_sol, None)
-                results = _to_dict(results)
+                results, _ = model_options.milp_solver.process_solution_file(s_file_sol)
                 assert 'Z' in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "
                     f"Found {results.keys()}, expected 'Z'"
@@ -2355,7 +2335,7 @@ class SBox_CVL(Component):
                     _write_espresso_input(
                         posset, esp_file_name, model_options.path
                     )
-                    if model_options.minimizer is None:
+                    if isinstance(model_options.logic_minimizer, NO_LOGIC_MINIMIZER_CVL):
                         print(
                             "Optimization problem for Espresso has been "
                             f"written to {esp_file_in}.\n"
@@ -2365,8 +2345,11 @@ class SBox_CVL(Component):
                         )
                         self._return_immediately_ = True
                         return
-                    elif model_options.minimizer == MINIMIZER.ESPRESSO:
-                        run_espresso(esp_file_in, esp_file_out)
+                    elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
+                        model_options.logic_minimizer.solve(
+                            esp_file_in, esp_file_out
+                        )
+
                 clauses = _read_espresso_output(esp_file_out)
 
                 n_in, n_out = self.input_length, self.output_length
@@ -2406,7 +2389,6 @@ class SBox_CVL(Component):
             sage: from civerly.component import SBox_CVL
             sage: from civerly.model_options import *
             sage: from civerly.util import suppress_output, vec_to_int
-            sage: from civerly.solvers import _process_solution_file, solve
             sage: sb = SBox((4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15))
             sage: sbox = SBox_CVL(sb, "s-box")
             sage: cipher = SBoxCipher(4, 4, name="ToySingleSBoxCipher")
@@ -2417,14 +2399,13 @@ class SBox_CVL(Component):
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   minimizer=MINIMIZER.ESPRESSO,
+            ....:   sat_solver=CRYPTOMINISAT_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   path=Path("./DOCTEST-ToySingleSBoxCipher-Models/"))
             sage: # optional - cryptominisat # optional - espresso
             sage: with suppress_output(): cipher.analyse(model_options)
-            sage: results, objective_value = _process_solution_file(
-            ....:   model_options.path / (cipher.name + ".sat"),
-            ....:   SOLVER.CRYPTOMINISAT
+            sage: results, objective_value = model_options.sat_solver.process_solution_file(
+            ....:   model_options.path / (cipher.name + ".sat")
             ....: )
             sage: objective_value
             1
@@ -2500,7 +2481,7 @@ class SBox_CVL(Component):
                 _write_espresso_input(
                     posset, esp_file_name, model_options.path
                 )
-                if model_options.minimizer is None:
+                if isinstance(model_options.logic_minimizer, NO_LOGIC_MINIMIZER_CVL):
                     print(
                         "Optimization problem for Espresso has been "
                         f"written to '{esp_file_in}'.\n"
@@ -2510,8 +2491,11 @@ class SBox_CVL(Component):
                     )
                     self._return_immediately_ = True
                     return
-                elif model_options.minimizer == MINIMIZER.ESPRESSO:
-                    run_espresso(esp_file_in, esp_file_out)
+                elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
+                    model_options.logic_minimizer.solve(
+                        esp_file_in, esp_file_out
+                    )
+
             clauses = _read_espresso_output(esp_file_out)
 
             for clause in clauses:
