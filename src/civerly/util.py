@@ -631,10 +631,8 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     # STEP 3:
     # use the found solution to generate a minimial MILP that models the
     # component
-    for res in results.items():
-        Z_index = _between_brackets(res[0])
-
-        if res[1] != 0:
+    for Z_index, use in results['Z'].items():
+        if use != 0:
             final_choices.append(Z_index)
 
     for ic, ineq in enumerate(convex_constraints):
@@ -674,6 +672,20 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
         elif ineq.is_equation():
             comp.milp.add_constraint(sum(tmp_arr) + ineq.b() == 0)
     return
+
+
+def _to_dict(flat_results):
+    r"""
+    Convert a flat results dict ``{'Z[0]': 1, 'Z[1]': 2}`` to a nested one
+    ``{'Z': {0: 1, 1: 2}}``, grouping by variable name and using the
+    bracket index as an integer key.
+    """
+    nested = {}
+    for variable, value in flat_results.items():
+        var_name, rest = variable.split("[", 1)
+        var_index = int(rest.rstrip("]"))
+        nested.setdefault(var_name, {})[var_index] = value
+    return nested
 
 
 @contextlib.contextmanager
