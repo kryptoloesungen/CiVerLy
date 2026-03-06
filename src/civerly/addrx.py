@@ -12,13 +12,15 @@ EXAMPLES::
     sage: from civerly.component import ModAdd_CVL, AND_CVL, SBox_CVL
     sage: addrx = AddRX(4, 4, 4, "Cipher")
     sage: edges = [(addrx.IN, (0, 0)), (addrx.IN, (1, 1))]
-    sage: try: addrx.add_subcipher(AND_CVL(4), edges)
-    ....: except TypeError: print("Did not work")
-    Did not work
+    sage: addrx.add_subcipher(AND_CVL(4), edges)
+    Traceback (most recent call last):
+    ...
+    TypeError: AddRX does not accept SBox_CVL and AND_CVL
     sage: e = [(addrx.IN, (0, 0))]
-    sage: try: node = addrx.add_subcipher(SBox_CVL(SBox([0,1,4,3,6,5,2,7])), e)
-    ....: except TypeError: print("Did not work")
-    Did not work
+    sage: addrx.add_subcipher(SBox_CVL(SBox([0,1,4,3,6,5,2,7])), e)
+    Traceback (most recent call last):
+    ...
+    TypeError: AddRX does not accept SBox_CVL and AND_CVL
     sage: edges = [(addrx.IN, (i, i)) for i in range(4)]
     sage: node = addrx.add_subcipher(ModAdd_CVL(8), edges)
 """

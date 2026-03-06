@@ -24,9 +24,10 @@ EXAMPLES::
     sage: aeslikecipher = AESlike(4, 5, 3, "Cipher") # 5 rows x 3 columns
     sage: modadd = ModAdd_CVL(4)
     sage: edges = [(aeslikecipher.IN, (0, 0)), (aeslikecipher.IN, (1, 0))]
-    sage: try: aeslikecipher.add_subcipher(modadd, edges)
-    ....: except TypeError: print("Did not work")
-    Did not work
+    sage: aeslikecipher.add_subcipher(modadd, edges)
+    Traceback (most recent call last):
+    ...
+    TypeError: The passed sub_cipher has type <class 'civerly.component.ModAdd_CVL'> and is not allowed in SBoxCiphers.
     sage: sb = SBox_CVL(PRESENT)
     sage: for i in range(15):
     ....:   edges = [(aeslikecipher.IN, (i, 0))]
