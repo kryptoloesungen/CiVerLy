@@ -53,9 +53,10 @@ class Component(ABC):
     EXAMPLES::
 
         sage: from civerly.component import Component
-        sage: try: comp = Component(16, 16)
-        ....: except TypeError: print("Did not work")
-        Did not work
+        sage: comp = Component(16, 16)  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        TypeError: Can't instantiate abstract class Component...
 
     .. admonition:: For future development
 
@@ -249,9 +250,10 @@ class I_CVL(Component):
             sage: identity = I_CVL(16)
             sage: hex(vec_to_int(identity(int_to_vec(0x1f2,16))))
             '0x1f2'
-            sage: try: hex(vec_to_int(identity(int_to_vec(0x1929ab6,16))))
-            ....: except ValueError: print("Did not work")
-            Did not work
+            sage: int_to_vec(0x1929ab6, 16)
+            Traceback (most recent call last):
+            ...
+            ValueError: Input size of 26382006 too large (can at most be 65536)
 
         TESTS::
 
@@ -472,9 +474,10 @@ class ConstXOR_CVL(Component):
         sage: constxor = ConstXOR_CVL(32, 0x11112222)
         sage: hex(vec_to_int(constxor(int_to_vec(0xababcdcd,32))))
         '0xbabaefef'
-        sage: try: constxor.const = 0x1019b214
-        ....: except AttributeError: print("Did not work")
-        Did not work
+        sage: constxor.const = 0x1019b214  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        AttributeError: ...
 
     TESTS::
 

@@ -15,9 +15,10 @@ EXAMPLES::
     sage: node_xor = andrx_cipher.add_subcipher(XOR_CVL(32, name="xor"), edges)
     sage: edges = [(node_xor, (0, 0)), (andrx_cipher.IN, (1, 1))]
     sage: node_and = andrx_cipher.add_subcipher(AND_CVL(32, name="and"), edges)
-    sage: try: andrx_cipher.add_subcipher(SBox_CVL(AES), [(node_and, (0, 0))])
-    ....: except TypeError: print("Did not work")
-    Did not work
+    sage: andrx_cipher.add_subcipher(SBox_CVL(AES), [(node_and, (0, 0))])
+    Traceback (most recent call last):
+    ...
+    TypeError: AndRX does not accept SBox_CVL and ModAdd_CVL
 """
 
 from civerly.wordbasedcipher import WordBasedCipher

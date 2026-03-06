@@ -16,9 +16,10 @@ EXAMPLES::
     <class 'sage.modules.vector_mod2_dense.Vector_mod2_dense'>
     sage: vec_to_int(int_to_vec(0x1234,16)) == 0x1234
     True
-    sage: try: int_to_vec(0x1234, 12)
-    ....: except ValueError: print("Did not work")
-    Did not work
+    sage: int_to_vec(0x1234, 12)
+    Traceback (most recent call last):
+    ...
+    ValueError: Input size of 4660 too large (can at most be 4096)
 
 """
 
@@ -89,9 +90,10 @@ def int_to_vec(input_num, size):
         sage: int_to_vec(0x12340, 24)
         (0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0,
         1, 0, 0, 0, 0, 0, 0)
-        sage: try: int_to_vec(0x12340, 16)
-        ....: except ValueError: print("Did not work")
-        Did not work
+        sage: int_to_vec(0x12340, 16)
+        Traceback (most recent call last):
+        ...
+        ValueError: Input size of 74560 too large (can at most be 65536)
 
     TESTS::
 
