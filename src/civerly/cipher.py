@@ -72,7 +72,7 @@ class CipherNotValidException(Exception):
 
 
 class Cipher:
-    class __Special_Node:
+    class __Special_Node(Component):
         r"""
         A special "component" representing the input or output of
         ``cipher_instance``, which is not directly accessible from the outside.
