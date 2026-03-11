@@ -1659,77 +1659,98 @@ class Cipher:
 
         OUTPUT: None, but writes a PDF file.
         """
-
-        tex_file_name = model_options.path / (self.name + ".tex")
-        pdf_file_name = model_options.path / (self.name + ".pdf")
-
+        # 1. Get results
         results, objective_value = self.read_results(model_options)
 
-        STRING = "\\documentclass{article}\n"
+        # 2. Construct TrailNode tree
+        root_node = TrailNode(self, model_options, results)
+
+        # 3. Verify correctness
+        root_node.verify_correctness()
+
+        # 4. Generate LaTeX string
+        string  = self._latex_header(model_options, objective_value)
+        string += root_node.to_latex(model_options)
+        string += "\\end{document}\n"
+
+        # 5. Write to .tex file and compile to PDF
+        self._write_and_compile_tex(string, model_options)
+
+    def get_trail(self, model_options):
+        r"""
+        After solving a MILP or SAT, converts the solution values to a
+        trail-like output as a ``TrailNode`` tree. Similar to
+        ``self.generate_report``, but returns the tree instead of a PDF.
+        """
+        results, _ = self.read_results(model_options)
+        root_node = TrailNode(self, model_options, results)
+        root_node.verify_correctness()
+        return root_node
+
+    def _latex_header(self, model_options, objective_value) -> str:
+        r"""
+        Returns the LaTeX preamble and document header for a trail report.
+        """
+        cryptanalysis_map = {
+            CRYPTANALYSIS.DIFFERENTIAL: "differential",
+            CRYPTANALYSIS.LINEAR:       "linear",
+        }
+        granularity_map = {
+            GRANULARITY.WORDWISE: "Wordwise",
+            GRANULARITY.BITWISE:  "Bitwise",
+        }
+        opt_map = {
+            OPTIMIZATION.MILP: "MILP",
+            OPTIMIZATION.SAT:  "SAT",
+        }
+        for val, enum in [
+            (model_options.cryptanalysis, CRYPTANALYSIS),
+            (model_options.granularity,   GRANULARITY),
+            (model_options.optimization,  OPTIMIZATION),
+        ]:
+            if val not in {CRYPTANALYSIS.DIFFERENTIAL, CRYPTANALYSIS.LINEAR,
+                           GRANULARITY.WORDWISE, GRANULARITY.BITWISE,
+                           OPTIMIZATION.MILP, OPTIMIZATION.SAT}:
+                raise InvalidModelOptionException(val, enum)
+
+        cryptanalysis = cryptanalysis_map[model_options.cryptanalysis]
+        granularity   = granularity_map[model_options.granularity]
+        milp_or_sat   = opt_map[model_options.optimization]
+        name = self.name.replace('_', '\\_')
+
+        # define \statematrix as empty command so sub-ciphers can renewcommand
+        STRING  = "\\documentclass{article}\n"
         STRING += "\\usepackage{amssymb}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
         STRING += "\\usetikzlibrary{arrows}\n"
-
-        # define as empty command, in order to 'renewcommand' throughout the
-        # sections
         STRING += "\\newcommand*{\\statematrix}[2]{}\n"
-
-        if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
-            cryptanalysis = "differential"
-        elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
-            cryptanalysis = "linear"
-        else:
-            raise InvalidModelOptionException(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
-
-        if model_options.granularity == GRANULARITY.WORDWISE:
-            granularity = "Wordwise"
-        elif model_options.granularity == GRANULARITY.BITWISE:
-            granularity = "Bitwise"
-        else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
-
-        name = self.name.replace('_', '\\_')
         STRING += f"\\title{{{granularity} {cryptanalysis} trail through "
-        if model_options.optimization == OPTIMIZATION.MILP:
-            milp_or_sat = "MILP"
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            milp_or_sat = "SAT"
         STRING += f"\\texttt{{{name}}} found by {milp_or_sat}}}\n\n"
         STRING += "\\author{\\texttt{CiVerLy}}\n"
         STRING += "\\begin{document}\n"
         STRING += "\\maketitle\n"
 
         if model_options.granularity == GRANULARITY.WORDWISE:
-            STRING += "Total number of active SBoxes:"
-            STRING += f"${objective_value}$ \n"
+            STRING += f"Total number of active SBoxes: ${objective_value}$ \n"
         elif model_options.granularity == GRANULARITY.BITWISE:
-            if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
-                cryptanalysis_obj_value = "differential probability"
-            elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
-                cryptanalysis_obj_value = "linear correlation"
-            STRING += f"Maximal {cryptanalysis_obj_value}: "
-            STRING += f"$2^{{-{objective_value}}}$\n"
+            obj_label = {
+                CRYPTANALYSIS.DIFFERENTIAL: "differential probability",
+                CRYPTANALYSIS.LINEAR:       "linear correlation",
+            }[model_options.cryptanalysis]
+            STRING += f"Maximal {obj_label}: $2^{{-{objective_value}}}$\n"
 
-        ###################################
-        root_node = TrailNode(cipher_instance=self)
-        STRING += self._draw_or_get_trail_rec(
-            results=results,
-            current_node=root_node,
-            model_options=model_options,
-            _report=True
-        )
-        ###################################
-        STRING += "\\end{document}\n"
+        return STRING
 
-        root_node.verify_correctness()  # Throws Error when incorrect
+    def _write_and_compile_tex(self, string, model_options) -> None:
+        r"""
+        Writes ``string`` to a ``.tex`` file and compiles it to PDF via
+        ``pdflatex``, then removes auxiliary build files.
+        """
+        tex_file_name = model_options.path / (self.name + ".tex")
+        pdf_file_name = model_options.path / (self.name + ".pdf")
 
         with open(tex_file_name, 'w') as f:
-            f.write(STRING)
-            f.close()
+            f.write(string)
 
         with suppress_output():
             process = subprocess.Popen([
@@ -1746,199 +1767,34 @@ class Cipher:
 
         with suppress_output():
             prefix = str(model_options.path)
-            patterns = [
-                "/*.synctex.gz",
-                "/*.fls",
-                "/*.aux",
-                "/*.log",
-                "/*.fdb_latexmk"
-            ]
-            for pattern in patterns:
-                for file_matching_pattern in glob.glob(prefix + pattern):
-                    subprocess.Popen(
-                        ["rm", "-f", file_matching_pattern]
-                    ).wait()
+            for pattern in ["/*.synctex.gz", "/*.fls", "/*.aux",
+                            "/*.log", "/*.fdb_latexmk"]:
+                for f in glob.glob(prefix + pattern):
+                    subprocess.Popen(["rm", "-f", f]).wait()
 
         print(f"Output file in: {pdf_file_name}")
 
-        return
-
-    def get_trail(self, model_options):
+    def _latex_section(self, trail_node, model_options) -> str:
         r"""
-        After solving a MILP or SAT, it will convert the solution values to a
-        trail-like output, in form of a list. This is very similar to
-        ``self.generate_report``, however the content is in form of a list
-        rather than a pdf file.
+        Generate the LaTeX/tikz section string for this cipher, using the
+        pre-built ``trail_node`` (which holds ``bits_in`` and ``bits_out``).
+        Called by ``TrailNode.to_latex``.
         """
-        results, _ = self.read_results(model_options)
+        from civerly.aeslike import AESlike
 
-        root_node = TrailNode(cipher_instance=self)
-        self._draw_or_get_trail_rec(
-            results, model_options, root_node, _report=False
-        )
-        root_node.verify_correctness()  # Throws Error when incorrect
+        depths    = self._dfs_traversal()
+        divide_by = self.wordsize if model_options.granularity == GRANULARITY.WORDWISE else 1
 
-        return root_node
-
-    def _draw_or_get_trail_rec(self, results, model_options,
-                               current_node, _report=False):
-        r"""
-        Helper function for both ``get_trail`` and ``generate_report``, in
-        which the main recursion steps are performed. Should only be used
-        internally.
-
-        There are multiple case distinctions made:
-
-            - ``generate_report``/``get_trail``
-            - MILP/SAT
-            - AESlike/Cipher
-
-        The difference between ``_draw_trail_tikz`` for ``AESlike`` and for
-        ``SBoxCipher`` is the alignment, as the ``AESlike`` internal state is
-        arranged in form of a rectangle, while generic ``SBoxCipher`` objects
-        use a state where each word is on the same row.
-        """
-
-        STRING = self._rec_helpfunc(
-            results=results,
-            model_options=model_options,
-            current_node=current_node,
-            _report=_report
-        )
-
-        if model_options.optimization == OPTIMIZATION.MILP:
-            if not hasattr(self, 'dictionaries_milp'):
-                with open(model_options.path / (self.name + "_d.json")) as f:
-                    dictionaries = json.load(f)
-            else:
-                dictionaries = self.dictionaries_milp
-
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            if not hasattr(self, 'dictionaries_sat'):
-                with open(model_options.path / (self.name + "_d.json")) as f:
-                    dictionaries = json.load(f)
-            else:
-                dictionaries = self.dictionaries_sat
-
-            def check_condition(comp_num, s):
-                return s > self.input_length + self.output_length and \
-                    s in dictionaries[comp_num].keys()
-
-        else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-            )
-
-        depths = self._dfs_traversal()
-
-        # Recursively iterate through each subcipher
-        for comp_num, comp in enumerate(self.nodes):
-            if isinstance(comp, Cipher):
-                if model_options.optimization == OPTIMIZATION.MILP:
-                    # Build nested sub_results for the sub-cipher directly
-                    # from the parent's nested results entry for this comp_num
-                    sub_results = {}
-                    var_name = f"X{comp_num}"
-                    for s_ind, solution_bit_value in \
-                            results.get(var_name, {}).items():
-                        translated = dictionaries[comp_num][
-                            f"{var_name}[{s_ind}]"
-                        ]
-                        tr_name, tr_rest = translated.split('[', 1)
-                        tr_ind = int(tr_rest.rstrip(']'))
-                        sub_results.setdefault(tr_name, {})[tr_ind] = \
-                            solution_bit_value
-                else:  # SAT
-                    sub_results = {}
-                    for s, solution_bit_value in results.items():
-                        if check_condition(comp_num, s):
-                            # Translate the results using the corresponding
-                            # dictionaries
-                            sub_results[dictionaries[comp_num][s]] = \
-                                solution_bit_value
-
-                new_node = current_node.children[depths[comp_num]]
-
-                output = comp._draw_or_get_trail_rec(
-                    results=sub_results,
-                    model_options=model_options,
-                    current_node=new_node,
-                    _report=_report
-                )
-                if _report:
-                    STRING += output
-
-        return STRING
-
-    def _rec_helpfunc(self, results, model_options, current_node,
-                      _report=False):
-        r"""
-        Internal helper function that generates a well-aligned grid of the
-        cipher components and returns either the corresponding latex code or
-        the trail as a list.
-
-        INPUT:
-
-            - ``results`` -- a list containing the variable assignments for the
-              given optimization problem
-
-            - ``model_options`` -- the model_options enum containing the
-              relevant metadata
-
-            - ``current_node`` -- Of type ``TrailNode``, used to generate the
-              tree structure to double-check the reports coherence.
-
-            Optionally:
-
-            - ``_report`` -- bool; Indicates whether this is called by
-              :meth:`generate_report` or not. In case it is, return ``STRING``
-
-        OUTPUT:
-
-            - Either a string containing the latex code for the trail or a list
-              containing the trail itself
-        """
-        # NOTE for clarification:
-        # - ``bits``   : Array initialized with None entries, which will be
-        #   filled with the bit values.
-        # - ``nibbles``: Array which aligns the bits to the left and groups
-        #   them into nibbles of size ``self._wrd``.
-        # ------------------------------------------------- #
-
-        if model_options.granularity == GRANULARITY.WORDWISE:
-            divide_by = self.wordsize
-        elif model_options.granularity == GRANULARITY.BITWISE:
-            divide_by = 1
-        else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
-
-        # load dictionaries (e.g. when generating report in a new session after
-        # models where solved externally)
-        if not hasattr(self, 'dictionaries'):
-            with open(model_options.path / (self.name + "_d.json")) as f:
-                dictionaries = json.load(f)
-
-        ##################################################
-        depths = self._dfs_traversal()
-
-        # Amount of space (in tikz units) between:
-        #   -> each of the layers
-        #   -> in- and output of the layers
         space_between_layers = 3
         space_between_in_out = 2
-        ##################################################
 
-        STRING = f"\\section{{{self.name.replace('_', '\\_')}}}\n"
+        # Local copies so nibble-padding below does not mutate the node
+        bits_in  = [row[:] for row in trail_node.bits_in]
+        bits_out = [row[:] for row in trail_node.bits_out]
+
+        STRING  = f"\\section{{{self.name.replace('_', '\\_')}}}\n"
         STRING += "\\begingroup\n"
 
-        # Distinction between how a statematrix looks like, depending on:
-        # -> if self is AESlike: statematrix is rectangular, based on
-        #    self.rows and self.cols
-        # -> if not, statematrix will not be used and the state is arranged
-        #    in one row.
-        from civerly.aeslike import AESlike
         if isinstance(self, AESlike):
             STRING += "\\renewcommand{\\statematrix}[2]{\n"
             STRING += f"\t\\draw (#1, #2) rectangle (#1 + {self.cols}, #2 + {self.rows});\n"
@@ -1951,8 +1807,6 @@ class Cipher:
         scale = sqrt((-0.75 + self._wrd/4) * 4)
 
         STRING += "\\begin{center}\n"
-
-        # Resize the drawings such that everything fits on the page
         if isinstance(self, AESlike):
             STRING += "\t\\resizebox{0.7\\textwidth}{!}{\\begin{tikzpicture}\n"
         else:
@@ -1961,119 +1815,7 @@ class Cipher:
             else:
                 STRING += "\t\\resizebox{!}{0.8\\textheight}{\\begin{tikzpicture}\n"
 
-        max_width_in = max([
-            sum(
-                self.nodes[w].input_length
-                for w in range(len(self.nodes))
-                if depths[w] == depth
-            )
-            for depth in range(max(depths)+1)
-        ])
-        max_width_out = max([
-            sum(
-                self.nodes[w].output_length
-                for w in range(len(self.nodes))
-                if depths[w] == depth
-            )
-            for depth in range(max(depths)+1)
-        ])
-
-        bits_in = [
-            [None for _ in range(max_width_in // divide_by)]
-            for _ in range(max(depths)+1)
-        ]
-        bits_out = [
-            [None for _ in range(max_width_out // divide_by)]
-            for _ in range(max(depths)+1)
-        ]
-
-        # Sort the (messy and unordered) variable values correctly
-        if model_options.optimization == OPTIMIZATION.MILP:
-            for var_name, var_dict in results.items():
-                if var_name in ("IN", "OUT"):
-                    # if var_name is MILP_IN or MILP_OUT, we skip it
-                    continue
-                comp_num = int(var_name[1:])
-                for s_ind, solution_bit_value in var_dict.items():
-                    translated_component = dictionaries[comp_num][
-                        f"{var_name}[{s_ind}]"
-                    ]
-                    # Draw the input nodes of each component
-                    bool1 = "IN" in translated_component
-                    # We also draw the output of the last component.
-                    bool2 = "OUT" in translated_component
-
-                    if bool1 and comp_num != 0:  # dont draw self.IN.in
-                        current_index = _between_brackets(translated_component)
-                        bit_ind = self._from_grid(
-                            comp_num, current_index, model_options, input_side=True
-                        )
-                        bits_in[depths[comp_num]][bit_ind] = solution_bit_value
-                    elif bool2:
-                        current_index = _between_brackets(translated_component)
-                        bit_ind = self._from_grid(
-                            comp_num, current_index, model_options, input_side=False
-                        )
-                        bits_out[depths[comp_num]][bit_ind] = solution_bit_value
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            # NOTE: SAT-vars start at 1 while grid-indexing starts at 0
-            for s, solution_bit_value in results.items():
-                if s <= self.input_length + self.output_length:
-                    # if s is SAT_IN or SAT_OUT, we skip it
-                    continue
-                comp_num = 0
-                try:
-                    # determine correct comp_num based on s being in
-                    # dictionaries[comp_num]
-                    while str(s) not in dictionaries[comp_num].keys():
-                        comp_num += 1
-                except IndexError as error:
-                    # if the variable comes from the summation logic that bound
-                    # the objective value, we skip it this is the case when s
-                    # was added into the sat after the last component,
-                    # i.e. when s > max(dictionaries[-1].keys())
-                    if s > int(max(dictionaries[comp_num - 1].keys())):
-                        continue
-                    else:
-                        raise error
-
-                translated_component = dictionaries[comp_num][str(s)]
-                comp = self.nodes[comp_num]
-                # Draw the input nodes of each component
-                bool1 = translated_component <= comp.input_length
-                # We also draw the output of the last component.
-                bool2 = comp.input_length < translated_component and \
-                    translated_component <= comp.input_length + comp.output_length
-
-                if bool1 and comp_num != 0:  # dont draw self.IN.in
-                    current_index = translated_component - 1
-                    bit_ind = self._from_grid(
-                        comp_num, current_index, model_options, input_side=True
-                    )
-                    bits_in[depths[comp_num]][bit_ind] = solution_bit_value
-                elif bool2:
-                    current_index = translated_component - \
-                        self.nodes[comp_num].input_length - 1
-                    bit_ind = self._from_grid(
-                        comp_num, current_index, model_options, input_side=False
-                    )
-                    bits_out[depths[comp_num]][bit_ind] = solution_bit_value
-        else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-            )
-
-        # realign bits_in, bits_out by removing any 'None' entries
-        bits_in = [
-            [entry for entry in bits_in_row if entry is not None]
-            for bits_in_row in bits_in
-        ]
-        bits_out = [
-            [entry for entry in bits_out_row if entry is not None]
-            for bits_out_row in bits_out
-        ]
-
-        # draw state arrays
+        # Draw state arrays / component structure
         if isinstance(self, AESlike):
             for layer in range(max(depths)+1):
                 x_pos = (layer % 4) * (self.cols + 2)
@@ -2083,16 +1825,14 @@ class Cipher:
                 STRING += "{\\huge $\\stackrel{ \\scriptsize "
                 STRING += f"\\textrm{{{self.nodes[depths.index(layer)].name}}}"
                 STRING += "}{\\longrightarrow}$};\n"
-        else:  # if this is SBoxCipher
-
+        else:  # SBoxCipher
             for (a, b), (x, y) in self.edges:
-                xx = self._from_grid(a, x//divide_by, model_options, input_side=False)
-                yy = self._from_grid(b, y//divide_by, model_options, input_side=True)
+                xx = self._from_grid(a, x//divide_by, model_options=model_options, input_side=False)
+                yy = self._from_grid(b, y//divide_by, model_options=model_options, input_side=True)
 
                 top_a = -depths[a] * (space_between_layers + space_between_in_out)
                 bot_b = -(depths[b] * (space_between_layers + space_between_in_out) - space_between_in_out + 1)
 
-                # Connection between nodes
                 if b == self.nodes.index(self.OUT):
                     STRING += "\t\t\\draw[thin, dashed, ->] "
                 else:
@@ -2102,7 +1842,6 @@ class Cipher:
                 STRING += f"({scale * divide_by * (0.5 + yy)/self._wrd}, "
                 STRING += f"{bot_b});\n"
 
-            # Draw the component as a box
             for a, na in enumerate(self.nodes):
                 if isinstance(na, Cipher.__Special_Node):
                     continue
@@ -2110,68 +1849,50 @@ class Cipher:
                 top = -depths[a] * (space_between_layers + space_between_in_out)
                 bot = -depths[a] * (space_between_layers + space_between_in_out) - space_between_in_out + 1
 
-                if na.input_length > 0:  # for most nodes
-                    corner_a = (scale * divide_by * self._from_grid(a, 0, model_options, input_side=True)/self._wrd, top)
-                else:  # if na is C_CVL or similar
-                    corner_a = (scale * divide_by * self._from_grid(a, na.output_length//(2*divide_by), model_options, input_side=False)/self._wrd, top)
+                if na.input_length > 0:
+                    corner_a = (scale * divide_by * self._from_grid(a, 0, model_options=model_options, input_side=True)/self._wrd, top)
+                else:
+                    corner_a = (scale * divide_by * self._from_grid(a, na.output_length//(2*divide_by), model_options=model_options, input_side=False)/self._wrd, top)
 
-                corner_b = (scale * divide_by * self._from_grid(a, 0, input_side=False)/self._wrd, bot)
-                corner_c = (scale * divide_by * (self._from_grid(a, (na.output_length-1)//divide_by, model_options, input_side=False) + 1)/self._wrd, bot)
+                corner_b = (scale * divide_by * self._from_grid(a, 0, model_options=model_options, input_side=False)/self._wrd, bot)
+                corner_c = (scale * divide_by * (self._from_grid(a, (na.output_length-1)//divide_by, model_options=model_options, input_side=False) + 1)/self._wrd, bot)
 
-                if na.input_length > 0:  # for most nodes
-                    corner_d = (scale * divide_by * (self._from_grid(a, (na.input_length-1)//divide_by, model_options, input_side=True) + 1)/self._wrd, top)
-                else:  # if na is C_CVL or similar
-                    corner_d = (scale * divide_by * (self._from_grid(a, na.output_length//(2*divide_by), model_options, input_side=False) + 1)/self._wrd, top)
+                if na.input_length > 0:
+                    corner_d = (scale * divide_by * (self._from_grid(a, (na.input_length-1)//divide_by, model_options=model_options, input_side=True) + 1)/self._wrd, top)
+                else:
+                    corner_d = (scale * divide_by * (self._from_grid(a, na.output_length//(2*divide_by), model_options=model_options, input_side=False) + 1)/self._wrd, top)
 
                 mid_point = tuple(sum(x)/4 for x in zip(*[corner_a, corner_b, corner_c, corner_d]))
 
                 STRING += f"\t\t\\draw[very thick] {corner_a} -- {corner_b} -- {corner_c} -- {corner_d} -- {corner_a};\n"
                 STRING += f"\t\t\\node[] at {mid_point} {{\\tiny ${na.name.replace('_', '\\_')}$}};\n"
 
-        # Selecting correct arrays depending on granularities
+        # Convert raw bits to display arrays based on granularity
         if model_options.granularity == GRANULARITY.WORDWISE:
-            arr_in = bits_in
+            arr_in  = bits_in
             arr_out = bits_out
-
         elif model_options.granularity == GRANULARITY.BITWISE:
+            for i in range(max(depths)+1):  # pad to word boundary
+                bits_in[i]  += [0] * (-len(bits_in[i])  % self._wrd)
+                bits_out[i] += [0] * (-len(bits_out[i]) % self._wrd)
 
-            for i in range(max(depths)+1):  # pad with zeros
-                bits_in[i] += [0]*(-len(bits_in[i]) % self._wrd)
-                bits_out[i] += [0]*(-len(bits_out[i]) % self._wrd)
-
-            # Instead of representing each bit on its own, we combine them to
-            # nibbles, for a more concise representation.
-            nibbles_in = [
-                [None for _ in range(len(bits_in[depth])//self._wrd)]
-                for depth in range(max(depths)+1)
-            ]
-            nibbles_out = [
-                [None for _ in range(len(bits_out[depth])//self._wrd)]
-                for depth in range(max(depths)+1)
-            ]
-
-            for depth in range(max(depths)+1):
-                nibbles_in[depth] = [
-                    sum([
-                        bits_in[depth][i:i+self._wrd][j] << (self._wrd-1-j)
-                        for j in range(self._wrd)
-                    ])
-                    for i in range(0, len(bits_in[depth]), self._wrd)
+            # Group bits into words for display
+            nibbles_in  = [[None] * (len(bits_in[d])  // self._wrd) for d in range(max(depths)+1)]
+            nibbles_out = [[None] * (len(bits_out[d]) // self._wrd) for d in range(max(depths)+1)]
+            for d in range(max(depths)+1):
+                nibbles_in[d]  = [
+                    sum(bits_in[d][i:i+self._wrd][j]  << (self._wrd-1-j) for j in range(self._wrd))
+                    for i in range(0, len(bits_in[d]),  self._wrd)
                 ]
-                nibbles_out[depth] = [
-                    sum([
-                        bits_out[depth][i:i+self._wrd][j] << (self._wrd-1-j)
-                        for j in range(self._wrd)
-                    ])
-                    for i in range(0, len(bits_out[depth]), self._wrd)
+                nibbles_out[d] = [
+                    sum(bits_out[d][i:i+self._wrd][j] << (self._wrd-1-j) for j in range(self._wrd))
+                    for i in range(0, len(bits_out[d]), self._wrd)
                 ]
-
-            arr_in = nibbles_in
+            arr_in  = nibbles_in
             arr_out = nibbles_out
 
-        # fill in values
+        # Fill in values
         bool_finished_arrin = False
-        # Fill the layers with the nibble values
         for j, arr_layer in enumerate(arr_in + arr_out):
             # restart the counter after we iterated through arr_in
             if j >= len(arr_in):
@@ -2202,12 +1923,10 @@ class Cipher:
                             STRING += f"{-(j // 4) * (self.rows + 1) + self.rows - (i % self.rows) - 0.5})"
                             STRING += f"{{ {tikz_entry} }};\n"
 
-                    else:  # if this is SBoxCipher
+                    else:  # SBoxCipher
                         if j == len(arr_out) - 1 and bool_finished_arrin:
                             continue  # skip self.OUT.out
 
-                        # compute the correct depth at which we draw, depending
-                        # on whether we draw from arr_in or arr_out
                         computed_draw_depth = j * (space_between_layers + space_between_in_out)
                         if bool_finished_arrin:
                             computed_draw_depth += space_between_in_out
@@ -2232,25 +1951,9 @@ class Cipher:
                             STRING += f"{{{tikz_entry}}};\n"
 
         STRING += "\t\\end{tikzpicture}}\n\\end{center}\n\\endgroup\n"
+        return STRING
 
-        # Construct the tree structure of subciphers for
-        # civerly.trail.verify_correctness()
-        current_node.name = self.name
-        current_node.children = [
-            TrailNode(cipher_instance=self.nodes[depths[r]])
-            for r, row in enumerate(bits_out)
-        ]
-        for i in range(1, len(bits_out)):
-            current_node.children[i - 1].right = current_node.children[i]
 
-        for i in range(0, len(bits_out)):
-            current_node.children[i].input = bits_in[i]
-            current_node.children[i].output = bits_out[i]
-
-        if _report:
-            return STRING
-        else:
-            return
 
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         r"""

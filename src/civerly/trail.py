@@ -8,68 +8,52 @@ from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.util import _between_brackets
 
 class TrailNode:
-    def __init__(self, cipher_instance, model_options, results) -> None:
+    def __init__(self, cipher_instance, model_options, results,
+                 _parent_depth=None) -> None:
         self.children : list[TrailNode] = []
         self.right = None
         self.input = None
         self.output = None
+        self.bits_in = None
+        self.bits_out = None
+        self._parent_depth = _parent_depth
         self.cipher_instance = cipher_instance
         self.name = cipher_instance.name
         self.input_length = cipher_instance.input_length
         self.output_length = cipher_instance.output_length
 
-        if model_options.optimization == OPTIMIZATION.MILP:
-            if not hasattr(self.cipher_instance, 'dictionaries_milp'):
-                with open(model_options.path / (self.cipher_instance.name + "_d.json")) as f:
-                    dictionaries = json.load(f)
-            else:
-                dictionaries = self.cipher_instance.dictionaries_milp
+        # obtain dictionaries
+        opt_to_attr = {OPTIMIZATION.MILP: 'dictionaries_milp', OPTIMIZATION.SAT: 'dictionaries_sat'}
+        attr = opt_to_attr[model_options.optimization]
+        if hasattr(self.cipher_instance, attr):
+            dictionaries = getattr(self.cipher_instance, attr)
+        else:
+            with open(model_options.path / (self.name + "_d.json")) as f:
+                dictionaries = json.load(f)
 
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            if not hasattr(self.cipher_instance, 'dictionaries_sat'):
-                with open(model_options.path / (self.cipher_instance.name + "_d.json")) as f:
-                    dictionaries = json.load(f)
-            else:
-                dictionaries = self.cipher_instance.dictionaries_sat
-
+        if model_options.optimization == OPTIMIZATION.SAT:
             def check_condition(comp_num, s):
                 return s > self.cipher_instance.input_length + self.cipher_instance.output_length and \
                     s in dictionaries[comp_num].keys()
 
         depths = self.cipher_instance._dfs_traversal()
+        nodes = self.cipher_instance.nodes
 
         ################################################
-        nodes = self.cipher_instance.nodes
-        max_width_in = max([
-            sum(
-                nodes[w].input_length
-                for w in range(len(nodes))
-                if depths[w] == depth
-            )
-            for depth in range(max(depths)+1)
-        ])
-        max_width_out = max([
-            sum(
-                nodes[w].output_length
-                for w in range(len(nodes))
-                if depths[w] == depth
-            )
-            for depth in range(max(depths)+1)
-        ])
+        depth_range = range(max(depths) + 1)
+        max_width_in = max(
+            sum(n.input_length for n, d in zip(nodes, depths) if d == depth)
+            for depth in depth_range
+        )
+        max_width_out = max(
+            sum(n.output_length for n, d in zip(nodes, depths) if d == depth)
+            for depth in depth_range
+        )
 
-        if model_options.granularity == GRANULARITY.WORDWISE:
-            divide_by = self.cipher_instance.wordsize
-        elif model_options.granularity == GRANULARITY.BITWISE:
-            divide_by = 1
+        divide_by = self.cipher_instance.wordsize if model_options.granularity == GRANULARITY.WORDWISE else 1
 
-        bits_in = [
-            [None for _ in range(max_width_in // divide_by)]
-            for _ in range(max(depths)+1)
-        ]
-        bits_out = [
-            [None for _ in range(max_width_out // divide_by)]
-            for _ in range(max(depths)+1)
-        ]
+        bits_in  = [[None] * (max_width_in  // divide_by) for _ in depth_range]
+        bits_out = [[None] * (max_width_out // divide_by) for _ in depth_range]
 
         # Sort the (messy and unordered) variable values correctly
         if model_options.optimization == OPTIMIZATION.MILP:
@@ -144,53 +128,53 @@ class TrailNode:
                     bits_out[depths[comp_num]][bit_ind] = solution_bit_value
 
         # realign bits_in, bits_out by removing any 'None' entries
-        bits_in = [
-            [entry for entry in bits_in_row if entry is not None]
-            for bits_in_row in bits_in
-        ]
-        bits_out = [
-            [entry for entry in bits_out_row if entry is not None]
-            for bits_out_row in bits_out
-        ]
+        bits_in  = [[e for e in row if e is not None] for row in bits_in]
+        bits_out = [[e for e in row if e is not None] for row in bits_out]
 
-        self.input = bits_out[0]
+        self.bits_in  = bits_in
+        self.bits_out = bits_out
+        self.input  = bits_out[0]
         self.output = bits_out[-1]
         ################################################
-    
-        # Recursively iterate through each subcipher
-        for comp_num, comp in enumerate(nodes):
-            if not isinstance(comp, Component):
-                if model_options.optimization == OPTIMIZATION.MILP:
-                    # Build nested sub_results for the sub-cipher directly
-                    # from the parent's nested results entry for this comp_num
-                    sub_results = {}
-                    var_name = f"X{comp_num}"
-                    for s_ind, solution_bit_value in \
-                            results.get(var_name, {}).items():
-                        translated = dictionaries[comp_num][
-                            f"{var_name}[{s_ind}]"
-                        ]
-                        tr_name, tr_rest = translated.split('[', 1)
-                        tr_ind = int(tr_rest.rstrip(']'))
-                        sub_results.setdefault(tr_name, {})[tr_ind] = \
-                            solution_bit_value
-                else:  # SAT
-                    sub_results = {}
-                    for s, solution_bit_value in results.items():
-                        if check_condition(comp_num, s):
-                            # Translate the results using the corresponding
-                            # dictionaries
-                            sub_results[dictionaries[comp_num][s]] = \
-                                solution_bit_value
 
+        # Iterate through each subcipher
+        for comp_num, comp in enumerate(nodes):
+            if model_options.optimization == OPTIMIZATION.MILP:
+                # Build nested sub_results for the sub-cipher directly
+                # from the parent's nested results entry for this comp_num
+                sub_results = {}
+                var_name = f"X{comp_num}"
+                for s_ind, solution_bit_value in \
+                        results.get(var_name, {}).items():
+                    translated = dictionaries[comp_num][
+                        f"{var_name}[{s_ind}]"
+                    ]
+                    tr_name, tr_rest = translated.split('[', 1)
+                    tr_ind = int(tr_rest.rstrip(']'))
+                    sub_results.setdefault(tr_name, {})[tr_ind] = \
+                        solution_bit_value
+            else:  # SAT
+                sub_results = {}
+                for s, solution_bit_value in results.items():
+                    if check_condition(comp_num, s):
+                        # Translate the results using the corresponding
+                        # dictionaries
+                        sub_results[dictionaries[comp_num][s]] = \
+                            solution_bit_value
+            # recurse
+            if not isinstance(comp, Component):
                 self.children.append(TrailNode(
-                        self.cipher_instance.nodes[depths[comp_num]],
-                        model_options=model_options,
-                        results=sub_results
+                    comp,
+                    model_options=model_options,
+                    results=sub_results,
+                    _parent_depth=depths[comp_num]
                 ))
+
+        # link siblings
+        for i in range(len(self.children) - 1):
+            self.children[i].right = self.children[i + 1]
         ########################################################################
 
-        
 
     def _to_hex(self) -> str:
         string = ""
@@ -221,21 +205,20 @@ class TrailNode:
                 string += "\n" + child.__repr__(_depth+1)
         return string
 
+    def to_latex(self, model_options) -> str:
+        string = self.cipher_instance._latex_section(self, model_options)
+        for child in self.children:
+            string += child.to_latex(model_options)
+        return string
+
     def verify_correctness(self):
         r"""
-        Performs a coherence check of the report. It takes each of the
-        intermediate states and checks whether the inputs and outputs match.
-        For that, we build up a tree-like data structure where each displayed
-        layer in the report is represented by a node in the tree.
-        Each node in that tree has the following keys:
+        Performs a coherence check of the report. For each sub-cipher child,
+        it verifies that the intermediate states seen from the parent cipher
+        and from the sub-cipher itself agree.
 
-        - ``children`` -- list of nodes; The children nodes of ``node``
-        - ``right`` -- node; the right sibling-node
-        - ``val`` -- list; the values stored in that node.
-
-        As an example, we assume the report to contain the following values in
-        the states of the ExampleRound cipher (on a wordwise level, for
-        simplicity). We label these states with (i) for integers i.
+        As an example, for ExampleRound = [LinearLayer, SBoxLayer] the
+        following must hold (labelling states as in the report):
 
         ExampleRound:
 
@@ -256,47 +239,44 @@ class TrailNode:
                 ---SBoxLayer--->
             [1, 0, 0, 0, 0, 1, 0, 0] (7)
 
-        Now, it should hold that (1) == (4), (2) == (5), (2) == (6),
-        (3) == (7), just by the fact that these layers are directly connected
-        to each other (if not the same). This is exactly what this method
-        checks for, for any arbitrary cipher.
+        Checks: (1)==(4), (2)==(5), (2)==(6), (3)==(7).
 
-        Note that this is a purely syntatic verification of the report, there
-        is no validation on a semantic level! As an example, it is not
-        guaranteed that (6) == (7), even though it is clear that SBoxes can
-        not change the wordwise activity pattern in any way.
+        For each child at depth d in the parent, this amounts to:
+            parent.bits_in[d]   == child.bits_out[0]    (input match)
+            parent.bits_out[d]  == child.bits_out[-1]   (output match)
 
+        Note that this is a purely syntactic verification of the report, there
+        is no validation on a semantic level!
         """
 
         valid = True
 
-        if self.children == [] or None in (self.input, self.output):
+        if not self.children or None in (self.input, self.output):
             return valid
-        first_child = self.children[0]
-        last_child = self.children[-1]
-
-        bool1 = self.input == first_child.output
-        if self.right is not None:
-            bool2 = self.output == last_child.output
-        else:
-            bool2 = True
-
-        if bool1 and bool2:
-            pass  # everything is fine
-        else:  # incoherent report!
-            valid = False
-            msg = "Report is not coherent"
-            if not bool1:
-                msg += f" between {self.name} and {first_child.name} (1):"
-                msg += f" (self = {self._to_hex()}) | "
-                msg += f"(child[0] = {first_child._to_hex()})."
-            elif not bool2:
-                msg += f" between {self.name} and {last_child.name} (2):"
-                msg += f" (self = {self._to_hex()}) | "
-                msg += f"(child[-1] = {last_child._to_hex()})."
-
-            raise AssertionError(msg)
 
         for child in self.children:
+            d = child._parent_depth
+
+            expected_in  = self.bits_in[d]
+            expected_out = self.bits_out[d]
+            actual_in    = child.bits_out[0]
+            actual_out   = child.bits_out[-1]
+
+            if expected_in and actual_in and expected_in != actual_in:
+                valid = False
+                raise AssertionError(
+                    f"Report is not coherent between {self.name} and "
+                    f"{child.name} (input at depth {d}): "
+                    f"(parent = {expected_in}) | (child = {actual_in})."
+                )
+            if expected_out and actual_out and expected_out != actual_out:
+                valid = False
+                raise AssertionError(
+                    f"Report is not coherent between {self.name} and "
+                    f"{child.name} (output at depth {d}): "
+                    f"(parent = {expected_out}) | (child = {actual_out})."
+                )
+
             valid &= child.verify_correctness()
+
         return valid
