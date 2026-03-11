@@ -1610,6 +1610,23 @@ class Cipher:
         else:
             return grid_out
 
+    def read_results(self, model_options):
+        r"""
+        """
+        if model_options.optimization == OPTIMIZATION.MILP:
+            solution_file_name = model_options.path / (self.name + ".sol")
+            return model_options.milp_solver.process_solution_file(
+                solution_file_name) #, "MILP"
+        elif model_options.optimization == OPTIMIZATION.SAT:
+            solution_file_name = model_options.path / (self.name + ".sat")
+            return model_options.sat_solver.process_solution_file(
+                solution_file_name) #, "SAT"
+        else:
+            raise InvalidModelOptionException(
+                model_options.optimization, OPTIMIZATION
+            )
+
+
     def generate_report(self, model_options):
         """
         Generates a ``.tex`` file that contains the state matrices of active
@@ -1626,21 +1643,7 @@ class Cipher:
         tex_file_name = model_options.path / (self.name + ".tex")
         pdf_file_name = model_options.path / (self.name + ".pdf")
 
-        if model_options.optimization == OPTIMIZATION.MILP:
-            milp_or_sat = "MILP"
-            solution_file_name = model_options.path / (self.name + ".sol")
-            results, objective_value = model_options.milp_solver.process_solution_file(
-                solution_file_name)
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            milp_or_sat = "SAT"
-            solution_file_name = model_options.path / (self.name + ".sat")
-            results, objective_value = model_options.sat_solver.process_solution_file(
-                solution_file_name)
-        else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-            )
-
+        results, objective_value = self.read_results(model_options)
 
         STRING = "\\documentclass{article}\n"
         STRING += "\\usepackage{amssymb}\n"
@@ -1671,6 +1674,10 @@ class Cipher:
 
         name = self.name.replace('_', '\\_')
         STRING += f"\\title{{{granularity} {cryptanalysis} trail through "
+        if model_options.optimization == OPTIMIZATION.MILP:
+            milp_or_sat = "MILP"
+        elif model_options.optimization == OPTIMIZATION.SAT:
+            milp_or_sat = "SAT"
         STRING += f"\\texttt{{{name}}} found by {milp_or_sat}}}\n\n"
         STRING += "\\author{\\texttt{CiVerLy}}\n"
         STRING += "\\begin{document}\n"
