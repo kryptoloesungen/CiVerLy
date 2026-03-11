@@ -1610,6 +1610,26 @@ class Cipher:
         else:
             return grid_out
 
+    def _from_grid(self, node_num, current_index, model_options, input_side=True):
+        r"""
+        Recovers ``(node_num, current_index)`` from grid.
+        """
+        if model_options.granularity == GRANULARITY.WORDWISE:
+            divide_by = self.wordsize
+        elif model_options.granularity == GRANULARITY.BITWISE:
+            divide_by = 1
+        grid = self._construct_grid(divide_by=divide_by, input_side=input_side)
+
+        for grid_row in grid:
+            if (node_num, current_index) in grid_row:
+                return grid_row.index((node_num, current_index))
+
+        # ------------------------ if nothing was found
+        raise AssertionError(
+            f"{(self.nodes[node_num].name, node_num)}[{current_index}] "
+            "is not found in grid!"
+        )
+
     def read_results(self, model_options):
         r"""
         """
@@ -1750,20 +1770,7 @@ class Cipher:
         ``self.generate_report``, however the content is in form of a list
         rather than a pdf file.
         """
-        if model_options.optimization == OPTIMIZATION.MILP:
-            solution_file_name = model_options.path / (self.name + ".sol")
-            results = model_options.milp_solver.process_solution_file(
-                solution_file_name
-            )[0]
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            solution_file_name = model_options.path / (self.name + ".sat")
-            results = model_options.sat_solver.process_solution_file(
-                solution_file_name
-            )[0]
-        else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-            )
+        results, _ = self.read_results(model_options)
 
         root_node = TrailNode(cipher_instance=self)
         self._draw_or_get_trail_rec(
@@ -1923,28 +1930,6 @@ class Cipher:
         space_between_in_out = 2
         ##################################################
 
-        grid_in = self._construct_grid(divide_by=divide_by, input_side=True)
-        grid_out = self._construct_grid(divide_by=divide_by, input_side=False)
-
-        def _from_grid(node_num, current_index, input_side=True):
-            r"""
-            Recovers ``(node_num, current_index)`` from grid.
-            """
-            if input_side:
-                used_grid = grid_in
-            else:
-                used_grid = grid_out
-
-            for grid_row in used_grid:
-                if (node_num, current_index) in grid_row:
-                    return grid_row.index((node_num, current_index))
-
-            # ------------------------ if nothing was found
-            raise AssertionError(
-                f"{(self.nodes[node_num].name, node_num)}[{current_index}] "
-                "is not found in grid!"
-            )
-
         STRING = f"\\section{{{self.name.replace('_', '\\_')}}}\n"
         STRING += "\\begingroup\n"
 
@@ -2020,14 +2005,14 @@ class Cipher:
 
                     if bool1 and comp_num != 0:  # dont draw self.IN.in
                         current_index = _between_brackets(translated_component)
-                        bit_ind = _from_grid(
-                            comp_num, current_index, input_side=True
+                        bit_ind = self._from_grid(
+                            comp_num, current_index, model_options, input_side=True
                         )
                         bits_in[depths[comp_num]][bit_ind] = solution_bit_value
                     elif bool2:
                         current_index = _between_brackets(translated_component)
-                        bit_ind = _from_grid(
-                            comp_num, current_index, input_side=False
+                        bit_ind = self._from_grid(
+                            comp_num, current_index, model_options, input_side=False
                         )
                         bits_out[depths[comp_num]][bit_ind] = solution_bit_value
         elif model_options.optimization == OPTIMIZATION.SAT:
@@ -2062,15 +2047,15 @@ class Cipher:
 
                 if bool1 and comp_num != 0:  # dont draw self.IN.in
                     current_index = translated_component - 1
-                    bit_ind = _from_grid(
-                        comp_num, current_index, input_side=True
+                    bit_ind = self._from_grid(
+                        comp_num, current_index, model_options, input_side=True
                     )
                     bits_in[depths[comp_num]][bit_ind] = solution_bit_value
                 elif bool2:
                     current_index = translated_component - \
                         self.nodes[comp_num].input_length - 1
-                    bit_ind = _from_grid(
-                        comp_num, current_index, input_side=False
+                    bit_ind = self._from_grid(
+                        comp_num, current_index, model_options, input_side=False
                     )
                     bits_out[depths[comp_num]][bit_ind] = solution_bit_value
         else:
@@ -2101,8 +2086,8 @@ class Cipher:
         else:  # if this is SBoxCipher
 
             for (a, b), (x, y) in self.edges:
-                xx = _from_grid(a, x//divide_by, input_side=False)
-                yy = _from_grid(b, y//divide_by, input_side=True)
+                xx = self._from_grid(a, x//divide_by, model_options, input_side=False)
+                yy = self._from_grid(b, y//divide_by, model_options, input_side=True)
 
                 top_a = -depths[a] * (space_between_layers + space_between_in_out)
                 bot_b = -(depths[b] * (space_between_layers + space_between_in_out) - space_between_in_out + 1)
@@ -2126,17 +2111,17 @@ class Cipher:
                 bot = -depths[a] * (space_between_layers + space_between_in_out) - space_between_in_out + 1
 
                 if na.input_length > 0:  # for most nodes
-                    corner_a = (scale * divide_by * _from_grid(a, 0, input_side=True)/self._wrd, top)
+                    corner_a = (scale * divide_by * self._from_grid(a, 0, model_options, input_side=True)/self._wrd, top)
                 else:  # if na is C_CVL or similar
-                    corner_a = (scale * divide_by * _from_grid(a, na.output_length//(2*divide_by), input_side=False)/self._wrd, top)
+                    corner_a = (scale * divide_by * self._from_grid(a, na.output_length//(2*divide_by), model_options, input_side=False)/self._wrd, top)
 
-                corner_b = (scale * divide_by * _from_grid(a, 0, input_side=False)/self._wrd, bot)
-                corner_c = (scale * divide_by * (_from_grid(a, (na.output_length-1)//divide_by, input_side=False) + 1)/self._wrd, bot)
+                corner_b = (scale * divide_by * self._from_grid(a, 0, input_side=False)/self._wrd, bot)
+                corner_c = (scale * divide_by * (self._from_grid(a, (na.output_length-1)//divide_by, model_options, input_side=False) + 1)/self._wrd, bot)
 
                 if na.input_length > 0:  # for most nodes
-                    corner_d = (scale * divide_by * (_from_grid(a, (na.input_length-1)//divide_by, input_side=True) + 1)/self._wrd, top)
+                    corner_d = (scale * divide_by * (self._from_grid(a, (na.input_length-1)//divide_by, model_options, input_side=True) + 1)/self._wrd, top)
                 else:  # if na is C_CVL or similar
-                    corner_d = (scale * divide_by * (_from_grid(a, na.output_length//(2*divide_by), input_side=False) + 1)/self._wrd, top)
+                    corner_d = (scale * divide_by * (self._from_grid(a, na.output_length//(2*divide_by), model_options, input_side=False) + 1)/self._wrd, top)
 
                 mid_point = tuple(sum(x)/4 for x in zip(*[corner_a, corner_b, corner_c, corner_d]))
 
