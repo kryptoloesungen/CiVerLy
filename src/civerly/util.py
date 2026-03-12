@@ -21,6 +21,23 @@ EXAMPLES::
     ...
     ValueError: Input size of 4660 too large (can at most be 4096)
 
+TESTS:
+
+    Verify that temporary directories used in doctests are actually removed
+    after cleanup, and that errors during cleanup are raised rather than
+    silently suppressed::
+
+        sage: import tempfile, shutil, os
+        sage: tmpdir = tempfile.mkdtemp()
+        sage: assert os.path.exists(tmpdir)    # directory exists before cleanup
+        sage: shutil.rmtree(tmpdir)
+        sage: os.path.exists(tmpdir)           # directory is gone after cleanup
+        False
+        sage: shutil.rmtree(tmpdir)            # raises without ignore_errors
+        Traceback (most recent call last):
+        ...
+        FileNotFoundError: ...
+
 """
 
 import warnings
