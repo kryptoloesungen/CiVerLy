@@ -19,6 +19,8 @@ class Toy3:
             sage: from civerly.cipher_implementations.toy_ciphers.toy3 \
             ....:   import Toy3
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy3()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -28,10 +30,10 @@ class Toy3:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-Toy3-Models/"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options)
             798 variables and 3591 clauses were written to
-            'DOCTEST-Toy3-Models/Toy3.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -42,8 +44,8 @@ class Toy3:
             8
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy3-Models/Toy3.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy3 \
@@ -58,12 +60,12 @@ class Toy3:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-Toy3-Models/"))
-            sage: cipher.analyse(model_options)
-            Using existing file DOCTEST-Toy3-Models/espresso-5a255793_out.pla,
+            ....:   path=Path(tmpdir))
+            sage: cipher.analyse(model_options)  # doctest: +ELLIPSIS
+            Using existing file ...,
             make sure it is up to date!
             812 variables and 3563 clauses were written to
-            'DOCTEST-Toy3-Models/Toy3.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -74,17 +76,18 @@ class Toy3:
             8
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy3-Models/Toy3.pdf
-
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy3-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         The test code for MILP:
 
             sage: from civerly.cipher_implementations.toy_ciphers.toy3 \
             ....:   import Toy3
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy3()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -93,18 +96,18 @@ class Toy3:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:   milp_solver=GUROBI_CVL(),
-            ....:   path=Path("./DOCTEST-Toy3-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - gurobi
             sage: cipher.analyse(model_options)
             854 variables and 1313 constraints were written to
-            'DOCTEST-Toy3-Models/Toy3.mps'
+            '...'
             8
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy3-Models/Toy3.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy3-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         Test multi-step modeling with external Espresso reduction::
 
@@ -112,6 +115,8 @@ class Toy3:
             sage: from civerly.cipher_implementations.toy_ciphers.toy3 \
             ....:   import Toy3
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy3()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -121,19 +126,19 @@ class Toy3:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=None,
-            ....:   path=Path("./DOCTEST-Toy3-Models/"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options)
             Optimization problem for Espresso has been written to...
             sage: # optional - espresso
             sage: import os
             sage: _ = os.popen("espresso -epos "
-            ....: "DOCTEST-Toy3-Models/espresso-5a255793_in.pla > "
-            ....: "DOCTEST-Toy3-Models/espresso-5a255793_out.pla").read()
-            sage: cipher.analyse(model_options)
-            Using existing file DOCTEST-Toy3-Models/espresso-5a255793_out.pla,
+            ....: f"{tmpdir}/espresso-5a255793_in.pla > "
+            ....: f"{tmpdir}/espresso-5a255793_out.pla").read()
+            sage: cipher.analyse(model_options)  # doctest: +ELLIPSIS
+            Using existing file ...,
             make sure it is up to date!
             812 variables and 3563 clauses were written to
-            'DOCTEST-Toy3-Models/Toy3.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -143,7 +148,7 @@ class Toy3:
             [  7 ,  8] (trying w =   7) : UNSAT
             8
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy3-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
 
         """

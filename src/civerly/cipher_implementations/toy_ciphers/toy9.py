@@ -14,6 +14,8 @@ class Toy9:
             ....:   import Toy9
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy9()
             sage: model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -22,18 +24,22 @@ class Toy9:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     milp_solver=GUROBI_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
-            ....:     path=Path("./DOCTEST-Toy9-Models/")
+            ....:     path=Path(tmpdir)
             ....: )
             sage: cipher.analyse(model_options) # optional - gurobi # optional - espresso
             36 variables and 85 constraints were written to
-            'DOCTEST-Toy9-Models/toy9.mps'
+            '...'
             1.4150374993
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir) # optional - gurobi
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy9 \
             ....:   import Toy9
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy9()
             sage: model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -42,11 +48,11 @@ class Toy9:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=CRYPTOMINISAT_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
-            ....:     path=Path("./DOCTEST-Toy9-Models/")
+            ....:     path=Path(tmpdir)
             ....: )
             sage: cipher.analyse(model_options)
             36 variables and 109 clauses were written to
-            'DOCTEST-Toy9-Models/toy9.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -56,7 +62,7 @@ class Toy9:
             [  0 ,  1] (trying w =   0) : UNSAT
             1
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy9-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
 

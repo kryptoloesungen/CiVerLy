@@ -18,30 +18,32 @@ to use. A full list is given in :class:`civerly.model_options.MODEL_OPTIONS`
 but the code below should be rather straightforward::
 
     sage: from civerly.model_options import *
+    sage: import tempfile
     sage: from pathlib import Path
+    sage: tmpdir = tempfile.mkdtemp()
     sage: model_options = MODEL_OPTIONS(
     ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
     ....:   optimization=OPTIMIZATION.MILP,
     ....:   granularity=GRANULARITY.WORDWISE,
     ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
     ....:   milp_solver=SCIP_CVL(),
-    ....:   path=Path("./DOCTEST-AES-Models/"))
+    ....:   path=Path(tmpdir))
 
 Notice that we set ``sbox_modeling`` to ``None``, as we do not have to model
 the S-box in our wordwise model. Furthermore, the specified path is used for
 storing the generated models. Next, we simply tell CiVerLy to analyse AES::
 
     sage: # optional - scip
-    sage: aes.analyse(model_options) # doctest: +NORMALIZE_WHITESPACE
+    sage: aes.analyse(model_options) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
     2884 variables and 3085 constraints were written to
-    'DOCTEST-AES-Models/AES.mps'
+    '...'
     55
 
 Indeed, there are 55 acitve S-boxes for 10-round AES. We clean up the generated
 files::
 
     sage: import shutil
-    sage: shutil.rmtree("DOCTEST-AES-Models", ignore_errors=True)
+    sage: shutil.rmtree(tmpdir)
 
 Next up, we want to study linear cryptanalysis using the more accurate modeling
 of MixColumn which requires solving a MILP itself::

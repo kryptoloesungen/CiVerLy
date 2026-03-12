@@ -17,6 +17,8 @@ class Toy4:
             sage: from civerly.cipher_implementations.toy_ciphers.toy4 \
             ....:   import Toy4
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy4()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -26,10 +28,10 @@ class Toy4:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-Toy4-Models/"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options=model_options)
             288 variables and 1537 clauses were written to
-            'DOCTEST-Toy4-Models/Toy4.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -38,15 +40,19 @@ class Toy4:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy4-Models/Toy4.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy4 \
             ....:   import Toy4
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy4()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -56,10 +62,10 @@ class Toy4:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-Toy4-Models/"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options=model_options)
             360 variables and 897 clauses were written to
-            'DOCTEST-Toy4-Models/Toy4.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -68,16 +74,20 @@ class Toy4:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy4-Models/Toy4.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
         The test code for MILP:
 
             sage: from civerly.cipher_implementations.toy_ciphers.toy4 \
             ....:   import Toy4
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy4()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -86,21 +96,16 @@ class Toy4:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:   milp_solver=GUROBI_CVL(),
-            ....:   path=Path("./DOCTEST-Toy4-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - gurobi
             sage: cipher.analyse(model_options)
             376 variables and 305 constraints were written to
-            'DOCTEST-Toy4-Models/Toy4.mps'
+            '...'
             0
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
-
-        The last line checks whether the ciphers last layer is represented
-        correctly, even though it has a smaller width than the ciphers
-        wordsize.
-        Removing the files:
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy4-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
         cipher = SBoxCipher(32, 16, name="Toy4")

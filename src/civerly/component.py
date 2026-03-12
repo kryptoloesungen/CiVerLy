@@ -997,6 +997,8 @@ class AND_CVL(Component):
             sage: from civerly.model_options import *
             sage: from civerly.cipher import Cipher
             sage: from civerly.util import suppress_output
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: results = []
             sage: N = 10
             sage: for n in range(1, N+1):
@@ -1013,15 +1015,14 @@ class AND_CVL(Component):
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       sat_solver=CRYPTOMINISAT_CVL(),
             ....:       logic_minimizer=ESPRESSO_CVL(),
-            ....:       path=Path("./DOCTEST-ANDComponent-Models/"))
+            ....:       path=Path(tmpdir))
             ....:   with suppress_output():
             ....:       result = cipher.analyse(model_options)
             ....:   results.append(result)
             sage: results == [1]*N
             True
             sage: import shutil
-            sage: shutil.rmtree(
-            ....:   "./DOCTEST-ANDComponent-Models/", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
 
         """
@@ -1478,6 +1479,8 @@ class LinearLayer_CVL(Component):
             sage: from civerly.component import LinearLayer_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: arr = [
             ....:   [1, 0, 0, 0],
             ....:   [0, 1, 0, 0],
@@ -1495,7 +1498,7 @@ class LinearLayer_CVL(Component):
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path("./DOCTEST-LL-SAT/"))
+            ....:   path=Path(tmpdir))
             sage: cipher = Cipher(4, 8, name="LL-doctest")
             sage: node = cipher.add_subcipher(
             ....:   linearlayer, [(cipher.IN, (i, i)) for i in range(4)]
@@ -1504,7 +1507,7 @@ class LinearLayer_CVL(Component):
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options)
             48 variables and 89 clauses were written to
-            'DOCTEST-LL-SAT/LL-doctest.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -1513,8 +1516,8 @@ class LinearLayer_CVL(Component):
             [  0 , 3] (trying w =   1) : SAT
             [  0 , 1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-LL-SAT/LL-doctest.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
 
             sage: arr = [
             ....:   [0, 0, 1, 1],
@@ -1532,13 +1535,13 @@ class LinearLayer_CVL(Component):
             sage: node = cipher.add_subcipher(
             ....:   linearlayer, [(cipher.IN, (i, i)) for i in range(4)])
             sage: cipher.add_output([(node, (i, i)) for i in range(8)])
-            sage: sat_model = cipher.model(model_options)
+            sage: sat_model = cipher.model(model_options)  # doctest: +ELLIPSIS
             48 variables and 110 clauses were written to
-            'DOCTEST-LL-SAT/LL-doctest.cnf'
+            '...'
             sage: # optional - cryptominisat
             sage: model_options.sat_solver.solve(
-            ....:   Path('DOCTEST-LL-SAT/LL-doctest.cnf'),
-            ....:   Path('DOCTEST-LL-SAT/LL-doctest.sat'),
+            ....:   Path(tmpdir) / 'LL-doctest.cnf',
+            ....:   Path(tmpdir) / 'LL-doctest.sat',
             ....:   model_options)
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
@@ -1550,11 +1553,8 @@ class LinearLayer_CVL(Component):
             0
             sage: cipher.get_trail(model_options)
             ...
-
-        Removing the files:
-
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-LL-SAT", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
         """
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
@@ -1985,6 +1985,8 @@ class SBox_CVL(Component):
                 sage: from civerly.model_options import *
                 sage: from civerly.solvers import *
                 sage: from civerly.util import suppress_output, vec_to_int
+                sage: import tempfile
+                sage: tmpdir = tempfile.mkdtemp()
                 sage: sb = SBox(
                 ....:   (4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15)
                 ....: )
@@ -2000,7 +2002,7 @@ class SBox_CVL(Component):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
                 ....:   milp_solver=GUROBI_CVL(),
-                ....:   path=Path("./DOCTEST-ToySingleSBoxCipher-Models/"))
+                ....:   path=Path(tmpdir))
                 sage: # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
@@ -2023,7 +2025,7 @@ class SBox_CVL(Component):
                 sage: ddt[in_diff][out_diff]/16.0 == 2**(-objective_value)
                 True
                 sage: import shutil
-                sage: shutil.rmtree("./DOCTEST-ToySingleSBoxCipher-Models/")
+                sage: shutil.rmtree(tmpdir)
 
             Test small-sbox modeling for toy cipher using a single SBox with a
             unique transition of (non-trivial) maximal probability::
@@ -2033,6 +2035,8 @@ class SBox_CVL(Component):
                 sage: from civerly.component import SBox_CVL
                 sage: from civerly.model_options import *
                 sage: from civerly.util import suppress_output, vec_to_int
+                sage: import tempfile
+                sage: tmpdir = tempfile.mkdtemp()
                 sage: sb = SBox(
                 ....:   (4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15)
                 ....: )
@@ -2048,7 +2052,7 @@ class SBox_CVL(Component):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
                 ....:   milp_solver=GUROBI_CVL(),
-                ....:   path=Path("./DOCTEST-ToySingleSBoxCipher-Models/"))
+                ....:   path=Path(tmpdir))
                 sage:  # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.model(model_options)
@@ -2073,7 +2077,7 @@ class SBox_CVL(Component):
                 sage: ddt[in_diff][out_diff]/16.0 == 2**(-objective_value)
                 True
                 sage: import shutil
-                sage: shutil.rmtree("./DOCTEST-ToySingleSBoxCipher-Models/")
+                sage: shutil.rmtree(tmpdir)
         """
         solver = model_options.milp_solver
 

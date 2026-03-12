@@ -361,9 +361,10 @@ def _generate_constraints_sum_leq_int_LS24(sat, sum_arr, num):
         sage: from sage.sat.solvers.dimacs import DIMACS
         sage: from civerly.solvers import *
         sage: from civerly.model_options import *
+        sage: import tempfile
         sage: from pathlib import Path
-        sage: path = Path('./util_doctests/')
-        sage: path.mkdir(parents=True, exist_ok=True)
+        sage: tmpdir = tempfile.mkdtemp()
+        sage: path = Path(tmpdir)
         sage: for NUM_CLAUSES in range(1, 20):
         ....:   sat = DIMACS()
         ....:   for i in range(1, NUM_CLAUSES + 1): sat.add_clause((i,))
@@ -385,7 +386,7 @@ def _generate_constraints_sum_leq_int_LS24(sat, sum_arr, num):
         ....:                   "The constraints don't assert correct bound!")
         ....:           else: break
         sage: import shutil
-        sage: shutil.rmtree(path, ignore_errors=True)
+        sage: shutil.rmtree(tmpdir)
 
     If everything works correctly, then a constraint system which requires
     :math:`w` many variables to be SAT only becomes possible to solve if we
@@ -445,16 +446,18 @@ def _write_espresso_input(posset, esp_file_name, workdir_path):
     TESTS::
 
         sage: from civerly.util import _write_espresso_input
+        sage: import tempfile
         sage: from pathlib import Path
         sage: import os
-        sage: path = Path("./DOCTEST-Espresso/")
+        sage: tmpdir = tempfile.mkdtemp()
+        sage: path = Path(tmpdir)
         sage: file_name = "espresso-input-doctest"
         sage: posset = [(0, 0, 0)]
         sage: _write_espresso_input(posset, file_name, path)
         sage: os.path.exists(path / f"{file_name}_in.pla")
         True
         sage: import shutil
-        sage: shutil.rmtree("DOCTEST-Espresso", ignore_errors=True)
+        sage: shutil.rmtree(tmpdir)
 
     """
 
@@ -487,9 +490,11 @@ def _read_espresso_output(esp_file_out):
 
         sage: from civerly.util import _write_espresso_input
         sage: from civerly.util import _read_espresso_output
+        sage: import tempfile
         sage: from pathlib import Path
         sage: import os
-        sage: path = Path("./DOCTEST-Espresso/")
+        sage: tmpdir = tempfile.mkdtemp()
+        sage: path = Path(tmpdir)
         sage: file_name = "espresso-output-doctest"
         sage: posset = [(0, 0, 0), (1, 1, 1)]
         sage: _write_espresso_input(posset, file_name, path)
@@ -502,7 +507,7 @@ def _read_espresso_output(esp_file_out):
         sage: clauses == posset_from_clauses
         True
         sage: import shutil
-        sage: shutil.rmtree("DOCTEST-Espresso", ignore_errors=True)
+        sage: shutil.rmtree(tmpdir)
 
     Note that the clauses are not the correct ones describing posset,
     as the flipping via Espresso's `-epos` is missing.

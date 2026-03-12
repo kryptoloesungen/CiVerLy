@@ -16,6 +16,8 @@ class Toy1:
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
             ....:   import Toy1
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy1()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -23,11 +25,11 @@ class Toy1:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path("./DOCTEST-Toy1-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
             382 variables and 1527 clauses were written to
-            'DOCTEST-Toy1-Models/Toy1.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -36,14 +38,18 @@ class Toy1:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy1-Models/Toy1.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
             ....:   import Toy1
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy1()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -51,11 +57,11 @@ class Toy1:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path("./DOCTEST-Toy1-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
             382 variables and 1003 clauses were written to
-            'DOCTEST-Toy1-Models/Toy1.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -64,10 +70,14 @@ class Toy1:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
             ....:   import Toy1
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy1()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -75,11 +85,11 @@ class Toy1:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path("./DOCTEST-Toy1-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
             426 variables and 955 clauses were written to
-            'DOCTEST-Toy1-Models/Toy1.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -88,51 +98,59 @@ class Toy1:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
         The test code for MILP:
 
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
             ....:   import Toy1
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy1()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   path=Path("./DOCTEST-Toy1-Models/"))
-            sage: milp_model = cipher.model(model_options=model_options)
+            ....:   path=Path(tmpdir))
+            sage: milp_model = cipher.model(model_options=model_options)  # doctest: +ELLIPSIS
             474 variables and 346 constraints were written to
-            'DOCTEST-Toy1-Models/Toy1.mps'
+            '...'
             sage: from pathlib import Path
             sage: GUROBI_CVL().solve( # optional - gurobi
-            ....:   input_file_name=Path("DOCTEST-Toy1-Models/Toy1.mps"),
-            ....:   output_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....:   input_file_name=Path(tmpdir) / "Toy1.mps",
+            ....:   output_file_name=Path(tmpdir) / "Toy1.sol",
             ....: )
             sage: GUROBI_CVL().process_solution_file( # optional - gurobi
-            ....:   solution_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....:   solution_file_name=Path(tmpdir) / "Toy1.sol",
             ....: )[1]
             0
             sage: SCIP_CVL().solve( # optional - scip
-            ....:   input_file_name=Path("DOCTEST-Toy1-Models/Toy1.mps"),
-            ....:   output_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....:   input_file_name=Path(tmpdir) / "Toy1.mps",
+            ....:   output_file_name=Path(tmpdir) / "Toy1.sol",
             ....: )
             sage: SCIP_CVL().process_solution_file( # optional - scip
-            ....:   solution_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....:   solution_file_name=Path(tmpdir) / "Toy1.sol",
             ....: )[1]
             0
             sage: GLPK_CVL().solve( # optional - glpk
-            ....:   input_file_name=Path("DOCTEST-Toy1-Models/Toy1.mps"),
-            ....:   output_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....:   input_file_name=Path(tmpdir) / "Toy1.mps",
+            ....:   output_file_name=Path(tmpdir) / "Toy1.sol",
             ....: )
             sage: GLPK_CVL().process_solution_file( # optional - glpk
-            ....:   solution_file_name=Path("DOCTEST-Toy1-Models/Toy1.sol"),
+            ....:   solution_file_name=Path(tmpdir) / "Toy1.sol",
             ....: )[1]
             0
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
             ....:   import Toy1
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy1()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -140,16 +158,14 @@ class Toy1:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   milp_solver=GUROBI_CVL(),
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   path=Path("./DOCTEST-Toy1-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - gurobi
             sage: cipher.analyse(model_options=model_options)
             486 variables and 350 constraints were written to
-            'DOCTEST-Toy1-Models/Toy1.mps'
+            '...'
             0
-
-        Removing the files:
             sage: import shutil
-            sage: shutil.rmtree(Path("DOCTEST-Toy1-Models"), ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
         cipher = SBoxCipher(37, 37, name="Toy1")

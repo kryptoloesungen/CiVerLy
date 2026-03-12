@@ -16,6 +16,8 @@ class Toy7:
             sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
             ....:   import Toy7
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy7()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -25,26 +27,20 @@ class Toy7:
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(0, 8),
-            ....:   path=Path("./DOCTEST-Toy7-Models/"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options=model_options)
-            Using existing file DOCTEST-Toy7-Models/espresso-4ce399fb_out.pla,
-            make sure it is up to date!
-            Using existing file DOCTEST-Toy7-Models/espresso-4ce399fb_out.pla,
-            make sure it is up to date!
-            Using existing file DOCTEST-Toy7-Models/espresso-d3ba4659_out.pla,
-            make sure it is up to date!
             1356 variables and 3621 clauses were written to
-            'DOCTEST-Toy7-Models/Toy7.cnf'
+            '...'
             [  0 ,  8] (trying w =   4) : SAT
             [  0 ,  4] (trying w =   2) : UNSAT
             [  3 ,  4] (trying w =   3) : SAT
             3
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy7-Models/Toy7.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy7-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
 

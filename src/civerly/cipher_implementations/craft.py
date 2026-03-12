@@ -40,40 +40,38 @@ class CRAFT_CVL:
         Determine the number of active S-boxes using a word-wise model based
         on the the branch number::
 
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-CRAFT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: craft.analyse(model_options) # optional - scip
             5896 variables and 6121 constraints were written to
-            'DOCTEST-CRAFT-Models/CRAFT.mps'
+            '...'
             10
-
-        Notice that the bound of 10 active S-boxes is rather trivial (one
-        per round). Hence, this is a good example of why the more accurate
-        modeling of the linear layer is useful. But first some cleanup::
-
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
+            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Now the improved modeling::
 
             sage: craft = CRAFT_CVL(10)
+            sage: tmpdir = tempfile.mkdtemp()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-CRAFT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: craft.analyse(model_options) # optional - scip
             5856 variables and 6041 constraints were written to
-            'DOCTEST-CRAFT-Models/CRAFT.mps'
+            '...'
             36
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
+            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Indeed, 36 active S-boxes is a much better bound.
 
@@ -82,6 +80,7 @@ class CRAFT_CVL:
         this is computationally more difficult than the previous tests::
 
             sage: craft = CRAFT_CVL(3)
+            sage: tmpdir = tempfile.mkdtemp()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.MILP,
@@ -89,12 +88,12 @@ class CRAFT_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-CRAFT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: craft.analyse(model_options) # optional - scip
             7440 variables and 9057 constraints were written to
-            'DOCTEST-CRAFT-Models/CRAFT.mps'
+            '...'
             8
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
+            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Here the objective value is :math:`- \log_2(p)`, with :math:`p` being
         the differential probability (or respectively the linear correlation)
@@ -104,6 +103,7 @@ class CRAFT_CVL:
         model the linear layer::
 
             sage: craft = CRAFT_CVL(3)
+            sage: tmpdir = tempfile.mkdtemp()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.MILP,
@@ -111,12 +111,12 @@ class CRAFT_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-CRAFT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: craft.analyse(model_options) # optional - scip
             7728 variables and 8001 constraints were written to
-            'DOCTEST-CRAFT-Models/CRAFT.mps'
+            '...'
             8
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True) # optional - scip
+            sage: shutil.rmtree(tmpdir) # optional - scip
 
 
         It is also possible to use SAT to model the cipher. The results should
@@ -125,6 +125,8 @@ class CRAFT_CVL:
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.craft import CRAFT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: craft = CRAFT_CVL(3)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -134,10 +136,10 @@ class CRAFT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-CRAFT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: craft.analyse(model_options)
             7440 variables and 17201 clauses were written to
-            'DOCTEST-CRAFT-Models/CRAFT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -146,18 +148,20 @@ class CRAFT_CVL:
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8
-            sage: craft.generate_report(model_options)
-            Output file in: DOCTEST-CRAFT-Models/CRAFT.pdf
+            sage: craft.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(craft.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         Now with CaDiCaL as solver::
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.craft import CRAFT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: craft = CRAFT_CVL(3)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -167,10 +171,10 @@ class CRAFT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CADICAL_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-CRAFT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: craft.analyse(model_options)
             7440 variables and 17201 clauses were written to
-            'DOCTEST-CRAFT-Models/CRAFT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -179,12 +183,12 @@ class CRAFT_CVL:
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8
-            sage: craft.generate_report(model_options)
-            Output file in: DOCTEST-CRAFT-Models/CRAFT.pdf
+            sage: craft.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(craft.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-CRAFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
 
 

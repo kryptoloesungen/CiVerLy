@@ -17,6 +17,8 @@ class Toy11:
             ....:   import Toy11
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy11()
             sage: model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -26,18 +28,22 @@ class Toy11:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     milp_solver=GUROBI_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
-            ....:     path=Path("./DOCTEST-Toy11-Models/")
+            ....:     path=Path(tmpdir)
             ....: )
             sage: cipher.analyse(model_options) # optional - gurobi # optional - espresso
             101 variables and 388 constraints were written to
-            'DOCTEST-Toy11-Models/toy11.mps'
+            '...'
             1
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir) # optional - gurobi
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy11 \
             ....:   import Toy11
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy11()
             sage: model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -47,11 +53,11 @@ class Toy11:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sat_solver=CADICAL_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
-            ....:     path=Path("./DOCTEST-Toy11-Models/")
+            ....:     path=Path(tmpdir)
             ....: )
             sage: cipher.analyse(model_options)
             89 variables and 436 clauses were written to
-            'DOCTEST-Toy11-Models/toy11.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -60,9 +66,8 @@ class Toy11:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : UNSAT
             1
-
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy11-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
 

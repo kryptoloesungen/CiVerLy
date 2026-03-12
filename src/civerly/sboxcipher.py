@@ -81,6 +81,9 @@ class SBoxCipher(Cipher):
                 sage: from civerly.model_options import *
                 sage: from sage.crypto.sboxes import PRESENT as present_S_sage
                 sage: from civerly.util import suppress_output
+                sage: import tempfile
+                sage: from pathlib import Path
+                sage: tmpdir = tempfile.mkdtemp()
                 sage: name = "ToyFeistel"
                 sage: n = 4
                 sage: R = 1
@@ -114,7 +117,7 @@ class SBoxCipher(Cipher):
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
                 ....:   milp_solver=GUROBI_CVL(),
-                ....:   path=Path("./DOCTEST-ToyFeistelCipher-Models/"))
+                ....:   path=Path(tmpdir))
                 sage: # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
@@ -137,7 +140,7 @@ class SBoxCipher(Cipher):
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
                 ....:   milp_solver=GUROBI_CVL(),
-                ....:   path=Path("./DOCTEST-ToyFeistelCipher-Models/"))
+                ....:   path=Path(tmpdir))
                 sage: # optional - gurobi
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
@@ -146,9 +149,7 @@ class SBoxCipher(Cipher):
                 ....: )[1]
                 1
                 sage: import shutil
-                sage: shutil.rmtree(
-                ....:   "DOCTEST-ToyFeistelCipher-Models",
-                ....:   ignore_errors=True)
+                sage: shutil.rmtree(tmpdir)
 
         """
         if model_options.granularity == GRANULARITY.WORDWISE \
