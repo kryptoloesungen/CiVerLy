@@ -174,6 +174,8 @@ class TrailNode:
         for i in range(len(self.children) - 1):
             self.children[i].right = self.children[i + 1]
         ########################################################################
+        assert len(self.bits_out[0]) == len(self.input)
+        assert len(self.bits_out[-1]) == len(self.output)
 
 
     def _to_hex(self) -> str:
@@ -254,29 +256,34 @@ class TrailNode:
         if not self.children or None in (self.input, self.output):
             return valid
 
+        dmax = 1 + max([child._parent_depth for child in self.children])
+        off_in  = [0]*dmax
+        off_out = [0]*dmax
+
         for child in self.children:
             d = child._parent_depth
 
-            expected_in  = self.bits_in[d]
-            expected_out = self.bits_out[d]
+            expected_in  = self.bits_in[d][off_in[d] : off_in[d] + len(child.input)]
+            expected_out = self.bits_out[d][off_out[d] : off_out[d] + len(child.output)]
             actual_in    = child.bits_out[0]
             actual_out   = child.bits_out[-1]
 
+            off_in[d]  += len(child.input)
+            off_out[d] += len(child.output)
+
             if expected_in and actual_in and expected_in != actual_in:
-                valid = False
                 raise AssertionError(
                     f"Report is not coherent between {self.name} and "
                     f"{child.name} (input at depth {d}): "
                     f"(parent = {expected_in}) | (child = {actual_in})."
                 )
             if expected_out and actual_out and expected_out != actual_out:
-                valid = False
                 raise AssertionError(
                     f"Report is not coherent between {self.name} and "
                     f"{child.name} (output at depth {d}): "
                     f"(parent = {expected_out}) | (child = {actual_out})."
                 )
 
-            valid &= child.verify_correctness()
+            child.verify_correctness()
 
-        return valid
+        return
