@@ -253,7 +253,7 @@ class I_CVL(Component):
             sage: int_to_vec(0x1929ab6, 16)
             Traceback (most recent call last):
             ...
-            ValueError: Input size of 26382006 too large (can at most be 65536)
+            ValueError: Input size of 26385078 too large (can at most be 65536)
 
         TESTS::
 
