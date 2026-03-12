@@ -93,7 +93,7 @@ class TrailNode:
                 try:
                     # determine correct comp_num based on s being in
                     # dictionaries[comp_num]
-                    while str(s) not in dictionaries[comp_num].keys():
+                    while s not in dictionaries[comp_num].keys():
                         comp_num += 1
                 except IndexError as error:
                     # if the variable comes from the summation logic that bound
@@ -105,7 +105,7 @@ class TrailNode:
                     else:
                         raise error
 
-                translated_component = dictionaries[comp_num][str(s)]
+                translated_component = dictionaries[comp_num][s]
                 comp = nodes[comp_num]
                 # Draw the input nodes of each component
                 bool1 = translated_component <= comp.input_length
