@@ -12,17 +12,19 @@ class Toy6:
             sage: from civerly.cipher_implementations.toy_ciphers.toy6 \
             ....:   import Toy6
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy6()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path("./DOCTEST-Toy6-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options)
             397 variables and 1142 clauses were written to
-            'DOCTEST-Toy6-Models/Toy6.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -31,12 +33,12 @@ class Toy6:
             [  0 ,  3] (trying w =   1) : UNSAT
             [  2 ,  3] (trying w =   2) : SAT
             2
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy6-Models/Toy6.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy6-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
 
         """

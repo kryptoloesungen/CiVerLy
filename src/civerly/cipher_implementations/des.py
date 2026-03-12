@@ -37,6 +37,8 @@ class DES_F_CVL:
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.des import DES_F_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = DES_F_CVL()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -47,19 +49,21 @@ class DES_F_CVL:
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(0, 4),
-            ....:   path=Path("DOCTEST-DESF-Models"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options=model_options)
             582 variables and 4612 clauses were written to
-            'DOCTEST-DESF-Models/f.cnf'
+            '...'
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : UNSAT
             2
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-DESF-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.des import DES_F_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = DES_F_CVL()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -70,18 +74,22 @@ class DES_F_CVL:
             ....:   sat_solver=CADICAL_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(0, 4),
-            ....:   path=Path("DOCTEST-DESF-Models"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options=model_options)
             582 variables and 4612 clauses were written to
-            'DOCTEST-DESF-Models/f.cnf'
+            '...'
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : UNSAT
             2
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
         Using MILP modeling::
 
             sage: from civerly.cipher_implementations.des import DES_F_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = DES_F_CVL()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -91,17 +99,16 @@ class DES_F_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   milp_solver=GUROBI_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("DOCTEST-DESF-Models"))
+            ....:   path=Path(tmpdir))
             sage: # optional - gurobi # optional - espresso
             sage: cipher.analyse(model_options=model_options)
             630 variables and 4164 constraints were written to
-            'DOCTEST-DESF-Models/f.mps'
+            '...'
             2
-            sage: cipher.generate_report(model_options=model_options)
-            Output file in: DOCTEST-DESF-Models/f.pdf
-
+            sage: cipher.generate_report(model_options=model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-DESF-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
         f = SBoxCipher(32, 32, name="f")
@@ -217,6 +224,8 @@ class DES_CVL:
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.des import DES_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = DES_CVL(R=3)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -227,10 +236,10 @@ class DES_CVL:
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(0, 10),
-            ....:   path=Path("DOCTEST-DES-Models"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options=model_options)
             3826 variables and 18250 clauses were written to
-            'DOCTEST-DES-Models/DES.cnf'
+            '...'
             [  0 , 10] (trying w =   5) : SAT
             [  0 ,  5] (trying w =   2) : UNSAT
             [  3 ,  5] (trying w =   4) : SAT
@@ -239,7 +248,7 @@ class DES_CVL:
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-DES-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
         if name is None:

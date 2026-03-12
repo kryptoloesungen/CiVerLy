@@ -1019,7 +1019,9 @@ class NoSolverWarning(Warning):
         sage: from civerly.model_options import *
         sage: from civerly.util import suppress_output
         sage: from civerly.cipher_implementations.aes import AES_CVL
+        sage: import tempfile
         sage: aes = AES_CVL(6)
+        sage: tmpdir = tempfile.mkdtemp()
         sage: model_options = MODEL_OPTIONS(
         ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
         ....:   optimization=OPTIMIZATION.MILP,
@@ -1027,7 +1029,7 @@ class NoSolverWarning(Warning):
         ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
         ....:   milp_solver=None,
         ....:   sat_solver=None,
-        ....:   path=Path("./DOCTEST-ModelOptions/"))
+        ....:   path=Path(tmpdir))
         sage: with suppress_output():
         ....:   aes.analyse(model_options)
         Traceback (most recent call last):
@@ -1036,7 +1038,7 @@ class NoSolverWarning(Warning):
         CiVerLy will return without solving.
 
         sage: import shutil
-        sage: shutil.rmtree("DOCTEST-ModelOptions")
+        sage: shutil.rmtree(tmpdir)
 
 
     """

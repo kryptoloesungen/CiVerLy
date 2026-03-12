@@ -23,6 +23,8 @@ class GIFT_CVL:
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: gift_cipher = GIFT_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -30,18 +32,20 @@ class GIFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-GIFT-Models/")
+            ....:   path=Path(tmpdir)
             ....: )
             sage: gift_cipher.analyse(model_options) # optional - scip
             2560 variables and 2849 constraints were written to
-            'DOCTEST-GIFT-Models/GIFT.mps'
+            '...'
             3.4150374993
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: gift_cipher = GIFT_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -50,18 +54,20 @@ class GIFT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   milp_solver=SCIP_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-GIFT-Models/")
+            ....:   path=Path(tmpdir)
             ....: )
             sage: gift_cipher.analyse(model_options) # optional - scip # optional - espresso
             2560 variables and 4161 constraints were written to
-            'DOCTEST-GIFT-Models/GIFT.mps'
+            '...'
             3.4150374993
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: gift_cipher = GIFT_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -69,14 +75,14 @@ class GIFT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-GIFT-Models/")
+            ....:   path=Path(tmpdir)
             ....: )
             sage: gift_cipher.analyse(model_options) # optional - scip
             2560 variables and 3585 constraints were written to
-            'DOCTEST-GIFT-Models/GIFT.mps'
+            '...'
             3.4150374993
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         Model the cipher with SAT using different values for ``sat_precision``:
 
@@ -84,6 +90,8 @@ class GIFT_CVL:
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: gift_cipher = GIFT_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -93,11 +101,11 @@ class GIFT_CVL:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-GIFT-Models/")
+            ....:   path=Path(tmpdir)
             ....: )
             sage: gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to
-            'DOCTEST-GIFT-Models/GIFT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -107,12 +115,14 @@ class GIFT_CVL:
             [  2 ,  3] (trying w =   2) : UNSAT
             3
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: gift_cipher = GIFT_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -124,11 +134,11 @@ class GIFT_CVL:
             ....:   sat_precision=1,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-GIFT-Models/")
+            ....:   path=Path(tmpdir)
             ....: )
             sage: gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to
-            'DOCTEST-GIFT-Models/GIFT.cnf'
+            '...'
             [ 0.0 ,10.0] (trying w =  5.0) : SAT
             [ 0.0 , 5.0] (trying w =  2.5) : UNSAT
             [ 2.6 , 5.0] (trying w =  3.8) : SAT
@@ -138,7 +148,7 @@ class GIFT_CVL:
             [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
             3.4
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         Simulate external Espresso minimization::
 
@@ -146,6 +156,8 @@ class GIFT_CVL:
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: gift_cipher = GIFT_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -157,17 +169,17 @@ class GIFT_CVL:
             ....:   sat_precision=1,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=None,
-            ....:   path=Path("./DOCTEST-GIFT-Models/")
+            ....:   path=Path(tmpdir)
             ....: )
             sage: gift_cipher.analyse(model_options)
             Optimization problem for Espresso has been written to...
             sage: import os
             sage: _ = os.popen("espresso -epos "
-            ....: "DOCTEST-GIFT-Models/espresso-d1bda7a_in.pla > "
-            ....: "DOCTEST-GIFT-Models/espresso-d1bda7a_out.pla").read()
+            ....: f"{tmpdir}/espresso-d1bda7a_in.pla > "
+            ....: f"{tmpdir}/espresso-d1bda7a_out.pla").read()
             sage: gift_cipher.analyse(model_options)
             Using existing file ..., make sure it is up to date!
-            2560 variables and 6401 clauses were written to 'DOCTEST-GIFT-Models/GIFT.cnf'
+            2560 variables and 6401 clauses were written to '...'
             [ 0.0 ,10.0] (trying w =  5.0) : SAT
             [ 0.0 , 5.0] (trying w =  2.5) : UNSAT
             [ 2.6 , 5.0] (trying w =  3.8) : SAT
@@ -177,7 +189,7 @@ class GIFT_CVL:
             [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
             3.4
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-GIFT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
         if name is None:

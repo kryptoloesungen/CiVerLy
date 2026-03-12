@@ -35,6 +35,8 @@ class ASCON_CVL:
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.ascon import ASCON_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = ASCON_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -45,21 +47,19 @@ class ASCON_CVL:
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
             ....:   solve_range=(7, 9),
-            ....:   path=Path("./DOCTEST-Ascon-Models/"))
+            ....:   path=Path(tmpdir))
             sage: cipher.analyse(model_options=model_options)
             20384 variables and 51649 clauses were written to
-            'DOCTEST-Ascon-Models/ascon.cnf'
+            '...'
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Ascon-Models/ascon.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
-
-        Remove the files:
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Ascon-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
 
         """

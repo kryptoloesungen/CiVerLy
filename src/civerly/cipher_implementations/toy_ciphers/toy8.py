@@ -15,22 +15,24 @@ class Toy8:
             sage: from civerly.cipher_implementations.toy_ciphers.toy8 \
             ....:   import Toy8
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: cipher = Toy8()
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path("./DOCTEST-Toy8-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
             ...
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-Toy8-Models/Toy8.pdf
+            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
             sage: trail = str(cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Toy8-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir)
 
         """
 

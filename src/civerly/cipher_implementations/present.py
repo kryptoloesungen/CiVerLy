@@ -41,6 +41,8 @@ class PRESENT_CVL:
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -48,16 +50,16 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options) # optional - scip
             1284 variables and 1341 constraints were written to
-            'DOCTEST-PRESENT-Models/PRESENT.mps'
+            '...'
             4
 
         Clean-up of the generated files::
 
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models") # optional - scip
+            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Of course, since the branch number of any word-permutation is 2, this
         result is not very interesting and unprecise, as the optimal solution
@@ -86,6 +88,8 @@ class PRESENT_CVL:
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -93,13 +97,13 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options) # optional - scip
             5312 variables and 6081 constraints were written to
-            'DOCTEST-PRESENT-Models/PRESENT.mps'
+            '...'
             12
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models") # optional - scip
+            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Here, the analysis output 12 means that the best differential trail
         over 4 rounds of PRESENT has a probability of :math:`2^{-12}`.
@@ -133,6 +137,8 @@ class PRESENT_CVL:
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -140,18 +146,20 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:   milp_solver=GUROBI_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - gurobi
             sage: present_cipher.analyse(model_options)
             5312 variables and 6081 constraints were written to
-            'DOCTEST-PRESENT-Models/PRESENT.mps'
+            '...'
             12
-            sage: present_cipher.generate_report(model_options)
-            Output file in: DOCTEST-PRESENT-Models/PRESENT.pdf
+            sage: present_cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
 
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -160,18 +168,20 @@ class PRESENT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   milp_solver=GUROBI_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - gurobi # optional - espresso
             sage: present_cipher.analyse(model_options)
             5312 variables and 8641 constraints were written to
-            'DOCTEST-PRESENT-Models/PRESENT.mps'
+            '...'
             12
-            sage: present_cipher.generate_report(model_options)
-            Output file in: DOCTEST-PRESENT-Models/PRESENT.pdf
+            sage: present_cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
 
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -179,19 +189,19 @@ class PRESENT_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
             ....:   milp_solver=GUROBI_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: # optional - gurobi
             sage: present_cipher.analyse(model_options) # long
             5312 variables and 6977 constraints were written to
-            'DOCTEST-PRESENT-Models/PRESENT.mps'
+            '...'
             12
-            sage: present_cipher.generate_report(model_options)
-            Output file in: DOCTEST-PRESENT-Models/PRESENT.pdf
+            sage: present_cipher.generate_report(model_options)  # doctest: +ELLIPSIS
+            Output file in: ...
 
         Clean up temporary MILP files::
 
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
         Model the cipher with SAT:
 
@@ -199,6 +209,8 @@ class PRESENT_CVL:
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -208,10 +220,10 @@ class PRESENT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options)
             5312 variables and 13441 clauses were written to
-            'DOCTEST-PRESENT-Models/PRESENT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -222,12 +234,14 @@ class PRESENT_CVL:
             sage: trail = str(present_cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -237,10 +251,10 @@ class PRESENT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CADICAL_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options)
             5312 variables and 13441 clauses were written to
-            'DOCTEST-PRESENT-Models/PRESENT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -251,7 +265,7 @@ class PRESENT_CVL:
             sage: trail = str(present_cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 
@@ -261,6 +275,8 @@ class PRESENT_CVL:
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -270,10 +286,10 @@ class PRESENT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options)
             5312 variables and 12993 clauses were written to
-            'DOCTEST-PRESENT-Models/PRESENT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -284,12 +300,14 @@ class PRESENT_CVL:
             sage: trail = str(present_cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=4)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -299,10 +317,10 @@ class PRESENT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options)
             5312 variables and 12993 clauses were written to
-            'DOCTEST-PRESENT-Models/PRESENT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -311,12 +329,14 @@ class PRESENT_CVL:
             [  4 ,  6] (trying w =   5) : UNSAT
             6
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=5)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -326,10 +346,10 @@ class PRESENT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options)
             6512 variables and 16017 clauses were written to
-            'DOCTEST-PRESENT-Models/PRESENT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -341,7 +361,7 @@ class PRESENT_CVL:
             sage: trail = str(present_cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
         Simulate external Espresso minimization::
 
@@ -349,6 +369,8 @@ class PRESENT_CVL:
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
             sage: present_cipher = PRESENT_CVL(R=5)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -358,17 +380,17 @@ class PRESENT_CVL:
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=CRYPTOMINISAT_CVL(),
             ....:   logic_minimizer=None,
-            ....:   path=Path("./DOCTEST-PRESENT-Models/"))
+            ....:   path=Path(tmpdir))
             sage: present_cipher.analyse(model_options)
             Optimization problem for Espresso has been written to...
             sage: import os
             sage: _ = os.popen("espresso -epos "
-            ....: "DOCTEST-PRESENT-Models/espresso-1c52f72b_in.pla > "
-            ....: "DOCTEST-PRESENT-Models/espresso-1c52f72b_out.pla").read()
+            ....: f"{tmpdir}/espresso-1c52f72b_in.pla > "
+            ....: f"{tmpdir}/espresso-1c52f72b_out.pla").read()
             sage: present_cipher.analyse(model_options)
             Using existing file ..., make sure it is up to date!
             6512 variables and 16017 clauses were written to
-            'DOCTEST-PRESENT-Models/PRESENT.cnf'
+            '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -378,7 +400,7 @@ class PRESENT_CVL:
             [  7 ,  8] (trying w =   7) : UNSAT
             8
             sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
+            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
         """
         if name is None:
