@@ -10,28 +10,26 @@ class Toy9:
 
         TESTS::
 
+            sage: # optional - gurobi # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy9 \
             ....:   import Toy9
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy9()
-            sage: model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:     optimization=OPTIMIZATION.MILP,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
-            ....:     path=Path(tmpdir)
-            ....: )
-            sage: cipher.analyse(model_options) # optional - gurobi # optional - espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy9()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       milp_solver=GUROBI_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
             36 variables and 85 constraints were written to
             '...'
             1.4150374993
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir) # optional - gurobi
 
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy9 \
@@ -39,18 +37,17 @@ class Toy9:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy9()
-            sage: model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:     optimization=OPTIMIZATION.SAT,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
-            ....:     path=Path(tmpdir)
-            ....: )
-            sage: cipher.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy9()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
             36 variables and 109 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -61,8 +58,6 @@ class Toy9:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : UNSAT
             1
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         """
 
