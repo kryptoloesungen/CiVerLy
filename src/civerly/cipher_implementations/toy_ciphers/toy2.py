@@ -13,21 +13,24 @@ class Toy2:
         TESTS::
 
         The test code for SAT:
+            sage: # optional - cryptominisat
             sage: from civerly.cipher_implementations.toy_ciphers.toy2 \
             ....:   import Toy2
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy2()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy2()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            ....:   cipher.generate_report(model_options)
             1120 variables and 6177 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -38,28 +41,18 @@ class Toy2:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
-
-            sage: from civerly.cipher_implementations.toy_ciphers.toy2 \
-            ....:   import Toy2
-            sage: from civerly.model_options import *
-            sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy2()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy2()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
             1408 variables and 3617 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -70,36 +63,31 @@ class Toy2:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         The test code for MILP:
+            sage: # optional - gurobi
             sage: from civerly.cipher_implementations.toy_ciphers.toy2 \
             ....:   import Toy2
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy2()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   milp_solver=GUROBI_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - gurobi
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy2()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       milp_solver=GUROBI_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
             1472 variables and 1105 constraints were written to
             '...'
             0
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
         """
         cipher = SBoxCipher(16, 16, name="Toy2")
 

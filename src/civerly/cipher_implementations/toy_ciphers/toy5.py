@@ -15,18 +15,35 @@ class Toy5:
             ....:   import Toy5
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy5()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy5()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       sat_solver=CADICAL_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            ....:   cipher = Toy5()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       sat_solver=CADICAL_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
             2940 variables and 13997 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -37,28 +54,8 @@ class Toy5:
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-
-            sage: # optional - cadical # optional - espresso
-            sage: from civerly.cipher_implementations.toy_ciphers.toy5 \
-            ....:   import Toy5
-            sage: from civerly.model_options import *
-            sage: cipher = Toy5()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options)  # doctest: +ELLIPSIS
-            Using existing file ...,
-            make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
             3256 variables and 11381 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -69,38 +66,31 @@ class Toy5:
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
             sage: # optional - gurobi
             sage: from civerly.cipher_implementations.toy_ciphers.toy5 \
             ....:   import Toy5
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy5()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=GUROBI_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy5()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:       milp_solver=GUROBI_CVL(),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
             3404 variables and 4177 constraints were written to
             '...'
             8
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         """
         cipher = SBoxCipher(48, 16, name="Toy5")

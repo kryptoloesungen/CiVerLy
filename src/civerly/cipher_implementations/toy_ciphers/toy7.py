@@ -17,30 +17,40 @@ class Toy7:
             ....:   import Toy7
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Toy7()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(0, 8),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
-            1356 variables and 3621 clauses were written to
-            '...'
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            ....:   cipher = Toy7()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       solve_range=(0, 8),
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            1356 variables and 3621 clauses were written to '...'
             [  0 ,  8] (trying w =   4) : SAT
             [  0 ,  4] (trying w =   2) : UNSAT
             [  3 ,  4] (trying w =   3) : SAT
             3
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            1356 variables and 3621 clauses were written to '...'
+            [  0 ,  8] (trying w =   4) : SAT
+            [  0 ,  4] (trying w =   2) : UNSAT
+            [  3 ,  4] (trying w =   3) : SAT
+            3
 
         """
 
