@@ -6,63 +6,47 @@ to exemplary describe the usage of CiVerLy.
 
 EXAMPLES:
 
-First, we want to determine the number of active S-boxes in 10-round AES. For
-this we will use a word-wise model based on the the branch number. As AES is
-already implement in CiVerLy, we can simply import it and instantiate it::
+First, we want to determine the number of active S-boxes in 10-round AES. We
+use a word-wise model based on the branch number. The full list of options is
+given in :class:`civerly.model_options.MODEL_OPTIONS`::
 
     sage: from civerly.cipher_implementations.aes import AES_CVL
-    sage: aes = AES_CVL(R=10)
-
-Next, we have to tell CiVerLy the specifics of the modeling technique we want
-to use. A full list is given in :class:`civerly.model_options.MODEL_OPTIONS`
-but the code below should be rather straightforward::
-
     sage: from civerly.model_options import *
     sage: import tempfile
-    sage: from pathlib import Path
-    sage: tmpdir = tempfile.mkdtemp()
-    sage: model_options = MODEL_OPTIONS(
-    ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-    ....:   optimization=OPTIMIZATION.MILP,
-    ....:   granularity=GRANULARITY.WORDWISE,
-    ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-    ....:   milp_solver=SCIP_CVL(),
-    ....:   path=Path(tmpdir))
-
-Notice that we set ``sbox_modeling`` to ``None``, as we do not have to model
-the S-box in our wordwise model. Furthermore, the specified path is used for
-storing the generated models. Next, we simply tell CiVerLy to analyse AES::
-
-    sage: # optional - scip
-    sage: aes.analyse(model_options) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+    sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    ....:   aes = AES_CVL(R=10)
+    ....:   model_options = MODEL_OPTIONS(
+    ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+    ....:       optimization=OPTIMIZATION.MILP,
+    ....:       granularity=GRANULARITY.WORDWISE,
+    ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+    ....:       milp_solver=SCIP_CVL(),
+    ....:       path=Path(tmpdir))
+    ....:   aes.analyse(model_options)
     2884 variables and 3085 constraints were written to
     '...'
     55
 
-Indeed, there are 55 acitve S-boxes for 10-round AES. We clean up the generated
-files::
+Indeed, there are 55 active S-boxes for 10-round AES. Next up, we want to
+study linear cryptanalysis using the more accurate modeling of MixColumn, which
+requires solving a MILP itself::
 
-    sage: import shutil
-    sage: shutil.rmtree(tmpdir)
-
-Next up, we want to study linear cryptanalysis using the more accurate modeling
-of MixColumn which requires solving a MILP itself::
-
-    sage: # optional - scip
     sage: from civerly.cipher_implementations.aes import AES_CVL
-    sage: aes = AES_CVL(R=10)
-    sage: model_options = MODEL_OPTIONS(
-    ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-    ....:     optimization=OPTIMIZATION.MILP,
-    ....:     granularity=GRANULARITY.WORDWISE,
-    ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-    ....:     milp_solver=SCIP_CVL(),
-    ....:     path=Path("./DOCTEST-AES-Models/"))
-    sage: aes.analyse(model_options) # doctest: +NORMALIZE_WHITESPACE
+    sage: from civerly.model_options import *
+    sage: import tempfile
+    sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    ....:   aes = AES_CVL(R=10)
+    ....:   model_options = MODEL_OPTIONS(
+    ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
+    ....:       optimization=OPTIMIZATION.MILP,
+    ....:       granularity=GRANULARITY.WORDWISE,
+    ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+    ....:       milp_solver=SCIP_CVL(),
+    ....:       path=Path(tmpdir))
+    ....:   aes.analyse(model_options)
     2848 variables and 2977 constraints were written to
-    'DOCTEST-AES-Models/AES.mps'
+    '...'
     55
-    sage: shutil.rmtree("DOCTEST-AES-Models", ignore_errors=True)
 
 Notice that above we use the ``analyse`` function of the ``aes`` cipher.
 While this is rather convenient, it requires the specified solver to be
@@ -176,6 +160,7 @@ the corresponding activity pattern, we can generate a PDF report::
 
 To conclude our example, we remove the generated files::
 
+    sage: import shutil
     sage: shutil.rmtree("DOCTEST-AES-Models", ignore_errors=True)
 """
 from civerly.aeslike import AESlike
@@ -242,98 +227,104 @@ class AES_CVL:
 
             Analyse with other solvers::
 
-                sage: # doctest: +NORMALIZE_WHITESPACE
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
-                sage: from pathlib import Path
-                sage: import shutil
-                sage: aes = AES_CVL(R=2)
-                sage: path = Path("./DOCTEST-AES-Models/")
-                sage: model_options = MODEL_OPTIONS(
-                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:     optimization=OPTIMIZATION.MILP,
-                ....:     granularity=GRANULARITY.WORDWISE,
-                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:     milp_solver=GLPK_CVL(),
-                ....:     path=path)
-                sage: aes.analyse(model_options) # optional - glpk
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                ....:   aes = AES_CVL(R=2)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:       optimization=OPTIMIZATION.MILP,
+                ....:       granularity=GRANULARITY.WORDWISE,
+                ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+                ....:       milp_solver=GLPK_CVL(),
+                ....:       path=Path(tmpdir))
+                ....:   aes.analyse(model_options)
                 548 variables and 557 constraints were written to
-                'DOCTEST-AES-Models/AES.mps'
+                '...'
                 5
-                sage: shutil.rmtree(path, ignore_errors=True)
-                sage: model_options = MODEL_OPTIONS(
-                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-                ....:     optimization=OPTIMIZATION.MILP,
-                ....:     granularity=GRANULARITY.WORDWISE,
-                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:     milp_solver=GLPK_CVL(),
-                ....:     path=path)
-                sage: aes.analyse(model_options) # optional - glpk
+                sage: from civerly.cipher_implementations.aes import AES_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                ....:   aes = AES_CVL(R=2)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:       optimization=OPTIMIZATION.MILP,
+                ....:       granularity=GRANULARITY.WORDWISE,
+                ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+                ....:       milp_solver=GLPK_CVL(),
+                ....:       path=Path(tmpdir))
+                ....:   aes.analyse(model_options)
                 544 variables and 545 constraints were written to
-                'DOCTEST-AES-Models/AES.mps'
+                '...'
                 5
-                sage: shutil.rmtree(path, ignore_errors=True)
-                sage: aes = AES_CVL(R=10)
-                sage: model_options = MODEL_OPTIONS(
-                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-                ....:     optimization=OPTIMIZATION.MILP,
-                ....:     granularity=GRANULARITY.WORDWISE,
-                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:     milp_solver=GUROBI_CVL(),
-                ....:     path=path)
-                sage: aes.analyse(model_options) # optional - gurobi
+                sage: from civerly.cipher_implementations.aes import AES_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                ....:   aes = AES_CVL(R=10)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:       optimization=OPTIMIZATION.MILP,
+                ....:       granularity=GRANULARITY.WORDWISE,
+                ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+                ....:       milp_solver=GUROBI_CVL(),
+                ....:       path=Path(tmpdir))
+                ....:   aes.analyse(model_options)
                 2884 variables and 3085 constraints were written to
-                'DOCTEST-AES-Models/AES.mps'
+                '...'
                 55
-                sage: shutil.rmtree(path, ignore_errors=True)
-                sage: model_options = MODEL_OPTIONS(
-                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:     optimization=OPTIMIZATION.MILP,
-                ....:     granularity=GRANULARITY.WORDWISE,
-                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:     milp_solver=GUROBI_CVL(),
-                ....:     path=path)
-                sage: aes.analyse(model_options) # optional - gurobi
+                sage: from civerly.cipher_implementations.aes import AES_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                ....:   aes = AES_CVL(R=10)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:       optimization=OPTIMIZATION.MILP,
+                ....:       granularity=GRANULARITY.WORDWISE,
+                ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+                ....:       milp_solver=GUROBI_CVL(),
+                ....:       path=Path(tmpdir))
+                ....:   aes.analyse(model_options)
                 2848 variables and 2977 constraints were written to
-                'DOCTEST-AES-Models/AES.mps'
+                '...'
                 55
-                sage: shutil.rmtree(path, ignore_errors=True)
 
             Trying the parallel construction
             :math:`F(x_1, x_2) := AES(x_1) || AES(x_2)`:
 
-                sage: # doctest: +NORMALIZE_WHITESPACE
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
                 sage: from civerly.aeslike import AESlike
-                sage: path = Path("./DOCTEST-AES-Models/")
-                sage: cipher = AESlike(8, 4, 8, name="parallelAES")
-                sage: node1 = cipher.add_subcipher(
-                ....:     AES_CVL(R=10),
-                ....:     [(cipher.IN, (i, i)) for i in range(16)])
-                sage: node2 = cipher.add_subcipher(
-                ....:     AES_CVL(R=10),
-                ....:     [(cipher.IN, (i + 16, i)) for i in range(16)])
-                sage: edges = [(node1, (i, i)) for i in range(16)]
-                sage: edges += [(node2, (i, i + 16)) for i in range(16)]
-                sage: cipher.add_output(edges)
-                sage: model_options = MODEL_OPTIONS(
-                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:     optimization=OPTIMIZATION.MILP,
-                ....:     granularity=GRANULARITY.WORDWISE,
-                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:     milp_solver=GUROBI_CVL(),
-                ....:     path=path)
-                sage: # optional - gurobi
-                sage: cipher.analyse(model_options)
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                ....:   cipher = AESlike(8, 4, 8, name="parallelAES")
+                ....:   node1 = cipher.add_subcipher(
+                ....:       AES_CVL(R=10),
+                ....:       [(cipher.IN, (i, i)) for i in range(16)])
+                ....:   node2 = cipher.add_subcipher(
+                ....:       AES_CVL(R=10),
+                ....:       [(cipher.IN, (i + 16, i)) for i in range(16)])
+                ....:   edges = [(node1, (i, i)) for i in range(16)]
+                ....:   edges += [(node2, (i, i + 16)) for i in range(16)]
+                ....:   cipher.add_output(edges)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:       optimization=OPTIMIZATION.MILP,
+                ....:       granularity=GRANULARITY.WORDWISE,
+                ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+                ....:       milp_solver=GUROBI_CVL(),
+                ....:       path=Path(tmpdir))
+                ....:   cipher.analyse(model_options)
+                ....:   cipher.generate_report(model_options)
+                ....:   trail = str(cipher.get_trail(model_options))
+                ....:   assert "Unnamed Component" not in trail
                 5888 variables and 6145 constraints were written to
-                'DOCTEST-AES-Models/parallelAES.mps'
+                '...'
                 55
-                sage: cipher.generate_report(model_options)
-                Output file in: DOCTEST-AES-Models/parallelAES.pdf
-                sage: trail = str(cipher.get_trail(model_options))
-                sage: assert "Unnamed Component" not in trail
-                sage: shutil.rmtree(path, ignore_errors=True)
+                Output file in: ...
 
             The result shows that roughly half of the states are all-zero,
             which indicates that one of the two AES instances is completely
