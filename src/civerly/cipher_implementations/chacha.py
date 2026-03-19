@@ -33,17 +33,19 @@ class ChachaQRF_CVL:
             ....:   import ChachaQRF_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = ChachaQRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   solve_range=(0, 8),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = ChachaQRF_CVL()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     solve_range=(0, 8),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
             1916 variables and 4957 clauses were written to
             '...'
             [  0 ,  8] (trying w =   4) : SAT
@@ -51,28 +53,25 @@ class ChachaQRF_CVL:
             [  0 ,  2] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.chacha \
             ....:   import ChachaQRF_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = ChachaQRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   solve_range=(0, 8),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cadical
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = ChachaQRF_CVL()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     solve_range=(0, 8),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
             1916 variables and 4957 clauses were written to
             '...'
             [  0 ,  8] (trying w =   4) : SAT
@@ -80,27 +79,21 @@ class ChachaQRF_CVL:
             [  0 ,  2] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.chacha \
             ....:   import ChachaQRF_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = ChachaQRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = ChachaQRF_CVL()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             1920 variables and 5797 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -111,8 +104,6 @@ class ChachaQRF_CVL:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         """
         if name is None:
@@ -187,24 +178,21 @@ class Chacha_CVL:
             sage: from civerly.cipher_implementations.chacha import Chacha_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: cipher = Chacha_CVL(1)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   solve_range=(0, 4),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = Chacha_CVL(1)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     solve_range=(0, 4),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             22240 variables and 53601 clauses were written to
             '...'
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : UNSAT
             2
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
 
 

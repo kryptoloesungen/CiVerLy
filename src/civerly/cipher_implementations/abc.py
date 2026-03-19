@@ -75,24 +75,23 @@ class ABC_CVL:
 
         Model ABC in CiVerLy::
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.abc import ABC_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: abc_cipher = ABC_CVL(4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solve_range=(0, 10),
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: abc_cipher.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   abc_cipher = ABC_CVL(4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     solve_range=(0, 10),
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   abc_cipher.analyse(model_options)
             12640 variables and 44257 clauses were written to
             '...'
             [  0 , 10] (trying w =   5) : SAT
@@ -100,8 +99,6 @@ class ABC_CVL:
             [  3 ,  5] (trying w =   4) : SAT
             [  3 ,  4] (trying w =   3) : SAT
             3
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         """
         if rks == []:
