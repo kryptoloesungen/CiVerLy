@@ -24,72 +24,66 @@ class WEAK_PRESENT_CVL:
             sage: from civerly.cipher_implementations.weak_present \
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
-            sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: weak_cipher = WEAK_PRESENT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   milp_solver=GUROBI_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: weak_cipher.analyse(model_options) # optional - gurobi # optional - espresso
-            2560 variables and 4417 constraints were written to ...
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=GUROBI_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   weak_cipher.analyse(model_options)
+            2560 variables and 4417 constraints were written to
+            '...'
             3.4150374993
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir) # optional - gurobi
 
         Use SCIP solver::
 
             sage: from civerly.cipher_implementations.weak_present \
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
-            sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: weak_cipher = WEAK_PRESENT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: weak_cipher.analyse(model_options) # optional - scip # optional - espresso
-            2560 variables and 4417 constraints were written to ...
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   weak_cipher.analyse(model_options)
+            2560 variables and 4417 constraints were written to
+            '...'
             3.4150374993
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir) # optional - scip # optional - espresso
 
         Now for linear cryptanalysis the cipher with MILP:
 
             sage: from civerly.cipher_implementations.weak_present \
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
-            sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: weak_cipher = WEAK_PRESENT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   milp_solver=GUROBI_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: weak_cipher.analyse(model_options) # optional - gurobi # optional - espresso
-            2560 variables and 4321 constraints were written to ...
-            1.2451124979000001
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir) # optional - gurobi
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=GUROBI_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   weak_cipher.analyse(model_options)
+            2560 variables and 4321 constraints were written to
+            '...'
+            1.2451124979
         """
         if name is None:
             name = "WEAK_PRESENT"

@@ -64,20 +64,20 @@ class SPECK_CVL:
             True
 
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
-            sage: cipher = SPECK_CVL(32, 64, R=4)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = SPECK_CVL(32, 64, R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
             1788 variables and 4189 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -88,26 +88,23 @@ class SPECK_CVL:
             [  4 ,  6] (trying w =   5) : SAT
             [  4 ,  5] (trying w =   4) : UNSAT
             5
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
-            sage: cipher = SPECK_CVL(32, 64, R=4)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cadical
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = SPECK_CVL(32, 64, R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
             1788 variables and 4189 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -118,29 +115,26 @@ class SPECK_CVL:
             [  4 ,  6] (trying w =   5) : SAT
             [  4 ,  5] (trying w =   4) : UNSAT
             5
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         Linear cryptanalysis (the results were tested until :math:`R = 12`
         and match Table 2 in [LWR16])::
 
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
-            sage: cipher = SPECK_CVL(32, 64, R=7)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = SPECK_CVL(32, 64, R=7)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
             2992 variables and 7776 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -150,26 +144,23 @@ class SPECK_CVL:
             [  7 , 12] (trying w =   9) : SAT
             [  7 ,  9] (trying w =   8) : UNSAT
             9
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
-            sage: cipher = SPECK_CVL(32, 64, R=7)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: # optional - cadical
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = SPECK_CVL(32, 64, R=7)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
             2992 variables and 7776 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -179,10 +170,7 @@ class SPECK_CVL:
             [  7 , 12] (trying w =   9) : SAT
             [  7 ,  9] (trying w =   8) : UNSAT
             9
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
 
         """
