@@ -12,12 +12,13 @@ class Toy1:
 
         TESTS::
 
-        The test code for SAT:
-            sage: # optional - cryptominisat
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
             ....:   import Toy1
             sage: from civerly.model_options import *
             sage: import tempfile
+
+        The test code for SAT:
+            sage: # optional - cryptominisat
             sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
@@ -85,8 +86,7 @@ class Toy1:
 
         The test code for MILP:
 
-            sage: from civerly.cipher_implementations.toy_ciphers.toy1 \
-            ....:   import Toy1
+            sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS
@@ -105,9 +105,12 @@ class Toy1:
             ....:   GUROBI_CVL().process_solution_file(
             ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
             ....:   )[1]
-            474 variables and 346 constraints were written to
-            '...'
+            474 variables and 346 constraints were written to '...'
+            ...
             0
+            sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
+            sage: from civerly.model_options import *
+            sage: import tempfile
             sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
@@ -124,9 +127,12 @@ class Toy1:
             ....:   SCIP_CVL().process_solution_file(
             ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
             ....:   )[1]
-            474 variables and 346 constraints were written to
-            '...'
+            474 variables and 346 constraints were written to '...'
+            ...
             0
+            sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
+            sage: from civerly.model_options import *
+            sage: import tempfile
             sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
@@ -143,9 +149,12 @@ class Toy1:
             ....:   GLPK_CVL().process_solution_file(
             ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
             ....:   )[1]
-            474 variables and 346 constraints were written to
-            '...'
+            474 variables and 346 constraints were written to '...'
+            ...
             0
+            sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
+            sage: from civerly.model_options import *
+            sage: import tempfile
             sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
@@ -156,8 +165,7 @@ class Toy1:
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            486 variables and 350 constraints were written to
-            '...'
+            486 variables and 350 constraints were written to '...'
             0
 
         """
