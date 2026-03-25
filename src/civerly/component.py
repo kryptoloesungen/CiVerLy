@@ -992,37 +992,34 @@ class AND_CVL(Component):
 
         TESTS::
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.component import AND_CVL
             sage: from civerly.model_options import *
             sage: from civerly.cipher import Cipher
             sage: from civerly.util import suppress_output
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: results = []
-            sage: N = 10
-            sage: for n in range(1, N+1):
-            ....:   cipher = Cipher(2*n, n, name="and-doctest")
-            ....:   node = cipher.add_subcipher(
-            ....:       AND_CVL(n, name="and"),
-            ....:       [(cipher.IN, (i, i)) for i in range(2*n)]
-            ....:   )
-            ....:   cipher.add_output([(node, (i, i)) for i in range(n)])
-            ....:   model_options = MODEL_OPTIONS(
-            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:       optimization=OPTIMIZATION.SAT,
-            ....:       granularity=GRANULARITY.BITWISE,
-            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
-            ....:       path=Path(tmpdir))
-            ....:   with suppress_output():
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
+            ....:   results = []
+            ....:   N = 10
+            ....:   for n in range(1, N+1):
+            ....:     cipher = Cipher(2*n, n, name="and-doctest")
+            ....:     node = cipher.add_subcipher(
+            ....:         AND_CVL(n, name="and"),
+            ....:         [(cipher.IN, (i, i)) for i in range(2*n)]
+            ....:     )
+            ....:     cipher.add_output([(node, (i, i)) for i in range(n)])
+            ....:     model_options = MODEL_OPTIONS(
+            ....:         cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:         optimization=OPTIMIZATION.SAT,
+            ....:         granularity=GRANULARITY.BITWISE,
+            ....:         sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:         sat_solver=CRYPTOMINISAT_CVL(),
+            ....:         logic_minimizer=ESPRESSO_CVL(),
+            ....:         path=Path(tmpdir))
+            ....:     with suppress_output():
             ....:       result = cipher.analyse(model_options)
-            ....:   results.append(result)
-            sage: results == [1]*N
+            ....:     results.append(result)
+            ....:   print(results == [1]*N)
             True
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
 
         """
@@ -1478,34 +1475,55 @@ class LinearLayer_CVL(Component):
             sage: from civerly.cipher import Cipher
             sage: from civerly.component import LinearLayer_CVL
             sage: from civerly.model_options import *
-            sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: arr = [
-            ....:   [1, 0, 0, 0],
-            ....:   [0, 1, 0, 0],
-            ....:   [0, 0, 1, 0],
-            ....:   [0, 0, 0, 1],
-            ....:   [0, 0, 0, 1],
-            ....:   [0, 0, 1, 0],
-            ....:   [0, 1, 0, 0],
-            ....:   [1, 0, 0, 0]
-            ....: ]
-            sage: linearlayer = LinearLayer_CVL(matrix(GF(2), 8, 4, arr))
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: cipher = Cipher(4, 8, name="LL-doctest")
-            sage: node = cipher.add_subcipher(
-            ....:   linearlayer, [(cipher.IN, (i, i)) for i in range(4)]
-            ....: )
-            sage: cipher.add_output([(node, (i, i)) for i in range(8)])
-            sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   arr = [
+            ....:     [1, 0, 0, 0],
+            ....:     [0, 1, 0, 0],
+            ....:     [0, 0, 1, 0],
+            ....:     [0, 0, 0, 1],
+            ....:     [0, 0, 0, 1],
+            ....:     [0, 0, 1, 0],
+            ....:     [0, 1, 0, 0],
+            ....:     [1, 0, 0, 0]
+            ....:   ]
+            ....:   linearlayer = LinearLayer_CVL(matrix(GF(2), 8, 4, arr))
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   cipher = Cipher(4, 8, name="LL-doctest")
+            ....:   node = cipher.add_subcipher(
+            ....:     linearlayer, [(cipher.IN, (i, i)) for i in range(4)]
+            ....:   )
+            ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
+            ....:   cipher.analyse(model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   arr = [
+            ....:     [0, 0, 1, 1],
+            ....:     [1, 0, 1, 1],
+            ....:     [0, 1, 0, 0],
+            ....:     [1, 1, 1, 0],
+            ....:     [1, 1, 0, 0],
+            ....:     [0, 0, 0, 0],
+            ....:     [0, 1, 0, 0],
+            ....:     [1, 0, 1, 1]
+            ....:   ]
+            ....:   mat = matrix(GF(2), 8, 4, arr)
+            ....:   linearlayer = LinearLayer_CVL(mat, name=f"L(4 -> 8)")
+            ....:   cipher = Cipher(4, 8, name="LL-doctest")
+            ....:   node = cipher.add_subcipher(
+            ....:     linearlayer, [(cipher.IN, (i, i)) for i in range(4)])
+            ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
+            ....:   cipher.model(model_options)
+            ....:   model_options.sat_solver.solve(
+            ....:     Path(tmpdir) / 'LL-doctest.cnf',
+            ....:     Path(tmpdir) / 'LL-doctest.sat',
+            ....:     model_options)
+            ....:   cipher.get_trail(model_options)
             48 variables and 89 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -1516,33 +1534,9 @@ class LinearLayer_CVL(Component):
             [  0 , 3] (trying w =   1) : SAT
             [  0 , 1] (trying w =   0) : SAT
             0
-            sage: cipher.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-
-            sage: arr = [
-            ....:   [0, 0, 1, 1],
-            ....:   [1, 0, 1, 1],
-            ....:   [0, 1, 0, 0],
-            ....:   [1, 1, 1, 0],
-            ....:   [1, 1, 0, 0],
-            ....:   [0, 0, 0, 0],
-            ....:   [0, 1, 0, 0],
-            ....:   [1, 0, 1, 1]
-            ....: ]
-            sage: mat = matrix(GF(2), 8, 4, arr)
-            sage: linearlayer = LinearLayer_CVL(mat, name=f"L(4 -> 8)")
-            sage: cipher = Cipher(4, 8, name="LL-doctest")
-            sage: node = cipher.add_subcipher(
-            ....:   linearlayer, [(cipher.IN, (i, i)) for i in range(4)])
-            sage: cipher.add_output([(node, (i, i)) for i in range(8)])
-            sage: sat_model = cipher.model(model_options)  # doctest: +ELLIPSIS
             48 variables and 110 clauses were written to
             '...'
-            sage: # optional - cryptominisat
-            sage: model_options.sat_solver.solve(
-            ....:   Path(tmpdir) / 'LL-doctest.cnf',
-            ....:   Path(tmpdir) / 'LL-doctest.sat',
-            ....:   model_options)
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -1551,10 +1545,7 @@ class LinearLayer_CVL(Component):
             [  0 , 3] (trying w =   1) : SAT
             [  0 , 1] (trying w =   0) : SAT
             0
-            sage: cipher.get_trail(model_options)
             ...
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
         """
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
@@ -1986,7 +1977,6 @@ class SBox_CVL(Component):
                 sage: from civerly.solvers import *
                 sage: from civerly.util import suppress_output, vec_to_int
                 sage: import tempfile
-                sage: tmpdir = tempfile.mkdtemp()
                 sage: sb = SBox(
                 ....:   (4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15)
                 ....: )
@@ -1996,36 +1986,34 @@ class SBox_CVL(Component):
                 ....:   sbox, [(cipher.IN, (i, i)) for i in range(4)]
                 ....: )
                 sage: cipher.add_output([(node, (i, i)) for i in range(4)])
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-                ....:   milp_solver=GUROBI_CVL(),
-                ....:   path=Path(tmpdir))
-                sage: # optional - gurobi
-                sage: with suppress_output():
-                ....:   milp = cipher.analyse(model_options)
-                sage: results, objective_value = model_options.milp_solver.process_solution_file(
-                ....:   model_options.path / (cipher.name + ".sol")
-                ....: )
-                sage: objective_value
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
+                ....:     milp_solver=GUROBI_CVL(),
+                ....:     path=Path(tmpdir))
+                ....:   with suppress_output():
+                ....:     milp = cipher.analyse(model_options)
+                ....:   results, objective_value = model_options.milp_solver.process_solution_file(
+                ....:     model_options.path / (cipher.name + ".sol")
+                ....:   )
+                ....:   print(objective_value)
+                ....:   in_diff  = vec_to_int(vector(
+                ....:     GF(2), 4,
+                ....:     [results['IN'][i] for i in range(4)]
+                ....:   ))
+                ....:   out_diff = vec_to_int(vector(
+                ....:     GF(2), 4,
+                ....:     [results['OUT'][i] for i in range(4)]
+                ....:   ))
+                ....:   ddt = sb.difference_distribution_table()
+                ....:   print(ddt[in_diff][out_diff])
+                ....:   print(ddt[in_diff][out_diff]/16.0 == 2**(-objective_value))
                 1
-                sage: in_diff  = vec_to_int(vector(
-                ....:   GF(2), 4,
-                ....:   [results['IN'][i] for i in range(4)]
-                ....: ))
-                sage: out_diff = vec_to_int(vector(
-                ....:   GF(2), 4,
-                ....:   [results['OUT'][i] for i in range(4)]
-                ....: ))
-                sage: ddt = sb.difference_distribution_table()
-                sage: ddt[in_diff][out_diff]
                 8
-                sage: ddt[in_diff][out_diff]/16.0 == 2**(-objective_value)
                 True
-                sage: import shutil
-                sage: shutil.rmtree(tmpdir)
 
             Test small-sbox modeling for toy cipher using a single SBox with a
             unique transition of (non-trivial) maximal probability::
@@ -2036,7 +2024,6 @@ class SBox_CVL(Component):
                 sage: from civerly.model_options import *
                 sage: from civerly.util import suppress_output, vec_to_int
                 sage: import tempfile
-                sage: tmpdir = tempfile.mkdtemp()
                 sage: sb = SBox(
                 ....:   (4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15)
                 ....: )
@@ -2046,38 +2033,36 @@ class SBox_CVL(Component):
                 ....:   sbox, [(cipher.IN, (i, i)) for i in range(4)]
                 ....: )
                 sage: cipher.add_output([(node, (i, i)) for i in range(4)])
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=GUROBI_CVL(),
-                ....:   path=Path(tmpdir))
-                sage:  # optional - gurobi
-                sage: with suppress_output():
-                ....:   milp = cipher.model(model_options)
-                sage: model_options.milp_solver.solve(
-                ....:   input_file_name=model_options.path / (cipher.name + ".mps"),
-                ....:   output_file_name=model_options.path / (cipher.name + ".sol"),
-                ....: )
-                sage: results, objective_value = model_options.milp_solver.process_solution_file(
-                ....:   model_options.path / (cipher.name + ".sol"),
-                ....: )
-                sage: objective_value
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+                ....:     milp_solver=GUROBI_CVL(),
+                ....:     path=Path(tmpdir))
+                ....:   with suppress_output():
+                ....:     milp = cipher.model(model_options)
+                ....:   model_options.milp_solver.solve(
+                ....:     input_file_name=model_options.path / (cipher.name + ".mps"),
+                ....:     output_file_name=model_options.path / (cipher.name + ".sol"),
+                ....:   )
+                ....:   results, objective_value = model_options.milp_solver.process_solution_file(
+                ....:     model_options.path / (cipher.name + ".sol"),
+                ....:   )
+                ....:   print(objective_value)
+                ....:   in_diff  = vec_to_int(vector(
+                ....:     GF(2), 4, [results['IN'][i] for i in range(4)]
+                ....:   ))
+                ....:   out_diff = vec_to_int(vector(
+                ....:     GF(2), 4, [results['OUT'][i] for i in range(4)]
+                ....:   ))
+                ....:   ddt = sb.difference_distribution_table()
+                ....:   print(ddt[in_diff][out_diff])
+                ....:   print(ddt[in_diff][out_diff]/16.0 == 2**(-objective_value))
                 1
-                sage: in_diff  = vec_to_int(vector(
-                ....:   GF(2), 4, [results['IN'][i] for i in range(4)]
-                ....: ))
-                sage: out_diff = vec_to_int(vector(
-                ....:   GF(2), 4, [results['OUT'][i] for i in range(4)]
-                ....: ))
-                sage: ddt = sb.difference_distribution_table()
-                sage: ddt[in_diff][out_diff]
                 8
-                sage: ddt[in_diff][out_diff]/16.0 == 2**(-objective_value)
                 True
-                sage: import shutil
-                sage: shutil.rmtree(tmpdir)
         """
         solver = model_options.milp_solver
 
@@ -2396,39 +2381,38 @@ class SBox_CVL(Component):
             sage: from civerly.component import SBox_CVL
             sage: from civerly.model_options import *
             sage: from civerly.util import suppress_output, vec_to_int
+            sage: import tempfile
             sage: sb = SBox((4, 0, 1, 8, 2, 5, 10, 7, 6, 9, 3, 11, 12, 13, 14, 15))
             sage: sbox = SBox_CVL(sb, "s-box")
             sage: cipher = SBoxCipher(4, 4, name="ToySingleSBoxCipher")
             sage: node = cipher.add_subcipher(sbox, [(cipher.IN, (i, i)) for i in range(4)])
             sage: cipher.add_output([(node, (i, i)) for i in range(4)])
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path("./DOCTEST-ToySingleSBoxCipher-Models/"))
-            sage: # optional - cryptominisat # optional - espresso
-            sage: with suppress_output(): cipher.analyse(model_options)
-            sage: results, objective_value = model_options.sat_solver.process_solution_file(
-            ....:   model_options.path / (cipher.name + ".sat")
-            ....: )
-            sage: objective_value
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   with suppress_output(): cipher.analyse(model_options)
+            ....:   results, objective_value = model_options.sat_solver.process_solution_file(
+            ....:     model_options.path / (cipher.name + ".sat")
+            ....:   )
+            ....:   print(objective_value)
+            ....:   in_diff  = vec_to_int(
+            ....:     vector(GF(2), 4, [results[i+1] for i in range(4)])
+            ....:   )
+            ....:   out_diff = vec_to_int(
+            ....:     vector(GF(2), 4, [results[i+5] for i in range(4)])
+            ....:   )
+            ....:   print(sb.difference_distribution_table()[in_diff][out_diff])
+            ....:   print(sb.difference_distribution_table()[in_diff][out_diff]/16.0
+            ....:         == 2**(-int(objective_value)))
             1
-            sage: in_diff  = vec_to_int(
-            ....:   vector(GF(2), 4, [results[i+1] for i in range(4)])
-            ....: )
-            sage: out_diff = vec_to_int(
-            ....:   vector(GF(2), 4, [results[i+5] for i in range(4)])
-            ....: )
-            sage: sb.difference_distribution_table()[in_diff][out_diff]
             8
-            sage: sb.difference_distribution_table()[in_diff][out_diff]/16.0 \
-            ....:   == 2**(-int(objective_value))
             True
-            sage: import shutil
-            sage: shutil.rmtree("./DOCTEST-ToySingleSBoxCipher-Models/")
 
 
         """

@@ -1021,24 +1021,21 @@ class NoSolverWarning(Warning):
         sage: from civerly.cipher_implementations.aes import AES_CVL
         sage: import tempfile
         sage: aes = AES_CVL(6)
-        sage: tmpdir = tempfile.mkdtemp()
-        sage: model_options = MODEL_OPTIONS(
-        ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-        ....:   optimization=OPTIMIZATION.MILP,
-        ....:   granularity=GRANULARITY.WORDWISE,
-        ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-        ....:   milp_solver=None,
-        ....:   sat_solver=None,
-        ....:   path=Path(tmpdir))
-        sage: with suppress_output():
-        ....:   aes.analyse(model_options)
+        sage: with tempfile.TemporaryDirectory() as tmpdir:
+        ....:   model_options = MODEL_OPTIONS(
+        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+        ....:     optimization=OPTIMIZATION.MILP,
+        ....:     granularity=GRANULARITY.WORDWISE,
+        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+        ....:     milp_solver=None,
+        ....:     sat_solver=None,
+        ....:     path=Path(tmpdir))
+        ....:   with suppress_output():
+        ....:     aes.analyse(model_options)
         Traceback (most recent call last):
         ...
         NoSolverWarning: No solver has been selected.
         CiVerLy will return without solving.
-
-        sage: import shutil
-        sage: shutil.rmtree(tmpdir)
 
 
     """
