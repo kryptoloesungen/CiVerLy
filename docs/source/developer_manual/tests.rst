@@ -21,9 +21,16 @@ The implementations of ciphers in CiVerLy commonly feature tests like the follow
 
 .. code-block:: sage
 
-   sage: aes.analyse(model_options) # optional - glpk
+   sage: import tempfile
+   sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+   ....:   model_options = MODEL_OPTIONS(..., path=Path(tmpdir))
+   ....:   aes.analyse(model_options)
 
-This test is then only run when the ``sage -t`` invocation contains the optional ``glpk`` flag.
+The ``# optional - glpk`` marker on the ``with`` line causes the entire block to be skipped
+when ``glpk`` is not in the optional flags.
+Using ``tempfile.TemporaryDirectory`` as a context manager guarantees that the generated
+model files are cleaned up automatically, even if the test fails.
+The block is then only run when the ``sage -t`` invocation contains the optional ``glpk`` flag.
 This in turn introduces a new pitfall.
 A developer that forgets to put this optional flag will not notice that it is missing if the solver is installed.
 This then makes the test fail for other developers that do not have the solver installed.
@@ -64,7 +71,10 @@ First, we can mark doctests that will take long time as follows:
 
 .. code-block:: sage
 
-   sage: present_cipher.analyse(model_options) # long
+   sage: import tempfile
+   sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # long  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+   ....:   model_options = MODEL_OPTIONS(..., path=Path(tmpdir))
+   ....:   present_cipher.analyse(model_options)
 
 To include these when running the tests, add ``--long`` to the ``sage -t`` command.
 
