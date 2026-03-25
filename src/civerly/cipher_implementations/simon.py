@@ -74,205 +74,181 @@ class SIMON_CVL:
 
         Models for differential cryptanalysis::
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(16, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(16, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             4160 variables and 8641 clauses were written to
             '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(16, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(16, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             3912 variables and 9041 clauses were written to
             '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
-            sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(16, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(16, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             4160 variables and 8641 clauses were written to
             '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
-            sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(16, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(16, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             3912 variables and 9041 clauses were written to
             '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
         Models for linear cryptanalysis. The results are from Table 1 in
         https://eprint.iacr.org/2015/145.pdf, which uses squared
         correlations::
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(10, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(10, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             5648 variables and 13169 clauses were written to
             '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(10, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(10, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             6000 variables and 12817 clauses were written to
             '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
-            sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(10, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(10, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             5648 variables and 13169 clauses were written to
             '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
-            sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   solve_range=(10, 20),
-            ....:   path=Path(tmpdir))
-            sage: cipher.analyse(model_options=model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     solve_range=(10, 20),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
             6000 variables and 12817 clauses were written to
             '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
             15
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir, ignore_errors=True)
 
         """
         if name is None:

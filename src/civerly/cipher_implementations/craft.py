@@ -40,38 +40,41 @@ class CRAFT_CVL:
         Determine the number of active S-boxes using a word-wise model based
         on the the branch number::
 
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.WORDWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: craft.analyse(model_options) # optional - scip
+            sage: craft = CRAFT_CVL(10)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   craft.analyse(model_options)
             5896 variables and 6121 constraints were written to
             '...'
             10
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Now the improved modeling::
 
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
             sage: craft = CRAFT_CVL(10)
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.WORDWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: craft.analyse(model_options) # optional - scip
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   craft.analyse(model_options)
             5856 variables and 6041 constraints were written to
             '...'
             36
-            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Indeed, 36 active S-boxes is a much better bound.
 
@@ -79,21 +82,23 @@ class CRAFT_CVL:
         linear trail through CRAFT, we can use bitwise modeling. However,
         this is computationally more difficult than the previous tests::
 
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
             sage: craft = CRAFT_CVL(3)
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: craft.analyse(model_options) # optional - scip
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
+            ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   craft.analyse(model_options)
             7440 variables and 9057 constraints were written to
             '...'
             8
-            sage: shutil.rmtree(tmpdir) # optional - scip
 
         Here the objective value is :math:`- \log_2(p)`, with :math:`p` being
         the differential probability (or respectively the linear correlation)
@@ -102,42 +107,45 @@ class CRAFT_CVL:
         We repeat the same experiment but this time use dummy variables to
         model the linear layer::
 
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
             sage: craft = CRAFT_CVL(3)
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: craft.analyse(model_options) # optional - scip
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   craft.analyse(model_options)
             7728 variables and 8001 constraints were written to
             '...'
             8
-            sage: shutil.rmtree(tmpdir) # optional - scip
-
 
         It is also possible to use SAT to model the cipher. The results should
         match those that MILP-modeling produces::
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.craft import CRAFT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
             sage: craft = CRAFT_CVL(3)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: craft.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   craft.analyse(model_options)
+            ....:   craft.generate_report(model_options)
+            ....:   trail = str(craft.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
             7440 variables and 17201 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -148,31 +156,28 @@ class CRAFT_CVL:
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8
-            sage: craft.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(craft.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         Now with CaDiCaL as solver::
 
-            sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.craft import CRAFT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
             sage: craft = CRAFT_CVL(3)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir))
-            sage: craft.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   craft.analyse(model_options)
+            ....:   craft.generate_report(model_options)
+            ....:   trail = str(craft.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
             7440 variables and 17201 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -183,12 +188,7 @@ class CRAFT_CVL:
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8
-            sage: craft.generate_report(model_options)  # doctest: +ELLIPSIS
             Output file in: ...
-            sage: trail = str(craft.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
 
 

@@ -24,86 +24,79 @@ class GIFT_CVL:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: gift_cipher.analyse(model_options) # optional - scip
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   gift_cipher = GIFT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:       milp_solver=SCIP_CVL(),
+            ....:       path=Path(tmpdir)
+            ....:   )
+            ....:   gift_cipher.analyse(model_options)
             2560 variables and 2849 constraints were written to
             '...'
             3.4150374993
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: gift_cipher.analyse(model_options) # optional - scip # optional - espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   gift_cipher = GIFT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   gift_cipher.analyse(model_options) 
             2560 variables and 4161 constraints were written to
             '...'
             3.4150374993
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
-
+            
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-            ....:   milp_solver=SCIP_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: gift_cipher.analyse(model_options) # optional - scip
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   gift_cipher = GIFT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   gift_cipher.analyse(model_options) 
             2560 variables and 3585 constraints were written to
             '...'
             3.4150374993
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         Model the cipher with SAT using different values for ``sat_precision``:
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: gift_cipher.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   gift_cipher = GIFT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -114,29 +107,26 @@ class GIFT_CVL:
             [  0 ,  3] (trying w =   1) : UNSAT
             [  2 ,  3] (trying w =   2) : UNSAT
             3
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solve_range=(0, 10),
-            ....:   sat_precision=1,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: gift_cipher.analyse(model_options)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   gift_cipher = GIFT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     solve_range=(0, 10),
+            ....:     sat_precision=1,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to
             '...'
             [ 0.0 ,10.0] (trying w =  5.0) : SAT
@@ -147,37 +137,34 @@ class GIFT_CVL:
             [ 3.3 , 3.5] (trying w =  3.4) : SAT
             [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
             3.4
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         Simulate external Espresso minimization::
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
-            sage: import tempfile
-            sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   solve_range=(0, 10),
-            ....:   sat_precision=1,
-            ....:   sat_solver=CRYPTOMINISAT_CVL(),
-            ....:   logic_minimizer=None,
-            ....:   path=Path(tmpdir)
-            ....: )
-            sage: gift_cipher.analyse(model_options)
-            Optimization problem for Espresso has been written to...
             sage: import os
-            sage: _ = os.popen("espresso -epos "
-            ....: f"{tmpdir}/espresso-d1bda7a_in.pla > "
-            ....: f"{tmpdir}/espresso-d1bda7a_out.pla").read()
-            sage: gift_cipher.analyse(model_options)
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
+            ....:   gift_cipher = GIFT_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     solve_range=(0, 10),
+            ....:     sat_precision=1,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=None,
+            ....:     path=Path(tmpdir)
+            ....:   )
+            ....:   gift_cipher.analyse(model_options)
+            ....:   _ = os.popen("espresso -epos "
+            ....:   f"{tmpdir}/espresso-d1bda7a_in.pla > "
+            ....:   f"{tmpdir}/espresso-d1bda7a_out.pla").read()
+            ....:   gift_cipher.analyse(model_options)
+            Optimization problem for Espresso has been written to...
             Using existing file ..., make sure it is up to date!
             2560 variables and 6401 clauses were written to '...'
             [ 0.0 ,10.0] (trying w =  5.0) : SAT
@@ -188,8 +175,6 @@ class GIFT_CVL:
             [ 3.3 , 3.5] (trying w =  3.4) : SAT
             [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
             3.4
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
 
         """
         if name is None:
