@@ -3,6 +3,9 @@ name: Run Full Doctests
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - develop
 
 # cancels pipeline runs from old pull requests if a new one is pushed
 concurrency:
