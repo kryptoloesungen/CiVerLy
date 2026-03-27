@@ -402,6 +402,12 @@ class Cipher:
         # wordsize. Any subclass of WordBasedCipher will overwrite this value
         # with `self.wordsize`
 
+        self.result = None
+        # self.result stores the input/output of the last call to self.analyse
+        # as a dict {"in": [...], "out": [...]}. It is None until analyse is
+        # called for the first time, and is completely overwritten on each
+        # subsequent call.
+
     # Get-functions of various attributes:
     # --------------------------------------------------
 
@@ -1479,9 +1485,9 @@ class Cipher:
                     input_file_name=model_options.path / (self.name + ".mps"),
                     output_file_name=model_options.path / (self.name + ".sol")
                 )
-                return model_options.milp_solver.process_solution_file(
-                    model_options.path / (self.name + ".sol")
-                )[1]
+                results, weight = self.read_results(model_options)
+                TrailNode(self, model_options, results)
+                return weight
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.model(model_options)
             if self._return_immediately_:
@@ -1498,9 +1504,9 @@ class Cipher:
                 if model_options.sat_solver is None:
                     raise NoSolverWarning()
                 else:
-                    return model_options.sat_solver.process_solution_file(
-                        model_options.path / (self.name + ".sat"),
-                    )[1]
+                    results, weight = self.read_results(model_options)
+                    TrailNode(self, model_options, results)
+                    return weight
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION

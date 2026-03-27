@@ -127,6 +127,16 @@ class TrailNode:
                     )
                     bits_out[depths[comp_num]][bit_ind] = solution_bit_value
 
+        # Extract per-node result slices before None removal changes indexing
+        grid_in  = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=True)
+        grid_out = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=False)
+        _node_results = {}
+        for comp_num, comp in enumerate(nodes):
+            d = depths[comp_num]
+            comp_bits_in  = [bits_in[d][i]  for i, (n, _) in enumerate(grid_in[d])  if n == comp_num and bits_in[d][i]  is not None]
+            comp_bits_out = [bits_out[d][i] for i, (n, _) in enumerate(grid_out[d]) if n == comp_num and bits_out[d][i] is not None]
+            _node_results[comp_num] = {"in": comp_bits_in, "out": comp_bits_out}
+
         # realign bits_in, bits_out by removing any 'None' entries
         bits_in  = [[e for e in row if e is not None] for row in bits_in]
         bits_out = [[e for e in row if e is not None] for row in bits_out]
@@ -135,6 +145,11 @@ class TrailNode:
         self.bits_out = bits_out
         self.input  = bits_out[0]
         self.output = bits_out[-1]
+
+        # Set .result on this cipher and each of its direct nodes
+        self.cipher_instance.result = {"in": self.input, "out": self.output}
+        for comp_num, comp in enumerate(nodes):
+            comp.result = _node_results[comp_num]
         ################################################
 
         # Iterate through each subcipher

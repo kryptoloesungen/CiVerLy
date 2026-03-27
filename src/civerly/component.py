@@ -100,6 +100,7 @@ class Component(ABC):
         self.__input_length = input_length
         self.__output_length = output_length
         self._return_immediately_ = False
+        self.result = None
 
     def __call__(self, x):
         r"""Evaluate this component."""
