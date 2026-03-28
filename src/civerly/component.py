@@ -1518,7 +1518,7 @@ class LinearLayer_CVL(Component):
             ....:   node = cipher.add_subcipher(
             ....:     linearlayer, [(cipher.IN, (i, i)) for i in range(4)])
             ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
-            ....:   cipher.model(model_options)
+            ....:   sat_model = cipher.model(model_options)  # assigned to suppress repr
             ....:   model_options.sat_solver.solve(
             ....:     Path(tmpdir) / 'LL-doctest.cnf',
             ....:     Path(tmpdir) / 'LL-doctest.sat',
