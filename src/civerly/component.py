@@ -1523,7 +1523,7 @@ class LinearLayer_CVL(Component):
             ....:     Path(tmpdir) / 'LL-doctest.cnf',
             ....:     Path(tmpdir) / 'LL-doctest.sat',
             ....:     model_options)
-            ....:   cipher.get_trail(model_options)
+            ....:   _ = cipher.get_trail(model_options)  # assigned to suppress repr
             48 variables and 89 clauses were written to
             '...'
             [  0 ,100] (trying w =  50) : SAT
@@ -1545,7 +1545,6 @@ class LinearLayer_CVL(Component):
             [  0 , 3] (trying w =   1) : SAT
             [  0 , 1] (trying w =   0) : SAT
             0
-            ...
         """
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
