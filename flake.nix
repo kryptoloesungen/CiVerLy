@@ -246,7 +246,11 @@
       {
         devShells.default = pkgs.mkShell {
           inputsFrom = [ civerly ];
-          buildInputs = runtimeDeps;
+          buildInputs = runtimeDeps ++ [
+            pkgs.ruff
+            pkgs.ty
+            pkgs.codespell
+          ];
         };
 
         packages = {
