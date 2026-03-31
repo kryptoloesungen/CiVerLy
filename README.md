@@ -40,6 +40,7 @@ The following example shows how to import the built‑in AES implementation, con
    # Import the AES implementation and modeling options
    from civerly.cipher_implementations.aes import AES_CVL
    from civerly.model_options import *
+   from civerly.solvers import SCIP_CVL
 
    # Instantiate a 10-round AES cipher
    aes = AES_CVL(R=10, name="AES-10r")
@@ -50,7 +51,7 @@ The following example shows how to import the built‑in AES implementation, con
        optimization=OPTIMIZATION.MILP,
        granularity=GRANULARITY.WORDWISE,
        linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-       solver=SOLVER.SCIP,  # requires SCIP to be installed
+       milp_solver=SCIP_CVL(),  # requires SCIP to be installed
        path=Path("./AES-Models/"),
    )
 
