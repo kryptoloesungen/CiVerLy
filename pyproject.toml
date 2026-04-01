@@ -23,22 +23,22 @@ sources = ["src/civerly/largesboxes/lib-largesboxes.cpp"]
 language = "c++"
 
 [tool.ruff.lint]
-select = ["ALL"]
-# select = [
-#   "F",    # pyflakes - undefined names, unused imports
-#   "E",    # pycodestyle errors
-#   "W",    # pycodestyle warnings
-#   "I",    # isort
-#   "B",    # flake8-bugbear - common bug patterns
-#   "UP",   # pyupgrade - modernize syntax
-#   "RUF",  # ruff-native rules
-#   "TC",   # flake8-type-checking - TYPE_CHECKING imports
-#   "N",    # pep8-naming conventions
-#   "SIM",  # flake8-simplify - simplifiable code patterns  
-#   "PLE",  # pylint errors only (high signal, skip PLR/PLW/PLC)
-#   "PTH",  # use pathlib instead of os.path
-#   "C4",   # flake8-comprehensions - unnecessary list/dict/set calls
-# ]
-# ignore = [
-#   "E501", # line length - let the formatter handle this
-# ]
+# select = ["ALL"]
+select = [
+  "F",    # pyflakes - undefined names, unused imports
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "I",    # isort
+  "B",    # flake8-bugbear - common bug patterns
+  "UP",   # pyupgrade - modernize syntax
+  "RUF",  # ruff-native rules
+  "TC",   # flake8-type-checking - TYPE_CHECKING imports
+  "N",    # pep8-naming conventions
+  "SIM",  # flake8-simplify - simplifiable code patterns
+  "PLE",  # pylint errors only (high signal, skip PLR/PLW/PLC)
+  "PTH",  # use pathlib instead of os.path
+  "C4",   # flake8-comprehensions - unnecessary list/dict/set calls
+]
+ignore = [
+  "E501", # line length - let the formatter handle this
+]
