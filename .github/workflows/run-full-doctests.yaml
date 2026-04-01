@@ -31,4 +31,4 @@ jobs:
         use-flakehub: false
 
     - name: Run Full Doctests (without gurobi)
-      run: nix develop --command make test-no-gurobi
+      run: nix develop --command make test-ci
