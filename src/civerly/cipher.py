@@ -98,6 +98,7 @@ class Cipher:
             self._return_immediately_ = False
             self.sum_arr_milp = []
             self.sum_arr_sat = []
+            self.result = None
             if in_node:
                 self.__name = f"{self.cipher_instance.name}.IN"
                 self.__input_length = self.cipher_instance.input_length
@@ -1692,6 +1693,347 @@ class Cipher:
         root_node = TrailNode(self, model_options, results)
         root_node.verify_correctness()
         return root_node
+
+    # ------------------------------------------------------------------
+    # JSON export / import
+    # ------------------------------------------------------------------
+
+    def _to_dict(self):
+        r"""
+        Return a JSON-serializable dictionary representation of ``self``.
+
+        Used internally by :meth:`export` and :meth:`load`.
+        """
+        from civerly.component import (
+            I_CVL, C_CVL, RK_CVL, ConstXOR_CVL, RoundkeyXOR_CVL,
+            XOR_CVL, ModAdd_CVL, AND_CVL, LinearLayer_CVL,
+            PermuteLayer_CVL, RotateLayer_CVL, SBox_CVL, ROT_AND_CVL,
+        )
+
+        def _int_or_none(x):
+            return int(x) if x is not None else None
+
+        def node_to_dict(node):
+            if isinstance(node, Cipher.__Special_Node):
+                return {"type": "__Special_Node"}
+            # Check subclasses before their superclasses
+            if isinstance(node, RotateLayer_CVL):
+                return {
+                    "type": "RotateLayer_CVL",
+                    "name": node.name,
+                    "input_length": int(node.input_length),
+                    "r": int(node.r),
+                    "word_coarseness": int(node.word_coarseness),
+                }
+            if isinstance(node, PermuteLayer_CVL):
+                return {
+                    "type": "PermuteLayer_CVL",
+                    "name": node.name,
+                    "perm": [int(x) for x in node.perm],
+                    "word_coarseness": int(node.word_coarseness),
+                }
+            if isinstance(node, LinearLayer_CVL):
+                return {
+                    "type": "LinearLayer_CVL",
+                    "name": node.name,
+                    "binary_matrix": [
+                        [int(x) for x in row]
+                        for row in node.binary_matrix.rows()
+                    ],
+                    "branch_number_differential": _int_or_none(
+                        node.branch_number_differential
+                    ),
+                    "branch_number_linear": _int_or_none(
+                        node.branch_number_linear
+                    ),
+                }
+            if isinstance(node, RoundkeyXOR_CVL):
+                return {
+                    "type": "RoundkeyXOR_CVL",
+                    "name": node.name,
+                    "output_length": int(node.output_length),
+                    "const": int(node.const),
+                }
+            if isinstance(node, ConstXOR_CVL):
+                return {
+                    "type": "ConstXOR_CVL",
+                    "name": node.name,
+                    "output_length": int(node.output_length),
+                    "const": int(node.const),
+                }
+            if isinstance(node, RK_CVL):
+                return {
+                    "type": "RK_CVL",
+                    "name": node.name,
+                    "output_length": int(node.output_length),
+                    "const": int(node.const),
+                }
+            if isinstance(node, C_CVL):
+                return {
+                    "type": "C_CVL",
+                    "name": node.name,
+                    "output_length": int(node.output_length),
+                    "const": int(node.const),
+                }
+            if isinstance(node, I_CVL):
+                return {
+                    "type": "I_CVL",
+                    "name": node.name,
+                    "input_length": int(node.input_length),
+                }
+            if isinstance(node, XOR_CVL):
+                return {
+                    "type": "XOR_CVL",
+                    "name": node.name,
+                    "word_length": int(node.word_length),
+                }
+            if isinstance(node, ModAdd_CVL):
+                return {
+                    "type": "ModAdd_CVL",
+                    "name": node.name,
+                    "word_length": int(node.word_length),
+                }
+            if isinstance(node, AND_CVL):
+                return {
+                    "type": "AND_CVL",
+                    "name": node.name,
+                    "word_length": int(node.word_length),
+                }
+            if isinstance(node, SBox_CVL):
+                return {
+                    "type": "SBox_CVL",
+                    "name": node.name,
+                    "S": [int(x) for x in node.S],
+                }
+            if isinstance(node, ROT_AND_CVL):
+                return {
+                    "type": "ROT_AND_CVL",
+                    "name": node.name,
+                    "word_length": int(node.word_length),
+                    "r": int(node.r),
+                }
+            if isinstance(node, Cipher):
+                return {"type": "Cipher", "cipher": node._to_dict()}
+            raise ValueError(
+                f"Cannot serialize node of unknown type "
+                f"{type(node).__name__!r}"
+            )
+
+        # The OUT node is appended last when is_valid becomes True
+        out_idx = len(self.nodes) - 1 if self.is_valid else None
+
+        node_dicts = [
+            {**node_to_dict(n), "result": n.result}
+            for i, n in enumerate(self.nodes)
+            if out_idx is None or i != out_idx
+        ]
+
+        edge_dicts = [
+            [[a, b], [x, y]]
+            for (a, b), (x, y) in self.edges
+            if out_idx is None or b != out_idx
+        ]
+
+        output_dicts = [
+            list(entry) if entry is not None else None
+            for entry in self.outputs
+        ]
+
+        return {
+            "name": self.name,
+            "input_length": self.input_length,
+            "output_length": self.output_length,
+            "wordsize": self._wrd,
+            "nodes": node_dicts,
+            "edges": edge_dicts,
+            "outputs": output_dicts,
+            "result": self.result,
+        }
+
+    def export(self, path):
+        r"""
+        Write ``self`` to a JSON file at ``path``.
+
+        The file can be loaded back with :meth:`Cipher.load`.
+
+        INPUT:
+
+            - ``path`` -- string or path-like; Destination file path.
+              The ``.json`` extension is conventional but not enforced.
+
+        EXAMPLES::
+
+            sage: import tempfile, os
+            sage: from civerly.cipher import Cipher
+            sage: from civerly.component import SBox_CVL
+            sage: from sage.crypto.sbox import SBox
+            sage: cipher = Cipher(9, 9, name="test")
+            sage: sb = SBox_CVL(SBox([0, 6, 1, 4, 2, 3, 5, 7]))
+            sage: edges = [(cipher.IN, (i, i)) for i in range(3)]
+            sage: node0 = cipher.add_subcipher(sb, edges)
+            sage: edges = [(cipher.IN, (i + 3, i)) for i in range(3)]
+            sage: node1 = cipher.add_subcipher(sb, edges)
+            sage: edges = [(cipher.IN, (i + 6, i)) for i in range(3)]
+            sage: node2 = cipher.add_subcipher(sb, edges)
+            sage: cipher.add_output([(node0, (i, i)) for i in range(3)])
+            sage: cipher.add_output([(node1, (i, i + 3)) for i in range(3)])
+            sage: cipher.add_output([(node2, (i, i + 6)) for i in range(3)])
+            sage: with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
+            ....:     tmp = f.name
+
+        Before analysis, ``result`` is ``None`` and round-trips as such::
+
+            sage: cipher.export(tmp)
+            Object 'test' has been exported to ...
+            sage: loaded = Cipher.load(tmp)
+            sage: cipher == loaded and loaded.result is None
+            True
+
+        After analysis, ``result`` holds the trail bit-pattern and is
+        preserved verbatim through the JSON file::
+
+            sage: from civerly.model_options import *
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
+            ....:   path=Path("DOCTEST-Export"))
+            sage: cipher.analyse(model_options)
+            ...
+            2
+            sage: cipher.export(tmp)
+            Object 'test' has been exported to ...
+            sage: loaded = Cipher.load(tmp)
+            sage: os.unlink(tmp)
+            sage: cipher == loaded and loaded.result == cipher.result
+            True
+        """
+        with open(path, "w") as f:
+            json.dump(self._to_dict(), f, indent=2,
+                      default=lambda obj: int(obj))
+        print(f"Object '{self.name}' has been exported to {path}.")
+
+    @classmethod
+    def _from_dict(cls, d):
+        r"""
+        Reconstruct a :class:`Cipher` from a dictionary produced by
+        :meth:`_to_dict`.
+        """
+        from civerly.component import (
+            I_CVL, C_CVL, RK_CVL, ConstXOR_CVL, RoundkeyXOR_CVL,
+            XOR_CVL, ModAdd_CVL, AND_CVL, LinearLayer_CVL,
+            PermuteLayer_CVL, RotateLayer_CVL, SBox_CVL, ROT_AND_CVL,
+        )
+        from sage.crypto.sbox import SBox
+        from sage.matrix.constructor import Matrix as matrix
+
+        def node_from_dict(nd):
+            t = nd["type"]
+            name = nd.get("name")
+            if t == "I_CVL":
+                return I_CVL(nd["input_length"], name=name)
+            if t == "C_CVL":
+                return C_CVL(nd["output_length"], nd["const"], name=name)
+            if t == "RK_CVL":
+                return RK_CVL(nd["output_length"], nd["const"], name=name)
+            if t == "ConstXOR_CVL":
+                return ConstXOR_CVL(
+                    nd["output_length"], nd["const"], name=name
+                )
+            if t == "RoundkeyXOR_CVL":
+                return RoundkeyXOR_CVL(
+                    nd["output_length"], nd["const"], name=name
+                )
+            if t == "XOR_CVL":
+                return XOR_CVL(nd["word_length"], name=name)
+            if t == "ModAdd_CVL":
+                return ModAdd_CVL(nd["word_length"], name=name)
+            if t == "AND_CVL":
+                return AND_CVL(nd["word_length"], name=name)
+            if t == "LinearLayer_CVL":
+                mat = matrix(GF(2), nd["binary_matrix"])
+                return LinearLayer_CVL(
+                    mat,
+                    branch_number_differential=nd[
+                        "branch_number_differential"
+                    ],
+                    branch_number_linear=nd["branch_number_linear"],
+                    name=name,
+                )
+            if t == "PermuteLayer_CVL":
+                return PermuteLayer_CVL(
+                    nd["perm"],
+                    word_coarseness=nd["word_coarseness"],
+                    name=name,
+                )
+            if t == "RotateLayer_CVL":
+                return RotateLayer_CVL(
+                    nd["input_length"],
+                    nd["r"],
+                    word_coarseness=nd["word_coarseness"],
+                    name=name,
+                )
+            if t == "SBox_CVL":
+                return SBox_CVL(SBox(nd["S"]), name=name)
+            if t == "ROT_AND_CVL":
+                return ROT_AND_CVL(nd["word_length"], nd["r"], name=name)
+            if t == "Cipher":
+                return cls._from_dict(nd["cipher"])
+            raise ValueError(f"Unknown node type {t!r} in JSON")
+
+        cipher = cls(d["input_length"], d["output_length"], name=d["name"])
+        cipher._wrd = d["wordsize"]
+
+        # Restore the IN node's result (index 0)
+        cipher.nodes[0].result = d["nodes"][0].get("result")
+
+        # d["nodes"][0] is the IN node — always present, skip during
+        # reconstruction (its index 0 is implicit in the edge list)
+        for node_idx, nd in enumerate(d["nodes"][1:], start=1):
+            component = node_from_dict(nd)
+            incoming = [
+                (a, (x, y))
+                for [a, b], [x, y] in d["edges"]
+                if b == node_idx
+            ]
+            cipher.add_subcipher(component, incoming)
+            # For Cipher nodes, _from_dict already restored .result on the
+            # component before add_subcipher deepcopied it, so it is correct.
+            # For leaf Component nodes, restore .result explicitly.
+            if nd["type"] != "Cipher":
+                cipher.nodes[node_idx].result = nd.get("result")
+
+        output_edges = [
+            (a, (x, y))
+            for y, entry in enumerate(d["outputs"])
+            if entry is not None
+            for a, x in [entry]
+        ]
+        if output_edges:
+            cipher.add_output(output_edges)
+
+        cipher.result = d["result"]
+        return cipher
+
+    @classmethod
+    def load(cls, path):
+        r"""
+        Load and return a :class:`Cipher` from the JSON file at ``path``
+        that was previously written by :meth:`export`.
+
+        INPUT:
+
+            - ``path`` -- string or path-like; Path to the JSON file.
+
+        OUTPUT: A reconstructed :class:`Cipher` instance.
+        """
+        with open(path) as f:
+            d = json.load(f)
+        return cls._from_dict(d)
 
     def _latex_header(self, model_options, objective_value) -> str:
         r"""
