@@ -52,7 +52,6 @@ from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.model_options import CRYPTANALYSIS
 from civerly.model_options import InvalidModelOptionException
 from civerly.solvers import NoSolverWarning
-from civerly.util import _before_brackets, _between_brackets
 from civerly.util import suppress_output, translate_sat_clause
 from civerly.trail import TrailNode
 
@@ -1643,11 +1642,11 @@ class Cipher:
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file_name = model_options.path / (self.name + ".sol")
             return model_options.milp_solver.process_solution_file(
-                solution_file_name) #, "MILP"
+                solution_file_name)
         elif model_options.optimization == OPTIMIZATION.SAT:
             solution_file_name = model_options.path / (self.name + ".sat")
             return model_options.sat_solver.process_solution_file(
-                solution_file_name) #, "SAT"
+                solution_file_name)
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
