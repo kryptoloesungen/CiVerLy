@@ -262,7 +262,7 @@ class HURDLE_CVL:
             sage: import tempfile
             sage: cipher = HURDLE_CVL(R=4)
             sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-            sage:   model_options = MODEL_OPTIONS(
+            ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
@@ -272,7 +272,7 @@ class HURDLE_CVL:
             ....:       sat_solver=CADICAL_CVL(),
             ....:       path=Path(tmpdir)
             ....:   )
-            sage:   cipher.analyse(model_options)
+            ....:   cipher.analyse(model_options)
             7168 variables and 88545 clauses were written to ...
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
