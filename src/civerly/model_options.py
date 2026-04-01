@@ -8,6 +8,9 @@ from pathlib import Path
 from civerly.solvers import SOLVER_CVL, LOGIC_MINIMIZER_CVL
 from civerly.solvers import MILP_SOLVER_CVL, SAT_SOLVER_CVL, LOGIC_MINIMIZER_CVL
 
+# Import all solvers, even though they are unused here.
+# This way, the user has access to ALL model options
+# when importing `civerly.model_options`.
 from civerly.solvers import NO_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
 from civerly.solvers import NO_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
 from civerly.solvers import NO_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL

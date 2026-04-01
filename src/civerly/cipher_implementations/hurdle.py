@@ -254,22 +254,35 @@ class HURDLE_CVL:
             ....:   0x4bf15508812e06f0
             True
 
+        Model 4 rounds HURDLE-II:
+
+            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: cipher = HURDLE_CVL(R=4)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       sat_solver=CADICAL_CVL(),
+            ....:       path=Path(tmpdir)
+            ....:   )
+            sage:   cipher.analyse(model_options)
+            7168 variables and 88545 clauses were written to ...
+            [  0 ,100] (trying w =  50) : SAT
+            [  0 , 50] (trying w =  25) : SAT
+            [  0 , 25] (trying w =  12) : SAT
+            [  0 , 12] (trying w =   6) : UNSAT
+            [  7 , 12] (trying w =   9) : UNSAT
+            [ 10 , 12] (trying w =  11) : UNSAT
+            12
+
         """
-        # To run HURDLE modeling, execute:
-        # ------------------------------------
-        # sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
-        # sage: from civerly.model_options import *
-        # sage: from pathlib import Path
-        # sage: cipher = HURDLE_CVL(R=4)
-        # sage: model_options = MODEL_OPTIONS(
-        # ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-        # ....:     optimization=OPTIMIZATION.SAT,
-        # ....:     granularity=GRANULARITY.BITWISE,
-        # ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-        # ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-        # ....:     logic_minimizer=ESPRESSO_CVL(),
-        # ....:     path=Path("./DOCTEST-HURDLE-Models/"))
-        # sage: cipher.analyse(model_options)
 
         if name is None:
             name = "HURDLE-II"
