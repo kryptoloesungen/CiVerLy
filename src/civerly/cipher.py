@@ -34,10 +34,12 @@ EXAMPLES::
     '0x11119999'
 """
 
-from sage.modules.free_module_element import vector
 from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
+from sage.matrix.constructor import Matrix as matrix
+from sage.modules.free_module_element import vector
 from sage.sat.solvers.dimacs import DIMACS
+from sage.crypto.sbox import SBox
 
 from collections.abc import Iterable
 from copy import deepcopy
@@ -1812,7 +1814,7 @@ class Cipher:
                     "r": int(node.r),
                 }
             if isinstance(node, Cipher):
-                return {"type": "Cipher", "cipher": node._to_dict()}
+                return {"type": type(node).__name__, "cipher": node._to_dict()}
             raise ValueError(
                 f"Cannot serialize node of unknown type "
                 f"{type(node).__name__!r}"
@@ -1838,11 +1840,20 @@ class Cipher:
             for entry in self.outputs
         ]
 
+        extra = {}
+        if hasattr(self, 'wordsize'):
+            extra["wordsize"] = int(self.wordsize)
+        if hasattr(self, 'rows'):
+            extra["rows"] = int(self.rows)
+        if hasattr(self, 'cols'):
+            extra["cols"] = int(self.cols)
+
         return {
+            "cipher_class": type(self).__name__,
             "name": self.name,
             "input_length": self.input_length,
             "output_length": self.output_length,
-            "wordsize": self._wrd,
+            **extra,
             "nodes": node_dicts,
             "edges": edge_dicts,
             "outputs": output_dicts,
@@ -1910,9 +1921,28 @@ class Cipher:
             sage: os.unlink(tmp)
             sage: cipher == loaded and loaded.result == cipher.result
             True
+
+        Again with a different cipher type::
+            
+            sage: import tempfile
+            sage: from civerly.cipher import Cipher
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: aes = AES_CVL(4)
+            sage: with tempfile.NamedTemporaryFile(suffix='.json') as f:
+            ....:   tmp = f.name
+            ....:   aes.export(tmp)
+            ....:   loaded = Cipher.load(tmp)
+            ....:   aes == loaded
+            Object 'AES' has been exported to ...
+            True
+            sage: from civerly.aeslike import AESlike
+            sage: isinstance(loaded, AESlike)
+            True
+
+
         """
         with open(path, "w") as f:
-            json.dump(self._to_dict(), f, indent=2,
+            json.dump(self._to_dict(), f,
                       default=lambda obj: int(obj))
         print(f"Object '{self.name}' has been exported to {path}.")
 
@@ -1927,8 +1957,6 @@ class Cipher:
             XOR_CVL, ModAdd_CVL, AND_CVL, LinearLayer_CVL,
             PermuteLayer_CVL, RotateLayer_CVL, SBox_CVL, ROT_AND_CVL,
         )
-        from sage.crypto.sbox import SBox
-        from sage.matrix.constructor import Matrix as matrix
 
         def node_from_dict(nd):
             t = nd["type"]
@@ -1980,12 +2008,41 @@ class Cipher:
                 return SBox_CVL(SBox(nd["S"]), name=name)
             if t == "ROT_AND_CVL":
                 return ROT_AND_CVL(nd["word_length"], nd["r"], name=name)
-            if t == "Cipher":
+            if t in (
+                "Cipher", "WordBasedCipher", "SBoxCipher",
+                "WordSBoxCipher", "AddRX", "AndRX", "AESlike"
+            ):
                 return cls._from_dict(nd["cipher"])
             raise ValueError(f"Unknown node type {t!r} in JSON")
 
-        cipher = cls(d["input_length"], d["output_length"], name=d["name"])
-        cipher._wrd = d["wordsize"]
+        cipher_class_name = d.get("cipher_class", "Cipher")
+        if cipher_class_name == "SBoxCipher":
+            from civerly.sboxcipher import SBoxCipher
+            wordsize = 1
+            cipher = SBoxCipher(d["input_length"], d["output_length"], name=d["name"])
+        elif cipher_class_name == "WordBasedCipher":
+            from civerly.wordbasedcipher import WordBasedCipher
+            wordsize = d["wordsize"]
+            cipher = WordBasedCipher(wordsize, d["input_length"] // wordsize, d["output_length"] // wordsize, name=d["name"])
+        elif cipher_class_name == "WordSBoxCipher":
+            from civerly.wordsboxcipher import WordSBoxCipher
+            wordsize = d["wordsize"]
+            cipher = WordSBoxCipher(wordsize, d["input_length"] // wordsize, d["output_length"] // wordsize, name=d["name"])
+        elif cipher_class_name == "AddRX":
+            from civerly.addrx import AddRX
+            wordsize = d["wordsize"]
+            cipher = AddRX(wordsize, d["input_length"] // wordsize, d["output_length"] // wordsize, name=d["name"])
+        elif cipher_class_name == "AndRX":
+            from civerly.andrx import AndRX
+            wordsize = d["wordsize"]
+            cipher = AndRX(wordsize, d["input_length"] // wordsize, d["output_length"] // wordsize, name=d["name"])
+        elif cipher_class_name == "AESlike":
+            from civerly.aeslike import AESlike
+            wordsize = d["wordsize"]
+            cipher = AESlike(d["wordsize"], d["rows"], d["cols"], name=d["name"])
+        else:
+            wordsize = 1
+            cipher = cls(d["input_length"], d["output_length"], name=d["name"])
 
         # Restore the IN node's result (index 0)
         cipher.nodes[0].result = d["nodes"][0].get("result")
@@ -1994,11 +2051,12 @@ class Cipher:
         # reconstruction (its index 0 is implicit in the edge list)
         for node_idx, nd in enumerate(d["nodes"][1:], start=1):
             component = node_from_dict(nd)
-            incoming = [
-                (a, (x, y))
+            incoming = list(set([
+                (a, (x//wordsize, y//wordsize))
+                # (a, (x, y))
                 for [a, b], [x, y] in d["edges"]
                 if b == node_idx
-            ]
+            ]))
             cipher.add_subcipher(component, incoming)
             # For Cipher nodes, _from_dict already restored .result on the
             # component before add_subcipher deepcopied it, so it is correct.
@@ -2006,12 +2064,13 @@ class Cipher:
             if nd["type"] != "Cipher":
                 cipher.nodes[node_idx].result = nd.get("result")
 
-        output_edges = [
-            (a, (x, y))
+        output_edges = list(set([
+            (a, (x//wordsize, y//wordsize))
+            # (a, (x, y))
             for y, entry in enumerate(d["outputs"])
             if entry is not None
             for a, x in [entry]
-        ]
+        ]))
         if output_edges:
             cipher.add_output(output_edges)
 
