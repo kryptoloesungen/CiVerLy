@@ -8,12 +8,13 @@ NIX_OR_NOTHING := $(if $(shell command -v nix 2>/dev/null),nix develop --command
 
 help:
 	@echo "Available targets:"
-	@echo "  lint          Run all checks (ruff check, ruff format --check, codespell)"
+	@echo "  lint          Run all checks (ruff check, ruff format --check, codespell, lychee)"
 	@echo "  check         Run ruff linter"
 	@echo "  check-fix     Run ruff linter and auto-fix issues"
 	@echo "  format        Run ruff formatter"
 	@echo "  format-check  Check formatting without modifying files"
 	@echo "  spell         Run codespell"
+	@echo "  check-links   Run lychee to search for dead links"
 	@echo "  test          Run sage tests"
 	@echo "  test-ci       Run sage tests with all solvers except gurobi, including long tests and docs"
 	@echo "  test-docs     Run sage tests on code in the docs"
@@ -44,7 +45,10 @@ format-check:
 spell:
 	codespell $(TEST_DIR) docs
 
-lint: check format-check spell
+check-links:
+	git ls-files | grep -v "\.png$$" | xargs lychee --user-agent "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0" --retry-wait-time 1 --max-concurrency 1 --accept "100..=103,200..=299,403"
+
+lint: check format-check spell check-links
 
 # ==============================================================================
 # Tests
