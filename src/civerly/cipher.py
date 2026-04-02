@@ -1895,8 +1895,48 @@ class Cipher:
 
             sage: cipher.export(tmp)
             Object 'test' has been exported to ...
+            sage: import json
+            sage: with open(tmp, "r") as f:
+            ....:   dictionary = json.load(f)
+            sage: dictionary == {
+            ....:     'cipher_class': 'Cipher', 'name': 'test',
+            ....:     'input_length': 9, 'output_length': 9,
+            ....:     'nodes': [
+            ....:         {'type': '__Special_Node', 'result': None},
+            ....:         {
+            ....:             'type': 'SBox_CVL', 'name': 'Unnamed Component',
+            ....:             'S': [0, 6, 1, 4, 2, 3, 5, 7], 'result': None
+            ....:         },
+            ....:         {
+            ....:             'type': 'SBox_CVL', 'name': 'Unnamed Component',
+            ....:             'S': [0, 6, 1, 4, 2, 3, 5, 7], 'result': None
+            ....:         },
+            ....:         {
+            ....:             'type': 'SBox_CVL', 'name': 'Unnamed Component',
+            ....:             'S': [0, 6, 1, 4, 2, 3, 5, 7], 'result': None
+            ....:         }
+            ....:     ],
+            ....:     'edges': [
+            ....:         [[0, 1], [0, 0]],
+            ....:         [[0, 1], [1, 1]],
+            ....:         [[0, 1], [2, 2]],
+            ....:         [[0, 2], [3, 0]],
+            ....:         [[0, 2], [4, 1]],
+            ....:         [[0, 2], [5, 2]],
+            ....:         [[0, 3], [6, 0]],
+            ....:         [[0, 3], [7, 1]],
+            ....:         [[0, 3], [8, 2]]
+            ....:     ],
+            ....:     'outputs': [
+            ....:         [1, 0], [1, 1], [1, 2],
+            ....:         [2, 0], [2, 1], [2, 2],
+            ....:         [3, 0], [3, 1], [3, 2]
+            ....:     ],
+            ....:     'result': None
+            ....: }
+            True
             sage: loaded = Cipher.load(tmp)
-            sage: cipher == loaded and loaded.result is None
+            sage: cipher == loaded
             True
 
         After analysis, ``result`` holds the trail bit-pattern and is
@@ -1932,7 +1972,7 @@ class Cipher:
             ....:   tmp = f.name
             ....:   aes.export(tmp)
             ....:   loaded = Cipher.load(tmp)
-            ....:   aes == loaded
+            ....:   aes == loaded and aes.__dict__ == loaded.__dict__
             Object 'AES' has been exported to ...
             True
             sage: from civerly.aeslike import AESlike
@@ -2051,12 +2091,12 @@ class Cipher:
         # reconstruction (its index 0 is implicit in the edge list)
         for node_idx, nd in enumerate(d["nodes"][1:], start=1):
             component = node_from_dict(nd)
-            incoming = list(set([
+            incoming = sorted(list(set([
                 (a, (x//wordsize, y//wordsize))
                 # (a, (x, y))
                 for [a, b], [x, y] in d["edges"]
                 if b == node_idx
-            ]))
+            ])))
             cipher.add_subcipher(component, incoming)
             # For Cipher nodes, _from_dict already restored .result on the
             # component before add_subcipher deepcopied it, so it is correct.
@@ -2064,13 +2104,13 @@ class Cipher:
             if nd["type"] != "Cipher":
                 cipher.nodes[node_idx].result = nd.get("result")
 
-        output_edges = list(set([
+        output_edges = sorted(list(set([
             (a, (x//wordsize, y//wordsize))
             # (a, (x, y))
             for y, entry in enumerate(d["outputs"])
             if entry is not None
             for a, x in [entry]
-        ]))
+        ])))
         if output_edges:
             cipher.add_output(output_edges)
 
