@@ -250,6 +250,7 @@
             pkgs.ruff
             pkgs.ty
             pkgs.codespell
+            pkgs.lychee
           ];
         };
 
