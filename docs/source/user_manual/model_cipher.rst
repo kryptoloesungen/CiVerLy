@@ -25,13 +25,14 @@ Below, we give an exemplary code snippet that configures the model options for a
 .. code-block::
 
    sage: from civerly.model_options import *
+   sage: from pathlib import Path
    sage: model_options = MODEL_OPTIONS(
    ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
    ....:   optimization=OPTIMIZATION.SAT,
    ....:   granularity=GRANULARITY.BITWISE,
    ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
    ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-   ....:   solver=SOLVER.CRYPTOMINISAT,
+   ....:   sat_solver=CRYPTOMINISAT_CVL(),
    ....:   solve_range=(0, 32),
    ....:   path=Path("Models/Cipher"))
 
@@ -67,22 +68,40 @@ General Options
   * ``GRANULARITY.WORDWISE`` or
   * ``GRANULARITY.BITWISE``.
 
-* ``solver``
+* ``milp_solver``
 
-  With this option, the user chooses the MILP or SAT solver that CiVerLy will use.
+  With this option, the user chooses the MILP solver that CiVerLy will use.
   The supported MILP solvers are SCIP, GLPK, and Gurobi.
-  For SAT, CiVerLy supports Cryptominisat and CaDiCaL.
-  The solver, of course, must be installed on the same machine as CiVerLy.
-  Notice that this option can also be set to None.
-  CiVerLy then only generates the models and leaves it to the user to solve them.
-  Hence, ``solver`` must be set to:
+  The solver must be installed on the same machine as CiVerLy.
+  Setting this to ``None`` means CiVerLy only generates the models and leaves solving to the user.
+  Hence, ``milp_solver`` must be set to:
 
   * ``None`` or
-  * ``SOLVER.SCIP`` or
-  * ``SOLVER.GLPK`` or
-  * ``SOLVER.GUROBI`` or
-  * ``SOLVER.CRYPTOMINISAT`` or
-  * ``SOLVER.CADICAL``.
+  * ``SCIP_CVL()`` or
+  * ``GLPK_CVL()`` or
+  * ``GUROBI_CVL()``.
+
+* ``sat_solver``
+
+  With this option, the user chooses the SAT solver that CiVerLy will use.
+  CiVerLy supports CryptoMiniSat and CaDiCaL.
+  The solver must be installed on the same machine as CiVerLy.
+  Setting this to ``None`` means CiVerLy only generates the models and leaves solving to the user.
+  Hence, ``sat_solver`` must be set to:
+
+  * ``None`` or
+  * ``CRYPTOMINISAT_CVL()`` or
+  * ``CADICAL_CVL()``.
+
+* ``logic_minimizer``
+
+  With this option, the user chooses the logic minimizer that CiVerLy will use when modeling S-boxes with the ``LOGICAL_COND_ESPRESSO`` technique.
+  Currently, only Espresso is supported.
+  Setting this to ``None`` means CiVerLy only generates the input for Espresso and leaves it to the user to run it.
+  Hence, ``logic_minimizer`` must be set to:
+
+  * ``None`` or
+  * ``ESPRESSO_CVL()``.
 
 * ``path``
 
@@ -142,5 +161,5 @@ Therefore, we strongly recommend to try different options on small instances of 
 For AES-like ciphers, i.e., cipher consisting of an S-box layer, a step permuting the cells and a MixColumns step, we recommend to use wordwise MILP modeling with the ``GENERALIZED_WORDWISE`` linear layer modeling.
 To keep it simple, for everything else we recommend bitwise SAT modeling with the ``MORE_DUMMIES`` linear layer modeling and the ``LOGICAL_COND_ESPRESSO`` modeling for S-boxes.
 
-In terms of solvers, for MILP, we recommend SCIP (unless a Gurobi licence is already available).
-For SAT, we recommend Cryptominisat.
+In terms of solvers, for MILP we recommend ``SCIP_CVL()`` (unless a Gurobi licence is already available).
+For SAT, we recommend ``CRYPTOMINISAT_CVL()``.
