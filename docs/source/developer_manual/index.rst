@@ -14,5 +14,6 @@ Of course, the source code of CiVerLy as well as the optional but highly recomme
    file_structure
    nix
    building_docs
+   code_analysis
    tests
    contributing_docs
