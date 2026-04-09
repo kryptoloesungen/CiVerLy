@@ -50,6 +50,12 @@ This can be as simple as printing e.g. the number of active S-boxes but you can
 also generate a PDF containing the details of the found trail.
 For more details, see `Generating the Report <generate_report.html>`_.
 
+**Exporting the Results**
+
+You can also export the results of your last analysis into a json file.
+This allows you to externally access and postprocess all your results later on.
+For more details, see `Exporting the Results <export_trail.html>`_.
+
 
 
 .. toctree::
@@ -60,3 +66,4 @@ For more details, see `Generating the Report <generate_report.html>`_.
    model_cipher
    solve_model
    generate_report
+   export_trail
