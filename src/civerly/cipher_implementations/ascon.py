@@ -35,7 +35,7 @@ class ASCON_CVL:
             sage: from civerly.cipher_implementations.ascon import ASCON_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   cipher = ASCON_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -51,8 +51,7 @@ class ASCON_CVL:
             ....:   cipher.generate_report(model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            20384 variables and 51649 clauses were written to
-            '...'
+            20384 variables and 51649 clauses were written to '...'
             [  7 ,  9] (trying w =   8) : SAT
             [  7 ,  8] (trying w =   7) : UNSAT
             8

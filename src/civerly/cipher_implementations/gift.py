@@ -24,7 +24,7 @@ class GIFT_CVL:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   gift_cipher = GIFT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -35,15 +35,14 @@ class GIFT_CVL:
             ....:       path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options)
-            2560 variables and 2849 constraints were written to
-            '...'
+            2560 variables and 2849 constraints were written to '...'
             3.4150374993
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
             ....:   gift_cipher = GIFT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -55,15 +54,14 @@ class GIFT_CVL:
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options) 
-            2560 variables and 4161 constraints were written to
-            '...'
+            2560 variables and 4161 constraints were written to '...'
             3.4150374993
             
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   gift_cipher = GIFT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -74,8 +72,7 @@ class GIFT_CVL:
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options) 
-            2560 variables and 3585 constraints were written to
-            '...'
+            2560 variables and 3585 constraints were written to '...'
             3.4150374993
 
         Model the cipher with SAT using different values for ``sat_precision``:
@@ -84,7 +81,7 @@ class GIFT_CVL:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   gift_cipher = GIFT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -97,8 +94,7 @@ class GIFT_CVL:
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options)
-            2560 variables and 6401 clauses were written to
-            '...'
+            2560 variables and 6401 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -112,7 +108,7 @@ class GIFT_CVL:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   gift_cipher = GIFT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -127,8 +123,7 @@ class GIFT_CVL:
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options)
-            2560 variables and 6401 clauses were written to
-            '...'
+            2560 variables and 6401 clauses were written to '...'
             [ 0.0 ,10.0] (trying w =  5.0) : SAT
             [ 0.0 , 5.0] (trying w =  2.5) : UNSAT
             [ 2.6 , 5.0] (trying w =  3.8) : SAT

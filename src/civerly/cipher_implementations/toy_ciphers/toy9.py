@@ -16,7 +16,7 @@ class Toy9:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy9()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -27,8 +27,7 @@ class Toy9:
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
-            36 variables and 85 constraints were written to
-            '...'
+            36 variables and 85 constraints were written to '...'
             1.4150374993
 
             sage: # optional - cryptominisat # optional - espresso
@@ -37,7 +36,7 @@ class Toy9:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy9()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -48,8 +47,7 @@ class Toy9:
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
-            36 variables and 109 clauses were written to
-            '...'
+            36 variables and 109 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT

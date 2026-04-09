@@ -273,7 +273,7 @@ class SKINNY_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, name="branchnum-SKINNY-32")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -282,15 +282,14 @@ class SKINNY_CVL:
             ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            22752 variables and 23505 constraints were written to
-            '...'
+            22752 variables and 23505 constraints were written to '...'
             32
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=10, name="wordwise-SKINNY-10")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -299,15 +298,14 @@ class SKINNY_CVL:
             ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            7136 variables and 7361 constraints were written to
-            '...'
+            7136 variables and 7361 constraints were written to '...'
             46
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -317,15 +315,14 @@ class SKINNY_CVL:
             ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            9312 variables and 9585 constraints were written to
-            '...'
+            9312 variables and 9585 constraints were written to '...'
             10
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, name="branchnum-SKINNY-32")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -334,15 +331,14 @@ class SKINNY_CVL:
             ....:     milp_solver=GUROBI_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            22752 variables and 23505 constraints were written to
-            '...'
+            22752 variables and 23505 constraints were written to '...'
             32
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=10, name="wordwise-SKINNY-10")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -351,15 +347,14 @@ class SKINNY_CVL:
             ....:     milp_solver=GUROBI_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            7136 variables and 7361 constraints were written to
-            '...'
+            7136 variables and 7361 constraints were written to '...'
             46
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -369,8 +364,7 @@ class SKINNY_CVL:
             ....:     milp_solver=GUROBI_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            9312 variables and 9585 constraints were written to
-            '...'
+            9312 variables and 9585 constraints were written to '...'
             10
 
         Using SAT modeling::
@@ -378,7 +372,7 @@ class SKINNY_CVL:
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -391,8 +385,7 @@ class SKINNY_CVL:
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19553 clauses were written to
-            '...'
+            8976 variables and 19553 clauses were written to '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : SAT
             [ 10 , 12] (trying w =  11) : SAT
@@ -402,7 +395,7 @@ class SKINNY_CVL:
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -415,8 +408,7 @@ class SKINNY_CVL:
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19553 clauses were written to
-            '...'
+            8976 variables and 19553 clauses were written to '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : SAT
             [ 10 , 12] (trying w =  11) : SAT
@@ -429,7 +421,7 @@ class SKINNY_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=10, name="wordwise-SKINNY-10")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -438,15 +430,14 @@ class SKINNY_CVL:
             ....:     milp_solver=GUROBI_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            7136 variables and 7521 constraints were written to
-            '...'
+            7136 variables and 7521 constraints were written to '...'
             43
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -457,15 +448,14 @@ class SKINNY_CVL:
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            9264 variables and 10161 constraints were written to
-            '...'
+            9264 variables and 10161 constraints were written to '...'
             5
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -476,14 +466,13 @@ class SKINNY_CVL:
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            9264 variables and 10161 constraints were written to
-            '...'
+            9264 variables and 10161 constraints were written to '...'
             5
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -496,8 +485,7 @@ class SKINNY_CVL:
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19313 clauses were written to
-            '...'
+            8976 variables and 19313 clauses were written to '...'
             [  4 , 10] (trying w =   7) : SAT
             [  4 ,  7] (trying w =   5) : SAT
             [  4 ,  5] (trying w =   4) : UNSAT
@@ -506,7 +494,7 @@ class SKINNY_CVL:
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   skinny = SKINNY_CVL(64, 64, R=3, name="bitwise-SKINNY-3")
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -519,8 +507,7 @@ class SKINNY_CVL:
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19313 clauses were written to
-            '...'
+            8976 variables and 19313 clauses were written to '...'
             [  4 , 10] (trying w =   7) : SAT
             [  4 ,  7] (trying w =   5) : SAT
             [  4 ,  5] (trying w =   4) : UNSAT

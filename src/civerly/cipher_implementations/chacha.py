@@ -33,7 +33,7 @@ class ChachaQRF_CVL:
             ....:   import ChachaQRF_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   cipher = ChachaQRF_CVL()
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -46,8 +46,7 @@ class ChachaQRF_CVL:
             ....:   cipher.generate_report(model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            1916 variables and 4957 clauses were written to
-            '...'
+            1916 variables and 4957 clauses were written to '...'
             [  0 ,  8] (trying w =   4) : SAT
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : SAT
@@ -59,7 +58,7 @@ class ChachaQRF_CVL:
             ....:   import ChachaQRF_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical
             ....:   cipher = ChachaQRF_CVL()
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -72,8 +71,7 @@ class ChachaQRF_CVL:
             ....:   cipher.generate_report(model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            1916 variables and 4957 clauses were written to
-            '...'
+            1916 variables and 4957 clauses were written to '...'
             [  0 ,  8] (trying w =   4) : SAT
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : SAT
@@ -85,7 +83,7 @@ class ChachaQRF_CVL:
             ....:   import ChachaQRF_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   cipher = ChachaQRF_CVL()
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -94,8 +92,7 @@ class ChachaQRF_CVL:
             ....:     sat_solver=CRYPTOMINISAT_CVL(),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            1920 variables and 5797 clauses were written to
-            '...'
+            1920 variables and 5797 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -178,7 +175,7 @@ class Chacha_CVL:
             sage: from civerly.cipher_implementations.chacha import Chacha_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   cipher = Chacha_CVL(1)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -188,8 +185,7 @@ class Chacha_CVL:
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            22240 variables and 53601 clauses were written to
-            '...'
+            22240 variables and 53601 clauses were written to '...'
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : UNSAT
             2

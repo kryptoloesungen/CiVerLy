@@ -13,7 +13,7 @@ given in :class:`civerly.model_options.MODEL_OPTIONS`::
     sage: from civerly.cipher_implementations.aes import AES_CVL
     sage: from civerly.model_options import *
     sage: import tempfile
-    sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
     ....:   aes = AES_CVL(R=10)
     ....:   model_options = MODEL_OPTIONS(
     ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -23,8 +23,7 @@ given in :class:`civerly.model_options.MODEL_OPTIONS`::
     ....:       milp_solver=SCIP_CVL(),
     ....:       path=Path(tmpdir))
     ....:   aes.analyse(model_options)
-    2884 variables and 3085 constraints were written to
-    '...'
+    2884 variables and 3085 constraints were written to '...'
     55
 
 Indeed, there are 55 active S-boxes for 10-round AES. Next up, we want to
@@ -34,7 +33,7 @@ requires solving a MILP itself::
     sage: from civerly.cipher_implementations.aes import AES_CVL
     sage: from civerly.model_options import *
     sage: import tempfile
-    sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
     ....:   aes = AES_CVL(R=10)
     ....:   model_options = MODEL_OPTIONS(
     ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -44,8 +43,7 @@ requires solving a MILP itself::
     ....:       milp_solver=SCIP_CVL(),
     ....:       path=Path(tmpdir))
     ....:   aes.analyse(model_options)
-    2848 variables and 2977 constraints were written to
-    '...'
+    2848 variables and 2977 constraints were written to '...'
     55
 
 Notice that above we use the ``analyse`` function of the ``aes`` cipher.
@@ -69,7 +67,7 @@ we again define the cipher and the ``model_options``::
 As we rely on an external solver, we can simply put it to ``None`` in the
 ``model_options``. Next, we generate the model::
 
-    sage: aes.model(model_options) # doctest: +NORMALIZE_WHITESPACE
+    sage: aes.model(model_options)
     LinearLayer MILP has been written to
     DOCTEST-AES-Models/MixColumn51845.mps.
     In order to continue the modeling, solve the generated MILP by providing a
@@ -107,7 +105,7 @@ Next, we finish the model::
     ....:     granularity=GRANULARITY.WORDWISE,
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
     ....:     path=Path("./DOCTEST-AES-Models/"))
-    sage: aes.model(model_options) # doctest: +NORMALIZE_WHITESPACE
+    sage: aes.model(model_options)
     Using existing file DOCTEST-AES-Models/MixColumn51845.sol,
     make sure it is up to date!
     2848 variables and 2977 constraints were written to
@@ -230,7 +228,7 @@ class AES_CVL:
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
                 sage: import tempfile
-                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk
                 ....:   aes = AES_CVL(R=2)
                 ....:   model_options = MODEL_OPTIONS(
                 ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -240,13 +238,12 @@ class AES_CVL:
                 ....:       milp_solver=GLPK_CVL(),
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
-                548 variables and 557 constraints were written to
-                '...'
+                548 variables and 557 constraints were written to '...'
                 5
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
                 sage: import tempfile
-                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk
                 ....:   aes = AES_CVL(R=2)
                 ....:   model_options = MODEL_OPTIONS(
                 ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -256,13 +253,12 @@ class AES_CVL:
                 ....:       milp_solver=GLPK_CVL(),
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
-                544 variables and 545 constraints were written to
-                '...'
+                544 variables and 545 constraints were written to '...'
                 5
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
                 sage: import tempfile
-                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
                 ....:   aes = AES_CVL(R=10)
                 ....:   model_options = MODEL_OPTIONS(
                 ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -272,13 +268,12 @@ class AES_CVL:
                 ....:       milp_solver=GUROBI_CVL(),
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
-                2884 variables and 3085 constraints were written to
-                '...'
+                2884 variables and 3085 constraints were written to '...'
                 55
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
                 sage: import tempfile
-                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
                 ....:   aes = AES_CVL(R=10)
                 ....:   model_options = MODEL_OPTIONS(
                 ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -288,8 +283,7 @@ class AES_CVL:
                 ....:       milp_solver=GUROBI_CVL(),
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
-                2848 variables and 2977 constraints were written to
-                '...'
+                2848 variables and 2977 constraints were written to '...'
                 55
 
             Trying the parallel construction
@@ -299,7 +293,7 @@ class AES_CVL:
                 sage: from civerly.model_options import *
                 sage: from civerly.aeslike import AESlike
                 sage: import tempfile
-                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
                 ....:   cipher = AESlike(8, 4, 8, name="parallelAES")
                 ....:   node1 = cipher.add_subcipher(
                 ....:       AES_CVL(R=10),
@@ -321,8 +315,7 @@ class AES_CVL:
                 ....:   cipher.generate_report(model_options)
                 ....:   trail = str(cipher.get_trail(model_options))
                 ....:   assert "Unnamed Component" not in trail
-                5888 variables and 6145 constraints were written to
-                '...'
+                5888 variables and 6145 constraints were written to '...'
                 55
                 Output file in: ...
 

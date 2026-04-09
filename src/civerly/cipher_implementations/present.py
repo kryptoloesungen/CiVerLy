@@ -42,7 +42,7 @@ class PRESENT_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -51,8 +51,7 @@ class PRESENT_CVL:
             ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
-            1284 variables and 1341 constraints were written to
-            '...'
+            1284 variables and 1341 constraints were written to '...'
             4
 
         Of course, since the branch number of any word-permutation is 2, this
@@ -84,7 +83,7 @@ class PRESENT_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -93,8 +92,7 @@ class PRESENT_CVL:
             ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
-            5312 variables and 6081 constraints were written to
-            '...'
+            5312 variables and 6081 constraints were written to '...'
             12
 
         Here, the analysis output 12 means that the best differential trail
@@ -131,7 +129,7 @@ class PRESENT_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -141,8 +139,7 @@ class PRESENT_CVL:
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
-            5312 variables and 6081 constraints were written to
-            '...'
+            5312 variables and 6081 constraints were written to '...'
             12
             Output file in: ...
 
@@ -151,7 +148,7 @@ class PRESENT_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -162,8 +159,7 @@ class PRESENT_CVL:
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
-            5312 variables and 8641 constraints were written to
-            '...'
+            5312 variables and 8641 constraints were written to '...'
             12
             Output file in: ...
 
@@ -172,7 +168,7 @@ class PRESENT_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # long  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # long
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -182,8 +178,7 @@ class PRESENT_CVL:
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
-            5312 variables and 6977 constraints were written to
-            '...'
+            5312 variables and 6977 constraints were written to '...'
             12
             Output file in: ...
 
@@ -193,7 +188,7 @@ class PRESENT_CVL:
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   present_cipher = PRESENT_CVL(R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -207,8 +202,7 @@ class PRESENT_CVL:
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            5312 variables and 13441 clauses were written to
-            '...'
+            5312 variables and 13441 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -221,7 +215,7 @@ class PRESENT_CVL:
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   present_cipher = PRESENT_CVL(R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -235,8 +229,7 @@ class PRESENT_CVL:
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            5312 variables and 13441 clauses were written to
-            '...'
+            5312 variables and 13441 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -251,7 +244,7 @@ class PRESENT_CVL:
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   present_cipher = PRESENT_CVL(R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -265,8 +258,7 @@ class PRESENT_CVL:
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            5312 variables and 12993 clauses were written to
-            '...'
+            5312 variables and 12993 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -279,7 +271,7 @@ class PRESENT_CVL:
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   present_cipher = PRESENT_CVL(R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -291,8 +283,7 @@ class PRESENT_CVL:
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
-            5312 variables and 12993 clauses were written to
-            '...'
+            5312 variables and 12993 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -305,7 +296,7 @@ class PRESENT_CVL:
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   present_cipher = PRESENT_CVL(R=5)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -319,8 +310,7 @@ class PRESENT_CVL:
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            6512 variables and 16017 clauses were written to
-            '...'
+            6512 variables and 16017 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -355,8 +345,7 @@ class PRESENT_CVL:
             ....:   present_cipher.analyse(model_options)
             Optimization problem for Espresso has been written to...
             Using existing file ..., make sure it is up to date!
-            6512 variables and 16017 clauses were written to
-            '...'
+            6512 variables and 16017 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT

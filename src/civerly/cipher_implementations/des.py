@@ -37,7 +37,7 @@ class DES_F_CVL:
             sage: from civerly.cipher_implementations.des import DES_F_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   cipher = DES_F_CVL()
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -50,8 +50,7 @@ class DES_F_CVL:
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            582 variables and 4612 clauses were written to
-            '...'
+            582 variables and 4612 clauses were written to '...'
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : UNSAT
             2
@@ -59,7 +58,7 @@ class DES_F_CVL:
             sage: from civerly.cipher_implementations.des import DES_F_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   cipher = DES_F_CVL()
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -72,8 +71,7 @@ class DES_F_CVL:
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            582 variables and 4612 clauses were written to
-            '...'
+            582 variables and 4612 clauses were written to '...'
             [  0 ,  4] (trying w =   2) : SAT
             [  0 ,  2] (trying w =   1) : UNSAT
             2
@@ -83,7 +81,7 @@ class DES_F_CVL:
             sage: from civerly.cipher_implementations.des import DES_F_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
             ....:   cipher = DES_F_CVL()
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -96,8 +94,7 @@ class DES_F_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options=model_options)
-            630 variables and 4164 constraints were written to
-            '...'
+            630 variables and 4164 constraints were written to '...'
             2
             Output file in: ...
 
@@ -215,7 +212,7 @@ class DES_CVL:
             sage: from civerly.cipher_implementations.des import DES_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   cipher = DES_CVL(R=3)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -230,8 +227,7 @@ class DES_CVL:
             ....:   cipher.analyse(model_options=model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            3826 variables and 18250 clauses were written to
-            '...'
+            3826 variables and 18250 clauses were written to '...'
             [  0 , 10] (trying w =   5) : SAT
             [  0 ,  5] (trying w =   2) : UNSAT
             [  3 ,  5] (trying w =   4) : SAT
