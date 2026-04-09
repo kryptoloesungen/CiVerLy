@@ -23,6 +23,8 @@ help:
 	@echo "Options:"
 	@echo "  SOLVERS='scip glpk'  Enable specific solvers (default: none)"
 	@echo "  LONG=1               Enable long tests"
+	@echo "  NTHREADS=4           Number of parallel test threads (default: 8, test-ci: 2)"
+	@echo "  WARN_LONG=60         Warn about tests slower than this many seconds (default: 180)"
 	@echo "  EXIT_FIRST=0         Disable exit on first failure (default: 1)"
 	@echo "  LOGFILE=foo.log      Override the default timestamped logfile name"
 
