@@ -62,3 +62,8 @@ class AddRX(WordBasedCipher):
                 return super().add_subcipher(sub_cipher, edges)
             raise TypeError("AddRX does not accept SBox_CVL and AND_CVL")
         raise TypeError(f"Trying to add illegal component {type(sub_cipher)}.")
+
+    def _to_dict(self):
+        d = super()._to_dict()
+        d["type"] = "AddRX"
+        return d
