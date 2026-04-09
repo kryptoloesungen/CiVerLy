@@ -48,47 +48,48 @@ A possible implementation of it is given below.
    sage: sbox2 = SBox_CVL(SBox([4, 2, 1, 7, 0, 3, 5, 6]), name="sbox2")
    sage: perm = PermuteLayer_CVL([0, 3, 1, 2], name="perm")
    sage: node = subcipher3.add_subcipher(
-   ....:   sbox1, [(subcipher3.IN, (i, i)) for i in range(3)]
-   sage: )
+   ....:   sbox1, [(subcipher3.IN, (i, i)) for i in range(3)])
    sage: node = subcipher3.add_subcipher(sbox2, [(node, (i, i)) for i in range(3)])
    sage: subcipher3.add_output([(node, (i, i)) for i in range(3)])
    sage: node1 = subcipher6.add_subcipher(
-   ....:   subcipher3, [(subcipher6.IN, (i, i)) for i in range(3)]
-   sage: )
+   ....:   subcipher3, [(subcipher6.IN, (i, i)) for i in range(3)])
    sage: node2 = subcipher6.add_subcipher(
-   ....:   subcipher3, [(subcipher6.IN, (i + 3, i)) for i in range(3)]
-   sage: )
+   ....:   subcipher3, [(subcipher6.IN, (i + 3, i)) for i in range(3)])
    sage: subcipher6.add_output([(node1, (i, i)) for i in range(3)])
    sage: subcipher6.add_output([(node2, (i, i + 3)) for i in range(3)])
    sage: node = subcipher4.add_subcipher(perm, [(subcipher4.IN, (i, i)) for i in range(4)])
    sage: node = subcipher4.add_subcipher(perm, [(node, (i, i)) for i in range(4)])
    sage: subcipher4.add_output([(node, (i, i)) for i in range(4)])
    sage: node1 = cipher.add_subcipher(
-   ....:   subcipher6, [(cipher.IN, (i, i)) for i in range(6)]
-   sage: )
+   ....:   subcipher6, [(cipher.IN, (i, i)) for i in range(6)])
    sage: node2 = cipher.add_subcipher(
-   ....:   subcipher4, [(cipher.IN, (i + 6, i)) for i in range(4)]
-   sage: )
+   ....:   subcipher4, [(cipher.IN, (i + 6, i)) for i in range(4)])
    sage: cipher.add_output([(node1, (i, i)) for i in range(6)])
    sage: cipher.add_output([(node2, (i, i + 6)) for i in range(4)])
 
 First, we analyse the toy cipher:
 
+.. link
+
 .. code-block:: sage
 
    sage: from civerly.model_options import *
+   sage: from pathlib import Path
    sage: model_options = MODEL_OPTIONS(
-       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-       optimization=OPTIMIZATION.MILP,
-       granularity=GRANULARITY.BITWISE,
-       sbox_modeling=SBOX_MODELING.LOGICAL_COND,
-       solver=SOLVER.SCIP,
-       path=Path("./Example")
-   )
-   cipher.analyse(model_options)
+   ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+   ....:   optimization=OPTIMIZATION.MILP,
+   ....:   granularity=GRANULARITY.BITWISE,
+   ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND,
+   ....:   milp_solver=SCIP_CVL(),
+   ....:   path=Path("./CVL-Example"))
+   sage: cipher.analyse(model_options) # optional: scip
+   206 variables and 1711 constraints were written to 'CVL-Example/cipher.mps'
+   0
 
 As we have thereby also modeled the cipher, we see below that (next to the ``.mps``, ``.sol`` and ``.log`` files) CiVerLy generated json files containing the corresponding dictionaries.
 Notice that files named ``<name>_d.json`` contain the dictionaries, while files of the form ``<name>_id.json`` contain their inverses, which are sometimes necessary when the key of a specific value must be found.
+
+.. skip
 
 .. code-block:: text
 
@@ -107,7 +108,9 @@ Notice that files named ``<name>_d.json`` contain the dictionaries, while files 
 
 Let us inspect the content of ``cipher_d.json`` more closely, to give a better intuition for how to understand the structure of these dictionaries.
 
-.. code-block::
+.. skip
+
+.. code-block:: text
 
    [
    { # dictionary for cipher.IN (cipher.complist[0])
@@ -133,13 +136,17 @@ Consider the variable ``X1[61]`` on the level of ``cipher_d``.
 Inside ``cipher.complist[1] = sub-cipher-6-bit``, this translates to ``X3[3]``.
 We continue this process by investigating the file ``sub-cipher-6-bit_d.json``, which contains
 
-.. code-block::
+.. skip
+
+.. code-block:: text
 
    [..., {..., "X3[3]": "X0[2]", ...}, ...]
 
 As ``cipher.complist[1].complist[3] = sub-sub-cipher-3-bit`` (the second one), we continue by analysing ``sub-sub-cipher-3-bit_d.json`` and see
 
-.. code-block::
+.. skip
+
+.. code-block:: text
 
    [..., {..., "X0[2]": "OUT[1]", ...}, ...]
 
@@ -162,19 +169,27 @@ Text
 
 Now, in regards to the tree structure explained above, calling the method ``get_trail`` simply returns the nodes in the order of a Depth-First-Search traversal, with whitespace indicating the depth of the current node inside the tree.
 
-.. code-block::
+.. link
+
+.. code-block:: sage
 
    sage: cipher.get_trail(model_options)
-   -> sub-cipher-6-bit : 0 -> 0
-       -> sub-sub-cipher-3-bit : 0 -> 0
-           -> sbox1 : 0 -> 0
-           -> sbox2 : 0 -> 0
-       -> sub-sub-cipher-3-bit : 0 -> 0
-           -> sbox1 : 0 -> 0
-           -> sbox2 : 0 -> 0
-   -> sub-cipher-4-bit : 3c -> 3c
-       -> perm : f -> f
-       -> perm : f -> f
+    -> sub-cipher-6-bit : 0 -> 0
+        -> sub-sub-cipher-3-bit : 0 -> 0
+            -> sbox1 : 0 -> 0
+            -> sbox2 : 0 -> 0
+        -> sub-sub-cipher-3-bit : 0 -> 0
+            -> sbox1 : 0 -> 0
+            -> sbox2 : 0 -> 0
+    -> sub-cipher-4-bit : 3c -> 3c
+        -> perm : f -> f
+        -> perm : f -> f
+
+.. code-block:: sage
+   :hide:
+
+   sage: import shutil
+   sage: shutil.rmtree("./CVL-Example")
 
 Note that the input into ``sub-cipher-4-bit`` is translated from ``3c`` to ``f`` due to the implicit padding of the report to full nibbles.
 Therefore, the 10-bit input `x` is represented as 12-bit `x||00`.
