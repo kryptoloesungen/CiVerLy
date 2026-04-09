@@ -19,10 +19,12 @@ For instance, consider a developer that wants to run all CiVerLy tests but who h
 Luckily, ``sage`` provides a solution for this as tests can be marked as optional.
 The implementations of ciphers in CiVerLy commonly feature tests like the following.
 
+.. skip
+
 .. code-block:: sage
 
    sage: import tempfile
-   sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+   sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk
    ....:   model_options = MODEL_OPTIONS(..., path=Path(tmpdir))
    ....:   aes.analyse(model_options)
 
@@ -55,32 +57,43 @@ The quickest way to run the test suite is through the Makefile targets provided 
 .. code-block:: console
 
    $ make test              # run all tests (no long-running tests, no solver flags)
-   $ make test-no-gurobi    # run all tests with all solvers except Gurobi (includes --long)
+   $ make test-ci           # run all tests with all CI solvers except Gurobi (includes --long and docs)
+   $ make test-docs         # run tests on documentation only (with CI solvers)
+   $ make test-extensive    # run all solver combinations with and without --long
 
-The ``test-no-gurobi`` target is the same configuration used in CI for pull requests.
-For solvers beyond the predefined sets, use the generic pattern target, which passes the given name as an optional flag:
+The ``test-ci`` target is the same configuration used in CI for pull requests.
+It runs both ``src/civerly`` and ``docs``.
+To enable specific solvers or other options, pass variables on the command line:
 
 .. code-block:: console
 
-   $ make test-scip         # equivalent to: sage -t --optional=sage,scip --long src/civerly
+   $ make test SOLVERS='scip glpk'  # run tests with scip and glpk enabled
+   $ make test LONG=1               # include long-running tests
+   $ make test NTHREADS=4           # run tests with 4 parallel threads (default: 8)
+   $ make test EXIT_FIRST=0         # continue after a failing test
+   $ make test LOGFILE=my.log       # write output to a custom logfile
 
 Tests are executed using ``sage -t``.
 Extensive documentation for the ``sage`` doctesting framework is available `online <https://doc.sagemath.org/html/en/developer/doctesting.html>`_.
 Here, we want to highlight some useful options.
 First, we can mark doctests that will take long time as follows:
 
+.. skip
+
 .. code-block:: sage
 
    sage: import tempfile
-   sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # long  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+   sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # long
    ....:   model_options = MODEL_OPTIONS(..., path=Path(tmpdir))
    ....:   present_cipher.analyse(model_options)
 
 To include these when running the tests, add ``--long`` to the ``sage -t`` command.
+Tests that exceed the threshold set by ``--warn-long`` (currently 180 seconds) will be reported as slow even without the ``# long`` marker.
 
 Further, ``sage`` can run tests in parallel.
-To do so, add for instance ``--nthreads=8`` to the ``sage -t`` command.
-When doing so, ensure that the different tests do not access the same files.
+The Makefile passes ``--nthreads=8`` by default (``test-ci`` uses 2 to stay within CI resource limits);
+override this with ``make test NTHREADS=4``.
+When running in parallel, ensure that the different tests do not access the same files.
 
 Another useful flag is ``--exitfirst`` which will stop all tests as soon as one failed.
 Use ``--logfile=filename.log`` to write a log file.
