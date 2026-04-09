@@ -78,7 +78,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -89,8 +89,7 @@ class SIMON_CVL:
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            4160 variables and 8641 clauses were written to
-            '...'
+            4160 variables and 8641 clauses were written to '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
@@ -99,7 +98,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -110,8 +109,7 @@ class SIMON_CVL:
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            3912 variables and 9041 clauses were written to
-            '...'
+            3912 variables and 9041 clauses were written to '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
@@ -120,7 +118,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -131,8 +129,7 @@ class SIMON_CVL:
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            4160 variables and 8641 clauses were written to
-            '...'
+            4160 variables and 8641 clauses were written to '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
@@ -141,7 +138,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=8, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -152,8 +149,7 @@ class SIMON_CVL:
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            3912 variables and 9041 clauses were written to
-            '...'
+            3912 variables and 9041 clauses were written to '...'
             [ 16 , 20] (trying w =  18) : SAT
             [ 16 , 18] (trying w =  17) : UNSAT
             18
@@ -166,7 +162,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -177,8 +173,7 @@ class SIMON_CVL:
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            5648 variables and 13169 clauses were written to
-            '...'
+            5648 variables and 13169 clauses were written to '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
@@ -188,7 +183,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -199,8 +194,7 @@ class SIMON_CVL:
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            6000 variables and 12817 clauses were written to
-            '...'
+            6000 variables and 12817 clauses were written to '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
@@ -210,7 +204,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=False)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -221,8 +215,7 @@ class SIMON_CVL:
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            5648 variables and 13169 clauses were written to
-            '...'
+            5648 variables and 13169 clauses were written to '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT
@@ -232,7 +225,7 @@ class SIMON_CVL:
             sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=True)
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -243,8 +236,7 @@ class SIMON_CVL:
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            6000 variables and 12817 clauses were written to
-            '...'
+            6000 variables and 12817 clauses were written to '...'
             [ 10 , 20] (trying w =  15) : SAT
             [ 10 , 15] (trying w =  12) : UNSAT
             [ 13 , 15] (trying w =  14) : UNSAT

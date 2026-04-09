@@ -20,7 +20,7 @@ class Toy3:
             ....:   import Toy3
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy3()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -49,8 +49,7 @@ class Toy3:
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             ....:   cipher.generate_report(model_options)
-            798 variables and 3591 clauses were written to
-            '...'
+            798 variables and 3591 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -61,8 +60,7 @@ class Toy3:
             8
             Output file in: ...
             Using existing file ..., make sure it is up to date!
-            812 variables and 3563 clauses were written to
-            '...'
+            812 variables and 3563 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -80,7 +78,7 @@ class Toy3:
             ....:   import Toy3
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy3()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -94,8 +92,7 @@ class Toy3:
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             ....:   cipher.generate_report(model_options)
-            854 variables and 1313 constraints were written to
-            '...'
+            854 variables and 1313 constraints were written to '...'
             8
             Output file in: ...
 
@@ -106,7 +103,7 @@ class Toy3:
             ....:   import Toy3
             sage: from civerly.model_options import *
             sage: import tempfile, os
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy3()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -125,8 +122,7 @@ class Toy3:
             ....:   cipher.analyse(model_options)
             Optimization problem for Espresso has been written to...
             Using existing file ..., make sure it is up to date!
-            812 variables and 3563 clauses were written to
-            '...'
+            812 variables and 3563 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT

@@ -19,7 +19,7 @@ class Toy1:
 
         The test code for SAT:
             sage: # optional - cryptominisat
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -32,8 +32,7 @@ class Toy1:
             ....:   cipher.generate_report(model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            382 variables and 1527 clauses were written to
-            '...'
+            382 variables and 1527 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -43,7 +42,7 @@ class Toy1:
             [  0 ,  1] (trying w =   0) : SAT
             0
             Output file in: ...
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -53,8 +52,7 @@ class Toy1:
             ....:       sat_solver=CRYPTOMINISAT_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            382 variables and 1003 clauses were written to
-            '...'
+            382 variables and 1003 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -63,7 +61,7 @@ class Toy1:
             [  0 ,  3] (trying w =   1) : SAT
             [  0 ,  1] (trying w =   0) : SAT
             0
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -73,8 +71,7 @@ class Toy1:
             ....:       sat_solver=CRYPTOMINISAT_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            426 variables and 955 clauses were written to
-            '...'
+            426 variables and 955 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -89,7 +86,7 @@ class Toy1:
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -111,7 +108,7 @@ class Toy1:
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -133,7 +130,7 @@ class Toy1:
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - glpk
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -155,7 +152,7 @@ class Toy1:
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,

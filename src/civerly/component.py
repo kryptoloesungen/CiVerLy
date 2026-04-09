@@ -53,7 +53,7 @@ class Component(ABC):
     EXAMPLES::
 
         sage: from civerly.component import Component
-        sage: comp = Component(16, 16)  # doctest: +ELLIPSIS
+        sage: comp = Component(16, 16)
         Traceback (most recent call last):
         ...
         TypeError: Can't instantiate abstract class Component...
@@ -510,7 +510,7 @@ class ConstXOR_CVL(Component):
         sage: constxor = ConstXOR_CVL(32, 0x11112222)
         sage: hex(vec_to_int(constxor(int_to_vec(0xababcdcd,32))))
         '0xbabaefef'
-        sage: constxor.const = 0x1019b214  # doctest: +ELLIPSIS
+        sage: constxor.const = 0x1019b214
         Traceback (most recent call last):
         ...
         AttributeError: ...
@@ -1596,7 +1596,7 @@ class LinearLayer_CVL(Component):
             sage: from civerly.component import LinearLayer_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   arr = [
             ....:     [1, 0, 0, 0],
             ....:     [0, 1, 0, 0],
@@ -1644,8 +1644,7 @@ class LinearLayer_CVL(Component):
             ....:     Path(tmpdir) / 'LL-doctest.sat',
             ....:     model_options)
             ....:   _ = cipher.get_trail(model_options)  # assigned to suppress repr
-            48 variables and 89 clauses were written to
-            '...'
+            48 variables and 89 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -1655,8 +1654,7 @@ class LinearLayer_CVL(Component):
             [  0 , 1] (trying w =   0) : SAT
             0
             Output file in: ...
-            48 variables and 110 clauses were written to
-            '...'
+            48 variables and 110 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT

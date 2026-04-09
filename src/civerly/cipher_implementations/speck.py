@@ -66,7 +66,7 @@ class SPECK_CVL:
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   cipher = SPECK_CVL(32, 64, R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -78,8 +78,7 @@ class SPECK_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
-            1788 variables and 4189 clauses were written to
-            '...'
+            1788 variables and 4189 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -93,7 +92,7 @@ class SPECK_CVL:
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical
             ....:   cipher = SPECK_CVL(32, 64, R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -105,8 +104,7 @@ class SPECK_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
-            1788 variables and 4189 clauses were written to
-            '...'
+            1788 variables and 4189 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -123,7 +121,7 @@ class SPECK_CVL:
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   cipher = SPECK_CVL(32, 64, R=7)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -135,8 +133,7 @@ class SPECK_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
-            2992 variables and 7776 clauses were written to
-            '...'
+            2992 variables and 7776 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -149,7 +146,7 @@ class SPECK_CVL:
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical
             ....:   cipher = SPECK_CVL(32, 64, R=7)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -161,8 +158,7 @@ class SPECK_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
-            2992 variables and 7776 clauses were written to
-            '...'
+            2992 variables and 7776 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT

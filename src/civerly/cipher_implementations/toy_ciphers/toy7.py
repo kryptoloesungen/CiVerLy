@@ -17,7 +17,7 @@ class Toy7:
             ....:   import Toy7
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy7()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,

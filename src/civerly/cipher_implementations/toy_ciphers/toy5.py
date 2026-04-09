@@ -15,7 +15,7 @@ class Toy5:
             ....:   import Toy5
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy5()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -44,8 +44,7 @@ class Toy5:
             ....:   cipher.generate_report(model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            2940 variables and 13997 clauses were written to
-            '...'
+            2940 variables and 13997 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -56,8 +55,7 @@ class Toy5:
             8
             Output file in: ...
             Using existing file ..., make sure it is up to date!
-            3256 variables and 11381 clauses were written to
-            '...'
+            3256 variables and 11381 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT
@@ -73,7 +71,7 @@ class Toy5:
             ....:   import Toy5
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy5()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -87,8 +85,7 @@ class Toy5:
             ....:   cipher.generate_report(model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            3404 variables and 4177 constraints were written to
-            '...'
+            3404 variables and 4177 constraints were written to '...'
             8
             Output file in: ...
 

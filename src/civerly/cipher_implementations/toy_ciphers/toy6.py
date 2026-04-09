@@ -14,7 +14,7 @@ class Toy6:
             ....:   import Toy6
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # doctest: +ELLIPSIS
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = Toy6()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -26,8 +26,7 @@ class Toy6:
             ....:   cipher.generate_report(model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            397 variables and 1142 clauses were written to
-            '...'
+            397 variables and 1142 clauses were written to '...'
             [  0 ,100] (trying w =  50) : SAT
             [  0 , 50] (trying w =  25) : SAT
             [  0 , 25] (trying w =  12) : SAT

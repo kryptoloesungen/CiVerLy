@@ -78,7 +78,7 @@ class ABC_CVL:
             sage: from civerly.cipher_implementations.abc import ABC_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
             ....:   abc_cipher = ABC_CVL(4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -92,8 +92,7 @@ class ABC_CVL:
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   abc_cipher.analyse(model_options)
-            12640 variables and 44257 clauses were written to
-            '...'
+            12640 variables and 44257 clauses were written to '...'
             [  0 , 10] (trying w =   5) : SAT
             [  0 ,  5] (trying w =   2) : UNSAT
             [  3 ,  5] (trying w =   4) : SAT
