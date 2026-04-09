@@ -198,23 +198,21 @@ class TrailNode:
         if self.output is not None:
             string += f"{vec_to_int(
                 vector(GF(2), self.input)
-            ):0{self.input_length//4}x}"
+            ):0{(self.input_length + 3)//4}x}"
         else:
             string += "None"
         string += " -> "
         if self.output is not None:
             string += f"{vec_to_int(
                 vector(GF(2), self.output)
-            ):0{self.output_length//4}x}"
+            ):0{(self.output_length + 3)//4}x}"
         else:
             string += "None"
         return string
 
-    def __repr__(self, _depth=-1) -> str:
+    def __repr__(self, _depth=0) -> str:
         from civerly.cipher import Cipher
-        string = ""
-        if _depth >= 0:
-            string += "\t"*_depth + "-> " + f"{self.name} : {self._to_hex()} "
+        string = "\t"*_depth + "-> " + f"{self.name} : {self._to_hex()}"
         for child in self.children:
             if not isinstance(
                 child.cipher_instance, Cipher._Cipher__Special_Node
