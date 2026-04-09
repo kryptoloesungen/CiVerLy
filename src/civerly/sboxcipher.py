@@ -53,6 +53,11 @@ class SBoxCipher(Cipher):
                 "not allowed in SBoxCiphers."
             )
 
+    def _to_dict(self):
+        d = super()._to_dict()
+        d["type"] = "SBoxCipher"
+        return d
+
     def _model_milp(self, model_options, _first_iter=False):
         r"""
         Generate the model for ``self`` according to the given

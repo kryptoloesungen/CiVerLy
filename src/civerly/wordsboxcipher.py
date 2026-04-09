@@ -18,4 +18,8 @@ from civerly.sboxcipher import SBoxCipher
 
 
 class WordSBoxCipher(WordBasedCipher, SBoxCipher):
-    pass
+
+    def _to_dict(self):
+        d = super()._to_dict()
+        d["type"] = "WordSBoxCipher"
+        return d
