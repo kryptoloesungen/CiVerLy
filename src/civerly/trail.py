@@ -10,6 +10,75 @@ from civerly.util import _between_brackets
 class TrailNode:
     def __init__(self, cipher_instance, model_options, results,
                  _parent_depth=None) -> None:
+        r"""
+        Initialize the recursive TrailNode structure, which contains the results 
+        of the last analysis with CiVerLy.
+        Called in :meth:`Cipher.analysis` and automatically adds
+        the `.result` attribute to `cipher_instance` and its subciphers.
+
+        INPUT:
+
+            - cipher_instance -- the cipher instance from which this trail is from
+
+            - model_options -- see :class:`MODEL_OPTIONS`
+
+            - results -- list containing the solver results, coming from :meth:`Cipher.read_results`
+            
+            - _parent_depth -- internally used to measure the recursion depth
+
+        OUTPUT: The root node of the tree-like structure, containing the results in a structured way.
+
+        TEST:
+
+        Initialize model options:
+
+            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.model_options import * 
+            sage: import tempfile
+            sage: # optional - cryptominisat # optional - espresso
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   cipher = SPECK_CVL(32, 64, R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+        
+        Solve the model and retrieve results:
+
+            sage: # optional - cryptominisat # optional - espresso
+            sage: cipher.model(model_options)
+            1792 variables and 4581 clauses were written to ...
+            sage: model_options.sat_solver.solve(
+            ....:    model_options.path / (cipher.name + ".cnf"),
+            ....:    model_options.path / (cipher.name + ".sat"),
+            ....:    model_options=model_options,
+            ....:    time_limit=None)
+            ...
+            sage: results, weight = cipher.read_results(model_options)
+            sage: cipher.result is None
+            True
+            
+        Initialize TrailNode:
+            
+            sage: # optional - cryptominisat # optional - espresso
+            sage: from civerly.trail import TrailNode
+            sage: node = TrailNode(cipher, model_options, results)
+            sage: cipher.result is None
+            False
+            sage: node
+            -> speck : ... -> ...
+                -> speck_round : ... -> ...
+                -> speck_round : ... -> ...
+                -> speck_round : ... -> ...
+                -> speck_round : ... -> ...
+            sage: import shutil 
+            sage: shutil.rmtree(tmpdir)
+        
+        """
         self.children : list[TrailNode] = []
         self.right = None
         self.input = None
@@ -211,6 +280,10 @@ class TrailNode:
         return string
 
     def __repr__(self, _depth=0) -> str:
+        r"""
+
+
+        """
         from civerly.cipher import Cipher
         string = "\t"*_depth + "-> " + f"{self.name} : {self._to_hex()}"
         for child in self.children:
