@@ -42,14 +42,12 @@ from sage.sat.solvers.dimacs import DIMACS
 from sage.crypto.sbox import SBox
 
 from collections.abc import Iterable
-from dataclasses import replace
-from math import ceil, sqrt
 from copy import deepcopy
-from pathlib import Path
-import subprocess
-import tempfile
+from dataclasses import replace
 import json
+import subprocess
 import glob
+from math import ceil, sqrt
 
 from civerly.component import Component
 from civerly.model_options import OPTIMIZATION, GRANULARITY
@@ -1983,33 +1981,33 @@ class Cipher:
         Writes ``string`` to a ``.tex`` file and compiles it to PDF via
         ``pdflatex``, then removes auxiliary build files.
         """
-        pdf_file_name_final = model_options.path / (self.name + ".pdf")
+        tex_file_name = model_options.path / (self.name + ".tex")
+        pdf_file_name = model_options.path / (self.name + ".pdf")
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tex_file_name = Path(tmpdir) / (self.name + ".tex")
-            pdf_file_name = Path(tmpdir) / (self.name + ".pdf")
+        with open(tex_file_name, 'w') as f:
+            f.write(string)
 
-            with open(tex_file_name, 'w') as f:
-                f.write(string)
+        with suppress_output():
+            process = subprocess.Popen([
+                "pdflatex",
+                f"-output-directory={str(model_options.path)}",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-recorder",
+                tex_file_name])
 
-            with suppress_output():
-                compile_process = subprocess.Popen([
-                    "pdflatex",
-                    f"-output-directory={tmpdir}",
-                    "-synctex=1",
-                    "-interaction=nonstopmode",
-                    "-file-line-error",
-                    "-recorder",
-                    tex_file_name])
+        if process.wait() != 0:
+            raise ChildProcessError("Error when compiling .tex file.")
 
-                mv_process = subprocess.Popen([
-                    "mv", pdf_file_name, str(model_options.path)
-                ])
+        with suppress_output():
+            prefix = str(model_options.path)
+            for pattern in ["/*.synctex.gz", "/*.fls", "/*.aux",
+                            "/*.log", "/*.fdb_latexmk"]:
+                for f in glob.glob(prefix + pattern):
+                    subprocess.Popen(["rm", "-f", f]).wait()
 
-            if compile_process.wait() != 0 or mv_process.wait() != 0:
-                raise ChildProcessError("Error when compiling .tex file.")
-
-        print(f"Output file in: {pdf_file_name_final}")
+        print(f"Output file in: {pdf_file_name}")
 
     def _latex_section(self, trail_node, model_options) -> str:
         r"""
