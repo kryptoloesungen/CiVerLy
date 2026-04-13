@@ -308,6 +308,71 @@ class TrailNode:
             sage: import shutil 
             sage: shutil.rmtree(tmpdir)
 
+        Another example with some toy cipher:
+
+            sage: from civerly.sboxcipher import SBoxCipher
+            sage: from civerly.component import PermuteLayer_CVL, SBox_CVL
+            sage: from sage.crypto.sbox import SBox
+            sage: cipher = SBoxCipher(10, 10, name="cipher")
+            sage: subcipher6 = SBoxCipher(6, 6, name="sub-cipher-6-bit")
+            sage: subcipher3 = SBoxCipher(3, 3, name="sub-sub-cipher-3-bit")
+            sage: subcipher4 = SBoxCipher(4, 4, name="sub-cipher-4-bit")
+            sage: sbox1 = SBox_CVL(
+            ....:   SBox([0, 7, 3, 5, 1, 2, 6, 4]), name="sbox1")
+            sage: sbox2 = SBox_CVL(
+            ....:   SBox([4, 2, 1, 7, 0, 3, 5, 6]), name="sbox2")
+            sage: perm = PermuteLayer_CVL([0, 3, 1, 2], name="perm")
+            sage: node = subcipher3.add_subcipher(
+            ....:   sbox1, [(subcipher3.IN, (i, i)) for i in range(3)])
+            sage: node = subcipher3.add_subcipher(
+            ....:   sbox2, [(node, (i, i)) for i in range(3)])
+            sage: subcipher3.add_output([(node, (i, i)) for i in range(3)])
+            sage: node1 = subcipher6.add_subcipher(
+            ....:   subcipher3, [(subcipher6.IN, (i, i)) for i in range(3)])
+            sage: node2 = subcipher6.add_subcipher(
+            ....:   subcipher3, [(subcipher6.IN, (i + 3, i)) for i in range(3)])
+            sage: subcipher6.add_output(
+            ....:   [(node1, (i, i)) for i in range(3)])
+            sage: subcipher6.add_output(
+            ....:   [(node2, (i, i + 3)) for i in range(3)])
+            sage: node = subcipher4.add_subcipher(
+            ....:   perm, [(subcipher4.IN, (i, i)) for i in range(4)])
+            sage: node = subcipher4.add_subcipher(
+            ....:   perm, [(node, (i, i)) for i in range(4)])
+            sage: subcipher4.add_output(
+            ....:   [(node, (i, i)) for i in range(4)])
+            sage: node1 = cipher.add_subcipher(
+            ....:   subcipher6, [(cipher.IN, (i, i)) for i in range(6)])
+            sage: node2 = cipher.add_subcipher(
+            ....:   subcipher4, [(cipher.IN, (i + 6, i)) for i in range(4)])
+            sage: cipher.add_output(
+            ....:   [(node1, (i, i)) for i in range(6)])
+            sage: cipher.add_output(
+            ....:   [(node2, (i, i + 6)) for i in range(4)])
+
+    Analyse the cipher:
+
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     path=Path(tmpdir))
+            sage: cipher.analyse(model_options) # optional -- scip
+            206 variables and 1711 constraints were written to ...
+            0
+            sage: cipher.get_trail(model_options)
+            -> cipher : 00... -> 00...
+                -> sub-cipher-6-bit : 00 -> 00
+                    -> sub-sub-cipher-3-bit : 0 -> 0
+                    -> sub-sub-cipher-3-bit : 0 -> 0
+                -> sub-cipher-4-bit : ... -> ...
+
         """
         from civerly.cipher import Cipher
         string = "\t"*_depth + "-> " + f"{self.name} : {self._to_hex()}"
