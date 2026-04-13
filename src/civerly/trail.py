@@ -67,14 +67,8 @@ class TrailNode:
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.trail import TrailNode
             sage: node = TrailNode(cipher, model_options, results)
-            sage: cipher.result is None
-            False
-            sage: node
-            -> speck : ... -> ...
-                -> speck_round : ... -> ...
-                -> speck_round : ... -> ...
-                -> speck_round : ... -> ...
-                -> speck_round : ... -> ...
+            sage: cipher.result
+            {'in': [...], 'out': [...]}
             sage: import shutil 
             sage: shutil.rmtree(tmpdir)
         
@@ -282,6 +276,37 @@ class TrailNode:
     def __repr__(self, _depth=0) -> str:
         r"""
 
+        Represent ``self`` in string format.
+
+        TESTS:
+
+            sage: # optional - cryptominisat # optional - espresso
+            sage: from civerly.trail import TrailNode
+            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.model_options import * 
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   cipher = SPECK_CVL(32, 64, R=5)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     path=Path(tmpdir))
+            sage: cipher.analyse(model_options)
+            ...
+            sage: results, weight = cipher.read_results(model_options)
+            sage: TrailNode(cipher, model_options, results)
+            -> speck : ... -> ...
+                -> speck_round : ... -> ...
+                -> speck_round : ... -> ...
+                -> speck_round : ... -> ...
+                -> speck_round : ... -> ...
+                -> speck_round : ... -> ...
+            sage: import shutil 
+            sage: shutil.rmtree(tmpdir)
 
         """
         from civerly.cipher import Cipher
