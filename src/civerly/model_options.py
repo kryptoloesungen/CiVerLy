@@ -207,6 +207,7 @@ class MODEL_OPTIONS:
     sat_precision: int = 0
     path: Path = None
     write_to_file: bool = True
+    number_of_solutions: int = 1
 
     def __repr__(self):
         string = "MODEL_OPTIONS:"
@@ -285,6 +286,16 @@ class MODEL_OPTIONS:
             attribute for <enum 'CRYPTANALYSIS'>! Only DIFFERENTIAL,
             LINEAR allowed.
         """
+        if not isinstance(self.number_of_solutions, int) \
+                or self.number_of_solutions < 1:
+            raise InvalidModelOptionException(
+                self.number_of_solutions,
+                message=(
+                    "number_of_solutions must be a positive integer, "
+                    f"got {self.number_of_solutions!r}."
+                )
+            )
+
         if self.solve_range is not None:
             if self.solve_range[0] < 0 or \
                     self.solve_range[0] >= self.solve_range[1]:
