@@ -175,10 +175,10 @@ Now, in regards to the tree structure explained above, calling the method ``get_
 
    sage: cipher.get_trail(model_options)
    -> cipher : 00f -> 00f
-    	-> sub-cipher-6-bit : 00 -> 00
-    		-> sub-sub-cipher-3-bit : 0 -> 0
-    		-> sub-sub-cipher-3-bit : 0 -> 0
-    	-> sub-cipher-4-bit : f -> f
+      -> sub-cipher-6-bit : 00 -> 00
+         -> sub-sub-cipher-3-bit : 0 -> 0
+         -> sub-sub-cipher-3-bit : 0 -> 0
+      -> sub-cipher-4-bit : f -> f
 
 .. code-block:: sage
    :hide:
