@@ -170,6 +170,7 @@ class MODEL_OPTIONS:
             -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
+            -> number_of_solutions : 1
             -> path : CiVerLy-Models
         sage: model_options = MODEL_OPTIONS(
         ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -191,6 +192,7 @@ class MODEL_OPTIONS:
             -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
+            -> number_of_solutions : 1
             -> path : CiVerLy-Models
     """
 
@@ -205,9 +207,9 @@ class MODEL_OPTIONS:
     logic_minimizer: LOGIC_MINIMIZER_CVL = None
     solve_range: tuple = None
     sat_precision: int = 0
+    number_of_solutions: int = 1
     path: Path = None
     write_to_file: bool = True
-    number_of_solutions: int = 1
 
     def __repr__(self):
         string = "MODEL_OPTIONS:"
