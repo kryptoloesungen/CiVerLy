@@ -1515,10 +1515,32 @@ class Cipher:
 
             Requires the specified solver to be installed.
         """
+        # Reset per-analysis state.
+        self.results = []
+        self.trail_nodes = []
+        self._blocking_constraints = []
+
         if model_options.optimization == OPTIMIZATION.MILP:
             self.model(model_options)
             if model_options.milp_solver is None:
                 raise NoSolverWarning()
+            if model_options.number_of_solutions > 1:
+                all_results = model_options.milp_solver.solve_multiple(
+                    input_file_name=model_options.path / (self.name + ".mps"),
+                    output_file_name=model_options.path / (self.name + ".sol"),
+                    model_options=model_options,
+                    n=model_options.number_of_solutions,
+                    cipher=self,
+                )
+                for results, weight in all_results:
+                    tn = TrailNode(self, model_options, results)
+                    self.trail_nodes.append(tn)
+                    self.results.append({
+                        "in": list(self.result["in"]),
+                        "out": list(self.result["out"]),
+                        "weight": weight,
+                    })
+                return [w for _, w in all_results]
             else:
                 model_options.milp_solver.solve(
                     input_file_name=model_options.path / (self.name + ".mps"),
@@ -1531,6 +1553,23 @@ class Cipher:
             self.model(model_options)
             if self._return_immediately_:
                 return
+            if model_options.number_of_solutions > 1:
+                all_results = model_options.sat_solver.solve_multiple(
+                    input_file_name=model_options.path / (self.name + ".cnf"),
+                    output_file_name=model_options.path / (self.name + ".sat"),
+                    model_options=model_options,
+                    n=model_options.number_of_solutions,
+                    cipher=self,
+                )
+                for results, weight in all_results:
+                    tn = TrailNode(self, model_options, results)
+                    self.trail_nodes.append(tn)
+                    self.results.append({
+                        "in": list(self.result["in"]),
+                        "out": list(self.result["out"]),
+                        "weight": weight,
+                    })
+                return [w for _, w in all_results]
             else:
                 # if no sat_solver has been selected, we generate all cnf-files
                 # for the given solve_range
