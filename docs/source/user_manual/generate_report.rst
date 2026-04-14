@@ -174,16 +174,11 @@ Now, in regards to the tree structure explained above, calling the method ``get_
 .. code-block:: sage
 
    sage: cipher.get_trail(model_options)
-    -> sub-cipher-6-bit : 0 -> 0
-        -> sub-sub-cipher-3-bit : 0 -> 0
-            -> sbox1 : 0 -> 0
-            -> sbox2 : 0 -> 0
-        -> sub-sub-cipher-3-bit : 0 -> 0
-            -> sbox1 : 0 -> 0
-            -> sbox2 : 0 -> 0
-    -> sub-cipher-4-bit : 3c -> 3c
-        -> perm : f -> f
-        -> perm : f -> f
+   -> cipher : 00f -> 00f
+    	-> sub-cipher-6-bit : 00 -> 00
+    		-> sub-sub-cipher-3-bit : 0 -> 0
+    		-> sub-sub-cipher-3-bit : 0 -> 0
+    	-> sub-cipher-4-bit : f -> f
 
 .. code-block:: sage
    :hide:
@@ -191,8 +186,6 @@ Now, in regards to the tree structure explained above, calling the method ``get_
    sage: import shutil
    sage: shutil.rmtree("./CVL-Example")
 
-Note that the input into ``sub-cipher-4-bit`` is translated from ``3c`` to ``f`` due to the implicit padding of the report to full nibbles.
-Therefore, the 10-bit input `x` is represented as 12-bit `x||00`.
 
 PDF
 ---
