@@ -1549,6 +1549,7 @@ class Cipher:
                 results, weight = self.read_results(model_options)
                 TrailNode(self, model_options, results)
                 return weight
+
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.model(model_options)
             if self._return_immediately_:
@@ -1873,35 +1874,83 @@ class Cipher:
             - ``model_options`` -- see
               :class:`civerly.model_options.MODEL_OPTIONS`
 
-        OUTPUT: None, but writes a PDF file.
+        OUTPUT: None, but writes one or more PDF files.
+
+        When ``model_options.number_of_solutions == 1`` (default) a single
+        ``<name>.pdf`` is produced (existing behaviour).
+
+        When ``model_options.number_of_solutions > 1``, one PDF per solution
+        is produced, named ``<name>_sol0.pdf``, ``<name>_sol1.pdf``, …
+        The stored :attr:`trail_nodes` (populated by the preceding
+        :meth:`analyse` call) are used directly; no solution files are
+        re-read.
         """
-        # 1. Get results
-        results, objective_value = self.read_results(model_options)
 
-        # 2. Construct TrailNode tree
-        root_node = TrailNode(self, model_options, results)
-
-        # 3. Verify correctness
-        root_node.verify_correctness()
-
-        # 4. Generate LaTeX string
-        string  = self._latex_header(model_options, objective_value)
-        string += root_node.to_latex(model_options)
-        string += "\\end{document}\n"
-
-        # 5. Write to .tex file and compile to PDF
-        self._write_and_compile_tex(string, model_options)
+        if model_options.number_of_solutions == 1:
+            # ---- single-solution path (unchanged) --------------------------
+            # 1. Get results
+            results, objective_value = self.read_results(model_options)
+            # 2. Construct TrailNode
+            root_node = TrailNode(self, model_options, results)
+            # 3. Verify correctness
+            root_node.verify_correctness()
+            # 4. Generate LaTeX string
+            string  = self._latex_header(model_options, objective_value)
+            string += root_node.to_latex(model_options)
+            string += "\\end{document}\n"
+            # 5. Write to .tex file and compile to pdf
+            self._write_and_compile_tex(string, model_options)
+        else:
+            # ---- multi-solution path ---------------------------------------
+            if not self.trail_nodes:
+                raise RuntimeError(
+                    "generate_report() with number_of_solutions > 1 requires "
+                    "analyse() to have been called first with the same "
+                    "model_options."
+                )
+            for i, (tn, sol) in enumerate(zip(self.trail_nodes, self.results)):
+                # 3. Verify correctness
+                tn.verify_correctness()
+                # 4. Generate LaTeX string
+                string  = self._latex_header(model_options, sol["weight"])
+                string += tn.to_latex(model_options)
+                string += "\\end{document}\n"
+                # 5. Write to .tex file and compile to pdf
+                self._write_and_compile_tex(
+                    string, model_options,
+                    _stem=f"{self.name}_sol{i}"
+                )
 
     def get_trail(self, model_options):
         r"""
         After solving a MILP or SAT, converts the solution values to a
-        trail-like output as a ``TrailNode`` tree. Similar to
-        ``self.generate_report``, but returns the tree instead of a PDF.
+        trail-like output as a ``TrailNode`` tree.  Similar to
+        :meth:`generate_report`, but returns the tree instead of a PDF.
+
+        When ``model_options.number_of_solutions == 1`` (default), a single
+        :class:`civerly.trail.TrailNode` is returned (existing behaviour).
+
+        When ``model_options.number_of_solutions > 1``, a **list** of
+        :class:`civerly.trail.TrailNode` objects is returned (one per
+        solution, best first).  The stored :attr:`trail_nodes` (populated by
+        the preceding :meth:`analyse` call) are returned directly.
         """
-        results, _ = self.read_results(model_options)
-        root_node = TrailNode(self, model_options, results)
-        root_node.verify_correctness()
-        return root_node
+
+        if model_options.number_of_solutions == 1:
+            results, _ = self.read_results(model_options)
+            root_node = TrailNode(self, model_options, results)
+            root_node.verify_correctness()
+            return root_node
+        else:
+            if not self.trail_nodes:
+                raise RuntimeError(
+                    "get_trail() with number_of_solutions > 1 requires "
+                    "analyse() to have been called first with the same "
+                    "model_options."
+                )
+            for tn in self.trail_nodes:
+                tn.verify_correctness()
+            return list(self.trail_nodes)
 
     def _to_dict(self):
         r"""
@@ -2181,13 +2230,14 @@ class Cipher:
 
         return STRING
 
-    def _write_and_compile_tex(self, string, model_options) -> None:
+    def _write_and_compile_tex(self, string, model_options, _stem=None) -> None:
         r"""
         Writes ``string`` to a ``.tex`` file and compiles it to PDF via
         ``pdflatex``, then removes auxiliary build files.
         """
-        tex_file_name = model_options.path / (self.name + ".tex")
-        pdf_file_name = model_options.path / (self.name + ".pdf")
+        stem = _stem if _stem is not None else self.name
+        tex_file_name = model_options.path / (stem + ".tex")
+        pdf_file_name = model_options.path / (stem + ".pdf")
 
         with open(tex_file_name, 'w') as f:
             f.write(string)
