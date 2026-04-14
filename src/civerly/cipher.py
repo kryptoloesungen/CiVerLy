@@ -48,6 +48,7 @@ import json
 import subprocess
 import glob
 from math import ceil, sqrt
+import re
 
 from civerly.component import Component
 from civerly.model_options import OPTIMIZATION, GRANULARITY
@@ -412,6 +413,27 @@ class Cipher:
         # as a dict {"in": [...], "out": [...]}. It is None until analyse is
         # called for the first time, and is completely overwritten on each
         # subsequent call.
+
+        self.results = []
+        # self.results stores all trails found by analyse() when
+        # number_of_solutions > 1. Each entry is a dict
+        # {"in": [...], "out": [...], "weight": <value>}, populated in
+        # solution order (best first).
+
+        self.trail_nodes = []
+        # self.trail_nodes stores the TrailNode objects built during
+        # analyse() for number_of_solutions > 1, one per solution.
+        # Used by generate_report() and get_trail() to avoid re-reading
+        # solution files.
+
+        self._custom_constraints = []
+        # User-added constraints from add_constraint(), stored as parsed tuples
+        # (lhs, op, rhs). Applied during model building.
+
+        self._blocking_constraints = []
+        # No-good cuts for by-hand multiple-solution enumeration. Each entry
+        # is a list of (comp_num, var_idx, value) triples derived from a solved
+        # MILP result. Reset at the start of each analyse() call.
 
     # Get-functions of various attributes:
     # --------------------------------------------------
@@ -1415,6 +1437,9 @@ class Cipher:
                             (-self.inv_dictionaries_sat[a][x+1],)
                         )
 
+        # Apply user-added custom constraints
+        self._apply_custom_constraints_sat(master_sat)
+
         model_options, model_options_ = model_options_, model_options
 
         return self._finish_sat(
@@ -1476,6 +1501,15 @@ class Cipher:
 
             - ``model_options`` -- see
               :class:`civerly.model_options.MODEL_OPTIONS`
+
+        When ``model_options.number_of_solutions == 1`` (the default), a
+        single optimal trail is found and its weight is returned (matching the
+        existing behaviour).  When ``number_of_solutions > 1``, the solver
+        looks for that many distinct solutions; the method returns a **list**
+        of weights (one per solution found), and all trails are available in
+        ``self.results`` (list of ``{"in": …, "out": …}`` dicts).
+        ``self.result`` continues to hold the *last* trail processed, for
+        backward compatibility.
 
         .. WARNING::
 
@@ -1657,6 +1691,138 @@ class Cipher:
                 model_options.optimization, OPTIMIZATION
             )
 
+    # ------------------------------------------------------------------
+    # Custom-constraint and multiple-solution helpers
+    # ------------------------------------------------------------------
+
+    def add_constraint(self, expr: str) -> None:
+        r"""
+        Add a custom equality constraint to be incorporated into the model
+        at the next call to :meth:`model` or :meth:`analyse`.
+
+        Supported syntax::
+
+            "nodes[i].IN[j]  == nodes[k].IN[l]"
+            "nodes[i].IN[j]  == nodes[k].OUT[l]"
+            "nodes[i].OUT[j] == nodes[k].OUT[l]"
+            "nodes[i].IN[j]  == 0"   (force a bit inactive)
+            "nodes[i].IN[j]  == 1"   (force a bit active)
+
+        where ``i``, ``j``, ``k``, ``l`` are non-negative integers,
+        ``IN`` selects an *input* bit of the node, and ``OUT`` an *output* bit.
+
+        EXAMPLES::
+
+            sage: from civerly.cipher import Cipher
+            sage: cipher = Cipher(8, 8, name="test")
+            sage: cipher.add_constraint("nodes[0].OUT[3] == nodes[1].IN[0]")
+            sage: len(cipher._custom_constraints)
+            1
+        """
+        self._custom_constraints.append(self._parse_constraint(expr))
+
+    @staticmethod
+    def _parse_constraint(expr: str):
+        r"""
+        Parse a constraint string into a structured triple ``(lhs, op, rhs)``.
+
+        Each side is either
+
+        * ``("var", node_idx: int, side: str, bit_idx: int)``  — a model variable
+        * ``("const", value: int)``  — a constant 0 or 1
+
+        and ``op`` is the string ``"=="``.
+        """
+        if "==" not in expr:
+            raise ValueError(
+                f"Unsupported constraint (only '==' is supported): {expr!r}"
+            )
+        lhs_str, rhs_str = expr.split("==", 1)
+
+        _var_pat = re.compile(
+            r'^\s*nodes\s*\[\s*(\d+)\s*\]\s*\.\s*(IN|OUT)\s*\[\s*(\d+)\s*\]\s*$'
+        )
+
+        def _parse_side(s: str):
+            m = _var_pat.match(s)
+            if m:
+                return ("var", int(m.group(1)), m.group(2), int(m.group(3)))
+            s = s.strip()
+            if s in ("0", "1"):
+                return ("const", int(s))
+            raise ValueError(
+                f"Cannot parse constraint operand: {s!r}\n"
+                "Expected 'nodes[i].IN/OUT[j]' or '0'/'1'."
+            )
+
+        return (_parse_side(lhs_str), "==", _parse_side(rhs_str))
+
+    def _add_milp_no_good(self, results: dict) -> None:
+        r"""
+        Convert a MILP solution *results* dict (as returned by
+        ``process_solution_file``) into a no-good (blocking) constraint and
+        append it to ``self._blocking_constraints``.
+
+        The no-good ensures the exact solution cannot repeat on re-solve.
+        It is expressed as a list of ``(comp_num, var_idx, value)`` triples;
+        :meth:`civerly.sboxcipher.SBoxCipher._model_milp` adds the
+        corresponding linear constraint during the next model build.
+        """
+        bc = []
+        for var_name, sub_dict in results.items():
+            if var_name in ("IN", "OUT"):
+                continue
+            try:
+                i = int(var_name[1:])   # "X3" → 3
+            except (ValueError, IndexError):
+                continue
+            for j, val in sub_dict.items():
+                bc.append((i, int(j), int(val)))
+        self._blocking_constraints.append(bc)
+
+    def _apply_custom_constraints_sat(self, master_sat) -> None:
+        r"""
+        Translate ``self._custom_constraints`` into SAT clauses and add them
+        to *master_sat*.  Called from :meth:`_model_sat` after all component
+        SAT models have been assembled.
+        """
+        for lhs_parsed, op, rhs_parsed in self._custom_constraints:
+
+            def resolve(parsed):
+                """Return master SAT variable index, or None for constants."""
+                if parsed[0] == "const":
+                    return None, parsed[1]
+                _, node_idx, side, bit_idx = parsed
+                comp = self.nodes[node_idx]
+                if side == "IN":
+                    comp_rel = bit_idx + 1          # 1-based
+                else:  # "OUT"
+                    comp_rel = comp.input_length + bit_idx + 1
+                sat_var = self.inv_dictionaries_sat[node_idx].get(comp_rel)
+                if sat_var is None:
+                    raise ValueError(
+                        f"nodes[{node_idx}].{side}[{bit_idx}] not found in "
+                        "SAT dictionaries — check node index and bit index."
+                    )
+                return sat_var, None
+
+            lhs_var, lhs_const = resolve(lhs_parsed)
+            rhs_var, rhs_const = resolve(rhs_parsed)
+
+            if op != "==":
+                raise ValueError(f"Unsupported SAT constraint operator: {op!r}")
+
+            if lhs_var is not None and rhs_var is not None:
+                # x_lhs == x_rhs  →  two implications
+                master_sat.add_clause((-lhs_var,  rhs_var))
+                master_sat.add_clause(( lhs_var, -rhs_var))
+            elif lhs_var is not None and rhs_const is not None:
+                # x == constant
+                master_sat.add_clause((lhs_var if rhs_const else -lhs_var,))
+            elif lhs_const is not None and rhs_var is not None:
+                # constant == x
+                master_sat.add_clause((rhs_var if lhs_const else -rhs_var,))
+            # const == const: no clause needed (trivially true or contradictory)
 
     def generate_report(self, model_options):
         """
