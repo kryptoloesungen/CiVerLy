@@ -363,10 +363,10 @@ class TrailNode:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND,
             ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
-            sage: cipher.analyse(model_options) # optional -- scip
+            sage: cipher.analyse(model_options) # optional - scip
             206 variables and 1711 constraints were written to ...
             0
-            sage: cipher.get_trail(model_options)
+            sage: cipher.get_trail(model_options) # optional - scip
             -> cipher : 00... -> 00...
                 -> sub-cipher-6-bit : 00 -> 00
                     -> sub-sub-cipher-3-bit : 0 -> 0
