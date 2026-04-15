@@ -315,14 +315,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
                        model_options=None, n=1, cipher=None,
                        time_limit=None):
         r"""
-        Find up to *n* solutions at the minimum SAT weight.
+        Find up to *n* solutions ordered by weight (best first).
 
-        **Strategy (by-hand blocking)**
+        **Strategy (by-hand blocking with weight escalation)**
 
         1. Call :meth:`solve` to find the minimum weight *W* and the first
-           solution (binary search).  After this call, *input_file_name* holds
-           the CNF with the weight constraint ``≤ W`` (the file is overwritten
-           by :meth:`solve`).
+           solution (binary search).  Before this call the base CNF is saved;
+           after the call *input_file_name* holds the CNF with the weight
+           constraint ``<= W``.
 
         2. For each subsequent solution:
 
@@ -336,23 +336,37 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
            b. Append the clause to *input_file_name* (accumulating across
               iterations) and invoke the solver.
 
-           c. If the result is UNSAT, stop — no more distinct solutions exist
-              at weight *W*.
+           c. If the result is UNSAT, all solutions at the current weight are
+              exhausted.  The weight bound is incremented by one, the CNF is
+              rebuilt from the saved base file with the new ``<= W+1``
+              constraint, and solving continues.  This repeats until SAT is
+              found or the upper bound (``model_options.solve_range[1]``) is
+              reached.
 
-        Returns a list of ``(results_dict, objective_value)`` pairs (first
-        solution is the optimal one; subsequent ones have the same objective
-        weight).
+        Returns a list of ``(results_dict, objective_value)`` pairs ordered
+        best to worst objective weight.
         """
         assert isinstance(input_file_name, Path)
         assert isinstance(output_file_name, Path)
 
         pr = model_options.sat_precision if model_options is not None else 0
+        W_MAX_INT = (
+            int(model_options.solve_range[1] * 10**pr)
+            if model_options is not None else 100
+        )
+
+        # Save the base CNF before solve() overwrites input_file_name.
+        base_cnf_file = (
+            input_file_name.parent / f"{input_file_name.stem}_base.cnf"
+        )
+        shutil.copyfile(input_file_name, base_cnf_file)
 
         # --- Step 1: find minimum weight and first solution -----------------
         weight = self.solve(
             input_file_name, output_file_name,
             model_options=model_options, time_limit=time_limit
         )
+        current_weight_int = int(round(weight * 10**pr))
         first_result, _ = self.process_solution_file(output_file_name)
         all_results = [(first_result, weight)]
 
@@ -376,7 +390,8 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         blocking_var_list = sorted(sum_vars | input_vars)
 
         # --- Step 2: enumerate additional solutions -------------------------
-        for sol_idx in range(1, n):
+        sol_idx = 1
+        while sol_idx < n:
             prev_result = all_results[-1][0]
 
             # Build blocking clause: negate each variable according to its
@@ -407,14 +422,44 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
                 result_line = _f.readlines()[0].strip()
 
             if result_line in ("UNSAT", "s UNSATISFIABLE"):
-                break  # no more solutions at this weight
+                # All solutions at current_weight_int are exhausted.
+                # Rebuild from the base CNF at increasing weights until SAT.
+                advanced = False
+                while current_weight_int < W_MAX_INT:
+                    current_weight_int += 1
+                    base_sat = DIMACS()
+                    base_sat.read(str(base_cnf_file))
+                    new_cnf = _generate_constraints_sum_leq_int_LS24(
+                        base_sat, sum_arr, current_weight_int
+                    )
+                    new_cnf.write(input_file_name)
 
-            # Append the weight so process_solution_file() can read it.
+                    status = self.invoke(input_file_name, tmp_sat_file,
+                                         time_limit=time_limit)
+                    if status is not None:
+                        break  # solver error or timeout
+
+                    with open(tmp_sat_file, 'r') as _f:
+                        result_line = _f.readlines()[0].strip()
+
+                    if result_line not in ("UNSAT", "s UNSATISFIABLE"):
+                        advanced = True
+                        break
+
+                if not advanced or status is not None:
+                    break  # no more solutions in range
+
+            # Process the SAT result (whether at the original weight or a new one).
+            current_weight = (
+                current_weight_int if pr == 0
+                else float(current_weight_int / 10**pr)
+            )
             with open(tmp_sat_file, 'a') as _f:
-                _f.write(str(float(weight)) + "\n")
+                _f.write(str(float(current_weight)) + "\n")
 
             result, w = self.process_solution_file(tmp_sat_file)
             all_results.append((result, w))
+            sol_idx += 1
 
         return all_results
 
@@ -744,24 +789,29 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         After each solve the solution is converted to a no-good linear
         constraint (via ``cipher._add_milp_no_good``), the MILP model is
         regenerated (via ``cipher.model``), and SCIP is invoked again.
-        This repeats until *n* solutions are found or the model becomes
-        infeasible.
 
-        Returns a list of ``(results_dict, objective_value)`` pairs (best
-        solution first).
+        When all solutions at the current optimal weight are exhausted, the
+        weight lower bound is increased by one and the search continues at the
+        next weight level until *n* solutions are found or no more solutions
+        exist within the allowed range.
+
+        Returns a list of ``(results_dict, objective_value)`` pairs ordered
+        from best to worst objective weight.
         """
         assert isinstance(input_file_name, Path)
         assert isinstance(output_file_name, Path)
 
         all_results = []
-        for i in range(n):
-            # Direct output file for this iteration
-            if i == 0:
+        current_weight = None  # weight of the most recently found solution
+        sol_idx = 0
+
+        while sol_idx < n:
+            if sol_idx == 0:
                 sol_file = output_file_name
             else:
                 sol_file = (
                     output_file_name.parent
-                    / f"{output_file_name.stem}_{i}{output_file_name.suffix}"
+                    / f"{output_file_name.stem}_{sol_idx}{output_file_name.suffix}"
                 )
 
             self.status = SOLVING_STATUS.SUCCESS
@@ -769,11 +819,34 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             try:
                 r, w = self.process_solution_file(sol_file)
             except (ValueError, AssertionError):
-                break   # infeasible – no more solutions
+                # No (more) solutions found.
+                if (current_weight is None or cipher is None
+                        or model_options is None):
+                    break  # never found a solution, or cannot rebuild
+                orig_sr = model_options.solve_range
+                if orig_sr is None:
+                    # Without an explicit range the solver minimises freely and
+                    # naturally advances to the next-best weight via the
+                    # accumulated no-good constraints.  Infeasibility here means
+                    # no solutions exist at any weight — stop.
+                    break
+                # Explicit solve_range: raise the lower bound by one so the
+                # solver finds solutions at the next weight level.  Keep
+                # existing no-good constraints so lower-weight solutions are
+                # not re-discovered.
+                current_weight += 1
+                if current_weight >= orig_sr[1]:
+                    break  # exceeded the allowed range
+                model_options.solve_range = (current_weight, orig_sr[1])
+                cipher.model(model_options)
+                model_options.solve_range = orig_sr
+                continue  # retry at the new weight without advancing sol_idx
 
             all_results.append((r, w))
+            current_weight = w
+            sol_idx += 1
 
-            if i < n - 1 and cipher is not None:
+            if sol_idx < n and cipher is not None:
                 cipher._add_milp_no_good(r)
                 cipher.model(model_options)
 
@@ -908,19 +981,25 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         Find up to *n* solutions using a by-hand blocking approach (GLPK does
         not support a solution pool natively).
 
-        Identical in structure to :meth:`civerly.solvers.SCIP_CVL.solve_multiple`.
+        Identical in structure to :meth:`civerly.solvers.SCIP_CVL.solve_multiple`:
+        when all solutions at the current optimal weight are exhausted, the
+        weight lower bound is increased by one and the search continues at the
+        next weight level.
         """
         assert isinstance(input_file_name, Path)
         assert isinstance(output_file_name, Path)
 
         all_results = []
-        for i in range(n):
-            if i == 0:
+        current_weight = None  # weight of the most recently found solution
+        sol_idx = 0
+
+        while sol_idx < n:
+            if sol_idx == 0:
                 sol_file = output_file_name
             else:
                 sol_file = (
                     output_file_name.parent
-                    / f"{output_file_name.stem}_{i}{output_file_name.suffix}"
+                    / f"{output_file_name.stem}_{sol_idx}{output_file_name.suffix}"
                 )
 
             self.status = SOLVING_STATUS.SUCCESS
@@ -928,11 +1007,34 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             try:
                 r, w = self.process_solution_file(sol_file)
             except (ValueError, AssertionError):
-                break
+                # No (more) solutions found.
+                if (current_weight is None or cipher is None
+                        or model_options is None):
+                    break  # never found a solution, or cannot rebuild
+                orig_sr = model_options.solve_range
+                if orig_sr is None:
+                    # Without an explicit range the solver minimises freely and
+                    # naturally advances to the next-best weight via the
+                    # accumulated no-good constraints.  Infeasibility here means
+                    # no solutions exist at any weight — stop.
+                    break
+                # Explicit solve_range: raise the lower bound by one so the
+                # solver finds solutions at the next weight level.  Keep
+                # existing no-good constraints so lower-weight solutions are
+                # not re-discovered.
+                current_weight += 1
+                if current_weight >= orig_sr[1]:
+                    break  # exceeded the allowed range
+                model_options.solve_range = (current_weight, orig_sr[1])
+                cipher.model(model_options)
+                model_options.solve_range = orig_sr
+                continue  # retry at the new weight without advancing sol_idx
 
             all_results.append((r, w))
+            current_weight = w
+            sol_idx += 1
 
-            if i < n - 1 and cipher is not None:
+            if sol_idx < n and cipher is not None:
                 cipher._add_milp_no_good(r)
                 cipher.model(model_options)
 
