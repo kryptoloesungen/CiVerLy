@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from sage.rings.integer import Integer
+
 from civerly.solvers import SOLVER_CVL, LOGIC_MINIMIZER_CVL
 from civerly.solvers import MILP_SOLVER_CVL, SAT_SOLVER_CVL, LOGIC_MINIMIZER_CVL
 
@@ -288,7 +290,7 @@ class MODEL_OPTIONS:
             attribute for <enum 'CRYPTANALYSIS'>! Only DIFFERENTIAL,
             LINEAR allowed.
         """
-        if not isinstance(self.number_of_solutions, int) \
+        if not isinstance(self.number_of_solutions, (int, Integer)) \
                 or self.number_of_solutions < 1:
             raise InvalidModelOptionException(
                 self.number_of_solutions,
