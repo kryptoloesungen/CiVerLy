@@ -168,6 +168,32 @@ class SPECK_CVL:
             9
             Output file in: ...
 
+        Find multiple solutions in SPECK:
+
+            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            ....:   cipher = SPECK_CVL(32, 64, R=3)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=CADICAL_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     number_of_solutions=5,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            1392 variables and 3516 clauses were written to ...
+            [  0 ,100] (trying w =  50) : SAT
+            [  0 , 50] (trying w =  25) : SAT
+            [  0 , 25] (trying w =  12) : SAT
+            [  0 , 12] (trying w =   6) : SAT
+            [  0 ,  6] (trying w =   3) : SAT
+            [  0 ,  3] (trying w =   1) : SAT
+            [  0 ,  1] (trying w =   0) : UNSAT
+            [1, 1, 1, 2, 2]
 
         """
         if name is None:
