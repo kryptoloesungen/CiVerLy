@@ -1758,6 +1758,64 @@ class Cipher:
             sage: cipher.add_constraint("nodes[0].OUT[3] == nodes[1].IN[0]")
             sage: len(cipher._custom_constraints)
             1
+
+        TESTS::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
+            sage: from civerly.util import vec_to_int
+            sage: import tempfile
+            sage: cipher = CRAFT_CVL(2)
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:      cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:      optimization=OPTIMIZATION.SAT,
+            ....:      granularity=GRANULARITY.BITWISE,
+            ....:      sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:      linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:      sat_solver=CRYPTOMINISAT_CVL(),
+            ....:      logic_minimizer=ESPRESSO_CVL(),
+            ....:      path=Path(tmpdir))
+            sage: cipher.analyse(model_options)
+            5120 variables and 11681 clauses were written to ...
+            [  0 ,100] (trying w =  50) : SAT
+            [  0 , 50] (trying w =  25) : SAT
+            [  0 , 25] (trying w =  12) : SAT
+            [  0 , 12] (trying w =   6) : SAT
+            [  0 ,  6] (trying w =   3) : UNSAT
+            [  4 ,  6] (trying w =   5) : SAT
+            [  4 ,  5] (trying w =   4) : SAT
+            4
+        
+        Activate the entire input and analyse again:
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: for i in range(cipher.input_length):
+            ....:   cipher.add_constraint(f"nodes[0].IN[{i}] == 1")
+            sage: cipher._custom_constraints
+            [(('var', 0, 'IN', 0), '==', ('const', 1)),
+            (('var', 0, 'IN', 1), '==', ('const', 1)),
+            ...
+            (('var', 0, 'IN', 62), '==', ('const', 1)),
+            (('var', 0, 'IN', 63), '==', ('const', 1))]
+            sage: cipher.analyse(model_options)
+            Using existing file ..., make sure it is up to date!
+            5120 variables and 11745 clauses were written to ...
+            [  0 ,100] (trying w =  50) : SAT
+            [  0 , 50] (trying w =  25) : UNSAT
+            [ 26 , 50] (trying w =  38) : SAT
+            [ 26 , 38] (trying w =  32) : SAT
+            [ 26 , 32] (trying w =  29) : UNSAT
+            [ 30 , 32] (trying w =  31) : UNSAT
+            32
+            sage: cipher.result['in'] == [1]*cipher.input_length
+            True
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
+
+        As expected, activating all input bits leads to a significantly worse trail.
+
         """
         self._custom_constraints.append(self._parse_constraint(expr))
 
