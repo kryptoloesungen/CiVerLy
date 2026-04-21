@@ -575,6 +575,40 @@ class Cipher:
         assert isinstance(self.__is_valid, bool)
         return self.__is_valid
 
+    def set_master_key(self, k: int):
+        r"""
+        Derive round keys from master key ``k`` and inject them into the
+        cipher's round key components.
+
+        Requires ``self.key_schedule`` and ``self._rk_components`` to be
+        set on the cipher instance (see :class:`civerly.keyschedule.KeySchedule`).
+        After calling this method, ``self.eval(plaintext)`` returns the
+        correct ciphertext for the given key.
+
+        Modeling is unaffected - round key components retain their canonical
+        behavior regardless of the value set here.
+
+        INPUT:
+
+            - ``k`` -- integer; the master key
+
+        EXAMPLES::
+
+            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.util import int_to_vec, vec_to_int
+            sage: hurdle = HURDLE_CVL(R=1)
+            sage: hurdle.set_master_key(0x99990099991188992277993366994455)
+            sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
+            ....:   0x09cc2a7e2222eeee
+            True
+
+        """
+        if not hasattr(self, '_rk_components'):
+            raise AttributeError(f"{self.name} has no key schedule")
+        rks = self.key_schedule(k)
+        for comp, val in zip(self._rk_components, rks):
+            comp.const = val
+
     def add_subcipher(self, sub_cipher, edges):
         r"""
         Insert ``sub_cipher`` as a node into the graph, and connects the

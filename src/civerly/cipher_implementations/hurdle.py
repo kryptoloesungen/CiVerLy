@@ -287,15 +287,12 @@ class HURDLE_CVL:
         if name is None:
             name = "HURDLE-II"
 
-        if k is None:
-            k = 0x0  # default key is zero
-        round_keys = hurdle_key_schedule(k)
-
         cipher = WordBasedCipher(4, 16, 16, name=name)
+
         round_node = cipher.IN
         for r in range(R):
 
-            hurdle_f = HURDLE_F_CVL(rk=round_keys[r])
+            hurdle_f = HURDLE_F_CVL(rk=0)
 
             # build feistel round
             hurdle_round = WordBasedCipher(4, 16, 16, name="round")
@@ -319,7 +316,14 @@ class HURDLE_CVL:
         # final swap (as in MidnightBlue's implementation)
         cipher.add_output([(round_node, (i, (i + 8) % 16)) for i in range(16)])
 
+        # collect RK references after deepcopying is complete
+        cipher._rk_components = [cipher.nodes[r+1].nodes[1].nodes[1] for r in range(R)]
+        cipher.key_schedule = hurdle_key_schedule
+
         self.cipher = cipher
+
+        if k is not None:
+            cipher.set_master_key(k)
 
     def __new__(cls, *args, **kwargs):
         instance = super(HURDLE_CVL, cls).__new__(cls)
