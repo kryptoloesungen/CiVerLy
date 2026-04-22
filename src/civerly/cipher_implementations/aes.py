@@ -23,7 +23,7 @@ given in :class:`civerly.model_options.MODEL_OPTIONS`::
     ....:       milp_solver=SCIP_CVL(),
     ....:       path=Path(tmpdir))
     ....:   aes.analyse(model_options)
-    2884 variables and 3085 constraints were written to '...'
+    3236 variables and 3437 constraints were written to '...'
     55
 
 Indeed, there are 55 active S-boxes for 10-round AES. Next up, we want to
@@ -108,9 +108,9 @@ Next, we finish the model::
     sage: aes.model(model_options)
     Using existing file DOCTEST-AES-Models/MixColumn51845.sol,
     make sure it is up to date!
-    2848 variables and 2977 constraints were written to
+    ...
     'DOCTEST-AES-Models/AES.mps'
-    Boolean Program (minimization, 2848 variables, 2977 constraints)
+    Boolean Program (minimization, ...)
 
 Now, you would again copy the ``.mps`` file, this time of course the
 ``AES.mps``, to a machine with a supported solver. After solving, the
@@ -162,7 +162,7 @@ To conclude our example, we remove the generated files::
     sage: shutil.rmtree("DOCTEST-AES-Models", ignore_errors=True)
 """
 from civerly.aeslike import AESlike
-from civerly.component import SBox_CVL, PermuteLayer_CVL, LinearLayer_CVL
+from civerly.component import SBox_CVL, PermuteLayer_CVL, LinearLayer_CVL, RoundkeyXOR_CVL
 
 from sage.matrix.constructor import Matrix as matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
@@ -170,20 +170,49 @@ from sage.matrix.special import identity_matrix, block_matrix
 from sage.crypto.sboxes import AES as AES_S
 
 
+def aes_key_schedule(k, R):
+    """Return list of R+1 128-bit round keys for AES-128 with master key k."""
+    Rcon = [0x00000000, 0x01000000, 0x02000000, 0x04000000, 0x08000000,
+            0x10000000, 0x20000000, 0x40000000, 0x80000000, 0x1b000000,
+            0x36000000, 0x6c000000, 0xd8000000, 0xab000000]
+
+    def sub_word(w):
+        return (int(AES_S[(w >> 24) & 0xff]) << 24 |
+                int(AES_S[(w >> 16) & 0xff]) << 16 |
+                int(AES_S[(w >> 8) & 0xff]) << 8 |
+                int(AES_S[w & 0xff]))
+
+    def rot_word(w):
+        return ((w << 8) | (w >> 24)) & 0xFFFFFFFF
+
+    W = [(k >> (96 - 32*i)) & 0xFFFFFFFF for i in range(4)]
+    for i in range(4, 4*(R+1)):
+        temp = W[i-1]
+        if i % 4 == 0:
+            temp = sub_word(rot_word(temp)) ^ Rcon[i // 4]
+        W.append(W[i-4] ^ temp)
+
+    return [sum(W[4*r + j] << (32 * (3-j)) for j in range(4)) for r in range(R+1)]
+
+
 class AES_CVL:
     """Implementation of the AES in CiVerLy."""
 
-    def __init__(self, R, name=None) -> None:
+    def __init__(self, R, k=None, name=None) -> None:
         r"""
-        Implement AES in CiVerLy.
+        Implement AES-128 in CiVerLy.
 
-        Notice that the key schedule is omitted.
-        This cipher is "plug-and-play" usable, i.e. it can be directly used
-        when imported.
+        By default round keys are zero, which leaves correctness of the
+        data path verifiable without a key schedule.  Pass a 128-bit master
+        key ``k`` to inject the real AES-128 round keys via
+        :meth:`civerly.cipher.Cipher.set_master_key`.
 
         INPUT:
 
             - ``R`` -- integer; Number of rounds.
+
+            - ``k`` -- integer (128-bit); Master key (optional).  When given,
+              the AES-128 round keys are derived and injected immediately.
 
             - ``name`` -- string; The name of the cipher (optional).
               This will be used to name the cipher and the corresponding file
@@ -192,13 +221,22 @@ class AES_CVL:
 
         EXAMPLES:
 
-        Encrypt a message (to verify the implementation)::
+        Encrypt a message with zero round keys (to verify the data path)::
 
             sage: from civerly.util import vec_to_int, int_to_vec
             sage: from civerly.cipher_implementations.aes import AES_CVL
             sage: aes = AES_CVL(R=4)
             sage: hex(vec_to_int(aes(int_to_vec(0x12345678,128))))
             '0x1491385e17259a1555f377e76ade6090'
+
+        Encrypt using the NIST FIPS 197 Appendix B test vector::
+
+            sage: from civerly.util import vec_to_int, int_to_vec
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: aes = AES_CVL(R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c)
+            sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
+            sage: hex(vec_to_int(aes(pt)))
+            '0x3925841d02dc09fbdc118597196a0b32'
 
         TESTS:
 
@@ -238,7 +276,7 @@ class AES_CVL:
                 ....:       milp_solver=GLPK_CVL(),
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
-                548 variables and 557 constraints were written to '...'
+                644 variables and 653 constraints were written to '...'
                 5
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
@@ -268,7 +306,7 @@ class AES_CVL:
                 ....:       milp_solver=GUROBI_CVL(),
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
-                2884 variables and 3085 constraints were written to '...'
+                3236 variables and 3437 constraints were written to '...'
                 55
                 sage: from civerly.cipher_implementations.aes import AES_CVL
                 sage: from civerly.model_options import *
@@ -386,18 +424,32 @@ class AES_CVL:
         aes_cipher = AESlike(8, 4, 4, name=name)
 
         node = aes_cipher.IN
+        edges = [(node, (i, i)) for i in range(16)]
+        node = aes_cipher.add_subcipher(RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges)
+
         for r in range(R-1):
             edges = [(node, (i, i)) for i in range(16)]
             node = aes_cipher.add_subcipher(aes_round, edges)
+            edges = [(node, (i, i)) for i in range(16)]
+            node = aes_cipher.add_subcipher(RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges)
 
         edges = [(node, (i, i)) for i in range(16)]
         node = aes_cipher.add_subcipher(sboxlayer, edges)
         edges = [(node, (i, i)) for i in range(16)]
         node = aes_cipher.add_subcipher(shiftrow, edges)
+        edges = [(node, (i, i)) for i in range(16)]
+        node = aes_cipher.add_subcipher(RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges)
 
         aes_cipher.add_output([(node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
+
+        aes_cipher._rk_components = [aes_cipher.nodes[2*r+1] for r in range(R)] + [aes_cipher.nodes[2*R+2]]
+        aes_cipher.key_schedule = lambda key: aes_key_schedule(key, R)
+
         self.aes_cipher = aes_cipher
+
+        if k is not None:
+            aes_cipher.set_master_key(k)
 
     def __new__(cls, *args, **kwargs):
         """Instantiate the AES."""
