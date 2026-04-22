@@ -31,10 +31,10 @@ Overview
             ├── cipher.py
             ├── component.py
             ├── __init__.py
-            ├── largesboxes
+            ├── distorted_balls
             │   ├── __init__.py
-            │   ├── largesboxes.py
-            │   └── lib-largesboxes.cpp
+            │   ├── distorted_balls.py
+            │   └── lib-distorted-balls.cpp
             ├── model_options.py
             ├── sboxcipher.py
             ├── solvers.py

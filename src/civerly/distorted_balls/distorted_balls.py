@@ -20,10 +20,10 @@ def get_inequations(ddt, fixed_probability=None) -> list:
 
         Encrypt a message (for verifying the implemenation)::
 
-            sage: from civerly.largesboxes import largesboxes
+            sage: from civerly.distorted_balls import distorted_balls
             sage: from sage.crypto.sboxes import PRESENT as PRESENT_S_sage
             sage: ddt = PRESENT_S_sage.difference_distribution_table()
-            sage: ineq = largesboxes.get_inequations(ddt)
+            sage: ineq = distorted_balls.get_inequations(ddt)
             sage: len(ineq)
             708
             sage: ineq[-1]
@@ -34,29 +34,29 @@ def get_inequations(ddt, fixed_probability=None) -> list:
 
         Test inequations for PRESENT (all probabilities)::
 
-            sage: from civerly.largesboxes import largesboxes
+            sage: from civerly.distorted_balls import distorted_balls
             sage: from sage.crypto.sboxes import PRESENT as PRESENT_S_sage
             sage: ddt = PRESENT_S_sage.difference_distribution_table()
-            sage: ineq = largesboxes.get_inequations(ddt)
+            sage: ineq = distorted_balls.get_inequations(ddt)
             sage: len(ineq)
             708
-            sage: largesboxes.verify_inequations(ineq, ddt, None)
+            sage: distorted_balls.verify_inequations(ineq, ddt, None)
             True
 
         Test inequations for PRESENT (transitions with probability 2 only)::
 
-            sage: from civerly.largesboxes import largesboxes
+            sage: from civerly.distorted_balls import distorted_balls
             sage: from sage.crypto.sboxes import PRESENT as PRESENT_S_sage
             sage: ddt = PRESENT_S_sage.difference_distribution_table()
-            sage: ineq = largesboxes.get_inequations(ddt, 2)
+            sage: ineq = distorted_balls.get_inequations(ddt, 2)
             sage: len(ineq)
             1151
-            sage: largesboxes.verify_inequations(ineq, ddt, 2)
+            sage: distorted_balls.verify_inequations(ineq, ddt, 2)
             True
     """
     # Shared library responsible for computing the inequations
     pkg_dir = Path(__file__).parent.parent
-    lib_path = next(pkg_dir.glob("largesboxes*.so"))
+    lib_path = next(pkg_dir.glob("distorted_balls*.so"))
     lib = ctypes.CDLL(lib_path)
 
     lib.compute_inequations.argtypes = [

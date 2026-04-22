@@ -38,7 +38,7 @@ from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
 from civerly.model_options import SBOX_MODELING
 from civerly.model_options import InvalidModelOptionException
-from civerly.largesboxes import largesboxes
+from civerly.distorted_balls import distorted_balls
 from civerly.solvers import ESPRESSO_CVL, NO_MILP_SOLVER_CVL, NO_LOGIC_MINIMIZER_CVL
 
 
@@ -2267,7 +2267,7 @@ class SBox_CVL(Component):
                         continue
                     # prob needs to be a string to comply with json format
                     inequations_for_prob[str(prob)] = \
-                        largesboxes.get_inequations(ddt, prob)
+                        distorted_balls.get_inequations(ddt, prob)
                 # Cache inequations
                 with open(s_file_ineq, "w") as ineq_file:
                     json.dump(inequations_for_prob, ineq_file)

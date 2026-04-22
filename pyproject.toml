@@ -18,8 +18,8 @@ where = ["src"]
 include = ["civerly*"]
 
 [[tool.setuptools.ext-modules]]
-name = "civerly.largesboxes"
-sources = ["src/civerly/largesboxes/lib-largesboxes.cpp"]
+name = "civerly.distorted_balls"
+sources = ["src/civerly/distorted_balls/lib-distorted-balls.cpp"]
 language = "c++"
 
 [tool.ruff.lint]
