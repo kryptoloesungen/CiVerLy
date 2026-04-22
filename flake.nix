@@ -8,6 +8,11 @@
       url = "github:ralismark/nix-appimage";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    espresso = {
+      url = "github:hadipourh/espresso";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.nixpkgs.follows = "";
+    };
   };
 
   outputs =
@@ -16,6 +21,7 @@
       nixpkgs,
       flake-utils,
       nix-appimage,
+      espresso,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -24,26 +30,11 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [
+            espresso.overlay
             (final: prev: {
               sage = prev.sage.override { requireSageTests = false; };
             })
           ];
-        };
-
-
-        espresso = pkgs.stdenv.mkDerivation {
-          pname = "espresso";
-          version = "2.4";
-
-          src = pkgs.fetchFromGitHub {
-            owner = "hadipourh";
-            repo = "espresso";
-            rev = "v3.0";
-            sha256 = "sha256-1cR5fLgmZwVW7wmR/nJIDoW8fKP0XwSpbgPPSzoMKYo=";
-          };
-
-          nativeBuildInputs = [ pkgs.cmake ];
-
         };
 
         pyproject = builtins.fromTOML (builtins.readFile ./pyproject.toml);
@@ -160,7 +151,7 @@
              * - GLPK
                - ${pkgs.glpk.version}
              * - Espresso
-               - ${espresso.version}
+               - ${pkgs.espresso.version}
         '';
 
         civerlyDocsHtml = pkgs.stdenv.mkDerivation {
@@ -228,7 +219,7 @@
           pkgs.scipopt-scip
           pkgs.cryptominisat
           pkgs.cadical
-          espresso
+          pkgs.espresso
           pkgs.texliveSmall
         ];
 

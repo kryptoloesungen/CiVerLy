@@ -1,5 +1,26 @@
 {
   "nodes": {
+    "espresso": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": []
+      },
+      "locked": {
+        "lastModified": 1776778250,
+        "narHash": "sha256-g7gZyWgy4MYOpo2BPRNNIpBXOs8eFjfESlT4FjK0ua4=",
+        "owner": "hadipourh",
+        "repo": "espresso",
+        "rev": "409a5a25f1595d6cd2f4acee17ad3e981c7c17cc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hadipourh",
+        "repo": "espresso",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -92,6 +113,7 @@
     },
     "root": {
       "inputs": {
+        "espresso": "espresso",
         "flake-utils": "flake-utils",
         "nix-appimage": "nix-appimage",
         "nixpkgs": "nixpkgs"
