@@ -2257,15 +2257,6 @@ class Cipher:
         STRING += "\\begin{document}\n"
         STRING += "\\maketitle\n"
 
-        if model_options.granularity == GRANULARITY.WORDWISE:
-            STRING += f"Total number of active SBoxes: ${objective_value}$ \n"
-        elif model_options.granularity == GRANULARITY.BITWISE:
-            obj_label = {
-                CRYPTANALYSIS.DIFFERENTIAL: "differential probability",
-                CRYPTANALYSIS.LINEAR:       "linear correlation",
-            }[model_options.cryptanalysis]
-            STRING += f"Maximal {obj_label}: $2^{{-{objective_value}}}$\n"
-
         return STRING
 
     def _write_and_compile_tex(self, string, model_options, _stem=None) -> None:
@@ -2320,7 +2311,20 @@ class Cipher:
         bits_in  = [row[:] for row in trail_node.bits_in]
         bits_out = [row[:] for row in trail_node.bits_out]
 
-        STRING  = f"\\section{{{self.name.replace('_', '\\_')}}}\n"
+
+        STRING  = f"\\newpage\n"
+        STRING += f"\\section{{{self.name.replace('_', '\\_')}}}\n"
+
+        w = int(trail_node.weight)
+        if model_options.granularity == GRANULARITY.WORDWISE:
+            STRING += f"Active SBoxes: ${w}$\n\n"
+        elif model_options.granularity == GRANULARITY.BITWISE:
+            obj_label = {
+                CRYPTANALYSIS.DIFFERENTIAL: "differential probability",
+                CRYPTANALYSIS.LINEAR:       "linear correlation",
+            }[model_options.cryptanalysis]
+            STRING += f"Maximal {obj_label}: $2^{{-{w}}}$\n\n"
+
         STRING += "\\begingroup\n"
 
         if isinstance(self, AESlike):
