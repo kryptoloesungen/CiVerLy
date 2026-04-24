@@ -100,7 +100,7 @@ class Cipher:
             self._return_immediately_ = False
             self.sum_arr_milp = []
             self.sum_arr_sat = []
-            self.result = None
+            self.results = []
             if in_node:
                 self.__name = f"{self.cipher_instance.name}.IN"
                 self.__input_length = self.cipher_instance.input_length
@@ -407,12 +407,6 @@ class Cipher:
         # self._wrd is used for generate_report, to determine the displayed
         # wordsize. Any subclass of WordBasedCipher will overwrite this value
         # with `self.wordsize`
-
-        self.result = None
-        # self.result stores the input/output of the last call to self.analyse
-        # as a dict {"in": [...], "out": [...]}. It is None until analyse is
-        # called for the first time, and is completely overwritten on each
-        # subsequent call.
 
         self.results = []
         # self.results stores all trails found by analyse() when
@@ -1507,9 +1501,7 @@ class Cipher:
         existing behaviour).  When ``number_of_solutions > 1``, the solver
         looks for that many distinct solutions; the method returns a **list**
         of weights (one per solution found), and all trails are available in
-        ``self.results`` (list of ``{"in": …, "out": …}`` dicts).
-        ``self.result`` continues to hold the *last* trail processed, for
-        backward compatibility.
+        ``self.results`` (list of ``{"in": ..., "out": ...}`` dicts).
 
         .. WARNING::
 
@@ -1532,23 +1524,17 @@ class Cipher:
                     n=model_options.number_of_solutions,
                     cipher=self,
                 )
-                for results, weight in all_results:
-                    tn = TrailNode(self, model_options, results)
-                    self.trail_nodes.append(tn)
-                    self.results.append({
-                        "in": list(self.result["in"]),
-                        "out": list(self.result["out"]),
-                        "weight": weight,
-                    })
+                for results_and_weight in all_results:
+                    TrailNode(self, model_options, results_and_weight)
                 return [w for _, w in all_results]
             else:
                 model_options.milp_solver.solve(
                     input_file_name=model_options.path / (self.name + ".mps"),
                     output_file_name=model_options.path / (self.name + ".sol")
                 )
-                results, weight = self.read_results(model_options)
-                TrailNode(self, model_options, results)
-                return weight
+                results_and_weight = self.read_results(model_options)
+                TrailNode(self, model_options, results_and_weight)
+                return results_and_weight[1]
 
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.model(model_options)
@@ -1562,14 +1548,8 @@ class Cipher:
                     n=model_options.number_of_solutions,
                     cipher=self,
                 )
-                for results, weight in all_results:
-                    tn = TrailNode(self, model_options, results)
-                    self.trail_nodes.append(tn)
-                    self.results.append({
-                        "in": list(self.result["in"]),
-                        "out": list(self.result["out"]),
-                        "weight": weight,
-                    })
+                for results_and_weight in all_results:
+                    TrailNode(self, model_options, results_and_weight)
                 return [w for _, w in all_results]
             else:
                 # if no sat_solver has been selected, we generate all cnf-files
@@ -1583,9 +1563,9 @@ class Cipher:
                 if model_options.sat_solver is None:
                     raise NoSolverWarning()
                 else:
-                    results, weight = self.read_results(model_options)
-                    TrailNode(self, model_options, results)
-                    return weight
+                    results_and_weight = self.read_results(model_options)
+                    TrailNode(self, model_options, results_and_weight)
+                    return results_and_weight[1]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1809,7 +1789,7 @@ class Cipher:
             [ 26 , 32] (trying w =  29) : UNSAT
             [ 30 , 32] (trying w =  31) : UNSAT
             32
-            sage: cipher.result['in'] == [1]*cipher.input_length
+            sage: cipher.results[0]['in'] == [1]*cipher.input_length
             True
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
@@ -1947,13 +1927,13 @@ class Cipher:
         if model_options.number_of_solutions == 1:
             # ---- single-solution path (unchanged) --------------------------
             # 1. Get results
-            results, objective_value = self.read_results(model_options)
+            results_and_weight = self.read_results(model_options)
             # 2. Construct TrailNode
-            root_node = TrailNode(self, model_options, results)
+            root_node = TrailNode(self, model_options, results_and_weight)
             # 3. Verify correctness
             root_node.verify_correctness()
             # 4. Generate LaTeX string
-            string  = self._latex_header(model_options, objective_value)
+            string  = self._latex_header(model_options, results_and_weight[1])
             string += root_node.to_latex(model_options)
             string += "\\end{document}\n"
             # 5. Write to .tex file and compile to pdf
@@ -1995,8 +1975,8 @@ class Cipher:
         """
 
         if model_options.number_of_solutions == 1:
-            results, _ = self.read_results(model_options)
-            root_node = TrailNode(self, model_options, results)
+            results_and_weight = self.read_results(model_options)
+            root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
             return root_node
         else:
@@ -2019,7 +1999,7 @@ class Cipher:
         out_idx = len(self.nodes) - 1 if self.is_valid else None
 
         node_dicts = [
-            {**n._to_dict(), "result": n.result}
+            {**n._to_dict(), "results": n.results}
             for i, n in enumerate(self.nodes)
             if out_idx is None or i != out_idx
         ]
@@ -2043,7 +2023,7 @@ class Cipher:
             "nodes": node_dicts,
             "edges": edge_dicts,
             "outputs": output_dicts,
-            "result": self.result,
+            "results": self.results,
         }
 
     def export(self, path):
@@ -2077,15 +2057,15 @@ class Cipher:
             sage: with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
             ....:     tmp = f.name
 
-        Before analysis, ``result`` is ``None`` and round-trips as such::
+        Before analysis, ``results`` is ``[]`` and round-trips as such::
 
             sage: cipher.export(tmp)
             Object 'test' has been exported to ...
             sage: loaded = Cipher.load(tmp)
-            sage: cipher == loaded and loaded.result is None
+            sage: cipher == loaded and loaded.results == []
             True
 
-        After analysis, ``result`` holds the trail bit-pattern and is
+        After analysis, ``results`` holds the trail bit-patterns and is
         preserved verbatim through the JSON file::
 
             sage: from civerly.model_options import *
@@ -2105,7 +2085,7 @@ class Cipher:
             Object 'test' has been exported to ...
             sage: loaded = Cipher.load(tmp)
             sage: os.unlink(tmp)
-            sage: cipher == loaded and loaded.result == cipher.result
+            sage: cipher == loaded and loaded.results == cipher.results
             True
 
         Again with a different cipher type::
@@ -2138,7 +2118,7 @@ class Cipher:
     @staticmethod
     def _populate_from_dict(cipher, d):
         r"""
-        Restore nodes, edges, outputs and result onto an empty cipher shell
+        Restore nodes, edges, outputs and results onto an empty cipher shell
         using data from a dictionary produced by :meth:`_to_dict`.
         """
         from civerly.component import (
@@ -2183,7 +2163,7 @@ class Cipher:
             return class_var._from_dict(nd)
 
         # Restore the IN node's result (index 0)
-        cipher.nodes[0].result = d["nodes"][0]["result"]
+        cipher.nodes[0].results = d["nodes"][0]["results"]
         w = 1 if type(cipher) == Cipher else cipher.wordsize
 
         for node_idx, nd in enumerate(d["nodes"][1:], start=1):
@@ -2195,7 +2175,7 @@ class Cipher:
             ]))
             cipher.add_subcipher(component, incoming)
             if not isinstance(component, Cipher):
-                cipher.nodes[node_idx].result = nd["result"]
+                cipher.nodes[node_idx].results = nd["results"]
 
         output_edges = list(set([
             (a, (x//w, y//w))
@@ -2206,7 +2186,7 @@ class Cipher:
         if output_edges:
             cipher.add_output(output_edges)
 
-        cipher.result = d["result"]
+        cipher.results = d["results"]
 
     @classmethod
     def _from_dict(cls, d):

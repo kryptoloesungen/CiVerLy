@@ -8,7 +8,7 @@ from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.util import _between_brackets
 
 class TrailNode:
-    def __init__(self, cipher_instance, model_options, results,
+    def __init__(self, cipher_instance, model_options, results_and_weight,
                  _parent_depth=None) -> None:
         r"""
         Initialize the recursive TrailNode structure, which contains the results 
@@ -84,6 +84,9 @@ class TrailNode:
         self.name = cipher_instance.name
         self.input_length = cipher_instance.input_length
         self.output_length = cipher_instance.output_length
+
+        cipher_instance.trail_nodes.append(self)
+        results, self.weight = results_and_weight
 
         # obtain dictionaries
         opt_to_attr = {OPTIMIZATION.MILP: 'dictionaries_milp', OPTIMIZATION.SAT: 'dictionaries_sat'}
@@ -209,10 +212,12 @@ class TrailNode:
         self.input  = bits_out[0]
         self.output = bits_out[-1]
 
-        # Set .result on this cipher and each of its direct nodes
-        self.cipher_instance.result = {"in": self.input, "out": self.output}
-        for comp_num, comp in enumerate(nodes):
-            comp.result = _node_results[comp_num]
+        # Set .results on this cipher and each of its direct nodes
+        self.cipher_instance.results.append(
+            {"in": self.input, "out": self.output, "weight": self.weight}
+        )
+        # for comp_num, comp in enumerate(nodes):
+        #     comp.results.append(_node_results[comp_num])
         ################################################
 
         # Iterate through each subcipher
@@ -231,6 +236,19 @@ class TrailNode:
                     tr_ind = int(tr_rest.rstrip(']'))
                     sub_results.setdefault(tr_name, {})[tr_ind] = \
                         solution_bit_value
+                # Compute the weight of this subcipher's trail from the
+                # parent's objective contributions for comp_num.
+                prefix = f"X{comp_num}["
+                if hasattr(self.cipher_instance, 'sum_arr_milp'):
+                    sub_weight = sum(
+                        -factor * results.get(f"X{comp_num}", {}).get(
+                            int(v[len(prefix):-1]), 0
+                        )
+                        for factor, v in self.cipher_instance.sum_arr_milp
+                        if v.startswith(prefix)
+                    )
+                else:
+                    sub_weight = 0
             else:  # SAT
                 sub_results = {}
                 for s, solution_bit_value in results.items():
@@ -239,12 +257,24 @@ class TrailNode:
                         # dictionaries
                         sub_results[dictionaries[comp_num][s]] = \
                             solution_bit_value
+                # Compute the weight of this subcipher's trail from the
+                # parent's objective contributions for comp_num.
+                if hasattr(self.cipher_instance, 'sum_arr_sat'):
+                    comp_vars = set(dictionaries[comp_num].keys())
+                    pr = model_options.sat_precision
+                    sub_weight = sum(
+                        factor * results.get(sat_var, 0)
+                        for factor, sat_var in self.cipher_instance.sum_arr_sat
+                        if sat_var in comp_vars
+                    ) / (10 ** pr)
+                else:
+                    sub_weight = 0
             # recurse
             if not isinstance(comp, Component):
                 self.children.append(TrailNode(
                     comp,
                     model_options=model_options,
-                    results=sub_results,
+                    results_and_weight=(sub_results, sub_weight),
                     _parent_depth=depths[comp_num]
                 ))
 
