@@ -14,7 +14,7 @@ class TrailNode:
         Initialize the recursive TrailNode structure, which contains the results 
         of the last analysis with CiVerLy.
         Called in :meth:`Cipher.analysis` and automatically adds
-        the `.result` attribute to `cipher_instance` and its subciphers.
+        the `.results` attribute to `cipher_instance` and its subciphers.
 
         INPUT:
 
@@ -59,7 +59,7 @@ class TrailNode:
             ....:    time_limit=None)
             ...
             sage: results, weight = cipher.read_results(model_options)
-            sage: cipher.result is None
+            sage: cipher.results == []
             True
             
         Initialize TrailNode:
@@ -67,7 +67,7 @@ class TrailNode:
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.trail import TrailNode
             sage: node = TrailNode(cipher, model_options, results)
-            sage: cipher.result
+            sage: cipher.results[0]
             {'in': [...], 'out': [...]}
             sage: import shutil 
             sage: shutil.rmtree(tmpdir)
