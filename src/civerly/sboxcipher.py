@@ -474,14 +474,15 @@ class SBoxCipher(Cipher):
                 master_milp.add_constraint(lhs >= 1 - n_active)
         # -----------------------------------
 
+        self.X = X
 
         # change back s.t. toplevel milp is written to file
         model_options, model_options_ = model_options_, model_options
 
-        return self._finish_milp(model_options, master_milp, X,
+        return self._finish_milp(model_options, master_milp,
                                  _first_iter=_first_iter)
 
-    def _finish_milp(self, model_options, milp, X, _first_iter=False):
+    def _finish_milp(self, model_options, milp, _first_iter=False):
         r"""
         Finish the given ``MixedIntegerLinearProgram``. That is, add a
         constraint that ensures that the input is active and add the objective
@@ -524,7 +525,7 @@ class SBoxCipher(Cipher):
         for factor, entry in self.sum_arr_milp:
             # negative factor since we want to MINIMIZE the MILP
             # while MAXIMIZING the propagation probability.
-            summation_result += -factor * X[
+            summation_result += -factor * self.X[
                 _before_brackets(entry)][_between_brackets(entry)]
 
         if len(self.MILP_IN.items()) == 0:

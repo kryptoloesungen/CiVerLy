@@ -421,6 +421,8 @@ class Cipher:
         # solution files.
         
         self._blocking_constraints = []
+        self.milp_model = None
+        self.sat_model = None
 
     # Get-functions of various attributes:
     # --------------------------------------------------
@@ -1502,8 +1504,31 @@ class Cipher:
         self.results = []
         self.trail_nodes = []
 
+        INPUT_STRING = (
+            "This cipher already stores a model from a previous analysis.\n"
+            "Do you want to delete it and model from scratch? [Y/n] "
+        )
+
         if model_options.optimization == OPTIMIZATION.MILP:
-            self.model(model_options)
+            if self.milp_model is None:
+                self._blocking_constraints = []
+                self.model(model_options)
+            else:
+                # loop until proper answer is given
+                answer = None
+                while answer not in ('N', 'Y', 'n', 'y', ''):
+                    answer = input(INPUT_STRING)
+                # only model from scratch if user wants to overwrite old model
+                if answer not in ('N', 'n'):
+                    self._blocking_constraints = []
+                    self.model(model_options)
+                else:
+                    print(
+                        "Using existing MILP model, make sure it is up to date!"
+                    )
+                    self._finish_milp(
+                        model_options, self.milp_model
+                    )
             if model_options.milp_solver is None:
                 raise NoSolverWarning()
             if model_options.number_of_solutions > 1:
@@ -1527,7 +1552,24 @@ class Cipher:
                 return results_and_weight[1]
 
         elif model_options.optimization == OPTIMIZATION.SAT:
-            self.model(model_options)
+            if self.sat_model is None:
+                self.model(model_options)
+            else:
+                # loop until proper answer is given
+                answer = None
+                while answer not in ('N', 'Y', 'n', 'y', ''):
+                    answer = input(INPUT_STRING)
+                # only model from scratch if user wants to overwrite old model
+                if answer not in ('N', 'n'):
+                    self._blocking_constraints = []
+                    self.model(model_options)
+                else:
+                    print(
+                        "Using existing SAT model, make sure it is up to date!"
+                    )
+                    self._finish_sat(
+                        model_options, self.sat_model
+                    )
             if self._return_immediately_:
                 return
             if model_options.number_of_solutions > 1:
