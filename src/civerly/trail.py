@@ -241,9 +241,9 @@ class TrailNode:
                 prefix = f"X{comp_num}["
                 if hasattr(self.cipher_instance, 'sum_arr_milp'):
                     sub_weight = sum(
-                        -factor * results.get(f"X{comp_num}", {}).get(
+                        -factor * int(results.get(f"X{comp_num}", {}).get(
                             int(v[len(prefix):-1]), 0
-                        )
+                        ))
                         for factor, v in self.cipher_instance.sum_arr_milp
                         if v.startswith(prefix)
                     )
