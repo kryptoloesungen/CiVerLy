@@ -381,7 +381,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
             sum_arr = json.load(_f)
 
         sum_vars = {int(var) for _, var in sum_arr}
-        # Also block on SAT_IN (vars 1 … input_length) to distinguish trails
+        # Also block on SAT_IN (vars 1 ... input_length) to distinguish trails
         # with identical S-box activity but different input differences.
         input_vars: set = (
             set(range(1, cipher.input_length + 1))
@@ -390,8 +390,8 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         blocking_var_list = sorted(sum_vars | input_vars)
 
         # --- Step 2: enumerate additional solutions -------------------------
-        sol_idx = 1
-        while sol_idx < n:
+        solution_index = 1
+        while solution_index < n:
             prev_result = all_results[-1][0]
 
             # Build blocking clause: negate each variable according to its
@@ -410,7 +410,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
 
             tmp_sat_file = (
                 input_file_name.parent
-                / f"{input_file_name.stem}_sol{sol_idx}.sat"
+                / f"{input_file_name.stem}_sol{solution_index}.sat"
             )
 
             status = self.invoke(input_file_name, tmp_sat_file,
@@ -459,7 +459,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
 
             result, w = self.process_solution_file(tmp_sat_file)
             all_results.append((result, w))
-            sol_idx += 1
+            solution_index += 1
 
         return all_results
 
@@ -787,7 +787,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         Find up to *n* solutions using a by-hand blocking approach.
 
         After each solve the solution is converted to a no-good linear
-        constraint (via ``cipher._add_milp_no_good``), the MILP model is
+        constraint (via ``cipher._exclude_solution``), the MILP model is
         regenerated (via ``cipher.model``), and SCIP is invoked again.
 
         When all solutions at the current optimal weight are exhausted, the
@@ -803,15 +803,15 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         all_results = []
         current_weight = None  # weight of the most recently found solution
-        sol_idx = 0
+        solution_index = 0
 
-        while sol_idx < n:
-            if sol_idx == 0:
+        while solution_index < n:
+            if solution_index == 0:
                 sol_file = output_file_name
             else:
                 sol_file = (
                     output_file_name.parent
-                    / f"{output_file_name.stem}_{sol_idx}{output_file_name.suffix}"
+                    / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
                 )
 
             self.status = SOLVING_STATUS.SUCCESS
@@ -827,7 +827,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                 if orig_sr is None:
                     # Without an explicit range the solver minimises freely and
                     # naturally advances to the next-best weight via the
-                    # accumulated no-good constraints.  Infeasibility here means
+                    # blocking constraints. Infeasibility here means
                     # no solutions exist at any weight — stop.
                     break
                 # Explicit solve_range: raise the lower bound by one so the
@@ -840,14 +840,14 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                 model_options.solve_range = (current_weight, orig_sr[1])
                 cipher.model(model_options)
                 model_options.solve_range = orig_sr
-                continue  # retry at the new weight without advancing sol_idx
+                continue  # retry at the new weight without advancing solution_index
 
             all_results.append((r, w))
             current_weight = w
-            sol_idx += 1
+            solution_index += 1
 
-            if sol_idx < n and cipher is not None:
-                cipher._add_milp_no_good(r)
+            if solution_index < n and cipher is not None:
+                cipher._exclude_solution(r)
                 cipher.model(model_options)
 
         return all_results
@@ -991,15 +991,15 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
         all_results = []
         current_weight = None  # weight of the most recently found solution
-        sol_idx = 0
+        solution_index = 0
 
-        while sol_idx < n:
-            if sol_idx == 0:
+        while solution_index < n:
+            if solution_index == 0:
                 sol_file = output_file_name
             else:
                 sol_file = (
                     output_file_name.parent
-                    / f"{output_file_name.stem}_{sol_idx}{output_file_name.suffix}"
+                    / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
                 )
 
             self.status = SOLVING_STATUS.SUCCESS
@@ -1028,14 +1028,14 @@ class GLPK_CVL(MILP_SOLVER_CVL):
                 model_options.solve_range = (current_weight, orig_sr[1])
                 cipher.model(model_options)
                 model_options.solve_range = orig_sr
-                continue  # retry at the new weight without advancing sol_idx
+                continue  # retry at the new weight without advancing solution_index
 
             all_results.append((r, w))
             current_weight = w
-            sol_idx += 1
+            solution_index += 1
 
-            if sol_idx < n and cipher is not None:
-                cipher._add_milp_no_good(r)
+            if solution_index < n and cipher is not None:
+                cipher._exclude_solution(r)
                 cipher.model(model_options)
 
         return all_results

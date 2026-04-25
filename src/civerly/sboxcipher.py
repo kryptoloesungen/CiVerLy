@@ -461,74 +461,27 @@ class SBoxCipher(Cipher):
                             X[_before_brackets(tmp)][_between_brackets(tmp)] == 0
                         )
 
-        # Apply user-added equality constraints and no-good blocking constraints
-        self._apply_custom_constraints_milp(master_milp, X)
-
-        self.X = X
-
-        # change back s.t. toplevel milp is written to file
-        model_options, model_options_ = model_options_, model_options
-
-        return self._finish_milp(model_options, master_milp,
-                                 _first_iter=_first_iter)
-
-    def _apply_custom_constraints_milp(self, master_milp, X) -> None:
-        r"""
-        Translate ``self._custom_constraints`` into MILP equality constraints
-        and ``self._blocking_constraints`` into linear no-good cuts, then add
-        them all to *master_milp*.
-
-        Custom constraints reference model variables through
-        ``self.inv_dictionaries_milp``, which must already be populated before
-        this method is called (i.e., call it at the end of the component loop
-        in :meth:`_model_milp`).
-
-        Each blocking constraint is a list of ``(comp_num, var_idx, val)``
-        triples that collectively describe one previously found solution.  The
-        corresponding no-good linear cut is::
-
-            sum_{val=0} X[i][j] − sum_{val=1} X[i][j]  ≥  1 − n_active
-
-        which prevents the exact same assignment from reoccurring.
-        """
-        # ---- custom equality constraints -----------------------------------
-        for lhs_parsed, op, rhs_parsed in self._custom_constraints:
-
-            def resolve_milp(parsed):
-                if parsed[0] == "const":
-                    return parsed[1]   # plain integer
-                _, node_idx, side, bit_idx = parsed
-                key = f"{side}[{bit_idx}]"
-                master_key = self.inv_dictionaries_milp[node_idx].get(key)
-                if master_key is None:
-                    raise ValueError(
-                        f"nodes[{node_idx}].{side}[{bit_idx}] not found in "
-                        "MILP dictionaries — check node index and bit index."
-                    )
-                return X[_before_brackets(master_key)][
-                    _between_brackets(master_key)
-                ]
-
-            lhs_var = resolve_milp(lhs_parsed)
-            rhs_var = resolve_milp(rhs_parsed)
-
-            if op == "==":
-                master_milp.add_constraint(lhs_var == rhs_var)
-
-        # ---- no-good blocking constraints ----------------------------------
+        # apply blocking constraints
+        # -----------------------------------
         for bc in self._blocking_constraints:
-            if not bc:
-                continue
             n_active = sum(1 for (_, _, v) in bc if v == 1)
-            # Build  lhs = Σ_{val=0} x_ij  −  Σ_{val=1} x_ij
+            # Build lhs = \sum_{val=0} x_ij  − \sum_{val=1} x_ij
             lhs = None
             for (i, j, val) in bc:
                 term = X[i][j] if val == 0 else ((-1) * X[i][j])
                 lhs = term if lhs is None else lhs + term
             if lhs is not None:
                 master_milp.add_constraint(lhs >= 1 - n_active)
+        # -----------------------------------
 
-    def _finish_milp(self, model_options, milp, _first_iter=False):
+
+        # change back s.t. toplevel milp is written to file
+        model_options, model_options_ = model_options_, model_options
+
+        return self._finish_milp(model_options, master_milp, X,
+                                 _first_iter=_first_iter)
+
+    def _finish_milp(self, model_options, milp, X, _first_iter=False):
         r"""
         Finish the given ``MixedIntegerLinearProgram``. That is, add a
         constraint that ensures that the input is active and add the objective
@@ -571,7 +524,7 @@ class SBoxCipher(Cipher):
         for factor, entry in self.sum_arr_milp:
             # negative factor since we want to MINIMIZE the MILP
             # while MAXIMIZING the propagation probability.
-            summation_result += -factor * self.X[
+            summation_result += -factor * X[
                 _before_brackets(entry)][_between_brackets(entry)]
 
         if len(self.MILP_IN.items()) == 0:
@@ -611,4 +564,5 @@ class SBoxCipher(Cipher):
             with suppress_output():
                 milp.write_mps(str(model_options.path / (self.name + ".mps")))
 
+        self.milp_model = milp
         return milp
