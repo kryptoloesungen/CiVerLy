@@ -1514,12 +1514,7 @@ class Cipher:
                 self._blocking_constraints = []
                 self.model(model_options)
             else:
-                # loop until proper answer is given
-                answer = None
-                while answer not in ('N', 'Y', 'n', 'y', ''):
-                    answer = input(INPUT_STRING)
-                # only model from scratch if user wants to overwrite old model
-                if answer not in ('N', 'n'):
+                if model_options.overwrite:
                     self._blocking_constraints = []
                     self.model(model_options)
                 else:
@@ -1555,12 +1550,7 @@ class Cipher:
             if self.sat_model is None:
                 self.model(model_options)
             else:
-                # loop until proper answer is given
-                answer = None
-                while answer not in ('N', 'Y', 'n', 'y', ''):
-                    answer = input(INPUT_STRING)
-                # only model from scratch if user wants to overwrite old model
-                if answer not in ('N', 'n'):
+                if model_options.overwrite:
                     self._blocking_constraints = []
                     self.model(model_options)
                 else:
