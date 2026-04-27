@@ -58,7 +58,7 @@ class TrailNode:
             ....:    model_options=model_options,
             ....:    time_limit=None)
             ...
-            sage: results, weight = cipher.read_results(model_options)
+            sage: results_and_weight = cipher.read_results(model_options)
             sage: cipher.results == []
             True
             
@@ -66,9 +66,9 @@ class TrailNode:
             
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.trail import TrailNode
-            sage: node = TrailNode(cipher, model_options, results)
+            sage: node = TrailNode(cipher, model_options, results_and_weight)
             sage: cipher.results[0]
-            {'in': [...], 'out': [...]}
+            {'in': [...], 'out': [...], 'weight': ...}
             sage: import shutil 
             sage: shutil.rmtree(tmpdir)
         
@@ -310,7 +310,6 @@ class TrailNode:
 
         TESTS:
 
-            sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.trail import TrailNode
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.model_options import * 
@@ -325,10 +324,11 @@ class TrailNode:
             ....:     sat_solver=CRYPTOMINISAT_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
-            sage: cipher.analyse(model_options)
+            sage: cipher.analyse(model_options) # optional - cryptominisat espresso
             ...
-            sage: results, weight = cipher.read_results(model_options)
-            sage: TrailNode(cipher, model_options, results)
+            sage: # optional - cryptominisat espresso
+            sage: results_and_weight = cipher.read_results(model_options)
+            sage: TrailNode(cipher, model_options, results_and_weight)
             -> speck : ... -> ...
                 -> speck_round : ... -> ...
                 -> speck_round : ... -> ...
@@ -382,6 +382,7 @@ class TrailNode:
 
     Analyse the cipher:
 
+            sage: # optional - scip
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
@@ -393,10 +394,10 @@ class TrailNode:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND,
             ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
-            sage: cipher.analyse(model_options) # optional - scip
+            sage: cipher.analyse(model_options)
             206 variables and 1711 constraints were written to ...
             0
-            sage: cipher.get_trail(model_options) # optional - scip
+            sage: cipher.get_trail(model_options)
             -> cipher : 00... -> 00...
                 -> sub-cipher-6-bit : 00 -> 00
                     -> sub-sub-cipher-3-bit : 0 -> 0
