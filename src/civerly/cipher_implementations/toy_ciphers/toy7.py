@@ -42,6 +42,54 @@ class Toy7:
             3
             Output file in: ...
 
+            sage: # optional - gurobi # optional - espresso
+            sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
+            ....:   import Toy7
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   cipher = Toy7()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       milp_solver=GUROBI_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       solve_range=(0, 10),
+            ....:       number_of_solutions=1,
+            ....:       path=Path(tmpdir))
+            sage: cipher.analyse(model_options=model_options)
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            Using existing file ..., make sure it is up to date!
+            1356 variables and 2507 constraints were written to '...'
+            3
+        
+        Try to find multiple solutions with gurobi:
+
+            sage: # optional - gurobi # optional - espresso
+            sage: del cipher
+            sage: cipher = Toy7()
+            sage: model_options.number_of_solutions = 5
+            sage: cipher.analyse(model_options=model_options)
+            ...
+            [3, 3, 3, 3, 3]
+            sage: # optional - gurobi # optional - espresso
+            sage: del cipher
+            sage: cipher = Toy7()
+            sage: model_options.number_of_solutions = 30
+            sage: res =cipher.analyse(model_options=model_options)
+            sage: res == [3]*30
+            True
+
+
+        Delete files:
+
+            sage: # optional - gurobi # optional - espresso
+            sage: import shutil 
+            sage: shutil.rmtree(tmpdir)
+            
         """
 
         cipher = SBoxCipher(24, 64, name="Toy7")

@@ -591,14 +591,25 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
                        model_options=None, n=1, cipher=None,
                        time_limit=None):
         r"""
-        Find up to *n* solutions using Gurobi's native solution pool.
+        Find up to *n* solutions using Gurobi's solution pool with weight
+        enforcement.
 
-        Gurobi parameters used:
+        Strategy:
 
-        - ``PoolSolutions=n``   – keep at most *n* solutions.
-        - ``PoolSearchMode=2``  – systematically search for the *n* best
-          solutions (lowest objective value).
-        - ``SolFiles=<prefix>`` – write pool solutions as
+        1. Run a standard solve to find the optimal weight *W*.
+        2. Rebuild the model with an equality constraint ``sum_arr == W``
+           and run Gurobi's pool (``PoolSearchMode=2``, ``PoolGap=0``) to
+           collect up to *n* solutions at that exact weight.
+        3. If fewer than *n* solutions are found, increment *W* by one and
+           repeat from step 2 until *n* solutions are collected or the
+           upper bound of ``model_options.solve_range`` is reached.
+
+        Gurobi pool parameters used:
+
+        - ``PoolSolutions=k``  – keep at most *k* more solutions.
+        - ``PoolSearchMode=2`` – systematically enumerate pool solutions.
+        - ``PoolGap=0``        – only accept solutions matching the weight.
+        - ``SolFiles=<prefix>``– write pool solutions as
           ``<prefix>0.sol``, ``<prefix>1.sol``, …
 
         Returns a list of ``(results_dict, objective_value)`` pairs ordered
@@ -610,62 +621,93 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         parent = output_file_name.parent
         stem = output_file_name.stem
         log_file_name = parent / f"{stem}_{self.name}.log"
-
-        # Pool solution files will be <pool_prefix>0.sol, <pool_prefix>1.sol …
         pool_prefix = parent / f"{stem}_pool"
 
-        command = [
-            "gurobi_cl",
-            f"ResultFile={output_file_name}",
-            f"LogFile={log_file_name}",
-            f"PoolSolutions={n}",
-            "PoolSearchMode=2",
-            f"SolFiles={pool_prefix}",
-            str(input_file_name),
-        ]
-        if time_limit is not None:
-            command.insert(2, f"TimeLimit={time_limit}")
+        # Step 1: find the optimal weight via a standard solve
+        self.status = SOLVING_STATUS.SUCCESS
+        self.invoke(input_file_name, output_file_name,
+                    log_file_name=log_file_name, time_limit=time_limit)
+        first_result, optimal_weight = self.process_solution_file(
+            output_file_name
+        )
 
-        # Disable CIVERLY_DISABLE env-var check (same as invoke())
-        ENV_DISABLE_PREFIX = "CIVERLY_DISABLE_"
-        if ENV_DISABLE_PREFIX + self.name in os.environ:
-            raise ValueError(
-                f"{self.name} was disabled by setting environment variable "
-                f"{ENV_DISABLE_PREFIX + self.name}"
-            )
+        if n <= 1 or cipher is None or model_options is None:
+            return [(first_result, optimal_weight)]
 
-        with suppress_output():
-            process = subprocess.Popen(command)
-            errno = process.wait()
-
-        if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
-
-        if log_file_name.exists():
-            with open(log_file_name, 'r') as file:
-                content = file.read()
-            if re.search(self.timeout_string, content, re.MULTILINE):
-                self.status = SOLVING_STATUS.TIMEOUT
-
-        # Collect all pool solution files that were created
+        # Step 2: enforce equality weight and collect solutions via pooling
+        orig_sr = model_options.solve_range
+        current_weight = optimal_weight
         all_results = []
-        for i in range(n):
-            sol_file = parent / f"{stem}_pool{i}.sol"
-            if not sol_file.exists():
-                break
-            try:
-                r, w = self.process_solution_file(sol_file)
-                all_results.append((r, w))
-            except (AssertionError, ValueError):
+
+        while len(all_results) < n:
+            if orig_sr is not None and (
+                current_weight < orig_sr[0] or current_weight > orig_sr[1]
+            ):
                 break
 
-        # Fall back to the main solution file when no pool files exist
-        if not all_results and output_file_name.exists():
-            try:
-                r, w = self.process_solution_file(output_file_name)
-                all_results.append((r, w))
-            except (AssertionError, ValueError):
-                pass
+            remaining = n - len(all_results)
+
+            # Rebuild the model with sum_arr == current_weight
+            model_options.solve_range = (current_weight, current_weight)
+            cipher.model(model_options)
+            model_options.solve_range = orig_sr
+
+            command = [
+                "gurobi_cl",
+                f"ResultFile={output_file_name}",
+                f"LogFile={log_file_name}",
+                f"PoolSolutions={remaining}",
+                "PoolSearchMode=2",
+                "PoolGap=0",
+                f"SolFiles={pool_prefix}",
+                str(input_file_name),
+            ]
+            if time_limit is not None:
+                command.insert(2, f"TimeLimit={time_limit}")
+
+            self.status = SOLVING_STATUS.SUCCESS
+            with suppress_output():
+                process = subprocess.Popen(command)
+                errno = process.wait()
+
+            if errno != 0:
+                self.status = SOLVING_STATUS.ERROR
+
+            if log_file_name.exists():
+                with open(log_file_name, 'r') as file:
+                    content = file.read()
+                if re.search(self.timeout_string, content, re.MULTILINE):
+                    self.status = SOLVING_STATUS.TIMEOUT
+
+            # Collect pool solution files for this weight level
+            results_for_current_weight = []
+            for i in range(remaining):
+                sol_file = parent / f"{stem}_pool_{i}.sol"
+                if not sol_file.exists():
+                    break
+                try:
+                    rw = self.process_solution_file(sol_file)
+                    results_for_current_weight.append(rw)
+                except (AssertionError, ValueError):
+                    continue
+
+            # Fall back to the main solution file when no pool files exist
+            if results_for_current_weight == [] and output_file_name.exists():
+                try:
+                    rw = self.process_solution_file(output_file_name)
+                    results_for_current_weight.append(rw)
+                    break
+                except (AssertionError, ValueError):
+                    pass
+
+            all_results += results_for_current_weight
+
+            # If the pool returned fewer than asked, all solutions at this
+            # weight are exhausted – move to the next weight level
+            if len(results_for_current_weight) < remaining:
+                current_weight += 1
+            else:
+                break
 
         return all_results
 
