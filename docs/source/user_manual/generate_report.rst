@@ -173,7 +173,7 @@ Now, in regards to the tree structure explained above, calling the method ``get_
 
 .. code-block:: sage
 
-   sage: cipher.get_trail(model_options)
+   sage: cipher.get_trail(model_options) # optional: scip
    -> cipher : 00f -> 00f
       -> sub-cipher-6-bit : 00 -> 00
          -> sub-sub-cipher-3-bit : 0 -> 0
@@ -184,7 +184,7 @@ Now, in regards to the tree structure explained above, calling the method ``get_
    :hide:
 
    sage: import shutil
-   sage: shutil.rmtree("./CVL-Example")
+   sage: shutil.rmtree("./CVL-Example") # optional: scip
 
 
 PDF
