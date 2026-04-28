@@ -96,19 +96,19 @@ class Cipher:
                 True
 
             """
-            self.cipher_instance = cipher_instance
+            self._cipher_wordsize = getattr(cipher_instance, 'wordsize', None)
             self._return_immediately_ = False
             self.sum_arr_milp = []
             self.sum_arr_sat = []
             self.results = []
             if in_node:
-                self.__name = f"{self.cipher_instance.name}.IN"
-                self.__input_length = self.cipher_instance.input_length
-                self.__output_length = self.cipher_instance.input_length
+                self.__name = f"{cipher_instance.name}.IN"
+                self.__input_length = cipher_instance.input_length
+                self.__output_length = cipher_instance.input_length
             else:
-                self.__name = f"{self.cipher_instance.name}.OUT"
-                self.__input_length = self.cipher_instance.output_length
-                self.__output_length = self.cipher_instance.output_length
+                self.__name = f"{cipher_instance.name}.OUT"
+                self.__input_length = cipher_instance.output_length
+                self.__output_length = cipher_instance.output_length
             self.in_node = in_node
 
         def __hash__(self):
@@ -250,7 +250,7 @@ class Cipher:
             Component._init_model(self, model_options)
             if model_options.granularity == GRANULARITY.WORDWISE:
                 for i in range(
-                    self.input_length // self.cipher_instance.wordsize
+                    self.input_length // self._cipher_wordsize
                 ):
                     self.milp.add_constraint(
                         self.MILP_OUT[i] == self.MILP_IN[i]
