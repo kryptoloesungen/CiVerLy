@@ -267,6 +267,16 @@ class SPECK_CVL:
         speck_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
         # -------------------------------------------------------- #
 
+        # Collect references to all RoundkeyXOR_CVL components for key schedule
+        # support. Each entry points to the KeyAdd component inside the
+        # corresponding round node. Set key_schedule to a callable returning
+        # R round keys to enable set_master_key(k).
+        # -------------------------------------------------------- #
+        speck_cipher._rk_components = [
+            speck_cipher.nodes[r+1].nodes[node_after_keyadd] for r in range(R)
+        ]
+        speck_cipher.key_schedule = None
+
         self.speck_cipher = speck_cipher
 
     def __new__(cls, *args, **kwargs):
