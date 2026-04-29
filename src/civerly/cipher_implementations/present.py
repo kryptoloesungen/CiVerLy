@@ -419,6 +419,18 @@ class PRESENT_CVL:
         present_cipher.add_output([(cipher_node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
 
+        # Collect references to all RoundkeyXOR_CVL components for key schedule
+        # support. Each entry points to the KeyAdd component inside the
+        # corresponding round node, plus the final whitening key at nodes[R+1].
+        # Set key_schedule to a callable returning R+1 round keys to enable
+        # set_master_key(k).
+        # ------------------------------------------------ #
+        present_cipher._rk_components = (
+            [present_cipher.nodes[r+1].nodes[node_rk] for r in range(R)]
+            + [present_cipher.nodes[R+1]]
+        )
+        present_cipher.key_schedule = None
+
         self.present_cipher = present_cipher
 
     def __new__(cls, *args, **kwargs):
