@@ -419,7 +419,6 @@ class Cipher:
         # Used by generate_report() and get_trail() to avoid re-reading
         # solution files.
         
-        self._blocking_constraints = []
         self.milp = None
         self.sat = None
         self.X = None
@@ -1504,18 +1503,11 @@ class Cipher:
         self.results = []
         self.trail_nodes = []
 
-        INPUT_STRING = (
-            "This cipher already stores a model from a previous analysis.\n"
-            "Do you want to delete it and model from scratch? [Y/n] "
-        )
-
         if model_options.optimization == OPTIMIZATION.MILP:
             if self.milp is None:
-                self._blocking_constraints = []
                 self.model(model_options)
             else:
                 if model_options.overwrite:
-                    self._blocking_constraints = []
                     self.model(model_options)
                 else:
                     print(
@@ -1528,11 +1520,8 @@ class Cipher:
                 raise NoSolverWarning()
             if model_options.number_of_solutions > 1:
                 all_results = model_options.milp_solver.solve_multiple(
-                    input_file_name=model_options.path / (self.name + ".mps"),
-                    output_file_name=model_options.path / (self.name + ".sol"),
                     model_options=model_options,
-                    n=model_options.number_of_solutions,
-                    cipher=self,
+                    cipher=self
                 )
                 for results_and_weight in all_results:
                     TrailNode(self, model_options, results_and_weight)
@@ -1551,7 +1540,6 @@ class Cipher:
                 self.model(model_options)
             else:
                 if model_options.overwrite:
-                    self._blocking_constraints = []
                     self.model(model_options)
                 else:
                     print(
@@ -1564,11 +1552,8 @@ class Cipher:
                 return
             if model_options.number_of_solutions > 1:
                 all_results = model_options.sat_solver.solve_multiple(
-                    input_file_name=model_options.path / (self.name + ".cnf"),
-                    output_file_name=model_options.path / (self.name + ".sat"),
                     model_options=model_options,
-                    n=model_options.number_of_solutions,
-                    cipher=self,
+                    cipher=self
                 )
                 for results_and_weight in all_results:
                     TrailNode(self, model_options, results_and_weight)
@@ -1732,29 +1717,6 @@ class Cipher:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
             )
-
-    def _exclude_solution(self, results: dict) -> None:
-        r"""
-        Convert a MILP solution *results* dict (as returned by
-        ``process_solution_file``) into a blocking constraint and
-        append it to ``self._blocking_constraints``.
-
-        The no-good ensures the exact solution cannot repeat on re-solve.
-        It is expressed as a list of ``(comp_num, var_idx, value)`` triples;
-        :meth:`civerly.sboxcipher.SBoxCipher._model_milp` adds the
-        corresponding linear constraint during the next model build.
-        """
-        bc = []
-        for var_name, sub_dict in results.items():
-            if var_name in ("IN", "OUT"):
-                continue
-            try:
-                i = int(var_name[1:])   # "X3" -> 3
-            except (ValueError, IndexError):
-                continue
-            for j, val in sub_dict.items():
-                bc.append((i, int(j), int(val)))
-        self._blocking_constraints.append(bc)
 
     def generate_report(self, model_options):
         """
