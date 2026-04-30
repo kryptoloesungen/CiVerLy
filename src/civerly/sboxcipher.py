@@ -571,9 +571,37 @@ class SBoxCipher(Cipher):
         It is expressed as a list of ``(comp_num, var_idx, value)`` triples;
         :meth:`civerly.sboxcipher.SBoxCipher._model_milp` adds the
         corresponding linear constraint during the next model build.
+
+        TESTS::
+
+            sage: # optional - scip, espresso
+            sage: from civerly.cipher_implementations.present \
+            ....:   import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: present_cipher = PRESENT_CVL(R=4)
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     number_of_solutions=2,
+            ....:     path=Path(tmpdir))
+            ....:   present_cipher.analyse(model_options)
+            ...
+            [12, 12]
+            sage: t1, t2 = present_cipher.get_trail(model_options)
+            sage: t1 == t2
+            False 
+
+
         """
-        bc = []
-        n_active = 0
+        from civerly.util import translate_var
+
         for var_name, sub_dict in results.items():
             if var_name in ("IN", "OUT"):
                 continue
@@ -581,16 +609,12 @@ class SBoxCipher(Cipher):
                 # 'X3' -> 3
                 i = int(var_name[1:])
 
+            # add \sum_{x_ij = 0} x_ij + \sum_{x_ij = 1} (1 - x_ij) \geq 1 
+            lhs = 0
+            n_active = 0
             for j, val in sub_dict.items():
-                assert val in (0, 1)
+                assert val in (0, 1), f"{val} is not binary"
                 n_active += val
-                bc.append((i, int(j), int(val)))
+                lhs += ((-1) ** val) * translate_var(self, i, self.X[i][j])
 
-        n_active = sum(1 for (_, _, v) in bc if v == 1)
-        # Build lhs = \sum_{val=0} x_ij  − \sum_{val=1} x_ij
-        lhs = None
-        for (i, j, val) in bc:
-            term = self.X[i][j] if val == 0 else ((-1) * self.X[i][j])
-            lhs = term if lhs is None else lhs + term
-        if lhs is not None:
             self.milp.add_constraint(lhs >= 1 - n_active)
