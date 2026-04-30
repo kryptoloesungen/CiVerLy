@@ -48,7 +48,6 @@ import json
 import subprocess
 import glob
 from math import ceil, sqrt
-import re
 
 from civerly.component import Component
 from civerly.model_options import OPTIMIZATION, GRANULARITY
@@ -421,8 +420,9 @@ class Cipher:
         # solution files.
         
         self._blocking_constraints = []
-        self.milp_model = None
-        self.sat_model = None
+        self.milp = None
+        self.sat = None
+        self.X = None
 
     # Get-functions of various attributes:
     # --------------------------------------------------
@@ -1476,7 +1476,7 @@ class Cipher:
                 f"'{str(model_options.path / (self.name + '.cnf'))}'"
             )
 
-        self.sat_model = sat
+        self.sat = sat
         return sat
 
     def analyse(self, model_options):
@@ -1510,7 +1510,7 @@ class Cipher:
         )
 
         if model_options.optimization == OPTIMIZATION.MILP:
-            if self.milp_model is None:
+            if self.milp is None:
                 self._blocking_constraints = []
                 self.model(model_options)
             else:
@@ -1522,7 +1522,7 @@ class Cipher:
                         "Using existing MILP model, make sure it is up to date!"
                     )
                     self._finish_milp(
-                        model_options, self.milp_model
+                        model_options, self.milp
                     )
             if model_options.milp_solver is None:
                 raise NoSolverWarning()
@@ -1547,7 +1547,7 @@ class Cipher:
                 return results_and_weight[1]
 
         elif model_options.optimization == OPTIMIZATION.SAT:
-            if self.sat_model is None:
+            if self.sat is None:
                 self.model(model_options)
             else:
                 if model_options.overwrite:
@@ -1558,7 +1558,7 @@ class Cipher:
                         "Using existing SAT model, make sure it is up to date!"
                     )
                     self._finish_sat(
-                        model_options, self.sat_model
+                        model_options, self.sat
                     )
             if self._return_immediately_:
                 return
