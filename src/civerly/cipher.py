@@ -95,7 +95,7 @@ class Cipher:
                 True
 
             """
-            self._cipher_wordsize = getattr(cipher_instance, 'wordsize', None)
+            self._cipher_wordsize = getattr(cipher_instance, 'wordsize', 1)
             self._return_immediately_ = False
             self.sum_arr_milp = []
             self.sum_arr_sat = []

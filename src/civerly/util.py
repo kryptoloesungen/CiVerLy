@@ -712,6 +712,100 @@ def _to_dict(flat_results):
     return nested
 
 
+def translate_var(cipher, node, local_var):                                                                                                        
+    r"""                                                                                                                                    
+    Translate a component-local model variable into the corresponding variable
+    in the cipher's master model (``cipher.milp`` or ``cipher.sat``).
+
+    Variables on ``cipher.nodes[k]`` (``MILP_IN``, ``MILP_OUT``, ``SAT_IN``,
+    ``SAT_OUT``) are local to each component's sub-model and cannot be used
+    directly in the master model.  This function performs the remapping.
+
+    INPUT:
+
+        - ``cipher`` -- a modeled :class:`civerly.cipher.Cipher` or
+          :class:`civerly.sboxcipher.SBoxCipher`; must have been modeled
+          (i.e., ``cipher.milp`` / ``cipher.sat`` must exist)
+
+        - ``node`` -- the component owning the variable: either the component
+          instance itself or its integer index in ``cipher.nodes``
+
+        - ``local_var`` -- the component-local variable to translate:
+          an integer SAT variable (from ``SAT_IN`` / ``SAT_OUT``) or a
+          SageMath MILP variable (from ``MILP_IN`` / ``MILP_OUT``)
+
+    OUTPUT:
+
+        The corresponding variable in the master model: an integer for SAT,
+        or a SageMath MILP variable for MILP.
+
+    TESTS:
+        
+        sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+        sage: from civerly.model_options import *
+        sage: import tempfile
+        sage: cipher = SKINNY_CVL(64, 64, R=3)
+        sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+        ....:   model_options = MODEL_OPTIONS(
+        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+        ....:     optimization=OPTIMIZATION.MILP,
+        ....:     granularity=GRANULARITY.BITWISE,
+        ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+        ....:     milp_solver=SCIP_CVL(),
+        ....:     logic_minimizer=ESPRESSO_CVL(),
+        ....:     path=Path(tmpdir))
+        sage: # optional - scip
+        sage: cipher.analyse(model_options)
+        ...
+        10
+        sage: from civerly.util import translate_var
+        sage: first_word = [
+        ....:   translate_var(cipher, 0, cipher.nodes[0].MILP_IN[i])
+        ....: for i in range(4)]
+        sage: for v in first_word: cipher.milp.add_constraint(v == 1)
+        sage: model_options.overwrite = False
+        sage: cipher.analyse(model_options)
+        Using existing MILP model, make sure it is up to date!
+        ...
+        11
+        sage: trail = cipher.get_trail(model_options)
+        sage: trail.input[:4] == [1]*4
+        True
+        sage: import shutil
+        sage: shutil.rmtree(tmpdir)
+
+        
+
+    For SAT, the returned value is the master SAT variable integer, which can
+    be used directly in ``cipher.sat.add_clause``::
+
+        v = translate_var(cipher, cipher.nodes[1], cipher.nodes[1].SAT_IN[4])
+        cipher.sat.add_clause((-v, ))
+
+    """                                                                                                                                     
+    node_idx = node if isinstance(node, (int, Integer)) else cipher.nodes.index(node)                                                       
+
+    if isinstance(local_var, (int, Integer)):                                                                                               
+        # SAT case: local_var is a component-local SAT variable number.
+        sign = (-1)**(local_var < 0)
+        return sign * cipher.inv_dictionaries_sat[node_idx][abs(local_var)]
+    else:
+        # MILP case: local_var is a SageMath LinearFunction for one variable.
+        # .dict() maps backend variable index -> coefficient; for a pure
+        # variable there is exactly one entry with coefficient 1, and the
+        # backend index is the same key used by translate_milp_constraint to
+        # populate cipher.X[node_idx].
+        coeff_dict = local_var.dict()
+        if len(coeff_dict) != 1:
+            raise ValueError(
+                "translate_var expects a single MILP variable, "
+                f"not a linear combination ({local_var!r})"
+            )
+        backend_idx = next(iter(coeff_dict))
+        return cipher.X[node_idx][backend_idx]
+
+
 @contextlib.contextmanager
 def suppress_output():
     r"""
