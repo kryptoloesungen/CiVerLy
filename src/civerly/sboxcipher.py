@@ -196,8 +196,14 @@ class SBoxCipher(Cipher):
             # check if component was modeled before
             for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
+                    # copy over attributes related to modeling
+                    comp.milp         = prev.milp
+                    comp.MILP_IN      = prev.MILP_IN
+                    comp.MILP_OUT     = prev.MILP_OUT
+                    comp.sum_arr_milp = prev.sum_arr_milp
+
                     # copy the component milp programs
-                    milps.append(milps[i_prev])
+                    milps.append(comp.milp)
 
                     for key, val in self.dictionaries_milp[i_prev].items():
                         assert key[:key.index('X') + 1] == "X"
@@ -588,4 +594,3 @@ class SBoxCipher(Cipher):
             lhs = term if lhs is None else lhs + term
         if lhs is not None:
             self.milp.add_constraint(lhs >= 1 - n_active)
-            print(self.milp.constraints()[-1])
