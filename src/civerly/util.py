@@ -772,6 +772,14 @@ def translate_var(cipher, node, local_var):
         sage: trail = cipher.get_trail(model_options)
         sage: trail.input[:4] == [1]*4
         True
+        sage: first_sbox_word = [
+        ....:   translate_var(
+        ....:       cipher, 0, cipher.nodes[1].nodes[1].nodes[j + 1].MILP_IN[i]
+        ....:   ) for i in range(4) for j in range(16)
+        ....: ]
+        sage: for v in first_sbox_word: cipher.milp.add_constraint(v == 1)
+        sage: model_options.overwrite = False
+        sage: cipher.analyse(model_options)
         sage: import shutil
         sage: shutil.rmtree(tmpdir)
 
