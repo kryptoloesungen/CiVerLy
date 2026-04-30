@@ -1250,8 +1250,14 @@ class Cipher:
             # check if component was modeled before
             for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
+                    # copy over attributes related to modeling
+                    comp.sat         = prev.sat
+                    comp.SAT_IN      = prev.SAT_IN
+                    comp.SAT_OUT     = prev.SAT_OUT
+                    comp.sum_arr_sat = prev.sum_arr_sat
+
                     # copy the component sat programs
-                    sats.append(sats[i_prev])
+                    sats.append(comp.sat)
 
                     # copy the dictionaries
                     self.dictionaries_sat[i_comp] = {
