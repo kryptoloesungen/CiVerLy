@@ -461,19 +461,6 @@ class SBoxCipher(Cipher):
                             X[_before_brackets(tmp)][_between_brackets(tmp)] == 0
                         )
 
-        # apply blocking constraints
-        # -----------------------------------
-        for bc in self._blocking_constraints:
-            n_active = sum(1 for (_, _, v) in bc if v == 1)
-            # Build lhs = \sum_{val=0} x_ij  − \sum_{val=1} x_ij
-            lhs = None
-            for (i, j, val) in bc:
-                term = X[i][j] if val == 0 else ((-1) * X[i][j])
-                lhs = term if lhs is None else lhs + term
-            if lhs is not None:
-                master_milp.add_constraint(lhs >= 1 - n_active)
-        # -----------------------------------
-
         self.X = X
 
         # change back s.t. toplevel milp is written to file
@@ -567,3 +554,38 @@ class SBoxCipher(Cipher):
 
         self.milp = milp
         return milp
+
+    def _exclude_solution_milp(self, results: dict) -> None:
+        r"""
+        Convert a MILP solution *results* dict (as returned by
+        ``process_solution_file``) into a blocking constraint and
+        add it to ``self.milp``.
+
+        The no-good ensures the exact solution cannot repeat on re-solve.
+        It is expressed as a list of ``(comp_num, var_idx, value)`` triples;
+        :meth:`civerly.sboxcipher.SBoxCipher._model_milp` adds the
+        corresponding linear constraint during the next model build.
+        """
+        bc = []
+        n_active = 0
+        for var_name, sub_dict in results.items():
+            if var_name in ("IN", "OUT"):
+                continue
+            if var_name[0] == 'X':
+                # 'X3' -> 3
+                i = int(var_name[1:])
+
+            for j, val in sub_dict.items():
+                assert val in (0, 1)
+                n_active += val
+                bc.append((i, int(j), int(val)))
+
+        n_active = sum(1 for (_, _, v) in bc if v == 1)
+        # Build lhs = \sum_{val=0} x_ij  − \sum_{val=1} x_ij
+        lhs = None
+        for (i, j, val) in bc:
+            term = self.X[i][j] if val == 0 else ((-1) * self.X[i][j])
+            lhs = term if lhs is None else lhs + term
+        if lhs is not None:
+            self.milp.add_constraint(lhs >= 1 - n_active)
+            print(self.milp.constraints()[-1])

@@ -311,9 +311,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
             return int(W_MIN)
         return float(W_MIN/10**pr)
 
-    def solve_multiple(self, input_file_name, output_file_name,
-                       model_options=None, n=1, cipher=None,
-                       time_limit=None):
+    def solve_multiple(self, model_options, cipher=None, time_limit=None):
         r"""
         Find up to *n* solutions ordered by weight (best first).
 
@@ -346,8 +344,12 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         Returns a list of ``(results_dict, objective_value)`` pairs ordered
         best to worst objective weight.
         """
+        input_file_name  = model_options.path / (cipher.name + ".cnf")
+        output_file_name = model_options.path / (cipher.name + ".sat")
         assert isinstance(input_file_name, Path)
         assert isinstance(output_file_name, Path)
+
+        n = model_options.number_of_solutions
 
         pr = model_options.sat_precision if model_options is not None else 0
         W_MAX_INT = (
@@ -587,9 +589,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         return _to_dict(results), objective_value
 
 
-    def solve_multiple(self, input_file_name, output_file_name,
-                       model_options=None, n=1, cipher=None,
-                       time_limit=None):
+    def solve_multiple(self, model_options, cipher=None, time_limit=None):
         r"""
         Find up to *n* solutions using Gurobi's solution pool with weight
         enforcement.
@@ -615,8 +615,12 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         Returns a list of ``(results_dict, objective_value)`` pairs ordered
         from best to worst objective (at most *n* entries).
         """
+        input_file_name  = model_options.path / (cipher.name + ".mps")
+        output_file_name = model_options.path / (cipher.name + ".sol")
         assert isinstance(input_file_name, Path)
         assert isinstance(output_file_name, Path)
+
+        n = model_options.number_of_solutions
 
         parent = output_file_name.parent
         stem = output_file_name.stem
@@ -624,7 +628,6 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         pool_prefix = parent / f"{stem}_pool"
 
         # Step 1: find the optimal weight via a standard solve
-        self.status = SOLVING_STATUS.SUCCESS
         self.invoke(input_file_name, output_file_name,
                     log_file_name=log_file_name, time_limit=time_limit)
         first_result, optimal_weight = self.process_solution_file(
@@ -665,7 +668,6 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             if time_limit is not None:
                 command.insert(2, f"TimeLimit={time_limit}")
 
-            self.status = SOLVING_STATUS.SUCCESS
             with suppress_output():
                 process = subprocess.Popen(command)
                 errno = process.wait()
@@ -822,14 +824,12 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         return _to_dict(results), objective_value
 
-    def solve_multiple(self, input_file_name, output_file_name,
-                       model_options=None, n=1, cipher=None,
-                       time_limit=None):
+    def solve_multiple(self, model_options, cipher=None, time_limit=None):
         r"""
         Find up to *n* solutions using a by-hand blocking approach.
 
         After each solve the solution is converted to a no-good linear
-        constraint (via ``cipher._exclude_solution``), the MILP model is
+        constraint (via ``cipher._exclude_solution_milp``), the MILP model is
         regenerated (via ``cipher.model``), and SCIP is invoked again.
 
         When all solutions at the current optimal weight are exhausted, the
@@ -840,8 +840,16 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         Returns a list of ``(results_dict, objective_value)`` pairs ordered
         from best to worst objective weight.
         """
+        input_file_name  = model_options.path / (cipher.name + ".mps")
+        output_file_name = model_options.path / (cipher.name + ".sol")
         assert isinstance(input_file_name, Path)
         assert isinstance(output_file_name, Path)
+
+        n = model_options.number_of_solutions
+
+        # disable overwrite
+        tmp_overwrite = model_options.overwrite
+        model_options.overwrite = False
 
         all_results = []
         current_weight = None  # weight of the most recently found solution
@@ -855,8 +863,6 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                     output_file_name.parent
                     / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
                 )
-
-            self.status = SOLVING_STATUS.SUCCESS
             self.invoke(input_file_name, sol_file, time_limit=time_limit)
             try:
                 r, w = self.process_solution_file(sol_file)
@@ -889,9 +895,11 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             solution_index += 1
 
             if solution_index < n and cipher is not None:
-                cipher._exclude_solution(r)
+                cipher._exclude_solution_milp(r)
                 cipher.model(model_options)
 
+        # set overwrite back to old value
+        model_options.overwrite = tmp_overwrite
         return all_results
 
 
@@ -1016,9 +1024,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             results[name] = value
         return _to_dict(results), objective_value
 
-    def solve_multiple(self, input_file_name, output_file_name,
-                       model_options=None, n=1, cipher=None,
-                       time_limit=None):
+    def solve_multiple(self, model_options, cipher=None, time_limit=None):
         r"""
         Find up to *n* solutions using a by-hand blocking approach (GLPK does
         not support a solution pool natively).
@@ -1028,8 +1034,16 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         weight lower bound is increased by one and the search continues at the
         next weight level.
         """
+        input_file_name  = model_options.path / (cipher.name + ".mps")
+        output_file_name = model_options.path / (cipher.name + ".sol")
         assert isinstance(input_file_name, Path)
         assert isinstance(output_file_name, Path)
+
+        n = model_options.number_of_solutions
+
+        # disable overwrite
+        tmp_overwrite = model_options.overwrite
+        model_options.overwrite = False
 
         all_results = []
         current_weight = None  # weight of the most recently found solution
@@ -1044,7 +1058,6 @@ class GLPK_CVL(MILP_SOLVER_CVL):
                     / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
                 )
 
-            self.status = SOLVING_STATUS.SUCCESS
             self.invoke(input_file_name, sol_file, time_limit=time_limit)
             try:
                 r, w = self.process_solution_file(sol_file)
@@ -1077,9 +1090,11 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             solution_index += 1
 
             if solution_index < n and cipher is not None:
-                cipher._exclude_solution(r)
+                cipher._exclude_solution_milp(r)
                 cipher.model(model_options)
 
+        # set overwrite back to old value
+        model_options.overwrite = tmp_overwrite
         return all_results
 
 
@@ -1304,9 +1319,7 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
     def solve(self, input_file_name, output_file_name, time_limit=None):
         raise NoSolverWarning()
 
-    def solve_multiple(self, input_file_name, output_file_name,
-                       model_options=None, n=1, cipher=None,
-                       time_limit=None):
+    def solve_multiple(self, model_options, cipher=None, time_limit=None):
         raise NoSolverWarning()
 
     def process_solution_file(self, solution_file_name):
@@ -1412,9 +1425,7 @@ class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         else:
             raise ValueError("Unknown solution format")
 
-    def solve_multiple(self, input_file_name, output_file_name,
-                       model_options=None, n=1, cipher=None,
-                       time_limit=None):
+    def solve_multiple(self, model_options, cipher=None, time_limit=None):
         raise NoSolverWarning()
 
 
