@@ -414,6 +414,46 @@ class TrailNode:
                 string += "\n" + child.__repr__(_depth+1)
         return string
 
+    def __eq__(self, other) -> bool:
+        """
+        Compare self with other by checking whether all intermediate states
+        have the same values.
+
+        TESTS:
+
+            sage: # optional - cryptominisat, espresso
+            sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
+            ....:   import Toy7
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   cipher = Toy7()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.SAT,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       number_of_solutions=2,
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   t1, t2 = cipher.get_trail(model_options)
+            ...
+            [3, 3]
+            sage: t1 == t2
+            False
+
+            
+        """
+        return isinstance(other, TrailNode) and \
+            self.input == other.input and \
+            self.output == other.output and \
+            all([
+                c1 == c2 for c1, c2 in zip(self.children, other.children)
+            ])
+
     def to_latex(self, model_options) -> str:
         string = self.cipher_instance._latex_section(self, model_options)
         for child in self.children:

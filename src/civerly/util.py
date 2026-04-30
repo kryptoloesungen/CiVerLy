@@ -712,8 +712,8 @@ def _to_dict(flat_results):
     return nested
 
 
-def translate_var(cipher, node, local_var):                                                                                                        
-    r"""                                                                                                                                    
+def translate_var(cipher, node, local_var):
+    r"""
     Translate a component-local model variable into the corresponding variable
     in the cipher's master model (``cipher.milp`` or ``cipher.sat``).
 
@@ -774,14 +774,6 @@ def translate_var(cipher, node, local_var):
         True
         sage: import shutil
         sage: shutil.rmtree(tmpdir)
-
-        
-
-    For SAT, the returned value is the master SAT variable integer, which can
-    be used directly in ``cipher.sat.add_clause``::
-
-        v = translate_var(cipher, cipher.nodes[1], cipher.nodes[1].SAT_IN[4])
-        cipher.sat.add_clause((-v, ))
 
     """                                                                                                                                     
     node_idx = node if isinstance(node, (int, Integer)) else cipher.nodes.index(node)                                                       
