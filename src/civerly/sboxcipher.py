@@ -278,7 +278,6 @@ class SBoxCipher(Cipher):
                     val = asg[:asg.index("=")].strip(" ")
                     key = f"X{i_comp}[{ind}]"
                     self.dictionaries_milp[i_comp][key] = val
-                    # self.dictionaries_milp[i_comp][ind] = val
 
                 self.inv_dictionaries_milp[i_comp] = {
                     v: k for k, v in self.dictionaries_milp[i_comp].items()

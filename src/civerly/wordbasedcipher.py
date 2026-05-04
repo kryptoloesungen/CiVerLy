@@ -52,14 +52,13 @@ class WordBasedCipher(Cipher):
                 Sub ciphers:
 
         """
+        self.__wordsize = wordsize
+        self._wrd = wordsize
         super().__init__(
             input_num_words * wordsize,
             output_num_words * wordsize,
             name
         )
-        self.__wordsize = wordsize
-        self._wrd = wordsize
-        self.IN.wordsize = wordsize
 
     @property
     def wordsize(self):
