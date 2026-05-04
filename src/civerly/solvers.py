@@ -896,7 +896,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
             if solution_index < n and cipher is not None:
                 cipher._exclude_solution_milp(r)
-                cipher.model(model_options)
+                cipher._finish_milp(model_options, cipher.milp)
 
         # set overwrite back to old value
         model_options.overwrite = tmp_overwrite
@@ -1091,7 +1091,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
             if solution_index < n and cipher is not None:
                 cipher._exclude_solution_milp(r)
-                cipher.model(model_options)
+                cipher._finish_milp(model_options, cipher.milp)
 
         # set overwrite back to old value
         model_options.overwrite = tmp_overwrite

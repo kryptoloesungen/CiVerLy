@@ -23,6 +23,7 @@ from civerly.component import SBox_CVL, LinearLayer_CVL, XOR_CVL
 from civerly.component import RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
 from civerly.util import _before_brackets, _between_brackets, suppress_output
 from civerly.util import translate_milp_constraint
+from civerly.util import translate_var
 from civerly.model_options import OPTIMIZATION, GRANULARITY, CRYPTANALYSIS
 from civerly.model_options import InvalidModelOptionException
 
@@ -568,9 +569,9 @@ class SBoxCipher(Cipher):
         add it to ``self.milp``.
 
         The no-good ensures the exact solution cannot repeat on re-solve.
-        It is expressed as a list of ``(comp_num, var_idx, value)`` triples;
-        :meth:`civerly.sboxcipher.SBoxCipher._model_milp` adds the
-        corresponding linear constraint during the next model build.
+        The constraint is added directly to ``self.milp``; callers must
+        flush ``self.milp`` to the MPS file (via ``_finish_milp``) before
+        invoking the solver again.
 
         TESTS::
 
@@ -580,7 +581,7 @@ class SBoxCipher(Cipher):
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.MILP,
@@ -589,32 +590,31 @@ class SBoxCipher(Cipher):
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     milp_solver=SCIP_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
-            ....:     number_of_solutions=2,
+            ....:     number_of_solutions=3,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
-            ...
-            [12, 12]
-            sage: t1, t2 = present_cipher.get_trail(model_options)
-            sage: t1 == t2
-            False 
+            5312 variables and 8641 constraints were written to ...
+            5312 variables and 8642 constraints were written to ...
+            5312 variables and 8643 constraints were written to ...
+            [12, 12, 12]
+            sage: t1, t2, t3 = present_cipher.get_trail(model_options)
+            sage: t1 == t2 or t1 == t3 or t2 == t3
+            False
 
 
         """
-        from civerly.util import translate_var
-
+        # add \sum_{x_ij = 0} x_ij + \sum_{x_ij = 1} (1 - x_ij) \geq 1
+        lhs = 0
+        n_active = 0
         for var_name, sub_dict in results.items():
             if var_name in ("IN", "OUT"):
                 continue
             if var_name[0] == 'X':
                 # 'X3' -> 3
                 i = int(var_name[1:])
-
-            # add \sum_{x_ij = 0} x_ij + \sum_{x_ij = 1} (1 - x_ij) \geq 1 
-            lhs = 0
-            n_active = 0
             for j, val in sub_dict.items():
                 assert val in (0, 1), f"{val} is not binary"
                 n_active += val
-                lhs += ((-1) ** val) * translate_var(self, i, self.X[i][j])
+                lhs += ((-1) ** val) * translate_var(self, self.nodes[i], self.X[i][j])
 
-            self.milp.add_constraint(lhs >= 1 - n_active)
+        self.milp.add_constraint(lhs >= 1 - n_active)
