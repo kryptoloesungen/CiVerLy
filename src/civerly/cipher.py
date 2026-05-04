@@ -396,6 +396,10 @@ class Cipher:
         self.__output_length = output_length
         self.__name = name
 
+        # self._wrd is used for generate_report, to determine the displayed
+        # wordsize. Any subclass of WordBasedCipher will overwrite this value
+        # with `self.wordsize`
+        self._wrd = getattr(self, '_wrd', 4)
         
         self.__is_valid = False
         self.__IN = Cipher.__Special_Node(self, in_node=True)
@@ -408,11 +412,7 @@ class Cipher:
         # number_of_solutions > 1. Each entry is a dict
         # {"in": [...], "out": [...], "weight": <value>}.
         self.results = []
-        
-        # self._wrd is used for generate_report, to determine the displayed
-        # wordsize. Any subclass of WordBasedCipher will overwrite this value
-        # with `self.wordsize`
-        self._wrd = getattr(self, '_wrd', 4)
+
 
         # self.trail_nodes stores the TrailNode objects built during
         # analyse() for number_of_solutions > 1, one per solution.
