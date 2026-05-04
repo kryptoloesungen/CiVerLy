@@ -73,5 +73,18 @@ The following example shows how to import the built‑in AES implementation, con
    into the same directory given by ``model_options.path`` (here: ``./AES-Models/``).
 
 This will write the MILP model files into `./AES-Models/` and print, among other information, the number of active S-boxes for 10-round AES. For more examples and configuration options, see the [user manual](https://kryptoloesungen.github.io/CiVerLy/user_manual/index.html) and the [AES documentation](https://kryptoloesungen.github.io/CiVerLy/documentation/implementations/aes.html).
+
+## How to cite
+
+   ```
+   @misc{civerly,
+    author = {{cryptosolutions GmbH} and {Federal Office for Information Security (BSI)}},
+    title  = {{CiVerLy} --- The Cipher Verification Library},
+    year   = {2026},
+    url    = {https://github.com/kryptoloesungen/CiVerLy},
+    note   = {Version 1.1.0},
+   }
+   ```
+
 ## License
 This project is licensed under the EUROPEAN UNION PUBLIC LICENCE v. 1.2 (EUPL 1.2) with an additional non-endorsement clause; see [LICENSE](LICENSE) for details.
