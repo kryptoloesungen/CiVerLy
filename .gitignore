@@ -1,4 +1,7 @@
 # Auto-generated during doc build
 docs/source/installation/versions.rst
 /.direnv/
+# Local shell hook for machine-specific config (e.g. Gurobi paths).
+# Copy .local-shell-hook.sh.example to .local-shell-hook.sh and edit it.
+/.local-shell-hook.sh
 /result
