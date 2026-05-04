@@ -27,17 +27,17 @@ from sage.sat.solvers.dimacs import DIMACS
 from sage.numerical.mip import MixedIntegerLinearProgram
 from sage.geometry.polyhedron.constructor import Polyhedron
 
-from civerly.util import vec_to_int, int_to_vec
 from civerly.util import list_of_predecessor_vector_indices
 from civerly.util import hw, hw_tau, suppress_output
+from civerly.util import reduction_algorithm_ST17
+from civerly.util import vec_to_int, int_to_vec
 from civerly.util import _write_espresso_input
 from civerly.util import _read_espresso_output
-from civerly.util import reduction_algorithm_ST17
 from civerly.util import translate_sat_clause
-from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
-from civerly.model_options import SBOX_MODELING
+from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import InvalidModelOptionException
+from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
 from civerly.solvers import ESPRESSO_CVL, NO_MILP_SOLVER_CVL, NO_LOGIC_MINIMIZER_CVL
 

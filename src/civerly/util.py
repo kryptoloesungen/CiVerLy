@@ -43,9 +43,10 @@ TESTS:
 import warnings
 
 import contextlib
+import random
+import zlib
 import sys
 import os
-import zlib
 
 from sage.rings.integer_ring import ZZ
 from sage.rings.integer import Integer
@@ -712,98 +713,75 @@ def _to_dict(flat_results):
     return nested
 
 
-def translate_var(cipher, node, local_var):
-    r"""
-    Translate a component-local model variable into the corresponding variable
-    in the cipher's master model (``cipher.milp`` or ``cipher.sat``).
+def _find_path(cipher, node, path=()):
+    """
+    Helper function for ``translate_var``. Return the recursion path
+    taken to get to ``node``.
 
-    Variables on ``cipher.nodes[k]`` (``MILP_IN``, ``MILP_OUT``, ``SAT_IN``,
-    ``SAT_OUT``) are local to each component's sub-model and cannot be used
-    directly in the master model.  This function performs the remapping.
-
-    INPUT:
-
-        - ``cipher`` -- a modeled :class:`civerly.cipher.Cipher` or
-          :class:`civerly.sboxcipher.SBoxCipher`; must have been modeled
-          (i.e., ``cipher.milp`` / ``cipher.sat`` must exist)
-
-        - ``node`` -- the component owning the variable: either the component
-          instance itself or its integer index in ``cipher.nodes``
-
-        - ``local_var`` -- the component-local variable to translate:
-          an integer SAT variable (from ``SAT_IN`` / ``SAT_OUT``) or a
-          SageMath MILP variable (from ``MILP_IN`` / ``MILP_OUT``)
-
-    OUTPUT:
-
-        The corresponding variable in the master model: an integer for SAT,
-        or a SageMath MILP variable for MILP.
-
-    TESTS:
+        sage: from civerly.util import _find_path
+        sage: from civerly.cipher_implementations.ascon import ASCON_CVL
+        sage: ascon = ASCON_CVL(3)
+        sage: node = ascon.nodes[3].nodes[2].nodes[1]
+        sage: _find_path(ascon, node)
+        (3, 2, 1)
         
-        sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+    """
+    from civerly.cipher import Cipher
+    if id(cipher) == id(node):
+        return path
+    if not isinstance(cipher, Cipher):
+        return None
+    for i in range(len(cipher.nodes)):
+        sub_path = _find_path(cipher.nodes[i], node, path + (i, ))
+        if sub_path is not None:
+            return sub_path
+
+def translate_var(cipher, node, local_var):
+    """
+
+    TESTS::
+        
+        sage: from civerly.cipher_implementations.craft import CRAFT_CVL
         sage: from civerly.model_options import *
         sage: import tempfile
-        sage: cipher = SKINNY_CVL(64, 64, R=3)
-        sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+        sage: craft = CRAFT_CVL(3)
+        sage: # optional - espresso
+        sage: with tempfile.TemporaryDirectory() as tmpdir:
         ....:   model_options = MODEL_OPTIONS(
         ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-        ....:     optimization=OPTIMIZATION.MILP,
+        ....:     optimization=OPTIMIZATION.SAT,
         ....:     granularity=GRANULARITY.BITWISE,
-        ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
         ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-        ....:     milp_solver=SCIP_CVL(),
+        ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+        ....:     sat_solver=CADICAL_CVL(),
         ....:     logic_minimizer=ESPRESSO_CVL(),
         ....:     path=Path(tmpdir))
-        sage: # optional - scip
-        sage: cipher.analyse(model_options)
-        ...
-        10
+        ....:   craft.model(model_options)
+        7488 variables and 17201 clauses were written to ...
         sage: from civerly.util import translate_var
-        sage: first_word = [
-        ....:   translate_var(cipher, 0, cipher.nodes[0].MILP_IN[i])
-        ....: for i in range(4)]
-        sage: for v in first_word: cipher.milp.add_constraint(v == 1)
-        sage: model_options.overwrite = False
-        sage: cipher.analyse(model_options)
-        Using existing MILP model, make sure it is up to date!
-        ...
-        11
-        sage: trail = cipher.get_trail(model_options)
-        sage: trail.input[:4] == [1]*4
-        True
-        sage: first_sbox_word = [
-        ....:   translate_var(
-        ....:       cipher, 0, cipher.nodes[1].nodes[1].nodes[j + 1].MILP_IN[i]
-        ....:   ) for i in range(4) for j in range(16)
-        ....: ]
-        sage: for v in first_sbox_word: cipher.milp.add_constraint(v == 1)
-        sage: model_options.overwrite = False
-        sage: cipher.analyse(model_options)
-        sage: import shutil
-        sage: shutil.rmtree(tmpdir)
+        sage: node = craft.nodes[1].nodes[2].nodes[1]
+        sage: translate_var(craft, node, node.SAT_IN[2])
+        643
 
-    """                                                                                                                                     
-    node_idx = node if isinstance(node, (int, Integer)) else cipher.nodes.index(node)                                                       
 
-    if isinstance(local_var, (int, Integer)):                                                                                               
-        # SAT case: local_var is a component-local SAT variable number.
-        sign = (-1)**(local_var < 0)
-        return sign * cipher.inv_dictionaries_sat[node_idx][abs(local_var)]
-    else:
-        # MILP case: local_var is a SageMath LinearFunction for one variable.
-        # .dict() maps backend variable index -> coefficient; for a pure
-        # variable there is exactly one entry with coefficient 1, and the
-        # backend index is the same key used by translate_milp_constraint to
-        # populate cipher.X[node_idx].
-        coeff_dict = local_var.dict()
-        if len(coeff_dict) != 1:
-            raise ValueError(
-                "translate_var expects a single MILP variable, "
-                f"not a linear combination ({local_var!r})"
-            )
-        backend_idx = next(iter(coeff_dict))
-        return cipher.X[node_idx][backend_idx]
+    """
+    index_path = _find_path(cipher, node)
+    var = local_var
+    # go backwards through the recursion tree
+    for depth in range(1, len(index_path)):
+        parent = cipher
+        for index in index_path[:len(index_path) - depth]:
+            parent = parent.nodes[index]
+        index = index_path[-depth]
+        # distinguish between SAT and MILP variable
+        if isinstance(local_var, (int, Integer)):
+            var = parent.inv_dictionaries_sat[index][var]
+        else:
+            var = parent.inv_dictionaries_milp[index][var]
+
+    return var
+
+
 
 
 @contextlib.contextmanager
