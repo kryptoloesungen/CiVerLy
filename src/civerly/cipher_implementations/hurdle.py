@@ -261,7 +261,7 @@ class HURDLE_CVL:
             sage: from pathlib import Path
             sage: import tempfile
             sage: cipher = HURDLE_CVL(R=4)
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical  # optional - espresso
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:       optimization=OPTIMIZATION.SAT,
