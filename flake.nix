@@ -243,6 +243,11 @@
             pkgs.codespell
             pkgs.lychee
           ];
+          shellHook = ''
+            if [ -f "$PWD/.local-shell-hook.sh" ]; then
+              source "$PWD/.local-shell-hook.sh"
+            fi
+          '';
         };
 
         packages = {
