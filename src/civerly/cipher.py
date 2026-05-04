@@ -39,22 +39,22 @@ from sage.modules.vector_mod2_dense import Vector_mod2_dense
 from sage.matrix.constructor import Matrix as matrix
 from sage.modules.free_module_element import vector
 from sage.sat.solvers.dimacs import DIMACS
-from sage.crypto.sbox import SBox
 
 from collections.abc import Iterable
-from copy import deepcopy
 from dataclasses import replace
-import json
-import subprocess
-import glob
 from math import ceil, sqrt
+from copy import deepcopy
+import subprocess
+import json
+import glob
 
-from civerly.component import Component
+from civerly.util import translate_sat_clause
+from civerly.util import suppress_output
+from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.model_options import CRYPTANALYSIS
-from civerly.model_options import InvalidModelOptionException
 from civerly.solvers import NoSolverWarning
-from civerly.util import suppress_output, translate_sat_clause
+from civerly.component import Component
 from civerly.trail import TrailNode
 
 
