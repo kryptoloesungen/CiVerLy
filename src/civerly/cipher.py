@@ -395,6 +395,12 @@ class Cipher:
         self.__input_length = input_length
         self.__output_length = output_length
         self.__name = name
+
+        # self._wrd is used for generate_report, to determine the displayed
+        # wordsize. Any subclass of WordBasedCipher will overwrite this value
+        # with `self.wordsize`
+        self._wrd = 4
+        
         self.__is_valid = False
         self.__IN = Cipher.__Special_Node(self, in_node=True)
         self.__OUT = Cipher.__Special_Node(self, in_node=False)
@@ -402,22 +408,16 @@ class Cipher:
         self.__edges = []
         self.__outputs = [Cipher.NOT_SET]*self.__output_length
 
-        self._wrd = 4
-        # self._wrd is used for generate_report, to determine the displayed
-        # wordsize. Any subclass of WordBasedCipher will overwrite this value
-        # with `self.wordsize`
-
-        self.results = []
         # self.results stores all trails found by analyse() when
         # number_of_solutions > 1. Each entry is a dict
-        # {"in": [...], "out": [...], "weight": <value>}, populated in
-        # solution order (best first).
+        # {"in": [...], "out": [...], "weight": <value>}.
+        self.results = []
 
-        self.trail_nodes = []
         # self.trail_nodes stores the TrailNode objects built during
         # analyse() for number_of_solutions > 1, one per solution.
         # Used by generate_report() and get_trail() to avoid re-reading
         # solution files.
+        self.trail_nodes = []
         
         self.milp = None
         self.sat = None
