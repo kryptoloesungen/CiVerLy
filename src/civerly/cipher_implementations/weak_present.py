@@ -111,11 +111,13 @@ class WEAK_PRESENT_CVL:
             sage: import builtins
             sage: model_options.overwrite = False
             sage: for i in range(cipher.input_length):
-            ....:     cipher.milp_model.add_constraint(cipher.nodes[0].MILP_OUT[i] == 1)
+            ....:     cipher.milp.add_constraint(cipher.nodes[0].MILP_OUT[i] == 1)
             sage: cipher.analyse(model_options)
             Using existing MILP model, make sure it is up to date!
             3648 variables and 6529 constraints were written to ...
             61.8300749986
+            sage: cipher.results[0]['in'] == [1]*64
+            True
             
         Now overwrite the old model:
             
