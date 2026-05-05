@@ -162,7 +162,12 @@ To conclude our example, we remove the generated files::
     sage: shutil.rmtree("DOCTEST-AES-Models", ignore_errors=True)
 """
 from civerly.aeslike import AESlike
-from civerly.component import SBox_CVL, PermuteLayer_CVL, LinearLayer_CVL, RoundkeyXOR_CVL
+from civerly.component import (
+    SBox_CVL, PermuteLayer_CVL, LinearLayer_CVL,
+    RoundkeyXOR_CVL, ConstXOR_CVL, XOR_CVL,
+)
+from civerly.sboxcipher import SBoxCipher
+from civerly.keyschedule import KeySchedule
 
 from sage.matrix.constructor import Matrix as matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
@@ -193,6 +198,159 @@ def aes_key_schedule(k, R):
         W.append(W[i-4] ^ temp)
 
     return [sum(W[4*r + j] << (32 * (3-j)) for j in range(4)) for r in range(R+1)]
+
+
+def _make_ks_step(rcon_val):
+    """One AES-128 key-expansion step as a SBoxCipher(128 -> 128).
+
+    Takes the current 128-bit key word [w0|w1|w2|w3] and outputs the
+    next 128-bit key [new_w0|new_w1|new_w2|new_w3]:
+
+        g = ConstXOR(SubWord(RotWord(w3)), rcon_val)
+        new_w0 = w0 ^ g
+        new_w1 = w1 ^ new_w0
+        new_w2 = w2 ^ new_w1
+        new_w3 = w3 ^ new_w2
+    """
+    step = SBoxCipher(128, 128, name="KS-step")
+
+    # RotWord: cyclic left-shift of w3 (bits 96-127) by one byte.
+    # In MSB-first, RotWord([B0,B1,B2,B3]) -> [B1,B2,B3,B0].
+    # PermuteLayer_CVL convention: perm[i]=j means input bit i -> output bit j.
+    # Input byte b (bits 8b..8b+7) lands at output byte (b-1)%4, so
+    # input bit i goes to output bit (i-8)%32.
+    rot_perm = [(i - 8) % 32 for i in range(32)]
+    node_rot = step.add_subcipher(
+        PermuteLayer_CVL(rot_perm, name="RotWord"),
+        [(step.IN, (96 + i, i)) for i in range(32)],
+    )
+
+    # SubWord: apply AES S-box to each byte of the rotated word.
+    sb_nodes = [
+        step.add_subcipher(
+            SBox_CVL(AES_S, name=f"SubWord_S{b}"),
+            [(node_rot, (8*b + i, i)) for i in range(8)],
+        )
+        for b in range(4)
+    ]
+
+    # Rcon XOR on the 32-bit SubWord result.
+    node_rcon = step.add_subcipher(
+        ConstXOR_CVL(32, rcon_val, name="Rcon"),
+        [(sb_nodes[b], (i, 8*b + i)) for b in range(4) for i in range(8)],
+    )
+
+    # Chain-XOR the four new key words.
+    node_w0 = step.add_subcipher(
+        XOR_CVL(32, name="XOR_w0"),
+        [(step.IN, (i, i)) for i in range(32)]
+        + [(node_rcon, (i, 32 + i)) for i in range(32)],
+    )
+    node_w1 = step.add_subcipher(
+        XOR_CVL(32, name="XOR_w1"),
+        [(step.IN, (32 + i, i)) for i in range(32)]
+        + [(node_w0, (i, 32 + i)) for i in range(32)],
+    )
+    node_w2 = step.add_subcipher(
+        XOR_CVL(32, name="XOR_w2"),
+        [(step.IN, (64 + i, i)) for i in range(32)]
+        + [(node_w1, (i, 32 + i)) for i in range(32)],
+    )
+    node_w3 = step.add_subcipher(
+        XOR_CVL(32, name="XOR_w3"),
+        [(step.IN, (96 + i, i)) for i in range(32)]
+        + [(node_w2, (i, 32 + i)) for i in range(32)],
+    )
+
+    step.add_output(
+        [(node_w0, (i, i)) for i in range(32)]
+        + [(node_w1, (i, 32 + i)) for i in range(32)]
+        + [(node_w2, (i, 64 + i)) for i in range(32)]
+        + [(node_w3, (i, 96 + i)) for i in range(32)],
+    )
+    return step
+
+
+class AES_KeySchedule_CVL(KeySchedule):
+    def __init__(self, R):
+        r"""
+        AES-128 key schedule as a CiVerLy DAG.
+
+        Takes a 128-bit master key and expands it into R+1 round keys
+        following NIST FIPS 197.
+
+        INPUT:
+
+            - ``R`` -- integer; Number of rounds (1..10 for AES-128).
+
+        EXAMPLES::
+
+            sage: from civerly.cipher_implementations.aes import AES_KeySchedule_CVL
+            sage: ks = AES_KeySchedule_CVL(10)
+            sage: rks = ks(0x000102030405060708090a0b0c0d0e0f)
+            sage: hex(rks[0])
+            '0x102030405060708090a0b0c0d0e0f'
+            sage: hex(rks[1])
+            '0xd6aa74fdd2af72fadaa678f1d6ab76fe'
+            sage: hex(rks[10])
+            '0x13111d7fe3944a17f307a78b4d2b30c5'
+
+        TESTS:
+
+        Full key schedule against FIPS 197, Appendix C.1. k_sch outputs
+        (key = ``000102030405060708090a0b0c0d0e0f``)::
+
+            sage: from civerly.cipher_implementations.aes import AES_KeySchedule_CVL
+            sage: ks = AES_KeySchedule_CVL(10)
+            sage: rks = ks(0x000102030405060708090a0b0c0d0e0f)
+            sage: for rk in rks:
+            ....:     print(f'{rk:032x}')
+            000102030405060708090a0b0c0d0e0f
+            d6aa74fdd2af72fadaa678f1d6ab76fe
+            b692cf0b643dbdf1be9bc5006830b3fe
+            b6ff744ed2c2c9bf6c590cbf0469bf41
+            47f7f7bc95353e03f96c32bcfd058dfd
+            3caaa3e8a99f9deb50f3af57adf622aa
+            5e390f7df7a69296a7553dc10aa31f6b
+            14f9701ae35fe28c440adf4d4ea9c026
+            47438735a41c65b9e016baf4aebf7ad2
+            549932d1f08557681093ed9cbe2c974e
+            13111d7fe3944a17f307a78b4d2b30c5
+        """
+        super().__init__(128, (R + 1) * 128, name="AES-KeySchedule")
+
+        # Rcon[1..13] for up to 13 AES-128 expansion rounds.
+        Rcon = [
+            0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
+            0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000,
+            0x6c000000, 0xd8000000, 0xab000000,
+        ]
+
+        output_edges = [(self.IN, (i, i)) for i in range(128)]
+        node = self.IN
+        for r in range(R):
+            node = self.add_subcipher(
+                _make_ks_step(Rcon[r]),
+                [(node, (i, i)) for i in range(128)],
+            )
+            output_edges += [(node, (i, i + 128 * (r + 1))) for i in range(128)]
+
+        self.add_output(output_edges)
+
+    def __call__(self, k):
+        r"""
+        Expand master key ``k`` into a list of R+1 round-key integers.
+
+        INPUT:
+
+            - ``k`` -- integer; 128-bit master key.
+
+        OUTPUT: List of R+1 integers.
+        """
+        from civerly.util import int_to_vec, vec_to_int
+        n = self.input_length
+        bits = self.eval(int_to_vec(k, n))
+        return [vec_to_int(bits[i*n:(i+1)*n]) for i in range(self.output_length // n)]
 
 
 class AES_CVL:
@@ -444,7 +602,7 @@ class AES_CVL:
         # ------------------------------------------------ #
 
         aes_cipher._rk_components = [aes_cipher.nodes[2*r+1] for r in range(R)] + [aes_cipher.nodes[2*R+2]]
-        aes_cipher.key_schedule = lambda key: aes_key_schedule(key, R)
+        aes_cipher.key_schedule = AES_KeySchedule_CVL(R)
 
         self.aes_cipher = aes_cipher
 
