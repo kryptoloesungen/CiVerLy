@@ -828,9 +828,8 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         r"""
         Find up to *n* solutions using a by-hand blocking approach.
 
-        After each solve the solution is converted to a no-good linear
-        constraint (via ``cipher._exclude_solution_milp``), the MILP model is
-        regenerated (via ``cipher.model``), and SCIP is invoked again.
+        After each solve the solution is excluded (via ``cipher.exclude_solution``),
+        the MILP model is regenerated (via ``cipher.model``), and the solver is invoked again.
 
         When all solutions at the current optimal weight are exhausted, the
         weight lower bound is increased by one and the search continues at the
@@ -848,7 +847,6 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         n = model_options.number_of_solutions
 
         all_results = []
-        current_weight = None  # weight of the most recently found solution
         solution_index = 0
 
         while solution_index < n:
@@ -860,38 +858,13 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                     / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
                 )
             self.invoke(input_file_name, sol_file, time_limit=time_limit)
-            try:
-                r, w = self.process_solution_file(sol_file)
-            except (ValueError, AssertionError):
-                # No (more) solutions found.
-                if (current_weight is None or cipher is None
-                        or model_options is None):
-                    break  # never found a solution, or cannot rebuild
-                orig_sr = model_options.solve_range
-                if orig_sr is None:
-                    # Without an explicit range the solver minimises freely and
-                    # naturally advances to the next-best weight via the
-                    # blocking constraints. Infeasibility here means
-                    # no solutions exist at any weight — stop.
-                    break
-                # Explicit solve_range: raise the lower bound by one so the
-                # solver finds solutions at the next weight level.  Keep
-                # existing no-good constraints so lower-weight solutions are
-                # not re-discovered.
-                current_weight += 1
-                if current_weight >= orig_sr[1]:
-                    break  # exceeded the allowed range
-                model_options.solve_range = (current_weight, orig_sr[1])
-                cipher.model(model_options)
-                model_options.solve_range = orig_sr
-                continue  # retry at the new weight without advancing solution_index
+            r, w = self.process_solution_file(sol_file)
 
             all_results.append((r, w))
-            current_weight = w
             solution_index += 1
 
             if solution_index < n and cipher is not None:
-                cipher._exclude_solution_milp(r)
+                cipher.exclude_solution(model_options, r)
                 cipher._finish_milp(model_options, cipher.milp)
 
         return all_results
@@ -1036,7 +1009,6 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         n = model_options.number_of_solutions
 
         all_results = []
-        current_weight = None  # weight of the most recently found solution
         solution_index = 0
 
         while solution_index < n:
@@ -1047,40 +1019,14 @@ class GLPK_CVL(MILP_SOLVER_CVL):
                     output_file_name.parent
                     / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
                 )
-
             self.invoke(input_file_name, sol_file, time_limit=time_limit)
-            try:
-                r, w = self.process_solution_file(sol_file)
-            except (ValueError, AssertionError):
-                # No (more) solutions found.
-                if (current_weight is None or cipher is None
-                        or model_options is None):
-                    break  # never found a solution, or cannot rebuild
-                orig_sr = model_options.solve_range
-                if orig_sr is None:
-                    # Without an explicit range the solver minimises freely and
-                    # naturally advances to the next-best weight via the
-                    # accumulated no-good constraints.  Infeasibility here means
-                    # no solutions exist at any weight — stop.
-                    break
-                # Explicit solve_range: raise the lower bound by one so the
-                # solver finds solutions at the next weight level.  Keep
-                # existing no-good constraints so lower-weight solutions are
-                # not re-discovered.
-                current_weight += 1
-                if current_weight >= orig_sr[1]:
-                    break  # exceeded the allowed range
-                model_options.solve_range = (current_weight, orig_sr[1])
-                cipher.model(model_options)
-                model_options.solve_range = orig_sr
-                continue  # retry at the new weight without advancing solution_index
+            r, w = self.process_solution_file(sol_file)
 
             all_results.append((r, w))
-            current_weight = w
             solution_index += 1
 
             if solution_index < n and cipher is not None:
-                cipher._exclude_solution_milp(r)
+                cipher.exclude_solution(model_options, r)
                 cipher._finish_milp(model_options, cipher.milp)
 
         return all_results
