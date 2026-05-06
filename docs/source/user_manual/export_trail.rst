@@ -8,41 +8,35 @@ allowing to seamlessly incorporate them into your workflow.
 
 See the following example to understand how to export and load Cipher objects.
 
-.. code-block:: sage
-
+.. code-block::
     sage: # First, analyse some cipher
-    sage: import tempfile
     sage: from civerly.cipher_implementations.present import PRESENT_CVL
     sage: from civerly.model_options import *
     sage: cipher = PRESENT_CVL(4)
-    sage: with tempfile.TemporaryDirectory() as tmpdir:
-    ....:   model_options = MODEL_OPTIONS(
+    sage: model_options = MODEL_OPTIONS(
     ....:     optimization=OPTIMIZATION.MILP,
     ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
     ....:     granularity=GRANULARITY.BITWISE,
     ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-    ....:     milp_solver=SCIP_CVL(),
+    ....:     milp_solver=GUROBI_CVL(),
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
     ....:     logic_minimizer=ESPRESSO_CVL(),
-    ....:     path=Path(tmpdir))
-    ....:   cipher.analyse(model_options)
-    5312 variables and 8641 constraints were written to ...
+    ....:     path=Path("export-example")
+    ....: )
+    sage: cipher.analyse(model_options)
+    5312 variables and 8641 constraints were written to 'export-example/PRESENT.mps'
     12
-    sage: input_difference = cipher.result['in']
-    sage: output_difference = cipher.result['out']
-
+    sage: input_difference = cipher.results[0]['in']
+    sage: output_difference = cipher.results[0]['out']
     sage: # Export the cipher together with its results
     sage: import tempfile
     sage: with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
-    ....:   tmpfile_name = f.name
-    ....:   cipher.export(tmpfile_name)
-    ....:   # Load the cipher from scratch
-    ....:   loaded = cipher.load(tmpfile_name)
-    ....:   # The results are still the same
-    ....:   print(loaded.result['in'] == input_difference)
-    ....:   print(loaded.result['out'] == output_difference)
-    Object 'PRESENT' has been exported to ...
-    True
-    True
+    sage:     tmpfile_name = f.name
+    sage: cipher.export(tmpfile_name)
+    sage: # Load the cipher from scratch
+    sage: loaded = cipher.load(tmpfile_name)
+    sage: # The results are still the same
+    sage: loaded.results[0]['in'] == input_difference
+    sage: loaded.results[0]['out'] == output_difference
 
 
