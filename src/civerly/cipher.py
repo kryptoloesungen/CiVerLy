@@ -2303,14 +2303,32 @@ class Cipher:
         STRING += "\t\\end{tikzpicture}}\n\\end{center}\n\\endgroup\n"
         return STRING
 
-    def exclude_solution(self, model_options, results): 
+    def exclude_solution(self, model_options, results):
         if model_options.optimization == OPTIMIZATION.MILP:
             return self._exclude_solution_milp(results)
         elif model_options.optimization == OPTIMIZATION.SAT:
-            return self._exclude_solution_sat(results)
+            return self._exclude_solution_sat(results, model_options)
 
-    def _exclude_solution_sat(self):
-        return None # TODO
+    def _exclude_solution_sat(self, results, model_options):
+        input_file_name = model_options.path / (self.name + ".cnf")
+        sum_arr_file = model_options.path / (self.name + "sum.json")
+
+        with open(sum_arr_file, 'r') as f:
+            sum_arr = json.load(f)
+
+        sum_vars = {int(var) for _, var in sum_arr}
+        input_vars = set(range(1, self.input_length + 1))
+        blocking_var_list = sorted(sum_vars | input_vars)
+
+        blocking_clause = tuple(
+            (-v if results.get(v, 0) == 1 else v)
+            for v in blocking_var_list
+        )
+
+        sat = DIMACS()
+        sat.read(str(input_file_name))
+        sat.add_clause(blocking_clause)
+        sat.write(input_file_name)
 
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         r"""
