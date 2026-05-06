@@ -397,7 +397,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
             prev_result = all_results[-1][0]
 
             # Build blocking clause: negate each variable according to its
-            # value in the previous solution.
+            # value in the previous solution, so that this solution is excluded.
             blocking_clause = tuple(
                 (-v if prev_result.get(v, 0) == 1 else v)
                 for v in blocking_var_list
@@ -847,10 +847,6 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         n = model_options.number_of_solutions
 
-        # disable overwrite
-        tmp_overwrite = model_options.overwrite
-        model_options.overwrite = False
-
         all_results = []
         current_weight = None  # weight of the most recently found solution
         solution_index = 0
@@ -898,8 +894,6 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                 cipher._exclude_solution_milp(r)
                 cipher._finish_milp(model_options, cipher.milp)
 
-        # set overwrite back to old value
-        model_options.overwrite = tmp_overwrite
         return all_results
 
 
@@ -1041,10 +1035,6 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
         n = model_options.number_of_solutions
 
-        # disable overwrite
-        tmp_overwrite = model_options.overwrite
-        model_options.overwrite = False
-
         all_results = []
         current_weight = None  # weight of the most recently found solution
         solution_index = 0
@@ -1093,8 +1083,6 @@ class GLPK_CVL(MILP_SOLVER_CVL):
                 cipher._exclude_solution_milp(r)
                 cipher._finish_milp(model_options, cipher.milp)
 
-        # set overwrite back to old value
-        model_options.overwrite = tmp_overwrite
         return all_results
 
 

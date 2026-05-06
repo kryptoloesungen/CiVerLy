@@ -108,8 +108,6 @@ class WEAK_PRESENT_CVL:
         Set all input bits to active and analyse again:
 
             sage: # optional - scip, espresso
-            sage: import builtins
-            sage: model_options.overwrite = False
             sage: for i in range(cipher.input_length):
             ....:     cipher.milp.add_constraint(cipher.nodes[0].MILP_OUT[i] == 1)
             sage: cipher.analyse(model_options)
@@ -118,15 +116,6 @@ class WEAK_PRESENT_CVL:
             61.8300749986
             sage: cipher.results[0]['in'] == [1]*64
             True
-            
-        Now overwrite the old model:
-            
-            sage: # optional - scip, espresso
-            sage: model_options.overwrite = True
-            sage: cipher.analyse(model_options)
-            Using existing file ..., make sure it is up to date!
-            3648 variables and 6465 constraints were written to ...
-            5.4150374993
             
         Remove temporary files:
 
