@@ -375,40 +375,19 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         if n <= 1:
             return all_results
 
-        # --- Determine variables to block on --------------------------------
+        # sum_arr is needed for weight-escalation (rebuilding CNF at a new bound).
         sum_arr_file = (
             input_file_name.parent / f"{input_file_name.stem}sum.json"
         )
         with open(sum_arr_file, 'r') as _f:
             sum_arr = json.load(_f)
 
-        sum_vars = {int(var) for _, var in sum_arr}
-        # Also block on SAT_IN (vars 1 ... input_length) to distinguish trails
-        # with identical S-box activity but different input differences.
-        input_vars: set = (
-            set(range(1, cipher.input_length + 1))
-            if cipher is not None else set()
-        )
-        blocking_var_list = sorted(sum_vars | input_vars)
-
         # --- Step 2: enumerate additional solutions -------------------------
         solution_index = 1
         while solution_index < n:
             prev_result = all_results[-1][0]
 
-            # Build blocking clause: negate each variable according to its
-            # value in the previous solution, so that this solution is excluded.
-            blocking_clause = tuple(
-                (-v if prev_result.get(v, 0) == 1 else v)
-                for v in blocking_var_list
-            )
-
-            # Load the current CNF (which already has the weight constraint and
-            # all previous blocking clauses), add the new clause, and overwrite.
-            sat = DIMACS()
-            sat.read(str(input_file_name))
-            sat.add_clause(blocking_clause)
-            sat.write(input_file_name)
+            cipher.exclude_solution(model_options, prev_result)
 
             tmp_sat_file = (
                 input_file_name.parent
