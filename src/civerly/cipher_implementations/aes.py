@@ -175,31 +175,6 @@ from sage.matrix.special import identity_matrix, block_matrix
 from sage.crypto.sboxes import AES as AES_S
 
 
-def aes_key_schedule(k, R):
-    """Return list of R+1 128-bit round keys for AES-128 with master key k."""
-    Rcon = [0x00000000, 0x01000000, 0x02000000, 0x04000000, 0x08000000,
-            0x10000000, 0x20000000, 0x40000000, 0x80000000, 0x1b000000,
-            0x36000000, 0x6c000000, 0xd8000000, 0xab000000]
-
-    def sub_word(w):
-        return (int(AES_S[(w >> 24) & 0xff]) << 24 |
-                int(AES_S[(w >> 16) & 0xff]) << 16 |
-                int(AES_S[(w >> 8) & 0xff]) << 8 |
-                int(AES_S[w & 0xff]))
-
-    def rot_word(w):
-        return ((w << 8) | (w >> 24)) & 0xFFFFFFFF
-
-    W = [(k >> (96 - 32*i)) & 0xFFFFFFFF for i in range(4)]
-    for i in range(4, 4*(R+1)):
-        temp = W[i-1]
-        if i % 4 == 0:
-            temp = sub_word(rot_word(temp)) ^ Rcon[i // 4]
-        W.append(W[i-4] ^ temp)
-
-    return [sum(W[4*r + j] << (32 * (3-j)) for j in range(4)) for r in range(R+1)]
-
-
 def _make_ks_step(rcon_val):
     """One AES-128 key-expansion step as a SBoxCipher(128 -> 128).
 
