@@ -9,6 +9,8 @@ allowing to seamlessly incorporate them into your workflow.
 See the following example to understand how to export and load Cipher objects.
 
 .. code-block::
+
+    sage: # optional - scip, espresso
     sage: # First, analyse some cipher
     sage: from civerly.cipher_implementations.present import PRESENT_CVL
     sage: from civerly.model_options import *
@@ -30,13 +32,16 @@ See the following example to understand how to export and load Cipher objects.
     sage: output_difference = cipher.results[0]['out']
     sage: # Export the cipher together with its results
     sage: import tempfile
-    sage: with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
-    sage:     tmpfile_name = f.name
+    sage: f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+    sage: tmpfile_name = f.name
     sage: cipher.export(tmpfile_name)
+    Object 'PRESENT' has been exported to ...
     sage: # Load the cipher from scratch
     sage: loaded = cipher.load(tmpfile_name)
     sage: # The results are still the same
     sage: loaded.results[0]['in'] == input_difference
+    True
     sage: loaded.results[0]['out'] == output_difference
+    True
 
 
