@@ -79,7 +79,8 @@ class Toy7:
             sage: del cipher
             sage: cipher = Toy7()
             sage: model_options.number_of_solutions = 30
-            sage: res =cipher.analyse(model_options=model_options)
+            sage: res = cipher.analyse(model_options=model_options)
+            ...
             sage: res == [3]*30
             True
 
