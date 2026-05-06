@@ -2132,7 +2132,7 @@ class Cipher:
         STRING  = f"\\newpage\n"
         STRING += f"\\section{{{self.name.replace('_', '\\_')}}}\n"
 
-        w = int(trail_node.weight)
+        w = trail_node.weight
         if model_options.granularity == GRANULARITY.WORDWISE:
             STRING += f"Active SBoxes: ${w}$\n\n"
         elif model_options.granularity == GRANULARITY.BITWISE:
