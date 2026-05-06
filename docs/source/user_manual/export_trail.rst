@@ -18,7 +18,7 @@ See the following example to understand how to export and load Cipher objects.
     ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
     ....:     granularity=GRANULARITY.BITWISE,
     ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-    ....:     milp_solver=GUROBI_CVL(),
+    ....:     milp_solver=SCIP_CVL(),
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
     ....:     logic_minimizer=ESPRESSO_CVL(),
     ....:     path=Path("export-example")
