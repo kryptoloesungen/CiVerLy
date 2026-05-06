@@ -564,10 +564,10 @@ class SBoxCipher(Cipher):
     def _exclude_solution_milp(self, results: dict) -> None:
         r"""
         Convert a MILP solution *results* dict (as returned by
-        ``process_solution_file``) into a blocking constraint and
-        add it to ``self.milp``.
+        ``process_solution_file``) into a constraint which forbids this
+        solution and add it to ``self.milp``.
 
-        The no-good ensures the exact solution cannot repeat on re-solve.
+        This ensures the exact solution cannot be found again on re-solve.
         The constraint is added directly to ``self.milp``; callers must
         flush ``self.milp`` to the MPS file (via ``_finish_milp``) before
         invoking the solver again.
