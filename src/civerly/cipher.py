@@ -1514,15 +1514,12 @@ class Cipher:
             if self.milp is None:
                 self.model(model_options)
             else:
-                if model_options.overwrite:
-                    self.model(model_options)
-                else:
-                    print(
-                        "Using existing MILP model, make sure it is up to date!"
-                    )
-                    self._finish_milp(
-                        model_options, self.milp
-                    )
+                print(
+                    "Using existing MILP model, make sure it is up to date!"
+                )
+                self._finish_milp(
+                    model_options, self.milp
+                )
             if model_options.milp_solver is None:
                 raise NoSolverWarning()
             if model_options.number_of_solutions > 1:
@@ -1546,15 +1543,12 @@ class Cipher:
             if self.sat is None:
                 self.model(model_options)
             else:
-                if model_options.overwrite:
-                    self.model(model_options)
-                else:
-                    print(
-                        "Using existing SAT model, make sure it is up to date!"
-                    )
-                    self._finish_sat(
-                        model_options, self.sat
-                    )
+                print(
+                    "Using existing SAT model, make sure it is up to date!"
+                )
+                self._finish_sat(
+                    model_options, self.sat
+                )
             if self._return_immediately_:
                 return
             if model_options.number_of_solutions > 1:

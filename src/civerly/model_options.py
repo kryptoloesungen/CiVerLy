@@ -212,7 +212,6 @@ class MODEL_OPTIONS:
     number_of_solutions: int = 1
     path: Path = None
     write_to_file: bool = True
-    overwrite: bool = True
 
     def __repr__(self):
         string = "MODEL_OPTIONS:"
