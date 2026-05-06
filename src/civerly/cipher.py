@@ -2302,7 +2302,14 @@ class Cipher:
         STRING += "\t\\end{tikzpicture}}\n\\end{center}\n\\endgroup\n"
         return STRING
 
+    def exclude_solution(self, model_options, results): 
+        if model_options.optimization == OPTIMIZATION.MILP:
+            return self._exclude_solution_milp(results)
+        elif model_options.optimization == OPTIMIZATION.SAT:
+            return self._exclude_solution_sat(results)
 
+    def _exclude_solution_sat(self):
+        return None # TODO
 
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         r"""
