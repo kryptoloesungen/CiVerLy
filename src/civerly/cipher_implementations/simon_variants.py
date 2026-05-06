@@ -293,6 +293,11 @@ class SIMON_Variants_CVL:
         simon_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
         # ------------------------------------------------ #
 
+        simon_cipher._rk_components = [
+            simon_cipher.nodes[r+1].nodes[node_keyxor] for r in range(R)
+        ]
+        simon_cipher.key_schedule = None
+
         self.simon_cipher = simon_cipher
 
     def __new__(cls, *args, **kwargs):
