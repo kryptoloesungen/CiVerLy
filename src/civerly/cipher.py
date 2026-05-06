@@ -1496,11 +1496,12 @@ class Cipher:
               :class:`civerly.model_options.MODEL_OPTIONS`
 
         When ``model_options.number_of_solutions == 1`` (the default), a
-        single optimal trail is found and its weight is returned (matching the
-        existing behaviour).  When ``number_of_solutions > 1``, the solver
-        looks for that many distinct solutions; the method returns a **list**
-        of weights (one per solution found), and all trails are available in
-        ``self.results`` (list of ``{"in": ..., "out": ...}`` dicts).
+        single optimal trail is found and its weight is returned.
+        When ``number_of_solutions > 1``, the solver looks for that many
+        distinct solutions; the method returns a **list** of that many optimal
+        weights (one per solution found), sorted in ascending order.
+        Furthermore, all trails are available in ``self.results``
+        (list of ``{"in": ..., "out": ..., "weight": ...}`` dicts).
 
         .. WARNING::
 
