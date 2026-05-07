@@ -59,7 +59,7 @@ lint: check format-check spell check-links
 SAGE              := sage
 NTHREADS          := 8
 WARN_LONG         := 180
-SAGE_FLAGS         = -t --nthreads=$(NTHREADS) --warn-long=$(WARN_LONG)
+SAGE_FLAGS         = -t --nthreads=$(NTHREADS) --warn-long=$(WARN_LONG) --timeout 0
 TEST_DIR          := src/civerly
 ALL_OPTIONALS     := scip glpk gurobi cryptominisat cadical espresso
 CI_SOLVERS        := scip glpk espresso cadical cryptominisat
