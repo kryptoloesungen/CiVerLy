@@ -629,8 +629,8 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
             remaining = n - len(all_results)
 
-            # Rebuild the model with sum_arr == current_weight
-            model_options.solve_range = (current_weight, current_weight)
+            # Rebuild the model with sum_arr <= current_weight
+            model_options.solve_range = (0, current_weight)
             cipher.model(model_options)
             model_options.solve_range = orig_sr
 
@@ -810,11 +810,6 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         After each solve the solution is excluded (via ``cipher.exclude_solution``),
         the MILP model is regenerated (via ``cipher.model``), and the solver is invoked again.
 
-        When all solutions at the current optimal weight are exhausted, the
-        weight lower bound is increased by one and the search continues at the
-        next weight level until *n* solutions are found or no more solutions
-        exist within the allowed range.
-
         Returns a list of ``(results_dict, objective_value)`` pairs ordered
         from best to worst objective weight.
         """
@@ -975,10 +970,9 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         Find up to *n* solutions using a by-hand blocking approach (GLPK does
         not support a solution pool natively).
 
-        Identical in structure to :meth:`civerly.solvers.SCIP_CVL.solve_multiple`:
-        when all solutions at the current optimal weight are exhausted, the
-        weight lower bound is increased by one and the search continues at the
-        next weight level.
+        Identical in structure to :meth:`civerly.solvers.SCIP_CVL.solve_multiple`.
+        Search for optimal solution, exclude it, and restart the solving process.
+        
         """
         input_file_name  = model_options.path / (cipher.name + ".mps")
         output_file_name = model_options.path / (cipher.name + ".sol")
