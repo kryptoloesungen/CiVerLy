@@ -121,6 +121,46 @@ class SOLVER_CVL:
 class MILP_SOLVER_CVL(SOLVER_CVL):
     def __init__(self):
         super().__init__()
+        
+    def solve_multiple(self, model_options, cipher=None, time_limit=None):
+        r"""
+        Find up to *n* solutions using a by-hand blocking approach.
+
+        After each solve the solution is excluded (via ``cipher.exclude_solution``),
+        the MILP model is regenerated (via ``cipher.model``), and the solver is invoked again.
+
+        Returns a list of ``(results_dict, objective_value)`` pairs ordered
+        from best to worst objective weight.
+        """
+        input_file_name  = model_options.path / (cipher.name + ".mps")
+        output_file_name = model_options.path / (cipher.name + ".sol")
+        assert isinstance(input_file_name, Path)
+        assert isinstance(output_file_name, Path)
+
+        n = model_options.number_of_solutions
+
+        all_results = []
+        solution_index = 0
+
+        while solution_index < n:
+            if solution_index == 0:
+                sol_file = output_file_name
+            else:
+                sol_file = (
+                    output_file_name.parent
+                    / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
+                )
+            self.invoke(input_file_name, sol_file, time_limit=time_limit)
+            r, w = self.process_solution_file(sol_file)
+
+            all_results.append((r, w))
+            solution_index += 1
+
+            if solution_index < n and cipher is not None:
+                cipher.exclude_solution(model_options, r)
+                cipher._finish_milp(model_options, cipher.milp)
+
+        return all_results
 
 
 class SAT_SOLVER_CVL(SOLVER_CVL):
@@ -796,46 +836,6 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         return _to_dict(results), objective_value
 
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        r"""
-        Find up to *n* solutions using a by-hand blocking approach.
-
-        After each solve the solution is excluded (via ``cipher.exclude_solution``),
-        the MILP model is regenerated (via ``cipher.model``), and the solver is invoked again.
-
-        Returns a list of ``(results_dict, objective_value)`` pairs ordered
-        from best to worst objective weight.
-        """
-        input_file_name  = model_options.path / (cipher.name + ".mps")
-        output_file_name = model_options.path / (cipher.name + ".sol")
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
-
-        n = model_options.number_of_solutions
-
-        all_results = []
-        solution_index = 0
-
-        while solution_index < n:
-            if solution_index == 0:
-                sol_file = output_file_name
-            else:
-                sol_file = (
-                    output_file_name.parent
-                    / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
-                )
-            self.invoke(input_file_name, sol_file, time_limit=time_limit)
-            r, w = self.process_solution_file(sol_file)
-
-            all_results.append((r, w))
-            solution_index += 1
-
-            if solution_index < n and cipher is not None:
-                cipher.exclude_solution(model_options, r)
-                cipher._finish_milp(model_options, cipher.milp)
-
-        return all_results
-
 
 class GLPK_CVL(MILP_SOLVER_CVL):
     def __init__(self):
@@ -957,45 +957,6 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             value = line[i+1:i+2]
             results[name] = value
         return _to_dict(results), objective_value
-
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        r"""
-        Find up to *n* solutions using a by-hand blocking approach (GLPK does
-        not support a solution pool natively).
-
-        Identical in structure to :meth:`civerly.solvers.SCIP_CVL.solve_multiple`.
-        Search for optimal solution, exclude it, and restart the solving process.
-        
-        """
-        input_file_name  = model_options.path / (cipher.name + ".mps")
-        output_file_name = model_options.path / (cipher.name + ".sol")
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
-
-        n = model_options.number_of_solutions
-
-        all_results = []
-        solution_index = 0
-
-        while solution_index < n:
-            if solution_index == 0:
-                sol_file = output_file_name
-            else:
-                sol_file = (
-                    output_file_name.parent
-                    / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
-                )
-            self.invoke(input_file_name, sol_file, time_limit=time_limit)
-            r, w = self.process_solution_file(sol_file)
-
-            all_results.append((r, w))
-            solution_index += 1
-
-            if solution_index < n and cipher is not None:
-                cipher.exclude_solution(model_options, r)
-                cipher._finish_milp(model_options, cipher.milp)
-
-        return all_results
 
 
 class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
