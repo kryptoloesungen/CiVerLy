@@ -476,10 +476,13 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         )
         command = [
             "gurobi_cl", f"ResultFile={output_file_name}",
-            f"LogFile={log_file_name}", str(input_file_name)
+            str(input_file_name)
         ]
         if time_limit is not None:
             command.insert(2, f"TimeLimit={time_limit}")
+            
+        if log_file_name is not None:
+            command.insert(2, f"LogFile={log_file_name}")
 
         with suppress_output():
             process = subprocess.Popen(command)
