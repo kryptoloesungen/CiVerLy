@@ -570,30 +570,53 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
     def solve_multiple(self, model_options, cipher=None, time_limit=None):
         r"""
-        Find up to *n* solutions using Gurobi's solution pool with weight
-        enforcement.
+        Find up to *n* optimal solutions using Gurobi's solution pool.
 
-        Strategy:
-
-        1. Run a standard solve to find the optimal weight *W*.
-        2. Rebuild the model with an equality constraint ``sum_arr == W``
-           and run Gurobi's pool (``PoolSearchMode=2``, ``PoolGap=0``) to
-           collect up to *n* solutions at that exact weight.
-        3. If fewer than *n* solutions are found, increment *W* by one and
-           repeat from step 2 until *n* solutions are collected or the
-           upper bound of ``model_options.solve_range`` is reached.
+        A single Gurobi invocation with ``PoolSearchMode=2`` and ``PoolGap=0``
+        finds the optimum and then systematically enumerates additional
+        solutions of equal quality, writing each to a numbered ``.sol`` file.
 
         Gurobi pool parameters used:
 
-        - ``PoolSolutions=k``  – keep at most *k* more solutions.
+        - ``PoolSolutions=n``  – keep at most *n* solutions.
         - ``PoolSearchMode=2`` – systematically enumerate pool solutions.
-        - ``PoolGap=0``        – only accept solutions matching the weight.
+        - ``PoolGap=0``        – only accept solutions matching the optimum.
         - ``SolFiles=<prefix>``– write pool solutions as
           ``<prefix>0.sol``, ``<prefix>1.sol``, …
 
-        Returns a list of ``(results_dict, objective_value)`` pairs ordered
-        from best to worst objective (at most *n* entries).
+        Returns a list of ``(results_dict, objective_value)`` pairs
+        (at most *n* entries).
         """
+
+        def solutionpooljson_to_solfiles(json_file_name, output_file_name):
+            """
+            The optimal solutions in the Gurobi solution pool can only be retrieved
+            in form of a JSON file. In order to make the program flow coherent
+            to the other solvers, write each solution into a new .sol file.
+            """
+            with open(json_file_name, 'r') as f:
+                data = json.load(f)
+
+            num_solutions = data['SolutionInfo']['SolCount']
+
+            for sol_idx in range(num_solutions):
+                obj_val = data['SolutionInfo']['PoolNObjVal'][sol_idx]
+                
+                sol_file = (
+                    output_file_name.parent
+                    / f"{output_file_name.stem}_{sol_idx}.sol"
+                )
+
+                with open(sol_file, 'w') as f:
+                    f.write(f"# Objective value = {obj_val}\n")
+                    
+                    for var in data['Vars']:
+                        var_name = var['VarName']
+                        var_value = var['PoolNX'][sol_idx]
+                        f.write(f"{var_name} {var_value}\n")
+            return
+
+
         input_file_name  = model_options.path / (cipher.name + ".mps")
         output_file_name = model_options.path / (cipher.name + ".sol")
         assert isinstance(input_file_name, Path)
@@ -604,93 +627,60 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         parent = output_file_name.parent
         stem = output_file_name.stem
         log_file_name = parent / f"{stem}_{self.name}.log"
-        pool_prefix = parent / f"{stem}_pool"
+        json_file_name = parent / f"{stem}_pool.json"
+        command = [
+            "gurobi_cl",
+            "PoolSearchMode=2",
+            f"LogFile={log_file_name}",
+            f"PoolSolutions={n}",
+            "JSONSolDetail=1",
+            f"ResultFile={json_file_name}",
+            str(input_file_name)
+        ]
 
-        # Step 1: find the optimal weight via a standard solve
-        self.invoke(input_file_name, output_file_name,
-                    log_file_name=log_file_name, time_limit=time_limit)
-        first_result, optimal_weight = self.process_solution_file(
-            output_file_name
-        )
+        if time_limit is not None:
+            command.insert(2, f"TimeLimit={time_limit}")
 
-        if n <= 1 or cipher is None or model_options is None:
-            return [(first_result, optimal_weight)]
+        with suppress_output():
+            process = subprocess.Popen(command)
+            errno = process.wait()
 
-        # Step 2: enforce equality weight and collect solutions via pooling
-        orig_sr = model_options.solve_range
-        current_weight = optimal_weight
-        all_results = []
+        if errno != 0:
+            self.status = SOLVING_STATUS.ERROR
 
-        while len(all_results) < n:
-            if orig_sr is not None and (
-                current_weight < orig_sr[0] or current_weight > orig_sr[1]
-            ):
-                break
-
-            remaining = n - len(all_results)
-
-            # Rebuild the model with sum_arr <= current_weight
-            model_options.solve_range = (0, current_weight)
-            cipher.model(model_options)
-            model_options.solve_range = orig_sr
-
-            command = [
-                "gurobi_cl",
-                f"ResultFile={output_file_name}",
-                f"LogFile={log_file_name}",
-                f"PoolSolutions={remaining}",
-                "PoolSearchMode=2",
-                "PoolGap=0",
-                f"SolFiles={pool_prefix}",
-                str(input_file_name),
-            ]
-            if time_limit is not None:
-                command.insert(2, f"TimeLimit={time_limit}")
-
-            with suppress_output():
-                process = subprocess.Popen(command)
-                errno = process.wait()
-
-            if errno != 0:
-                self.status = SOLVING_STATUS.ERROR
-
-            if log_file_name.exists():
-                with open(log_file_name, 'r') as file:
-                    content = file.read()
-                if re.search(self.timeout_string, content, re.MULTILINE):
+        if log_file_name.exists():
+            with open(log_file_name, 'r') as file:
+                if re.search(self.timeout_string, file.read(), re.MULTILINE):
                     self.status = SOLVING_STATUS.TIMEOUT
 
-            # Collect pool solution files for this weight level
-            results_for_current_weight = []
-            for i in range(remaining):
-                sol_file = parent / f"{stem}_pool_{i}.sol"
-                if not sol_file.exists():
-                    break
-                try:
-                    rw = self.process_solution_file(sol_file)
-                    results_for_current_weight.append(rw)
-                except (AssertionError, ValueError):
-                    continue
+        if self.status != SOLVING_STATUS.SUCCESS:
+            raise SolverException(self.status)
+        
+        # convert to seperate .sol files
+        solutionpooljson_to_solfiles(
+            json_file_name=json_file_name, output_file_name=output_file_name
+        )
 
-            # Fall back to the main solution file when no pool files exist
-            if results_for_current_weight == [] and output_file_name.exists():
-                try:
-                    rw = self.process_solution_file(output_file_name)
-                    results_for_current_weight.append(rw)
-                    break
-                except (AssertionError, ValueError):
-                    pass
+        results = []
+        for i in range(n):
+            sol_file = (
+                output_file_name.parent
+                / f"{output_file_name.stem}_{i}.sol"
+            )
+            if not sol_file.exists():
+                print(f"{sol_file} doesnt exist")
+                continue
+            try:
+                results.append(self.process_solution_file(sol_file))
+            except (AssertionError, ValueError):
+                print(f"process solution file failed for {sol_file}")
+                continue
 
-            all_results += results_for_current_weight
+        # Gurobi always writes the best solution to ResultFile; use as fallback
+        if not results and output_file_name.exists():
+            results.append(self.process_solution_file(output_file_name))
 
-            # If the pool returned fewer than asked, all solutions at this
-            # weight are exhausted – move to the next weight level
-            if len(results_for_current_weight) < remaining:
-                current_weight += 1
-            else:
-                break
-
-        return all_results
+        return results
 
 
 class SCIP_CVL(MILP_SOLVER_CVL):
