@@ -2,7 +2,7 @@ Exporting the Results
 =======================
 
 CiVerLy supports exporting Cipher objects into a json file.
-As Cipher objects also contain the trails coming from previous runs of :meth:`analysis`,
+As Cipher objects also contain the trails coming from previous runs of :meth:`analyse`,
 it is possible to directly access those results from outside of CiVerLy,
 allowing to seamlessly incorporate them into your workflow.
 
