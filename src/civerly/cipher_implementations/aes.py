@@ -26,9 +26,26 @@ given in :class:`civerly.model_options.MODEL_OPTIONS`::
     3236 variables and 3437 constraints were written to '...'
     55
 
-Indeed, there are 55 active S-boxes for 10-round AES. Next up, we want to
-study linear cryptanalysis using the more accurate modeling of MixColumn, which
-requires solving a MILP itself::
+Indeed, there are 55 active S-boxes for 10-round AES. If of interest, you can
+access the time it took to derive this result.
+
+    sage: # optional - scip
+    sage: aes.analyse_time # random
+    3.9598378209993825
+    sage: aes.model_time # random
+    0.8838596589994268
+    sage: aes.solve_time # random
+    0.4941104200006521
+
+Here, ``analyse_time`` is the complete time it took to execute
+``analyse``. ``model_time`` is the time it took to generate the model and
+``solve_time`` is the time it took to solve the model, in this case with
+SCIP. Notice that ``analyse_time`` is a couple of seconds more than the sum of
+``model_time`` and ``solve time. This is due to additional stuff happening
+inside of CiVerLy but negligible for larger models.
+
+Next up, we want to study linear cryptanalysis using the more accurate modeling
+of MixColumn, which requires solving a MILP itself::
 
     sage: from civerly.cipher_implementations.aes import AES_CVL
     sage: from civerly.model_options import *
