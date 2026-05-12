@@ -8,17 +8,18 @@ NIX_OR_NOTHING := $(if $(shell command -v nix 2>/dev/null),nix develop --command
 
 help:
 	@echo "Available targets:"
-	@echo "  lint          Run all checks (ruff check, ruff format --check, codespell, lychee)"
-	@echo "  check         Run ruff linter"
-	@echo "  check-fix     Run ruff linter and auto-fix issues"
-	@echo "  format        Run ruff formatter"
-	@echo "  format-check  Check formatting without modifying files"
-	@echo "  spell         Run codespell"
-	@echo "  check-links   Run lychee to search for dead links"
-	@echo "  test          Run sage tests"
-	@echo "  test-ci       Run sage tests with all solvers except gurobi, including long tests and docs"
-	@echo "  test-docs     Run sage tests on code in the docs"
+	@echo "  lint           Run all checks (ruff check, ruff format --check, codespell, lychee)"
+	@echo "  check          Run ruff linter"
+	@echo "  check-fix      Run ruff linter and auto-fix issues"
+	@echo "  format         Run ruff formatter"
+	@echo "  format-check   Check formatting without modifying files"
+	@echo "  spell          Run codespell"
+	@echo "  check-links    Run lychee to search for dead links"
+	@echo "  test           Run sage tests"
+	@echo "  test-ci        Run sage tests with all solvers except gurobi, including long tests and docs"
+	@echo "  test-docs      Run sage tests on code in the docs"
 	@echo "  test-extensive Run all solver combinations with and without --long"
+	@echo "  coverage       Run sage coverage analysis"
 	@echo ""
 	@echo "Options:"
 	@echo "  SOLVERS='scip glpk'  Enable specific solvers (default: none)"
@@ -111,3 +112,6 @@ test-extensive: test-dir
 		$(SAGE) $(SAGE_FLAGS) --logfile=$(TEST_OUT_DIR)/$(s)-long.log --optional=sage,$(s) --long $(TEST_DIR) ;)
 	$(NIX_OR_NOTHING) env CIVERLY_DISABLE_GUROBI=1 \
 		$(SAGE) $(SAGE_FLAGS) --logfile=$(TEST_OUT_DIR)/all-solvers-long.log --optional=sage,$(CI_SOLVERS_CSV) --long $(TEST_DIR)
+
+coverage:
+	$(NIX_OR_NOTHING) $(SAGE) --coverage $(TEST_DIR)
