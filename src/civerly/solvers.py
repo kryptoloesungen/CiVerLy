@@ -53,7 +53,7 @@ class SOLVER_CVL:
         self.redirect_stdout = None
 
     def solve(self, input_file, output_file_name,
-              log_file_name=None, time_limit=None):
+              log_file=None, time_limit=None):
         """
         Solve the given optimization problem. For MILP and minimizing, this
         simply calls :meth:`invoke`, while for SAT the binary search method
@@ -61,11 +61,11 @@ class SOLVER_CVL:
         """
         return self.invoke(
             input_file, output_file_name,
-            log_file_name=log_file_name, time_limit=time_limit
+            log_file=log_file, time_limit=time_limit
         )
 
     def invoke(self, input_file, output_file_name,
-              log_file_name=None, time_limit=None):
+              log_file=None, time_limit=None):
         """
         Solve the given MILP or SAT instance externally.
 
@@ -75,7 +75,7 @@ class SOLVER_CVL:
 
             - ``output_file_name``-- path of the file the solution is written to
 
-            - ``log_file_name``-- path to the solver's log file. Default based on
+            - ``log_file``-- path to the solver's log file. Default based on
             ``output_file_name`` and ``solver``.
 
             - ``time_limit``-- integer (default ``None``); time limit in seconds
@@ -96,13 +96,13 @@ class SOLVER_CVL:
         assert isinstance(output_file_name, Path)
 
         # default log file
-        if log_file_name is None:
+        if log_file is None:
             parent_dir = output_file_name.parent
             name = f"{output_file_name.stem}_{self.name}"
             suffix = ".log"
-            log_file_name = parent_dir / (name + suffix)
+            log_file = parent_dir / (name + suffix)
         else:
-            assert isinstance(log_file_name, Path)
+            assert isinstance(log_file, Path)
 
         # you can disable a solver by setting an environment variable
         # with this we simulate that a solver is not installed albeit it is
@@ -509,10 +509,10 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"Time limit reached"
 
     def invoke(self, input_file, output_file_name,
-              log_file_name=None, time_limit=None):
+              log_file=None, time_limit=None):
         r"""Invoke Gurobi solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file_name, time_limit
+            input_file, output_file_name, log_file, time_limit
         )
         command = [
             "gurobi_cl", f"ResultFile={output_file_name}",
@@ -521,8 +521,8 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         if time_limit is not None:
             command.insert(2, f"TimeLimit={time_limit}")
             
-        if log_file_name is not None:
-            command.insert(2, f"LogFile={log_file_name}")
+        if log_file is not None:
+            command.insert(2, f"LogFile={log_file}")
 
         with suppress_output():
             process = subprocess.Popen(command)
@@ -534,7 +534,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         if time_limit is not None:
             # check if the solver reported a time out by checking the log file
             # for an according string
-            with open(log_file_name, 'r') as file:
+            with open(log_file, 'r') as file:
                 content = file.read()
             if re.search(self.timeout_string, content, re.MULTILINE):
                 self.status = SOLVING_STATUS.TIMEOUT
@@ -543,7 +543,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             raise SolverException(self.status)
         return
 
-    def get_objective_bounds(self, log_file_name):
+    def get_objective_bounds(self, log_file):
         """
         Extract the bounds on the objective value from the log of an MILP solver.
 
@@ -551,13 +551,13 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
         INPUT:
 
-            - ``log_file_name``-- name of the log file
+            - ``log_file``-- name of the log file
         """
-        assert isinstance(log_file_name, Path)
+        assert isinstance(log_file, Path)
 
         regexp = r'Best objective (\S+), best bound (\S+), gap'
 
-        with open(log_file_name, 'r') as file:
+        with open(log_file, 'r') as file:
             content = file.read()
 
         hit = re.search(regexp, content, re.MULTILINE)
@@ -566,7 +566,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             lower_bound = _float_or_int(hit.group(2))
             return lower_bound, upper_bound
 
-        warnings.warn(f"No objective bounds found in {log_file_name}")
+        warnings.warn(f"No objective bounds found in {log_file}")
         return None, None
 
     def process_solution_file(self, solution_file_name):
@@ -669,12 +669,12 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
         parent = output_file_name.parent
         stem = output_file_name.stem
-        log_file_name = parent / f"{stem}_{self.name}.log"
+        log_file = parent / f"{stem}_{self.name}.log"
         json_file_name = parent / f"{stem}_pool.json"
         command = [
             "gurobi_cl",
             "PoolSearchMode=2",
-            f"LogFile={log_file_name}",
+            f"LogFile={log_file}",
             f"PoolSolutions={n}",
             "JSONSolDetail=1",
             f"ResultFile={json_file_name}",
@@ -691,8 +691,8 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         if errno != 0:
             self.status = SOLVING_STATUS.ERROR
 
-        if log_file_name.exists():
-            with open(log_file_name, 'r') as file:
+        if log_file.exists():
+            with open(log_file, 'r') as file:
                 if re.search(self.timeout_string, file.read(), re.MULTILINE):
                     self.status = SOLVING_STATUS.TIMEOUT
 
@@ -733,10 +733,10 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"time limit reached"
 
     def invoke(self, input_file, output_file_name,
-              log_file_name=None, time_limit=None):
+              log_file=None, time_limit=None):
         r"""Invoke SCIP solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file_name, time_limit
+            input_file, output_file_name, log_file, time_limit
         )
         if time_limit is not None:
             with open('scip_settings.set', 'w') as f:
@@ -754,9 +754,9 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             ),
             "-s", "scip_settings.set",
         ]
-        # only add -l flag when log_file_name is set
-        if log_file_name is not None:
-            command += ["-l", str(log_file_name)]
+        # only add -l flag when log_file is set
+        if log_file is not None:
+            command += ["-l", str(log_file)]
 
         with suppress_output():
             process = subprocess.Popen(command)
@@ -768,7 +768,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         if time_limit is not None:
             # check if the solver reported a time out by checking the log file
             # for an according string
-            with open(log_file_name, 'r') as file:
+            with open(log_file, 'r') as file:
                 content = file.read()
             if re.search(self.timeout_string, content, re.MULTILINE):
                 self.status = SOLVING_STATUS.TIMEOUT
@@ -778,7 +778,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         return
 
-    def get_objective_bounds(self, log_file_name):
+    def get_objective_bounds(self, log_file):
         """
         Extract the bounds on the objective value from
         the log file of a MILP solver.
@@ -788,13 +788,13 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         INPUT:
 
-            - ``log_file_name``-- name of the log file
+            - ``log_file``-- name of the log file
 
         """
-        assert isinstance(log_file_name, Path)
+        assert isinstance(log_file, Path)
         regexp = r'Primal Bound\s*:\s*(\S+).*\nDual Bound\s*:\s*(\S+).*'
 
-        with open(log_file_name, 'r') as file:
+        with open(log_file, 'r') as file:
             content = file.read()
 
         hit = re.search(regexp, content, re.MULTILINE)
@@ -803,7 +803,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             lower_bound = _float_or_int(hit.group(2))
             return lower_bound, upper_bound
 
-        warnings.warn(f"No objective bounds found in {log_file_name}")
+        warnings.warn(f"No objective bounds found in {log_file}")
         return None, None
 
     def process_solution_file(self, solution_file_name):
@@ -844,18 +844,18 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"TIME LIMIT EXCEEDED"
 
     def invoke(self, input_file, output_file_name,
-              log_file_name=None, time_limit=None):
+              log_file=None, time_limit=None):
         r"""Invoke GLPK solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file_name, time_limit
+            input_file, output_file_name, log_file, time_limit
         )
         command = [
             "glpsol", str(input_file),
             "-o", str(output_file_name)
         ]
-        # only add --log flag when log_file_name is set
-        if log_file_name is not None:
-            command += ["--log", str(log_file_name)]
+        # only add --log flag when log_file is set
+        if log_file is not None:
+            command += ["--log", str(log_file)]
 
         if time_limit is not None:
             command.insert(2, "--tmlim")
@@ -871,14 +871,14 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         if time_limit is not None:
             # check if the solver reported a time out by checking the log file
             # for an according string
-            with open(log_file_name, 'r') as file:
+            with open(log_file, 'r') as file:
                 content = file.read()
             if re.search(self.timeout_string, content, re.MULTILINE):
                 self.status = SOLVING_STATUS.TIMEOUT
 
         return
 
-    def get_objective_bounds(self, log_file_name):
+    def get_objective_bounds(self, log_file):
         """
         Extract the bounds on the objective value from the log of an MILP solver.
 
@@ -886,13 +886,13 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
         INPUT:
 
-            - ``log_file_name``-- name of the log file
+            - ``log_file``-- name of the log file
 
         """
-        assert isinstance(log_file_name, Path)
+        assert isinstance(log_file, Path)
         regexp = r'.*mip\s*=\s*(\S+)\s*>=\s*(\S+).*'
 
-        with open(log_file_name, 'r') as file:
+        with open(log_file, 'r') as file:
             content = file.read()
 
         hit = re.search(regexp, content, re.MULTILINE)
@@ -901,7 +901,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             lower_bound = _float_or_int(hit.group(2))
             return lower_bound, upper_bound
 
-        warnings.warn(f"No objective bounds found in {log_file_name}")
+        warnings.warn(f"No objective bounds found in {log_file}")
         return None, None
 
     def process_solution_file(self, solution_file_name):
@@ -965,10 +965,10 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
         self.name = "CryptoMiniSat"
 
     def invoke(self, input_file, output_file_name,
-              log_file_name=None, time_limit=None):
+              log_file=None, time_limit=None):
         r"""Invoke CryptoMiniSat solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file_name, time_limit
+            input_file, output_file_name, log_file, time_limit
         )
         command = [
             "cryptominisat5",
@@ -980,8 +980,8 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
             command.insert(1, "--maxtime")
             command.insert(2, str(time_limit))
 
-        if log_file_name is not None:
-            self.redirect_stdout = open(log_file_name, 'a')
+        if log_file is not None:
+            self.redirect_stdout = open(log_file, 'a')
 
         with suppress_output():
             process = subprocess.Popen(
@@ -990,7 +990,7 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
             )
             errno = process.wait()
 
-        if log_file_name is not None:
+        if log_file is not None:
             self.redirect_stdout.close()
 
         if errno != 0:
@@ -1053,10 +1053,10 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         self.name = "CaDiCal"
 
     def invoke(self, input_file, output_file_name,
-              log_file_name=None, time_limit=None):
+              log_file=None, time_limit=None):
         r"""Invoke CaDiCal solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file_name, time_limit
+            input_file, output_file_name, log_file, time_limit
         )
         command = [
             "cadical",
@@ -1069,8 +1069,8 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
             command.insert(2, "-t")
             command.insert(3, str(time_limit))
 
-        if log_file_name is not None:
-            self.redirect_stdout = open(log_file_name, 'a')
+        if log_file is not None:
+            self.redirect_stdout = open(log_file, 'a')
 
         with suppress_output():
             process = subprocess.Popen(
@@ -1079,7 +1079,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
             )
             errno = process.wait()
 
-        if log_file_name is not None:
+        if log_file is not None:
             self.redirect_stdout.close()
 
         if errno != 0:
@@ -1145,11 +1145,11 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         self.name = "Espresso"
 
     def invoke(self, input_file, output_file_name,
-               log_file_name=None, time_limit=None):
+               log_file=None, time_limit=None):
         r"""Invoke Espresso logic minimizer via shell."""
         super().invoke(
             input_file, output_file_name,
-            log_file_name=None, time_limit=None
+            log_file=None, time_limit=None
         )
         command = [
             "espresso",

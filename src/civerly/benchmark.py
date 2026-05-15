@@ -107,12 +107,12 @@ def benchmark(CM=None, remove_files=False, only_models=False,
 
                     if model_options.optimization == OPTIMIZATION.MILP:
                         name = f"{cipher.name}_{model_options.milp_solver.name}"
-                        log_file_name = model_options.path / f"{name}.log"
+                        log_file = model_options.path / f"{name}.log"
                         sol_file_name = model_options.path / (cipher.name + ".sol")
                         status = model_options.milp_solver.solve(model_options.path / (cipher.name + ".mps"),
                                        sol_file_name,
                                        time_limit=solving_time_limit,
-                                       log_file_name=log_file_name)
+                                       log_file=log_file)
                         solve_stop = time.time()
                         solve_time = round(solve_stop - solve_start, 2)
                         if status is None:
@@ -120,7 +120,7 @@ def benchmark(CM=None, remove_files=False, only_models=False,
                             solve_time = f"{solve_time}s"
                         elif status == SOLVING_STATUS.TIMEOUT:
                             solve_time = f"{solving_time_limit}s$^{{\\dagger}}$"
-                            bounds = model_options.milp_solver.get_objective_bounds(log_file_name)
+                            bounds = model_options.milp_solver.get_objective_bounds(log_file)
                             if bounds == [None, None]:
                                 obj = "-"
                             else:
