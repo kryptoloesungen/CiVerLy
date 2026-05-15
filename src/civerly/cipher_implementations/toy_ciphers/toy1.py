@@ -97,7 +97,7 @@ class Toy1:
             ....:   cipher.model(model_options=model_options)
             ....:   GUROBI_CVL().solve(
             ....:       input_file=Path(tmpdir) / "Toy1.mps",
-            ....:       output_file_name=Path(tmpdir) / "Toy1.sol",
+            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )
             ....:   GUROBI_CVL().process_solution_file(
             ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
@@ -119,7 +119,7 @@ class Toy1:
             ....:   cipher.model(model_options=model_options)
             ....:   SCIP_CVL().solve(
             ....:       input_file=Path(tmpdir) / "Toy1.mps",
-            ....:       output_file_name=Path(tmpdir) / "Toy1.sol",
+            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )
             ....:   SCIP_CVL().process_solution_file(
             ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
@@ -141,7 +141,7 @@ class Toy1:
             ....:   cipher.model(model_options=model_options)
             ....:   GLPK_CVL().solve(
             ....:       input_file=Path(tmpdir) / "Toy1.mps",
-            ....:       output_file_name=Path(tmpdir) / "Toy1.sol",
+            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )
             ....:   GLPK_CVL().process_solution_file(
             ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",

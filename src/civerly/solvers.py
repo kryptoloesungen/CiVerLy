@@ -52,7 +52,7 @@ class SOLVER_CVL:
         # overwritten for solvers not supporting log files
         self.redirect_stdout = None
 
-    def solve(self, input_file, output_file_name,
+    def solve(self, input_file, solution_file,
               log_file=None, time_limit=None):
         """
         Solve the given optimization problem. For MILP and minimizing, this
@@ -60,11 +60,11 @@ class SOLVER_CVL:
         (formerly `optimize_sat`) is called.
         """
         return self.invoke(
-            input_file, output_file_name,
+            input_file, solution_file,
             log_file=log_file, time_limit=time_limit
         )
 
-    def invoke(self, input_file, output_file_name,
+    def invoke(self, input_file, solution_file,
               log_file=None, time_limit=None):
         """
         Solve the given MILP or SAT instance externally.
@@ -73,10 +73,10 @@ class SOLVER_CVL:
 
             - ``input_file``-- path to the file containing the MILP or SAT
 
-            - ``output_file_name``-- path of the file the solution is written to
+            - ``solution_file``-- path of the file the solution is written to
 
             - ``log_file``-- path to the solver's log file. Default based on
-            ``output_file_name`` and ``solver``.
+            ``solution_file`` and ``solver``.
 
             - ``time_limit``-- integer (default ``None``); time limit in seconds
 
@@ -93,12 +93,12 @@ class SOLVER_CVL:
             installed on the same machine as CiVerLy.
         """
         assert isinstance(input_file, Path)
-        assert isinstance(output_file_name, Path)
+        assert isinstance(solution_file, Path)
 
         # default log file
         if log_file is None:
-            parent_dir = output_file_name.parent
-            name = f"{output_file_name.stem}_{self.name}"
+            parent_dir = solution_file.parent
+            name = f"{solution_file.stem}_{self.name}"
             suffix = ".log"
             log_file = parent_dir / (name + suffix)
         else:
@@ -133,9 +133,9 @@ class MILP_SOLVER_CVL(SOLVER_CVL):
         from best to worst objective weight.
         """
         input_file  = model_options.path / (cipher.name + ".mps")
-        output_file_name = model_options.path / (cipher.name + ".sol")
+        solution_file = model_options.path / (cipher.name + ".sol")
         assert isinstance(input_file, Path)
-        assert isinstance(output_file_name, Path)
+        assert isinstance(solution_file, Path)
 
         n = model_options.number_of_solutions
 
@@ -144,11 +144,11 @@ class MILP_SOLVER_CVL(SOLVER_CVL):
 
         while solution_index < n:
             if solution_index == 0:
-                sol_file = output_file_name
+                sol_file = solution_file
             else:
                 sol_file = (
-                    output_file_name.parent
-                    / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
+                    solution_file.parent
+                    / f"{solution_file.stem}_{solution_index}{solution_file.suffix}"
                 )
             self.invoke(input_file, sol_file, time_limit=time_limit)
             r, w = self.process_solution_file(sol_file)
@@ -167,7 +167,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
     def __init__(self):
         super().__init__()
 
-    def solve(self, input_file, output_file_name, model_options=None,
+    def solve(self, input_file, solution_file, model_options=None,
               time_limit=None, benchmark=False):
         """
         Repeatedly solve SAT to determine the lowest possible weight.
@@ -180,7 +180,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
 
             - ``input_file``-- path to the file containing the SAT
 
-            - ``output_file_name``-- path to the file the solution is written to
+            - ``solution_file``-- path to the file the solution is written to
 
             - ``model_options`` -- see
             :class:`civerly.model_options.MODEL_OPTIONS`.
@@ -204,7 +204,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
             installed on the same machine as CiVerLy.
         """
         assert isinstance(input_file, Path)
-        assert isinstance(output_file_name, Path)
+        assert isinstance(solution_file, Path)
 
         if time_limit is not None:
             end_time = int(time.time()+time_limit)
@@ -338,10 +338,10 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         tmp_cnf_file_name = input_file.parent / f"{name}.cnf"
         tmp_sat_file_name = input_file.parent / f"{name}.sat"
         shutil.copyfile(tmp_cnf_file_name, input_file)
-        shutil.copyfile(tmp_sat_file_name, output_file_name)
+        shutil.copyfile(tmp_sat_file_name, solution_file)
 
         # write optimization value into the sat file
-        with open(output_file_name, 'a') as f:
+        with open(solution_file, 'a') as f:
             f.write(str(float(W_MIN/10**pr))+"\n")
 
         if benchmark:
@@ -385,9 +385,9 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         best to worst objective weight.
         """
         input_file  = model_options.path / (cipher.name + ".cnf")
-        output_file_name = model_options.path / (cipher.name + ".sat")
+        solution_file = model_options.path / (cipher.name + ".sat")
         assert isinstance(input_file, Path)
-        assert isinstance(output_file_name, Path)
+        assert isinstance(solution_file, Path)
 
         n = model_options.number_of_solutions
 
@@ -405,11 +405,11 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
 
         # --- Step 1: find minimum weight and first solution -----------------
         weight = self.solve(
-            input_file, output_file_name,
+            input_file, solution_file,
             model_options=model_options, time_limit=time_limit
         )
         current_weight_int = int(round(weight * 10**pr))
-        first_result, _ = self.process_solution_file(output_file_name)
+        first_result, _ = self.process_solution_file(solution_file)
         all_results = [(first_result, weight)]
 
         if n <= 1:
@@ -508,14 +508,14 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         self.name = "Gurobi"
         self.timeout_string = r"Time limit reached"
 
-    def invoke(self, input_file, output_file_name,
+    def invoke(self, input_file, solution_file,
               log_file=None, time_limit=None):
         r"""Invoke Gurobi solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file, time_limit
+            input_file, solution_file, log_file, time_limit
         )
         command = [
-            "gurobi_cl", f"ResultFile={output_file_name}",
+            "gurobi_cl", f"ResultFile={solution_file}",
             str(input_file)
         ]
         if time_limit is not None:
@@ -631,7 +631,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         (at most *n* entries).
         """
 
-        def solutionpooljson_to_solfiles(json_file_name, output_file_name):
+        def solutionpooljson_to_solfiles(json_file_name, solution_file):
             """
             The optimal solutions in the Gurobi solution pool can only be retrieved
             in form of a JSON file. In order to make the program flow coherent
@@ -646,8 +646,8 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
                 obj_val = data['SolutionInfo']['PoolNObjVal'][sol_idx]
                 
                 sol_file = (
-                    output_file_name.parent
-                    / f"{output_file_name.stem}_{sol_idx}.sol"
+                    solution_file.parent
+                    / f"{solution_file.stem}_{sol_idx}.sol"
                 )
 
                 with open(sol_file, 'w') as f:
@@ -661,14 +661,14 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
 
         input_file  = model_options.path / (cipher.name + ".mps")
-        output_file_name = model_options.path / (cipher.name + ".sol")
+        solution_file = model_options.path / (cipher.name + ".sol")
         assert isinstance(input_file, Path)
-        assert isinstance(output_file_name, Path)
+        assert isinstance(solution_file, Path)
 
         n = model_options.number_of_solutions
 
-        parent = output_file_name.parent
-        stem = output_file_name.stem
+        parent = solution_file.parent
+        stem = solution_file.stem
         log_file = parent / f"{stem}_{self.name}.log"
         json_file_name = parent / f"{stem}_pool.json"
         command = [
@@ -701,14 +701,14 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         
         # convert to seperate .sol files
         solutionpooljson_to_solfiles(
-            json_file_name=json_file_name, output_file_name=output_file_name
+            json_file_name=json_file_name, solution_file=solution_file
         )
 
         results = []
         for i in range(n):
             sol_file = (
-                output_file_name.parent
-                / f"{output_file_name.stem}_{i}.sol"
+                solution_file.parent
+                / f"{solution_file.stem}_{i}.sol"
             )
             if not sol_file.exists():
                 print(f"{sol_file} doesnt exist")
@@ -720,8 +720,8 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
                 continue
 
         # Gurobi always writes the best solution to ResultFile; use as fallback
-        if not results and output_file_name.exists():
-            results.append(self.process_solution_file(output_file_name))
+        if not results and solution_file.exists():
+            results.append(self.process_solution_file(solution_file))
 
         return results
 
@@ -732,11 +732,11 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         self.name = "SCIP"
         self.timeout_string = r"time limit reached"
 
-    def invoke(self, input_file, output_file_name,
+    def invoke(self, input_file, solution_file,
               log_file=None, time_limit=None):
         r"""Invoke SCIP solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file, time_limit
+            input_file, solution_file, log_file, time_limit
         )
         if time_limit is not None:
             with open('scip_settings.set', 'w') as f:
@@ -749,7 +749,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             (
                 f"read {input_file} "
                 "optimize write solution "
-                f"{output_file_name} "
+                f"{solution_file} "
                 "quit"
             ),
             "-s", "scip_settings.set",
@@ -843,15 +843,15 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         self.name = "GLPK"
         self.timeout_string = r"TIME LIMIT EXCEEDED"
 
-    def invoke(self, input_file, output_file_name,
+    def invoke(self, input_file, solution_file,
               log_file=None, time_limit=None):
         r"""Invoke GLPK solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file, time_limit
+            input_file, solution_file, log_file, time_limit
         )
         command = [
             "glpsol", str(input_file),
-            "-o", str(output_file_name)
+            "-o", str(solution_file)
         ]
         # only add --log flag when log_file is set
         if log_file is not None:
@@ -964,16 +964,16 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
         super().__init__()
         self.name = "CryptoMiniSat"
 
-    def invoke(self, input_file, output_file_name,
+    def invoke(self, input_file, solution_file,
               log_file=None, time_limit=None):
         r"""Invoke CryptoMiniSat solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file, time_limit
+            input_file, solution_file, log_file, time_limit
         )
         command = [
             "cryptominisat5",
             "--presimp", "1",
-            "--dumpresult", output_file_name,
+            "--dumpresult", solution_file,
             input_file
         ]
         if time_limit is not None:
@@ -1052,18 +1052,18 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         super().__init__()
         self.name = "CaDiCal"
 
-    def invoke(self, input_file, output_file_name,
+    def invoke(self, input_file, solution_file,
               log_file=None, time_limit=None):
         r"""Invoke CaDiCal solver via shell."""
         super().invoke(
-            input_file, output_file_name, log_file, time_limit
+            input_file, solution_file, log_file, time_limit
         )
         command = [
             "cadical",
             str(input_file),
             "-P1", # preprocess for 1 round
             "--sat",
-            "-w", str(output_file_name)
+            "-w", str(solution_file)
         ]
         if time_limit is not None:
             command.insert(2, "-t")
@@ -1092,7 +1092,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         # if there was no error but there is no solution, we conclude that
         # there was a time out
         if self.status == SOLVING_STATUS.SUCCESS:
-            with open(output_file_name, 'r') as file:
+            with open(solution_file, 'r') as file:
                 line = file.readline().strip("\n")
             if line == "c UNKNOWN":
                 self.status = SOLVING_STATUS.TIMEOUT
@@ -1144,11 +1144,11 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         super().__init__()
         self.name = "Espresso"
 
-    def invoke(self, input_file, output_file_name,
+    def invoke(self, input_file, solution_file,
                log_file=None, time_limit=None):
         r"""Invoke Espresso logic minimizer via shell."""
         super().invoke(
-            input_file, output_file_name,
+            input_file, solution_file,
             log_file=None, time_limit=None
         )
         command = [
@@ -1157,7 +1157,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
             str(input_file)
         ]
 
-        self.redirect_stdout = open(output_file_name, 'a')
+        self.redirect_stdout = open(solution_file, 'a')
 
         # with suppress_output():
         if True:
@@ -1177,7 +1177,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
 
 
 class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
-    def solve(self, input_file, output_file_name, time_limit=None):
+    def solve(self, input_file, solution_file, time_limit=None):
         raise NoSolverWarning()
 
     def solve_multiple(self, model_options, cipher=None, time_limit=None):
@@ -1212,14 +1212,14 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
 
 
 class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
-    def solve(self, input_file, output_file_name, model_options,
+    def solve(self, input_file, solution_file, model_options,
               time_limit=None):
         """
         If no solver is selected, generate all cnf's in solve_range
         and let user solve them externally.
         """
         assert isinstance(input_file, Path)
-        assert isinstance(output_file_name, Path)
+        assert isinstance(solution_file, Path)
 
         # shorten variable name
         pr = model_options.sat_precision
@@ -1294,7 +1294,7 @@ class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
     def __init__(self):
         super().__init__()
 
-    def solve(self, input_file, output_file_name):
+    def solve(self, input_file, solution_file):
         raise NoSolverWarning()
 
 
