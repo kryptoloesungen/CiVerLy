@@ -267,21 +267,19 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         """
         pass
 
-class LOGIC_MINIMIZER_CVL(SOLVER_CVL):
+class LOGIC_MINIMIZER_CVL(SOLVER_CVL, ABC):
     """
-    The logic minimizer to be (automatically) called by CiVerLy, to minimize
-    boolean formulas and therefore to simplify MILP or SAT models.
-    Of course, CiVerLy does not implement any logic minimizer but simply
-    calls the corresponding logic minimizer externally.
-
-    Supported minimizers:
-
-        - Espresso: Used throughout the literature for this purpose.
-          Freely available on https://github.com/classabbyamp/espresso-logic
-
+    Abstract base class for implementing an interface to a logic minizers.
     """
     def __init__(self):
+        """Initizialize the minimizer interface."""
         super().__init__()
+
+    def solve(self, input_file, time_limit=None):
+        """
+        Logic minimizers must only implement the ``invoke`` method.
+        """
+        raise NotImplementedError
 
 
 class GUROBI_CVL(MILP_SOLVER_CVL):
