@@ -942,24 +942,34 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
 
 
 class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
+    """
+    Interface to the Espresso minimizer, see e.g. https://github.com/hadipourh/espresso.
+
+    TODO: add examples for invoke
+    """
     def __init__(self):
+        """Initizialize the Espresso interface."""
         super().__init__()
         self.name = "Espresso"
 
-    def invoke(self, input_file, solution_file,
-               log_file=None, time_limit=None):
-        r"""Invoke Espresso logic minimizer via shell."""
-        super().invoke(
-            input_file, solution_file,
-            log_file=None, time_limit=None
-        )
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+        """
+        Invoke the Espresso minimizer via its CLI.
+
+        The Espresso interface does not support the ``time_limit`` parameter and simply ignores it.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        super().invoke(input_file, solution_file, log_file=None, time_limit=None)
         command = [
             "espresso",
             "-epos",
             str(input_file)
         ]
 
-        self.redirect_stdout = open(solution_file, 'a')
+        redirect_stdout = solution_file.open('a')
 
         # with suppress_output():
         if True:
@@ -969,20 +979,18 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
             )
             errno = process.wait()
 
-        self.redirect_stdout.close()
+        redirect_stdout.close()
 
+        status = SOLVING_STATUS.SUCCESS
         # failure: errno 1
         if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
+            status = SOLVING_STATUS.ERROR
 
-        return
+        return status
 
 
 class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
     def solve(self, input_file, solution_file, time_limit=None):
-        raise NoSolverWarning()
-
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
         raise NoSolverWarning()
 
     def _process_solution_file(self, solution_file):
