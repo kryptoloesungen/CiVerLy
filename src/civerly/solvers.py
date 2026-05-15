@@ -17,80 +17,88 @@ from civerly.util import _generate_constraints_sum_leq_int_LS24
 from civerly.util import suppress_output, _float_or_int
 from civerly.util import _to_dict
 
+from abc import ABC, abstractmethod
 
-class SOLVER_CVL:
+class SOLVER_CVL(ABC):
     """
-    The solver to be (automatically) used by CiVerLy. Of course, CiVerLy does
-    not implement any solver but simply calls the corresponding solver.
-
-    Supported MILP solvers:
-
-    - SCIP: Open Source and reasonable performance.
-    - GLPK: Open Source but only weak performance.
-    - Gurobi: Commercial solver (license needed). Best performance.
-
-    Supported SAT solvers:
-
-    - CryptoMiniSat: Open Source solver.
-    - CaDiCal: Open Source solver.
-
-    .. NOTE::
-
-        If you are going to solve all models by yourself (e.g. on a different
-        machine), you can set this to ``None``.
-
-    .. WARNING::
-
-        Pick a solver only if it is installed on the same machine you are
-        running CiVerLy on.
+    Abstract base class for implementing an interface to a solver.
     """
-
     def __init__(self):
+        """
+        Initialize the solver interface.
+
+        This shall set ``self.name``.
+        """
         self.name = "GenericSolver"
-        self.status = SOLVING_STATUS.SUCCESS  # default value
+        self.can_solve_multiple = False
 
-        # overwritten for solvers not supporting log files
-        self.redirect_stdout = None
-
-    def solve(self, input_file, solution_file,
-              log_file=None, time_limit=None):
+    @abstractmethod
+    def solve(self, input_file, time_limit=None):
         """
-        Solve the given optimization problem. For MILP and minimizing, this
-        simply calls :meth:`invoke`, while for SAT the binary search method
-        (formerly `optimize_sat`) is called.
-        """
-        return self.invoke(
-            input_file, solution_file,
-            log_file=log_file, time_limit=time_limit
-        )
-
-    def invoke(self, input_file, solution_file,
-              log_file=None, time_limit=None):
-        """
-        Solve the given MILP or SAT instance externally.
+        Solve the model in the given file.
 
         INPUT:
 
-            - ``input_file``-- path to the file containing the MILP or SAT
+            - ``input_file`` -- path to the file containing the model
 
-            - ``solution_file``-- path of the file the solution is written to
+            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
 
-            - ``log_file``-- path to the solver's log file. Default based on
-            ``solution_file`` and ``solver``.
+        OUTPUT:
 
-            - ``time_limit``-- integer (default ``None``); time limit in seconds
+            - ``result`` -- a dictionary with at least the following entries:
+
+                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
+                - ``assingment`` -- dictionary or ``None``; the assignment of the variables in the solution
+                - ``solve_time`` -- float; time (in seconds) it took to find this solution
+
+        .. Warning::
+
+            If ``time_limit`` is reached, the solution might be non-optimal.
+        """
+        pass
+
+    def solve_multiple(self, input_file, number_of_solutions, time_limit=None):
+        r"""
+        Find the ``number_of_solutions`` best solutions to the model.
+
+        This method is optional and only implemented for solvers that have corresponding functionality.
+        When implemented ``self.can_solve_multiple`` shall be set to ``True``.
+
+        INPUT:
+
+            - ``input_file`` -- path to the file containing the model
+
+            - ``number_of_solutions`` -- number of solutions to find
+
+            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
+
+        OUTPUT:
+
+            - ``results`` -- a list of at most ``number_of_solutions`` many ``result``, see :meth:`.solve`.
+              If there are less solutions ``results`` may be shorter. ``results`` is ordered; best is at ``results[0]``.
+        """
+        raise NotImplementedError
+
+
+    @abstractmethod
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+        """
+        Invoke the solver's CLI to solve the model in the given file.
+
+        INPUT:
+
+            - ``input_file``-- path to the file containing the model
+
+            - ``solution_file``-- path of the file in which the solver writes the solution
+
+            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+
+            - ``time_limit``-- float (default ``None``); time limit in seconds
 
         OUTPUT:
 
             - Status, see :class:`civerly.solvers.SOLVING_STATUS`. Further, upon
-            successful execution either a ``.sol`` or a ``.sat`` file is created,
-            depending on ``solver``. The file will contain the solution, if one
-            is found.
-
-        .. NOTE::
-
-            This method is implemented for convenience in case a solver is
-            installed on the same machine as CiVerLy.
+              successful execution a solution is stored in ``solution_file``.
         """
         assert isinstance(input_file, Path)
         assert isinstance(solution_file, Path)
@@ -113,9 +121,6 @@ class SOLVER_CVL:
                 f"{self.name} was disabled by setting environment variable "
                 f"{ENV_DISABLE_PREFIX+self.name}"
             )
-
-    def _process_solution_file(self, solution_file):
-        pass
 
 
 class MILP_SOLVER_CVL(SOLVER_CVL):
