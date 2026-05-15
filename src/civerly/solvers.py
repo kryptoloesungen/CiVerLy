@@ -990,24 +990,67 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
 
 
 class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
-    def solve(self, input_file, solution_file, time_limit=None):
-        raise NoSolverWarning()
+    """
+    Dummy MILP solver interface.
 
-    def _process_solution_file(self, solution_file):
+    If one of the supported solvers is used externally, this interface can be used to parse the results.
+
+    TODO: add example
+    """
+
+    def __init__(self):
+        """Initizialize the dummy interface."""
+        super().__init__()
+        self.name = "DummyMILPSolver"
+
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
         """
-        Internal helper method to process the solution file.
+        Raise an exception stating what files are expected. If they already exists, do nothing.
 
         INPUT:
 
-            - ``solution_file``-- name of the file containing a solution
-            - ``solver`` -- the used solver, see
-            :class:`civerly.model_options.SOLVER`
+            - ``input_file``-- path to the file containing the model
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+            - ``solution_file``-- path of the file in which the solver writes the solution
+
+            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+
+            - ``time_limit``-- float (default ``None``); ignored
+
+        OUTPUT:
+
+            - Status, see :class:`civerly.solvers.SOLVING_STATUS`.
+        """
+        super().invoke(input_file, solution_file, log_file, time_limit)
+
+        # TODO:
+        # if solution and log file are there: continue
+        # else:
+        # raise Exception stating the names of the files that are expected
+        status = SOLVING_STATUS.SUCCESS
+
+        # TODO: for MILP we should handle time out / interruptions also for external solvers.
+        # to this end, we should outsource the check for a time out to a dedicated method which we can then overwrite in here.
+
+        return status
+
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the objective value and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assingment`` -- dictionary; the assignment of the variables in the solution
         """
         assert isinstance(solution_file, Path)
 
-        with open(solution_file, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         # try to guess the solver
@@ -1020,72 +1063,84 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         else:
             raise ValueError("Unknown solution format")
 
-
-class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
-    def solve(self, input_file, solution_file, model_options,
-              time_limit=None):
+    def _get_objective_bounds(self, log_file):
         """
-        If no solver is selected, generate all cnf's in solve_range
-        and let user solve them externally.
-        """
-        assert isinstance(input_file, Path)
-        assert isinstance(solution_file, Path)
+        Extract the bounds on the objective value from the log.
 
-        # shorten variable name
-        pr = model_options.sat_precision
-
-        def __get_sum_arr():
-            r"""
-            Implicit helper function to read and extract the sum_arr from the
-            corresponding json file.
-            """
-            sum_arr_file = input_file.parent / f"{input_file.stem}sum.json"
-            with open(sum_arr_file, 'r') as f:
-                file_content = json.load(f)
-
-                # Scale all weights by 10**sat_precision
-                # (and normalize again later)
-                sum_arr = [
-                    (weight, var)
-                    for weight, var in file_content
-                ]
-            return sum_arr
-
-        # scale W_MIN, W_MAX too
-        W_MIN = int(model_options.solve_range[0] * 10**pr)
-        W_MAX = int(model_options.solve_range[1] * 10**pr)
-
-        for w in range(W_MIN, W_MAX):
-            sat = DIMACS()
-            sat.read(str(input_file))
-
-            sat_constraining_prob = _generate_constraints_sum_leq_int_LS24(
-                sat,
-                __get_sum_arr(),
-                w
-            )
-
-            # temporary files with encoded weight w
-            name = f"{input_file.stem}_obj{w/10**pr}"
-            tmp_cnf_file_name = input_file.parent / f"{name}.cnf"
-            sat_constraining_prob.write(tmp_cnf_file_name)
-        return
-
-    def _process_solution_file(self, solution_file):
-        """
-        Internal helper method to process the solution file.
+        This function is used when the MILP solver exceeds the given timeout.
 
         INPUT:
 
-            - ``solution_file``-- name of the file containing a solution
-            - ``solver`` -- the used solver, see
-            :class:`civerly.model_options.SOLVER`
+            - ``log_file``-- name of the log file
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
+
+            - tuple of floats; lower and upper bound for the optimal objective value
+        """
+        assert isinstance(log_file, Path)
+        # TODO: determine solver and call corresponding method
+
+
+
+class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
+    """
+    Dummy SAT solver interface.
+
+    If one of the supported solvers is used externally, this interface can be used to parse the results.
+
+    TODO: add example
+    """
+
+    def __init__(self):
+        """Initizialize the dummy interface."""
+        super().__init__()
+        self.name = "DummySATSolver"
+
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+        """
+        Raise an exception stating what files are expected. If they already exists, do nothing.
+
+        INPUT:
+
+            - ``input_file``-- path to the file containing the model
+
+            - ``solution_file``-- path of the file in which the solver writes the solution
+
+            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+
+            - ``time_limit``-- float (default ``None``); ignored
+
+        OUTPUT:
+
+            - :attr:`civerly.solvers.SOLVING_STATUS.SUCCESS`
+        """
+        super().invoke(input_file, solution_file, log_file, time_limit)
+
+        # TODO:
+        # if solution and log file are there: continue
+        # else:
+        # raise Exception stating the names of the files that are expected
+
+        return SOLVING_STATUS.SUCCESS
+
+
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the satisfiability and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``satisfiability`` -- bool
+
+            - ``assingment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
         assert isinstance(solution_file, Path)
 
-        with open(solution_file, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         # try to guess the solver
@@ -1096,16 +1151,47 @@ class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         else:
             raise ValueError("Unknown solution format")
 
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        raise NoSolverWarning()
-
 
 class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
-    def __init__(self):
-        super().__init__()
+    """
+    Dummy logic minimizer interface.
 
-    def solve(self, input_file, solution_file):
-        raise NoSolverWarning()
+    If one of the supported minimizers is used externally, this interface can be used to parse the results.
+
+    TODO: add example
+    """
+
+    def __init__(self):
+        """Initizialize the dummy interface."""
+        super().__init__()
+        self.name = "DummyLogicMinimizer"
+
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+        """
+        Raise an exception stating what files are expected. If they already exists, do nothing.
+
+        INPUT:
+
+            - ``input_file``-- path to the file containing the model
+
+            - ``solution_file``-- path of the file in which the solver writes the solution
+
+            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+
+            - ``time_limit``-- float (default ``None``); ignored
+
+        OUTPUT:
+
+            - :attr:`civerly.solvers.SOLVING_STATUS.SUCCESS`
+        """
+        super().invoke(input_file, solution_file, log_file, time_limit)
+
+        # TODO:
+        # if solution and log file are there: continue
+        # else:
+        # raise Exception stating the names of the files that are expected
+
+        return SOLVING_STATUS.SUCCESS
 
 
 class SOLVING_STATUS(Enum):
@@ -1143,19 +1229,9 @@ class NoSolverWarning(Warning):
         ...
         NoSolverWarning: No solver has been selected.
         CiVerLy will return without solving.
-
-
     """
     def __init__(self):
         super().__init__(
             "No solver has been selected. "
             "CiVerLy will return without solving."
         )
-
-
-class SolverException(Exception):
-    def __init__(self, e):
-        if e == SOLVING_STATUS.TIMEOUT:
-            super().__init__("Solver / Minimizer timed out.")
-        elif e == SOLVING_STATUS.ERROR:
-            super().__init__("Solver / Minimizer raised an external error.")
