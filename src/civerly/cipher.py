@@ -1759,11 +1759,11 @@ class Cipher:
         """
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file = model_options.path / (self.name + ".sol")
-            return model_options.milp_solver.process_solution_file(
+            return model_options.milp_solver._process_solution_file(
                 solution_file)
         elif model_options.optimization == OPTIMIZATION.SAT:
             solution_file = model_options.path / (self.name + ".sat")
-            return model_options.sat_solver.process_solution_file(
+            return model_options.sat_solver._process_solution_file(
                 solution_file)
         else:
             raise InvalidModelOptionException(
