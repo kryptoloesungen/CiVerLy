@@ -123,49 +123,91 @@ class SOLVER_CVL(ABC):
             )
 
 
-class MILP_SOLVER_CVL(SOLVER_CVL):
+class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
+    """Abstract base class for implementing an interface to a MILP solver."""
+
     def __init__(self):
+        """Initizialize the MILP solver interface."""
         super().__init__()
-        
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        r"""
-        Find up to *n* solutions using a by-hand blocking approach.
 
-        After each solve the solution is excluded (via ``cipher.exclude_solution``),
-        the MILP model is regenerated (via ``cipher.model``), and the solver is invoked again.
-
-        Returns a list of ``(results_dict, objective_value)`` pairs ordered
-        from best to worst objective weight.
+    @abstractmethod
+    def solve(self, input_file, time_limit=None):
         """
-        input_file  = model_options.path / (cipher.name + ".mps")
-        solution_file = model_options.path / (cipher.name + ".sol")
-        assert isinstance(input_file, Path)
-        assert isinstance(solution_file, Path)
+        Solve the model in the given file.
 
-        n = model_options.number_of_solutions
+        INPUT:
 
-        all_results = []
-        solution_index = 0
+            - ``input_file`` -- path to the file containing the model
 
-        while solution_index < n:
-            if solution_index == 0:
-                sol_file = solution_file
-            else:
-                sol_file = (
-                    solution_file.parent
-                    / f"{solution_file.stem}_{solution_index}{solution_file.suffix}"
-                )
-            self.invoke(input_file, sol_file, time_limit=time_limit)
-            r, w = self._process_solution_file(sol_file)
+            - ``time_limit`` -- float or ``none`` (default ``none``); time limit in seconds
 
-            all_results.append((r, w))
-            solution_index += 1
+        OUTPUT:
 
-            if solution_index < n and cipher is not None:
-                cipher.exclude_solution(model_options, r)
-                cipher._finish_milp(model_options, cipher.milp)
+            - ``result`` -- a dictionary with at least the following entries:
 
-        return all_results
+                - ``status`` -- see :class:`civerly.solvers.solving_status`
+                - ``objective_value`` -- float; the objective value of the identified solution
+                - ``objective_bounds`` -- tuple of floats; lower and upper bound for the optimal objective value (interesting when ``time_limit`` is reached)
+                - ``assingment`` -- dictionary; the assignment of the variables in the solution
+                - ``solve_time`` -- float; time (in seconds) it took to find this solution
+
+        .. Warning::
+
+            If ``time_limit`` is reached, the solution might be non-optimal.
+        """
+        start_time = time.perf_counter()
+        solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sol"
+        log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
+        status = self.invoke(input_file, solution_file, log_file=log_file, time_limit=time_limit)
+        solve_time = start_time - time.perf_counter()
+
+        if status == SOLVING_STATUS.SUCCESS:
+            objective_value, assignment = self._process_solution_file(solution_file)
+            objective_bounds = (objective_value, objective_value)
+        elif status == SOLVING_STATUS.TIMEOUT:
+            objective_value, assignment = self._process_solution_file(solution_file)
+            objective_bounds = self._get_objective_bounds(log_file)
+        else:
+            objective_value = None
+            assignment = {}
+            objective_bounds = (None, None)
+
+        result = {"status": status, "objective_value": objective_value, "objective_bounds": objective_bounds, "assingment": assignment, "solve_time": solve_time}
+        return result
+
+    @abstractmethod
+    def _get_objective_bounds(self, log_file):
+        """
+        Extract the bounds on the objective value from the log of an MILP solver.
+
+        This function is used when the MILP solver exceeds the given timeout.
+
+        INPUT:
+
+            - ``log_file``-- name of the log file
+
+        OUTPUT:
+
+            - tuple of floats; lower and upper bound for the optimal objective value
+        """
+        pass
+
+    @abstractmethod
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the objective value and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assingment`` -- dictionary; the assignment of the variables in the solution
+        """
+        pass
 
 
 class SAT_SOLVER_CVL(SOLVER_CVL):
