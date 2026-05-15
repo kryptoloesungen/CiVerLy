@@ -116,7 +116,7 @@ def benchmark(CM=None, remove_files=False, only_models=False,
                         solve_stop = time.time()
                         solve_time = round(solve_stop - solve_start, 2)
                         if status is None:
-                            obj = model_options.milp_solver.process_solution_file(sol_file_name)[1]
+                            obj = model_options.milp_solver._process_solution_file(sol_file_name)[1]
                             solve_time = f"{solve_time}s"
                         elif status == SOLVING_STATUS.TIMEOUT:
                             solve_time = f"{solving_time_limit}s$^{{\\dagger}}$"
@@ -167,7 +167,7 @@ def benchmark(CM=None, remove_files=False, only_models=False,
                             s += f"[{row["W_MIN"]}, {row["W_MAX"]}]"
                             s += " & \\\\*"
                         else:
-                            bound = model_options.sat_solver.process_solution_file(
+                            bound = model_options.sat_solver._process_solution_file(
                                 model_options.path / (cipher.name + ".sat"))[1]
                             s += " & "
                             s += f"{bound} & \\cmark \\\\*"

@@ -127,7 +127,7 @@ class SBoxCipher(Cipher):
                 sage: # optional - scip
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
-                sage: model_options.milp_solver.process_solution_file(
+                sage: model_options.milp_solver._process_solution_file(
                 ....:   model_options.path / (cipher.name + ".sol"),
                 ....: )[1]
                 0
@@ -150,7 +150,7 @@ class SBoxCipher(Cipher):
                 sage: # optional - scip
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
-                sage: model_options.milp_solver.process_solution_file(
+                sage: model_options.milp_solver._process_solution_file(
                 ....:   model_options.path / (cipher.name + ".sol"),
                 ....: )[1]
                 1
@@ -564,7 +564,7 @@ class SBoxCipher(Cipher):
     def _exclude_solution_milp(self, results: dict) -> None:
         r"""
         Convert a MILP solution *results* dict (as returned by
-        ``process_solution_file``) into a constraint which forbids this
+        ``_process_solution_file``) into a constraint which forbids this
         solution and add it to ``self.milp``.
 
         This ensures the exact solution cannot be found again on re-solve.

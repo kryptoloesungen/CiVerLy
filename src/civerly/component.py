@@ -2153,7 +2153,7 @@ class SBox_CVL(Component):
                 ....:     path=Path(tmpdir))
                 ....:   with suppress_output():
                 ....:     milp = cipher.analyse(model_options)
-                ....:   results, objective_value = model_options.milp_solver.process_solution_file(
+                ....:   results, objective_value = model_options.milp_solver._process_solution_file(
                 ....:     model_options.path / (cipher.name + ".sol")
                 ....:   )
                 ....:   print(objective_value)
@@ -2204,7 +2204,7 @@ class SBox_CVL(Component):
                 ....:     input_file=model_options.path / (cipher.name + ".mps"),
                 ....:     solution_file=model_options.path / (cipher.name + ".sol"),
                 ....:   )
-                ....:   results, objective_value = model_options.milp_solver.process_solution_file(
+                ....:   results, objective_value = model_options.milp_solver._process_solution_file(
                 ....:     model_options.path / (cipher.name + ".sol"),
                 ....:   )
                 ....:   print(objective_value)
@@ -2376,7 +2376,7 @@ class SBox_CVL(Component):
                     "former check or generation"
                 )
 
-                results, _ = model_options.milp_solver.process_solution_file(s_file_sol)
+                results, _ = model_options.milp_solver._process_solution_file(s_file_sol)
                 assert 'Z' in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "
                     f"Found {results.keys()}, expected 'Z'"
@@ -2554,7 +2554,7 @@ class SBox_CVL(Component):
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             ....:   with suppress_output(): cipher.analyse(model_options)
-            ....:   results, objective_value = model_options.sat_solver.process_solution_file(
+            ....:   results, objective_value = model_options.sat_solver._process_solution_file(
             ....:     model_options.path / (cipher.name + ".sat")
             ....:   )
             ....:   print(objective_value)

@@ -137,7 +137,7 @@ Now, we first verify that the objective value is indeed 55::
     sage: from civerly.model_options import *
     sage: from pathlib import Path
     sage: sol_file_name = Path("DOCTEST-AES-Models/AES.sol")
-    sage: SCIP_CVL().process_solution_file(sol_file_name)[1]
+    sage: SCIP_CVL()._process_solution_file(sol_file_name)[1]
     55
 
 Which tells us that there are indeed 55 active S-boxes. To visualize

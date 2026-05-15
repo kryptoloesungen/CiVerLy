@@ -651,7 +651,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
             comp._return_immediately_ = True
             return
     final_choices = []  # solution of reduction algorithm
-    results, _ = model_options.milp_solver.process_solution_file(file_sol)
+    results, _ = model_options.milp_solver._process_solution_file(file_sol)
 
     # STEP 3:
     # use the found solution to generate a minimial MILP that models the
