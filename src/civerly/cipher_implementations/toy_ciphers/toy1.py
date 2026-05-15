@@ -100,7 +100,7 @@ class Toy1:
             ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )
             ....:   GUROBI_CVL().process_solution_file(
-            ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
+            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )[1]
             474 variables and 346 constraints were written to '...'
             ...
@@ -122,7 +122,7 @@ class Toy1:
             ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )
             ....:   SCIP_CVL().process_solution_file(
-            ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
+            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )[1]
             474 variables and 346 constraints were written to '...'
             ...
@@ -144,7 +144,7 @@ class Toy1:
             ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )
             ....:   GLPK_CVL().process_solution_file(
-            ....:       solution_file_name=Path(tmpdir) / "Toy1.sol",
+            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
             ....:   )[1]
             474 variables and 346 constraints were written to '...'
             ...
