@@ -1758,13 +1758,13 @@ class Cipher:
         r"""
         """
         if model_options.optimization == OPTIMIZATION.MILP:
-            solution_file_name = model_options.path / (self.name + ".sol")
+            solution_file = model_options.path / (self.name + ".sol")
             return model_options.milp_solver.process_solution_file(
-                solution_file_name)
+                solution_file)
         elif model_options.optimization == OPTIMIZATION.SAT:
-            solution_file_name = model_options.path / (self.name + ".sat")
+            solution_file = model_options.path / (self.name + ".sat")
             return model_options.sat_solver.process_solution_file(
-                solution_file_name)
+                solution_file)
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
