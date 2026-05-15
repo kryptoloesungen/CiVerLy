@@ -543,7 +543,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             raise SolverException(self.status)
         return
 
-    def get_objective_bounds(self, log_file):
+    def _get_objective_bounds(self, log_file):
         """
         Extract the bounds on the objective value from the log of an MILP solver.
 
@@ -778,7 +778,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         return
 
-    def get_objective_bounds(self, log_file):
+    def _get_objective_bounds(self, log_file):
         """
         Extract the bounds on the objective value from
         the log file of a MILP solver.
@@ -878,7 +878,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
         return
 
-    def get_objective_bounds(self, log_file):
+    def _get_objective_bounds(self, log_file):
         """
         Extract the bounds on the objective value from the log of an MILP solver.
 

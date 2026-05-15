@@ -120,7 +120,7 @@ def benchmark(CM=None, remove_files=False, only_models=False,
                             solve_time = f"{solve_time}s"
                         elif status == SOLVING_STATUS.TIMEOUT:
                             solve_time = f"{solving_time_limit}s$^{{\\dagger}}$"
-                            bounds = model_options.milp_solver.get_objective_bounds(log_file)
+                            bounds = model_options.milp_solver._get_objective_bounds(log_file)
                             if bounds == [None, None]:
                                 obj = "-"
                             else:
