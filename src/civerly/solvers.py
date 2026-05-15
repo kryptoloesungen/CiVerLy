@@ -607,17 +607,26 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
 
 class GLPK_CVL(MILP_SOLVER_CVL):
+    """
+    Interface to the GLPK solver, see https://www.gnu.org/software/glpk/.
+
+    TODO: add examples for solve
+    """
     def __init__(self):
+        """Initizialize the GLPK interface."""
         super().__init__()
         self.name = "GLPK"
         self.timeout_string = r"TIME LIMIT EXCEEDED"
 
-    def invoke(self, input_file, solution_file,
-              log_file=None, time_limit=None):
-        r"""Invoke GLPK solver via shell."""
-        super().invoke(
-            input_file, solution_file, log_file, time_limit
-        )
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+        """
+        Invoke the GLPK solver via its CLI.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        super().invoke(input_file, solution_file, log_file, time_limit)
         command = [
             "glpsol", str(input_file),
             "-o", str(solution_file)
@@ -634,34 +643,38 @@ class GLPK_CVL(MILP_SOLVER_CVL):
             process = subprocess.Popen(command)
             errno = process.wait()
 
+        status = SOLVING_STATUS.SUCCESS
         if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
+            status = SOLVING_STATUS.ERROR
 
         if time_limit is not None:
             # check if the solver reported a time out by checking the log file
             # for an according string
-            with open(log_file, 'r') as file:
+            with log_file.open('r') as file:
                 content = file.read()
             if re.search(self.timeout_string, content, re.MULTILINE):
-                self.status = SOLVING_STATUS.TIMEOUT
+                status = SOLVING_STATUS.TIMEOUT
 
-        return
+        return status
 
     def _get_objective_bounds(self, log_file):
         """
-        Extract the bounds on the objective value from the log of an MILP solver.
+        Extract the bounds on the objective value from the GLPK log.
 
-        This function shall be used when the MILP solver exceeds the given timeout.
+        This function is used when the MILP solver exceeds the given timeout.
 
         INPUT:
 
             - ``log_file``-- name of the log file
 
+        OUTPUT:
+
+            - tuple of floats; lower and upper bound for the optimal objective value
         """
         assert isinstance(log_file, Path)
         regexp = r'.*mip\s*=\s*(\S+)\s*>=\s*(\S+).*'
 
-        with open(log_file, 'r') as file:
+        with log_file.open('r') as file:
             content = file.read()
 
         hit = re.search(regexp, content, re.MULTILINE)
@@ -681,11 +694,15 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
             - ``solution_file``-- name of the file containing a solution
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
+
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assingment`` -- dictionary; the assignment of the variables in the solution
         """
         assert isinstance(solution_file, Path)
 
-        with open(solution_file, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         if any(["INFEASIBLE" in line for line in file_content[-10:]]):
@@ -719,13 +736,13 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         ]
         file_content = [line.replace(" ", "") for line in file_content]
 
-        results = {}
+        assignment = {}
         for line in file_content:
             i = line.index("]")
             name = line[:i+1]
             value = line[i+1:i+2]
-            results[name] = value
-        return _to_dict(results), objective_value
+            assignment[name] = value
+        return objective_value, _to_dict(assignment)
 
 
 class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
