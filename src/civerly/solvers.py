@@ -837,16 +837,25 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
 
 
 class CADICAL_CVL(SAT_SOLVER_CVL):
-    def __init__(self):
-        super().__init__()
-        self.name = "CaDiCal"
+    """
+    Interface to the CaDiCaL SAT solver, see https://github.com/arminbiere/cadical.
 
-    def invoke(self, input_file, solution_file,
-              log_file=None, time_limit=None):
-        r"""Invoke CaDiCal solver via shell."""
-        super().invoke(
-            input_file, solution_file, log_file, time_limit
-        )
+    TODO: add examples for solve
+    """
+    def __init__(self):
+        """Initizialize the CaDiCaL interface."""
+        super().__init__()
+        self.name = "CaDiCaL"
+
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+        """
+        Invoke the CaDiCaL solver via its CLI.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        super().invoke(input_file, solution_file, log_file, time_limit)
         command = [
             "cadical",
             str(input_file),
@@ -859,34 +868,35 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
             command.insert(3, str(time_limit))
 
         if log_file is not None:
-            self.redirect_stdout = open(log_file, 'a')
+            redirect_stdout = log_file.open('a')
 
         with suppress_output():
             process = subprocess.Popen(
-                command, stdout=self.redirect_stdout,
-                stderr=self.redirect_stdout
+                command, stdout=redirect_stdout,
+                stderr=redirect_stdout
             )
             errno = process.wait()
 
         if log_file is not None:
-            self.redirect_stdout.close()
+            redirect_stdout.close()
 
+        status = SOLVING_STATUS.SUCCESS
         if errno != 0:
             # 10: SAT, 20: UNSAT
             if errno in [10, 20]:
                 pass
             else:
-                self.status = SOLVING_STATUS.ERROR
+                status = SOLVING_STATUS.ERROR
 
         # if there was no error but there is no solution, we conclude that
         # there was a time out
         if self.status == SOLVING_STATUS.SUCCESS:
-            with open(solution_file, 'r') as file:
+            with solution_file.open('r') as file:
                 line = file.readline().strip("\n")
             if line == "c UNKNOWN":
-                self.status = SOLVING_STATUS.TIMEOUT
+                status = SOLVING_STATUS.TIMEOUT
 
-        return
+        return status
 
     def _process_solution_file(self, solution_file):
         """
@@ -896,15 +906,19 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
 
             - ``solution_file``-- name of the file containing a solution
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
+
+            - ``satisfiability`` -- bool
+
+            - ``assingment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
         assert isinstance(solution_file, Path)
 
-        with open(solution_file, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         if "UNSATISFIABLE" in file_content[0]:
-            raise AssertionError("The model is UNSAT")
+            return False, {}
 
         file_content = [
             line[2:] if len(line) > 0 and line[0] in ["v", "s"] else line
@@ -921,11 +935,10 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
             else:
                 raise AssertionError("Encountered 0 while parsing .sat")
 
-        results = file_content[1].split(" ")[:-1]
-        results = {abs(int(var)): __get_val(var) for var in results}
-        objective_value = _float_or_int(file_content[2])
+        assignment = file_content[1].split(" ")[:-1]
+        assignment = {abs(int(var)): __get_val(var) for var in assignment}
 
-        return results, objective_value
+        return True, assignment
 
 
 class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
