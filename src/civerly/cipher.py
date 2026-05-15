@@ -1584,7 +1584,7 @@ class Cipher:
             else:
                 model_options.milp_solver.solve(
                     input_file=model_options.path / (self.name + ".mps"),
-                    output_file_name=model_options.path / (self.name + ".sol")
+                    solution_file=model_options.path / (self.name + ".sol")
                 )
                 results_and_weight = self.read_results(model_options)
                 TrailNode(self, model_options, results_and_weight)
