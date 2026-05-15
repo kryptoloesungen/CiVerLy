@@ -1533,7 +1533,7 @@ class Cipher:
                 return [w for _, w in all_results]
             else:
                 model_options.milp_solver.solve(
-                    input_file_name=model_options.path / (self.name + ".mps"),
+                    input_file=model_options.path / (self.name + ".mps"),
                     output_file_name=model_options.path / (self.name + ".sol")
                 )
                 results_and_weight = self.read_results(model_options)
@@ -2310,7 +2310,7 @@ class Cipher:
             return self._exclude_solution_sat(results, model_options)
 
     def _exclude_solution_sat(self, results, model_options):
-        input_file_name = model_options.path / (self.name + ".cnf")
+        input_file = model_options.path / (self.name + ".cnf")
         sum_arr_file = model_options.path / (self.name + "sum.json")
 
         with open(sum_arr_file, 'r') as f:
@@ -2326,9 +2326,9 @@ class Cipher:
         )
 
         sat = DIMACS()
-        sat.read(str(input_file_name))
+        sat.read(str(input_file))
         sat.add_clause(blocking_clause)
-        sat.write(input_file_name)
+        sat.write(input_file)
 
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         r"""

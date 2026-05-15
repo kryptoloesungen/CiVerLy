@@ -2201,7 +2201,7 @@ class SBox_CVL(Component):
                 ....:   with suppress_output():
                 ....:     milp = cipher.model(model_options)
                 ....:   model_options.milp_solver.solve(
-                ....:     input_file_name=model_options.path / (cipher.name + ".mps"),
+                ....:     input_file=model_options.path / (cipher.name + ".mps"),
                 ....:     output_file_name=model_options.path / (cipher.name + ".sol"),
                 ....:   )
                 ....:   results, objective_value = model_options.milp_solver.process_solution_file(
@@ -2351,7 +2351,7 @@ class SBox_CVL(Component):
                         milp_to_minimize_milp.write_mps(str(s_file_mps))
                     if not isinstance(solver, NO_MILP_SOLVER_CVL):
                         solver.solve(
-                            input_file_name=s_file_mps, output_file_name=s_file_sol
+                            input_file=s_file_mps, output_file_name=s_file_sol
                         )
                     else:  # Remember filename so we can tell the user to solve it
                         new_mps_files.append(s_file_mps)

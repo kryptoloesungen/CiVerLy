@@ -81,9 +81,9 @@ we simulate it to continue::
 
     sage: # optional - scip
     sage: from pathlib import Path
-    sage: input_file_name = Path("DOCTEST-AES-Models/MixColumn51845.mps")
+    sage: input_file = Path("DOCTEST-AES-Models/MixColumn51845.mps")
     sage: output_file_name = Path("DOCTEST-AES-Models/MixColumn51845.sol")
-    sage: SCIP_CVL().solve(input_file_name, output_file_name)
+    sage: SCIP_CVL().solve(input_file, output_file_name)
 
 Notice that you do not have to keep the sage session alive while you
 solve the model externally. Again, this is something we have to
@@ -120,7 +120,7 @@ generating a report, you would copythe ``AES.sol`` file to the
 
     sage: # optional - scip
     sage: from pathlib import Path
-    sage: SCIP_CVL().solve(input_file_name=Path("DOCTEST-AES-Models/AES.mps"),
+    sage: SCIP_CVL().solve(input_file=Path("DOCTEST-AES-Models/AES.mps"),
     ....:       output_file_name=Path("DOCTEST-AES-Models/AES.sol")
     ....: )
 

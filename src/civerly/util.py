@@ -633,7 +633,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
 
         if not isinstance(model_options.milp_solver, NO_MILP_SOLVER_CVL):
             model_options.milp_solver.solve(
-                input_file_name=file_mps,
+                input_file=file_mps,
                 output_file_name=file_sol,
             )
         else:
