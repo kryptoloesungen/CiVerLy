@@ -481,22 +481,32 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
 
 class SCIP_CVL(MILP_SOLVER_CVL):
+    """
+    Interface to the SCIP solver, see https://scipopt.org/.
+
+    TODO: add examples for solve
+    """
     def __init__(self):
+        """Initizialize the SCIP interface."""
         super().__init__()
         self.name = "SCIP"
         self.timeout_string = r"time limit reached"
 
-    def invoke(self, input_file, solution_file,
-              log_file=None, time_limit=None):
-        r"""Invoke SCIP solver via shell."""
-        super().invoke(
-            input_file, solution_file, log_file, time_limit
-        )
+
+    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+        """
+        Invoke the SCIP solver via its CLI.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        super().invoke(input_file, solution_file, log_file, time_limit)
         if time_limit is not None:
-            with open('scip_settings.set', 'w') as f:
+            with Path('scip_settings.set').open('w') as f:
                 f.write(f"write/printzeros = TRUE\nlimits/time = {time_limit}")
         else:
-            with open('scip_settings.set', 'w') as f:
+            with Path('scip_settings.set').open('w') as f:
                 f.write('write/printzeros = TRUE')
         command = [
             "scip", "-c",
@@ -508,7 +518,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             ),
             "-s", "scip_settings.set",
         ]
-        # only add -l flag when log_file is set
+        # only add -l flag when log_file_name is set
         if log_file is not None:
             command += ["-l", str(log_file)]
 
@@ -516,39 +526,41 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             process = subprocess.Popen(command)
             errno = process.wait()
 
+        status = SOLVING_STATUS.SUCCESS
         if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
+            status = SOLVING_STATUS.ERROR
 
         if time_limit is not None:
             # check if the solver reported a time out by checking the log file
             # for an according string
-            with open(log_file, 'r') as file:
+            with log_file.open('r') as file:
                 content = file.read()
             if re.search(self.timeout_string, content, re.MULTILINE):
-                self.status = SOLVING_STATUS.TIMEOUT
+                status = SOLVING_STATUS.TIMEOUT
 
         # clean up
         Path("scip_settings.set").unlink(missing_ok=True)
 
-        return
+        return status
 
     def _get_objective_bounds(self, log_file):
         """
-        Extract the bounds on the objective value from
-        the log file of a MILP solver.
+        Extract the bounds on the objective value from the SCIP log.
 
-        This function shall be used when the MILP solver
-        exceeds the given timeout.
+        This function is used when the MILP solver exceeds the given timeout.
 
         INPUT:
 
             - ``log_file``-- name of the log file
 
+        OUTPUT:
+
+            - tuple of floats; lower and upper bound for the optimal objective value
         """
         assert isinstance(log_file, Path)
         regexp = r'Primal Bound\s*:\s*(\S+).*\nDual Bound\s*:\s*(\S+).*'
 
-        with open(log_file, 'r') as file:
+        with log_file.open('r') as file:
             content = file.read()
 
         hit = re.search(regexp, content, re.MULTILINE)
@@ -568,8 +580,11 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
             - ``solution_file``-- name of the file containing a solution
 
+        OUTPUT:
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assingment`` -- dictionary; the assignment of the variables in the solution
         """
         assert isinstance(solution_file, Path)
 
@@ -578,7 +593,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         if any(["infeasible" in line for line in file_content[:10]]):
             raise ValueError("There is no solution found!")
-        results = {}
+        assignment = {}
         objective_value = file_content[1].strip(" ")
         objective_value = objective_value[objective_value.index(":")+1:]
         objective_value = _float_or_int(objective_value)
@@ -586,9 +601,9 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             line = line[:line.index("(")].replace(" ", "")
             value = int(round(float(line[line.index("]")+1:])))
             name = line[:line.index("]")+1]
-            results[name] = value
+            assignment[name] = value
 
-        return _to_dict(results), objective_value
+        return  objective_value, _to_dict(assignment)
 
 
 class GLPK_CVL(MILP_SOLVER_CVL):
