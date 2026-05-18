@@ -403,7 +403,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         - ``PoolSolutions=n``: keep at most *n* solutions.
         - ``PoolSearchMode=2``: systematically enumerate pool solutions.
         - ``PoolGap=0``: only accept solutions matching the optimum.
-        - ``SolFiles=<prefix>``: write pool solutions as ``<prefix>0.sol``, ``<prefix>1.sol``, …
+        - ``SolFiles=<prefix>``: write pool solutions as ``<prefix>0.sol``, ``<prefix>1.sol``, ...
 
         .. SEEALSO::
 
