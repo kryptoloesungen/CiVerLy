@@ -193,6 +193,32 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         warnings.warn(f"No objective bounds found in {log_file}")
         return None, None
 
+    def _check_timeout(self, log_file, time_limit, status):
+        """
+        Check the log file for a timeout report and update ``status`` accordingly.
+
+        If ``time_limit`` is ``None`` the status is returned unchanged.
+        Otherwise ``log_file`` is searched for ``self.timeout_string`` and
+        ``SOLVING_STATUS.TIMEOUT`` is returned on a hit.
+
+        INPUT:
+
+            - ``log_file`` -- path to the log file
+            - ``time_limit`` -- float or ``None``; the time limit passed to the solver
+            - ``status`` -- the current :class:`SOLVING_STATUS`
+
+        OUTPUT:
+
+            - the (possibly updated) :class:`SOLVING_STATUS`
+        """
+        if time_limit is None:
+            return status
+        with log_file.open('r') as file:
+            content = file.read()
+        if re.search(self.timeout_string, content, re.MULTILINE):
+            return SOLVING_STATUS.TIMEOUT
+        return status
+
     @abstractmethod
     def _process_solution_file(self, solution_file):
         """
@@ -319,13 +345,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         if errno != 0:
             status = SOLVING_STATUS.ERROR
 
-        if time_limit is not None:
-            # check if the solver reported a time out by checking the log file
-            # for an according string
-            with log_file.open("r") as file:
-                content = file.read()
-            if re.search(self.timeout_string, content, re.MULTILINE):
-                status = SOLVING_STATUS.TIMEOUT
+        status = self._check_timeout(log_file, time_limit, status)
 
         return status
 
@@ -502,13 +522,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         if errno != 0:
             status = SOLVING_STATUS.ERROR
 
-        if time_limit is not None:
-            # check if the solver reported a time out by checking the log file
-            # for an according string
-            with log_file.open('r') as file:
-                content = file.read()
-            if re.search(self.timeout_string, content, re.MULTILINE):
-                status = SOLVING_STATUS.TIMEOUT
+        status = self._check_timeout(log_file, time_limit, status)
 
         # clean up
         Path("scip_settings.set").unlink(missing_ok=True)
@@ -589,13 +603,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         if errno != 0:
             status = SOLVING_STATUS.ERROR
 
-        if time_limit is not None:
-            # check if the solver reported a time out by checking the log file
-            # for an according string
-            with log_file.open('r') as file:
-                content = file.read()
-            if re.search(self.timeout_string, content, re.MULTILINE):
-                status = SOLVING_STATUS.TIMEOUT
+        status = self._check_timeout(log_file, time_limit, status)
 
         return status
 
