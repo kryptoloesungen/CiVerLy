@@ -756,8 +756,8 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
         command = [
             "cryptominisat5",
             "--presimp", "1",
-            "--dumpresult", solution_file,
-            input_file
+            "--dumpresult", str(solution_file),
+            str(input_file)
         ]
         if time_limit is not None:
             command.insert(1, "--maxtime")
