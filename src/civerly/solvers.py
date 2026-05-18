@@ -136,7 +136,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - ``result`` -- a dictionary with at least the following entries:
 
-                - ``status`` -- see :class:`civerly.solvers.solving_status`
+                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
                 - ``objective_value`` -- float; the objective value of the identified solution
                 - ``objective_bounds`` -- tuple of floats; lower and upper bound for the optimal objective value (interesting when ``time_limit`` is reached)
                 - ``assingment`` -- dictionary; the assignment of the variables in the solution
@@ -222,7 +222,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
 
             - ``result`` -- a dictionary with at least the following entries:
 
-                - ``status`` -- see :class:`civerly.solvers.solving_status`
+                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
                 - ``satisfiability`` -- bool or ``None``
                 - ``assingment`` -- dictionary; the assignment of the variables in the solution
                 - ``solve_time`` -- float; time (in seconds) it took to find this solution
