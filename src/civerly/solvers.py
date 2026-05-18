@@ -81,7 +81,7 @@ class SOLVER_CVL(ABC):
 
 
     @abstractmethod
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the solver's CLI to solve the model in the given file.
 
@@ -91,7 +91,7 @@ class SOLVER_CVL(ABC):
 
             - ``solution_file``-- path of the file in which the solver writes the solution
 
-            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+            - ``log_file``-- path to the solver's log file
 
             - ``time_limit``-- float (default ``None``); time limit in seconds
 
@@ -102,15 +102,7 @@ class SOLVER_CVL(ABC):
         """
         assert isinstance(input_file, Path)
         assert isinstance(solution_file, Path)
-
-        # default log file
-        if log_file is None:
-            parent_dir = solution_file.parent
-            name = f"{solution_file.stem}_{self.name}"
-            suffix = ".log"
-            log_file = parent_dir / (name + suffix)
-        else:
-            assert isinstance(log_file, Path)
+        assert isinstance(log_file, Path)
 
         # you can disable a solver by setting an environment variable
         # with this we simulate that a solver is not installed albeit it is
@@ -157,7 +149,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         start_time = time.perf_counter()
         solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sol"
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
-        status = self.invoke(input_file, solution_file, log_file=log_file, time_limit=time_limit)
+        status = self.invoke(input_file, solution_file, log_file, time_limit=time_limit)
         solve_time = time.perf_counter() - start_time
 
         if status == SOLVING_STATUS.SUCCESS:
@@ -237,7 +229,8 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         """
         start_time = time.perf_counter()
         solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sat"
-        status = self.invoke(input_file, solution_file, log_file=None, time_limit=time_limit)
+        log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
+        status = self.invoke(input_file, solution_file, log_file, time_limit=time_limit)
         solve_time = time.perf_counter() - start_time
 
         if status == SOLVING_STATUS.SUCCESS:
@@ -294,7 +287,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"Time limit reached"
         self.can_solve_multiple = True
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the Gurobi solver via its CLI.
 
@@ -492,7 +485,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"time limit reached"
 
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the SCIP solver via its CLI.
 
@@ -516,10 +509,8 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                 "quit"
             ),
             "-s", "scip_settings.set",
+            "-l", str(log_file)
         ]
-        # only add -l flag when log_file_name is set
-        if log_file is not None:
-            command += ["-l", str(log_file)]
 
         with suppress_output():
             process = subprocess.Popen(command)
@@ -617,7 +608,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         self.name = "GLPK"
         self.timeout_string = r"TIME LIMIT EXCEEDED"
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the GLPK solver via its CLI.
 
@@ -628,11 +619,9 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         super().invoke(input_file, solution_file, log_file, time_limit)
         command = [
             "glpsol", str(input_file),
-            "-o", str(solution_file)
+            "-o", str(solution_file),
+            "--log", str(log_file)
         ]
-        # only add --log flag when log_file is set
-        if log_file is not None:
-            command += ["--log", str(log_file)]
 
         if time_limit is not None:
             command.insert(2, "--tmlim")
@@ -755,7 +744,7 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
         super().__init__()
         self.name = "CryptoMiniSat"
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the CryptoMinisat solver via its CLI.
 
@@ -774,8 +763,7 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
             command.insert(1, "--maxtime")
             command.insert(2, str(time_limit))
 
-        if log_file is not None:
-            redirect_stdout = log_file.open('a')
+        redirect_stdout = log_file.open('a')
 
         with suppress_output():
             process = subprocess.Popen(
@@ -784,8 +772,7 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
             )
             errno = process.wait()
 
-        if log_file is not None:
-            redirect_stdout.close()
+        redirect_stdout.close()
 
         status = SOLVING_STATUS.SUCCESS
         if errno != 0:
@@ -846,7 +833,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         super().__init__()
         self.name = "CaDiCaL"
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the CaDiCaL solver via its CLI.
 
@@ -866,8 +853,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
             command.insert(2, "-t")
             command.insert(3, str(time_limit))
 
-        if log_file is not None:
-            redirect_stdout = log_file.open('a')
+        redirect_stdout = log_file.open('a')
 
         with suppress_output():
             process = subprocess.Popen(
@@ -876,8 +862,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
             )
             errno = process.wait()
 
-        if log_file is not None:
-            redirect_stdout.close()
+        redirect_stdout.close()
 
         status = SOLVING_STATUS.SUCCESS
         if errno != 0:
@@ -951,7 +936,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         super().__init__()
         self.name = "Espresso"
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the Espresso minimizer via its CLI.
 
@@ -961,7 +946,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
 
             :meth:`civerly.solvers.SOLVER_CVL.invoke`
         """
-        super().invoke(input_file, solution_file, log_file=None, time_limit=None)
+        super().invoke(input_file, solution_file, log_file, time_limit=None)
         command = [
             "espresso",
             "-epos",
@@ -1002,7 +987,7 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         super().__init__()
         self.name = "DummyMILPSolver"
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Raise an exception stating what files are expected. If they already exists, do nothing.
 
@@ -1012,7 +997,7 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
 
             - ``solution_file``-- path of the file in which the solver writes the solution
 
-            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+            - ``log_file``-- path to the solver's log file
 
             - ``time_limit``-- float (default ``None``); ignored
 
@@ -1095,7 +1080,7 @@ class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         super().__init__()
         self.name = "DummySATSolver"
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Raise an exception stating what files are expected. If they already exists, do nothing.
 
@@ -1105,7 +1090,7 @@ class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
 
             - ``solution_file``-- path of the file in which the solver writes the solution
 
-            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+            - ``log_file``-- path to the solver's log file
 
             - ``time_limit``-- float (default ``None``); ignored
 
@@ -1165,7 +1150,7 @@ class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         super().__init__()
         self.name = "DummyLogicMinimizer"
 
-    def invoke(self, input_file, solution_file, log_file=None, time_limit=None):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Raise an exception stating what files are expected. If they already exists, do nothing.
 
@@ -1175,7 +1160,7 @@ class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
 
             - ``solution_file``-- path of the file in which the solver writes the solution
 
-            - ``log_file``-- path to the solver's log file. If ``None``, a default based on ``solution_file`` and ``self.name`` is used
+            - ``log_file``-- path to the solver's log file
 
             - ``time_limit``-- float (default ``None``); ignored
 
