@@ -973,8 +973,8 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         # with suppress_output():
         if True:
             process = subprocess.Popen(
-                command, stdout=self.redirect_stdout,
-                stderr=self.redirect_stdout
+                command, stdout=redirect_stdout,
+                stderr=redirect_stdout
             )
             errno = process.wait()
 
