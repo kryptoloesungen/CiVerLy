@@ -24,10 +24,17 @@ class SOLVER_CVL(ABC):
         """
         Initialize the solver interface.
 
-        This shall set ``self.name``.
+        Subclasses must set ``self.name``. They may also adjust
+        ``self.errno_map`` and ``self.store_stdout`` to configure how the
+        shared :meth:`invoke` template interprets the solver's behavior.
         """
         self.name = "GenericSolver"
         self.can_solve_multiple = False
+        # exit-code -> SOLVING_STATUS. Unknown codes default to ERROR.
+        self.errno_map = {0: SOLVING_STATUS.SUCCESS}
+        # If True, ``invoke`` redirects subprocess stdout/stderr into ``log_file``.
+        # Solvers that write their own log via CLI flags leave this False.
+        self.store_stdout = False
 
     @abstractmethod
     def solve(self, input_file, time_limit=None):
@@ -77,10 +84,37 @@ class SOLVER_CVL(ABC):
         raise NotImplementedError
 
 
-    @abstractmethod
+    def _check_can_invoke(self, input_file, solution_file, log_file):
+        """
+        Verify the inputs and honor the ``CIVERLY_DISABLE_<NAME>`` env override.
+
+        This is called by :meth:`invoke` and is also exposed for subclasses
+        that override :meth:`invoke` entirely and still need the standard
+        precondition checks.
+        """
+        assert isinstance(input_file, Path)
+        assert isinstance(solution_file, Path)
+        assert isinstance(log_file, Path)
+
+        # you can disable a solver by setting an environment variable
+        # with this we simulate that a solver is not installed albeit it is
+        # i.e. this is used for testing only
+        ENV_DISABLE_PREFIX = "CIVERLY_DISABLE_"
+        if ENV_DISABLE_PREFIX+self.name.upper() in os.environ:
+            raise ValueError(
+                f"{self.name} was disabled by setting environment variable "
+                f"{ENV_DISABLE_PREFIX+self.name.upper()}"
+            )
+
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
         Invoke the solver's CLI to solve the model in the given file.
+
+        This template handles the env-disable check, command execution
+        (optionally capturing stdout/stderr into ``log_file``), and exit-code
+        interpretation. Subclasses provide the command list via
+        :meth:`_build_command`, and may adjust ``self.errno_map`` or
+        ``self.store_stdout`` to tailor the behavior.
 
         INPUT:
 
@@ -97,46 +131,17 @@ class SOLVER_CVL(ABC):
             - Status, see :class:`civerly.solvers.SOLVING_STATUS`. Further, upon
               successful execution a solution is stored in ``solution_file``.
         """
-        assert isinstance(input_file, Path)
-        assert isinstance(solution_file, Path)
-        assert isinstance(log_file, Path)
-
-        # you can disable a solver by setting an environment variable
-        # with this we simulate that a solver is not installed albeit it is
-        # i.e. this is used for testing only
-        ENV_DISABLE_PREFIX = "CIVERLY_DISABLE_"
-        if ENV_DISABLE_PREFIX+self.name.upper() in os.environ:
-            raise ValueError(
-                f"{self.name} was disabled by setting environment variable "
-                f"{ENV_DISABLE_PREFIX+self.name.upper()}"
-            )
-
-
-class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
-    """Abstract base class for implementing an interface to a MILP solver."""
-
-    def __init__(self):
-        """Initizialize the MILP solver interface."""
-        super().__init__()
-
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the MILP solver via its CLI.
-
-        Subclasses provide the command list via :meth:`_build_command`; the
-        scaffolding (env-disable check, subprocess execution, errno-to-status
-        mapping, timeout detection) is shared.
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+        self._check_can_invoke(input_file, solution_file, log_file)
         command = self._build_command(input_file, solution_file, log_file, time_limit)
-        with suppress_output():
-            errno = subprocess.Popen(command).wait()
-        status = SOLVING_STATUS.SUCCESS if errno == 0 else SOLVING_STATUS.ERROR
-        return self._check_timeout(log_file, time_limit, status)
+        if self.store_stdout:
+            with log_file.open('a') as redirect, suppress_output():
+                errno = subprocess.Popen(
+                    command, stdout=redirect, stderr=redirect
+                ).wait()
+        else:
+            with suppress_output():
+                errno = subprocess.Popen(command).wait()
+        return self.errno_map.get(errno, SOLVING_STATUS.ERROR)
 
     @abstractmethod
     def _build_command(self, input_file, solution_file, log_file, time_limit):
@@ -155,6 +160,26 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             - list of strings; the command to be passed to ``subprocess.Popen``
         """
         pass
+
+
+class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
+    """Abstract base class for implementing an interface to a MILP solver."""
+
+    def __init__(self):
+        """Initizialize the MILP solver interface."""
+        super().__init__()
+
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
+        """
+        Invoke the MILP solver, wrapping the shared template with a
+        log-file-based timeout check.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        status = super().invoke(input_file, solution_file, log_file, time_limit)
+        return self._check_timeout(log_file, time_limit, status)
 
     def solve(self, input_file, time_limit=None):
         """
@@ -280,6 +305,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
     def __init__(self):
         """Initizialize the SAT solver interface."""
         super().__init__()
+        # 10 = SAT, 20 = UNSAT are standard DIMACS exit codes.
+        self.errno_map = {
+            0: SOLVING_STATUS.SUCCESS,
+            10: SOLVING_STATUS.SUCCESS,
+            20: SOLVING_STATUS.SUCCESS,
+        }
+        # SAT solvers print results to stdout; capture into the log file.
+        self.store_stdout = True
 
     def solve(self, input_file, time_limit=None):
         """
@@ -696,48 +729,21 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
         """Initizialize the CryptoMinisat interface."""
         super().__init__()
         self.name = "CryptoMiniSat"
+        # 15 is CryptoMiniSat's exit code for "interrupted (time limit)".
+        self.errno_map[15] = SOLVING_STATUS.TIMEOUT
 
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the CryptoMinisat solver via its CLI.
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the CryptoMinisat CLI command list."""
         command = [
             "cryptominisat5",
             "--presimp", "1",
             "--dumpresult", str(solution_file),
-            str(input_file)
+            str(input_file),
         ]
         if time_limit is not None:
             command.insert(1, "--maxtime")
             command.insert(2, str(time_limit))
-
-        redirect_stdout = log_file.open('a')
-
-        with suppress_output():
-            process = subprocess.Popen(
-                command, stdout=redirect_stdout,
-                stderr=redirect_stdout
-            )
-            errno = process.wait()
-
-        redirect_stdout.close()
-
-        status = SOLVING_STATUS.SUCCESS
-        if errno != 0:
-            # 10: SAT, 20: UNSAT
-            if errno in [10, 20]:
-                pass
-            elif errno == 15:
-                status = SOLVING_STATUS.TIMEOUT
-            else:
-                status = SOLVING_STATUS.ERROR
-
-        return status
+        return command
 
     def _process_solution_file(self, solution_file):
         """
@@ -777,52 +783,34 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
-        Invoke the CaDiCaL solver via its CLI.
+        Invoke the CaDiCaL solver, wrapping the shared template with a
+        post-check on the solution file: CaDiCaL signals a timeout by writing
+        ``c UNKNOWN`` rather than via an exit code.
 
         .. SEEALSO::
 
             :meth:`civerly.solvers.SOLVER_CVL.invoke`
         """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+        status = super().invoke(input_file, solution_file, log_file, time_limit)
+        if status == SOLVING_STATUS.SUCCESS:
+            with solution_file.open('r') as file:
+                if file.readline().strip("\n") == "c UNKNOWN":
+                    status = SOLVING_STATUS.TIMEOUT
+        return status
+
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the CaDiCaL CLI command list."""
         command = [
             "cadical",
             str(input_file),
-            "-P1", # preprocess for 1 round
+            "-P1",  # preprocess for 1 round
             "--sat",
-            "-w", str(solution_file)
+            "-w", str(solution_file),
         ]
         if time_limit is not None:
             command.insert(2, "-t")
             command.insert(3, str(time_limit))
-
-        redirect_stdout = log_file.open('a')
-
-        with suppress_output():
-            process = subprocess.Popen(
-                command, stdout=redirect_stdout,
-                stderr=redirect_stdout
-            )
-            errno = process.wait()
-
-        redirect_stdout.close()
-
-        status = SOLVING_STATUS.SUCCESS
-        if errno != 0:
-            # 10: SAT, 20: UNSAT
-            if errno in [10, 20]:
-                pass
-            else:
-                status = SOLVING_STATUS.ERROR
-
-        # if there was no error but there is no solution, we conclude that
-        # there was a time out
-        if status == SOLVING_STATUS.SUCCESS:
-            with solution_file.open('r') as file:
-                line = file.readline().strip("\n")
-            if line == "c UNKNOWN":
-                status = SOLVING_STATUS.TIMEOUT
-
-        return status
+        return command
 
     def _process_solution_file(self, solution_file):
         """
@@ -871,35 +859,25 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         """
         Invoke the Espresso minimizer via its CLI.
 
-        The Espresso interface does not support the ``time_limit`` parameter and simply ignores it.
+        Espresso writes its output to stdout, so it cannot use the shared
+        template (which would redirect to ``log_file`` at best). The
+        ``time_limit`` parameter is ignored.
 
         .. SEEALSO::
 
             :meth:`civerly.solvers.SOLVER_CVL.invoke`
         """
-        super().invoke(input_file, solution_file, log_file, time_limit=None)
-        command = [
-            "espresso",
-            "-epos",
-            str(input_file)
-        ]
+        self._check_can_invoke(input_file, solution_file, log_file)
+        command = self._build_command(input_file, solution_file, log_file, time_limit)
+        with solution_file.open('a') as redirect:
+            errno = subprocess.Popen(
+                command, stdout=redirect, stderr=redirect
+            ).wait()
+        return self.errno_map.get(errno, SOLVING_STATUS.ERROR)
 
-        redirect_stdout = solution_file.open('a')
-
-        process = subprocess.Popen(
-            command, stdout=redirect_stdout,
-            stderr=redirect_stdout
-        )
-        errno = process.wait()
-
-        redirect_stdout.close()
-
-        status = SOLVING_STATUS.SUCCESS
-        # failure: errno 1
-        if errno != 0:
-            status = SOLVING_STATUS.ERROR
-
-        return status
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the Espresso CLI command list."""
+        return ["espresso", "-epos", str(input_file)]
 
 
 class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
@@ -934,7 +912,7 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
 
             - Status, see :class:`civerly.solvers.SOLVING_STATUS`.
         """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+        self._check_can_invoke(input_file, solution_file, log_file)
 
         # TODO:
         # if solution and log file are there: continue
@@ -1032,7 +1010,7 @@ class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
 
             - :attr:`civerly.solvers.SOLVING_STATUS.SUCCESS`
         """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+        self._check_can_invoke(input_file, solution_file, log_file)
 
         # TODO:
         # if solution and log file are there: continue
@@ -1069,6 +1047,12 @@ class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         else:
             raise ValueError("Unknown solution format")
 
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Unused: the dummy overrides :meth:`invoke` and never runs a subprocess."""
+        raise NotImplementedError(
+            "The dummy SAT solver does not invoke a subprocess."
+        )
+
 
 class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
     """
@@ -1102,7 +1086,7 @@ class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
 
             - :attr:`civerly.solvers.SOLVING_STATUS.SUCCESS`
         """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+        self._check_can_invoke(input_file, solution_file, log_file)
 
         # TODO:
         # if solution and log file are there: continue
@@ -1110,6 +1094,12 @@ class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         # raise Exception stating the names of the files that are expected
 
         return SOLVING_STATUS.SUCCESS
+
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Unused: the dummy overrides :meth:`invoke` and never runs a subprocess."""
+        raise NotImplementedError(
+            "The dummy logic minimizer does not invoke a subprocess."
+        )
 
 
 class SOLVING_STATUS(Enum):
