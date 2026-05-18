@@ -8,12 +8,9 @@ import subprocess
 import os
 import warnings
 import time
-import shutil
 from pathlib import Path
 from enum import Enum
 
-from sage.sat.solvers.dimacs import DIMACS
-from civerly.util import _generate_constraints_sum_leq_int_LS24
 from civerly.util import suppress_output, _float_or_int
 from civerly.util import _to_dict
 
