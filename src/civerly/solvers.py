@@ -130,7 +130,6 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         """Initizialize the MILP solver interface."""
         super().__init__()
 
-    @abstractmethod
     def solve(self, input_file, time_limit=None):
         """
         Solve the model in the given file.
