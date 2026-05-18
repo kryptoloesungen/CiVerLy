@@ -159,7 +159,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sol"
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
         status = self.invoke(input_file, solution_file, log_file=log_file, time_limit=time_limit)
-        solve_time = start_time - time.perf_counter()
+        solve_time = time.perf_counter() - start_time
 
         if status == SOLVING_STATUS.SUCCESS:
             objective_value, assignment = self._process_solution_file(solution_file)
@@ -239,7 +239,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL):
         start_time = time.perf_counter()
         solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sat"
         status = self.invoke(input_file, solution_file, log_file=None, time_limit=time_limit)
-        solve_time = start_time - time.perf_counter()
+        solve_time = time.perf_counter() - start_time
 
         if status == SOLVING_STATUS.SUCCESS:
             satisfiability, assignment = self._process_solution_file(solution_file)
