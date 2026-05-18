@@ -278,6 +278,33 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         result = {"status": status, "satisfiability": satisfiability, "assingment": assignment, "solve_time": solve_time}
         return result
 
+    def _parse_assignment_line(self, line):
+        """
+        Parse a DIMACS-style assignment line into a ``{var: 0/1}`` dictionary.
+
+        The line is expected to be a space-separated list of signed integers
+        terminated by a ``0`` sentinel (the standard SAT solver output format).
+        Positive integers map to ``1``, negatives to ``0``.
+
+        INPUT:
+
+            - ``line`` -- string; the assignment line (sentinel ``0`` included)
+
+        OUTPUT:
+
+            - dictionary mapping each variable index to ``0`` or ``1``
+        """
+        def __get_val(var):
+            if int(var) < 0:
+                return 0
+            elif int(var) > 0:
+                return 1
+            else:
+                raise AssertionError("Encountered 0 while parsing .sat")
+
+        tokens = line.split(" ")[:-1]
+        return {abs(int(var)): __get_val(var) for var in tokens}
+
     @abstractmethod
     def _process_solution_file(self, solution_file):
         """
@@ -741,18 +768,7 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
         if "UNSAT" in file_content[0]:
             return False, {}
 
-        def __get_val(var):
-            if int(var) < 0:
-                return 0
-            elif int(var) > 0:
-                return 1
-            else:
-                raise AssertionError("Encountered 0 while parsing .sat")
-
-        assignment = file_content[1].split(" ")[:-1]
-        assignment = {abs(int(var)): __get_val(var) for var in assignment}
-
-        return True, assignment
+        return True, self._parse_assignment_line(file_content[1])
 
 
 class CADICAL_CVL(SAT_SOLVER_CVL):
@@ -837,25 +853,14 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         if "UNSATISFIABLE" in file_content[0]:
             return False, {}
 
+        # strip leading "v "/"s " prefixes, then join all value lines into one
         file_content = [
             line[2:] if len(line) > 0 and line[0] in ["v", "s"] else line
             for line in file_content
         ]
         joined = ' '.join(file_content[1:-2])
-        file_content = [file_content[0], joined, file_content[-2]]
 
-        def __get_val(var):
-            if int(var) < 0:
-                return 0
-            elif int(var) > 0:
-                return 1
-            else:
-                raise AssertionError("Encountered 0 while parsing .sat")
-
-        assignment = file_content[1].split(" ")[:-1]
-        assignment = {abs(int(var)): __get_val(var) for var in assignment}
-
-        return True, assignment
+        return True, self._parse_assignment_line(joined)
 
 
 class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
@@ -1150,3 +1155,4 @@ class NoSolverWarning(Warning):
             "No solver has been selected. "
             "CiVerLy will return without solving."
         )
+
