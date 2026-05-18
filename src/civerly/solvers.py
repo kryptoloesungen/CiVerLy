@@ -119,6 +119,43 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         """Initizialize the MILP solver interface."""
         super().__init__()
 
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
+        """
+        Invoke the MILP solver via its CLI.
+
+        Subclasses provide the command list via :meth:`_build_command`; the
+        scaffolding (env-disable check, subprocess execution, errno-to-status
+        mapping, timeout detection) is shared.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        super().invoke(input_file, solution_file, log_file, time_limit)
+        command = self._build_command(input_file, solution_file, log_file, time_limit)
+        with suppress_output():
+            errno = subprocess.Popen(command).wait()
+        status = SOLVING_STATUS.SUCCESS if errno == 0 else SOLVING_STATUS.ERROR
+        return self._check_timeout(log_file, time_limit, status)
+
+    @abstractmethod
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """
+        Build the solver-specific CLI command list.
+
+        INPUT:
+
+            - ``input_file`` -- path to the file containing the model
+            - ``solution_file`` -- path of the file in which the solver writes the solution
+            - ``log_file`` -- path to the solver's log file
+            - ``time_limit`` -- float or ``None``; time limit in seconds
+
+        OUTPUT:
+
+            - list of strings; the command to be passed to ``subprocess.Popen``
+        """
+        pass
+
     def solve(self, input_file, time_limit=None):
         """
         Solve the model in the given file.
@@ -351,30 +388,12 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         self.bounds_regexp = r'Best objective (\S+), best bound (\S+), gap'
         self.can_solve_multiple = True
 
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the Gurobi solver via its CLI.
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the Gurobi CLI command list."""
         command = ["gurobi_cl", f"ResultFile={solution_file}", f"LogFile={log_file}", str(input_file)]
         if time_limit is not None:
             command.insert(2, f"TimeLimit={time_limit}")
-
-        with suppress_output():
-            process = subprocess.Popen(command)
-            errno = process.wait()
-
-        status = SOLVING_STATUS.SUCCESS
-        if errno != 0:
-            status = SOLVING_STATUS.ERROR
-
-        status = self._check_timeout(log_file, time_limit, status)
-
-        return status
+        return command
 
     def _process_solution_file(self, solution_file):
         """
@@ -518,18 +537,26 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         """
         Invoke the SCIP solver via its CLI.
 
+        SCIP needs a settings file alongside the command-line invocation; this
+        method writes it before delegating to the shared MILP template and
+        removes it afterwards.
+
         .. SEEALSO::
 
             :meth:`civerly.solvers.SOLVER_CVL.invoke`
         """
-        super().invoke(input_file, solution_file, log_file, time_limit)
-        if time_limit is not None:
-            with Path('scip_settings.set').open('w') as f:
-                f.write(f"write/printzeros = TRUE\nlimits/time = {time_limit}")
-        else:
+        try:
             with Path('scip_settings.set').open('w') as f:
                 f.write('write/printzeros = TRUE')
-        command = [
+                if time_limit is not None:
+                    f.write(f"\nlimits/time = {time_limit}")
+            return super().invoke(input_file, solution_file, log_file, time_limit)
+        finally:
+            Path("scip_settings.set").unlink(missing_ok=True)
+
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the SCIP CLI command list."""
+        return [
             "scip", "-c",
             (
                 f"read {input_file} "
@@ -538,23 +565,8 @@ class SCIP_CVL(MILP_SOLVER_CVL):
                 "quit"
             ),
             "-s", "scip_settings.set",
-            "-l", str(log_file)
+            "-l", str(log_file),
         ]
-
-        with suppress_output():
-            process = subprocess.Popen(command)
-            errno = process.wait()
-
-        status = SOLVING_STATUS.SUCCESS
-        if errno != 0:
-            status = SOLVING_STATUS.ERROR
-
-        status = self._check_timeout(log_file, time_limit, status)
-
-        # clean up
-        Path("scip_settings.set").unlink(missing_ok=True)
-
-        return status
 
     def _process_solution_file(self, solution_file):
         """
@@ -603,36 +615,17 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"TIME LIMIT EXCEEDED"
         self.bounds_regexp = r'.*mip\s*=\s*(\S+)\s*>=\s*(\S+).*'
 
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the GLPK solver via its CLI.
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        super().invoke(input_file, solution_file, log_file, time_limit)
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the GLPK CLI command list."""
         command = [
             "glpsol", str(input_file),
             "-o", str(solution_file),
-            "--log", str(log_file)
+            "--log", str(log_file),
         ]
-
         if time_limit is not None:
             command.insert(2, "--tmlim")
             command.insert(3, str(time_limit))
-
-        with suppress_output():
-            process = subprocess.Popen(command)
-            errno = process.wait()
-
-        status = SOLVING_STATUS.SUCCESS
-        if errno != 0:
-            status = SOLVING_STATUS.ERROR
-
-        status = self._check_timeout(log_file, time_limit, status)
-
-        return status
+        return command
 
     def _process_solution_file(self, solution_file):
         """
@@ -1000,6 +993,11 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         assert isinstance(log_file, Path)
         # TODO: determine solver and call corresponding method
 
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Unused: the dummy overrides :meth:`invoke` and never runs a subprocess."""
+        raise NotImplementedError(
+            "The dummy MILP solver does not invoke a subprocess."
+        )
 
 
 class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
