@@ -212,6 +212,9 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
     def __init__(self):
         """Initizialize the MILP solver interface."""
         super().__init__()
+        # Subclasses set this to a regex matched against ``log_file`` to detect
+        # a reported timeout. Leave ``None`` to skip the log-based check.
+        self.timeout_string = None
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
@@ -303,8 +306,9 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         """
         Check the log file for a timeout report and update ``status`` accordingly.
 
-        If ``time_limit`` is ``None`` the status is returned unchanged.
-        Otherwise ``log_file`` is searched for ``self.timeout_string`` and
+        Returns ``status`` unchanged if ``time_limit`` is ``None`` or if the
+        subclass did not configure ``self.timeout_string``. Otherwise
+        ``log_file`` is searched for ``self.timeout_string`` and
         ``SOLVING_STATUS.TIMEOUT`` is returned on a hit.
 
         INPUT:
@@ -317,7 +321,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - the (possibly updated) :class:`SOLVING_STATUS`
         """
-        if time_limit is None:
+        if time_limit is None or self.timeout_string is None:
             return status
         with log_file.open('r') as file:
             content = file.read()
