@@ -212,13 +212,13 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         """
         Solve the model in the given file.
 
-        Input:
+        INPUT:
 
             - ``input_file`` -- path to the file containing the model
 
             - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
 
-        Output:
+        OUTPUT:
 
             - ``result`` -- a dictionary with at least the following entries:
 
