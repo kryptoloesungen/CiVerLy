@@ -199,7 +199,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
                 - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
                 - ``objective_value`` -- float; the objective value of the identified solution
                 - ``objective_bounds`` -- tuple of floats; lower and upper bound for the optimal objective value (interesting when ``time_limit`` is reached)
-                - ``assingment`` -- dictionary; the assignment of the variables in the solution
+                - ``assignment`` -- dictionary; the assignment of the variables in the solution
                 - ``solve_time`` -- float; time (in seconds) it took to find this solution
 
         .. Warning::
@@ -223,7 +223,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             assignment = {}
             objective_bounds = (None, None)
 
-        result = {"status": status, "objective_value": objective_value, "objective_bounds": objective_bounds, "assingment": assignment, "solve_time": solve_time}
+        result = {"status": status, "objective_value": objective_value, "objective_bounds": objective_bounds, "assignment": assignment, "solve_time": solve_time}
         return result
 
     def _get_objective_bounds(self, log_file):
@@ -296,7 +296,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - ``objective_value`` -- float; the objective value of the solution
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
         """
         pass
 
@@ -337,7 +337,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
                 - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
                 - ``satisfiability`` -- bool or ``None``
-                - ``assingment`` -- dictionary; the assignment of the variables in the solution
+                - ``assignment`` -- dictionary; the assignment of the variables in the solution
                 - ``solve_time`` -- float; time (in seconds) it took to find this solution
         """
         start_time = time.perf_counter()
@@ -352,7 +352,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             satisfiability = None
             assignment = {}
 
-        result = {"status": status, "satisfiability": satisfiability, "assingment": assignment, "solve_time": solve_time}
+        result = {"status": status, "satisfiability": satisfiability, "assignment": assignment, "solve_time": solve_time}
         return result
 
     def solve(self, input_file, sum_arr_file, solve_range, precision=0, time_limit=None):
@@ -394,7 +394,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                   the optimum. ``(opt, opt)`` on a tight solve, the still-open
                   interval on timeout, ``(None, None)`` on error or when no
                   feasible solution exists.
-                - ``assingment`` -- dictionary; the assignment of the
+                - ``assignment`` -- dictionary; the assignment of the
                   variables at the minimum weight, empty if unsatisfiable
                 - ``solve_time`` -- float; total time spent
         """
@@ -427,7 +427,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 "status": status,
                 "objective_value": None,
                 "objective_bounds": bounds,
-                "assingment": {},
+                "assignment": {},
                 "solve_time": time.perf_counter() - start_time,
             }
 
@@ -473,7 +473,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                     "status": SOLVING_STATUS.SUCCESS,
                     "objective_value": None,
                     "objective_bounds": (None, None),
-                    "assingment": {},
+                    "assignment": {},
                     "solve_time": time.perf_counter() - start_time,
                 }
             last_sat = r
@@ -483,7 +483,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             "status": SOLVING_STATUS.SUCCESS,
             "objective_value": opt,
             "objective_bounds": (opt, opt),
-            "assingment": last_sat["assingment"],
+            "assignment": last_sat["assignment"],
             "solve_time": time.perf_counter() - start_time,
         }
 
@@ -527,7 +527,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - ``satisfiability`` -- bool
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
         pass
 
@@ -576,7 +576,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
             - ``objective_value`` -- float; the objective value of the solution
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
         """
         assert isinstance(solution_file, Path)
 
@@ -749,7 +749,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
             - ``objective_value`` -- float; the objective value of the solution
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
         """
         assert isinstance(solution_file, Path)
 
@@ -808,7 +808,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
             - ``objective_value`` -- float; the objective value of the solution
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
         """
         assert isinstance(solution_file, Path)
 
@@ -893,7 +893,7 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
 
             - ``satisfiability`` -- bool
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
         assert isinstance(solution_file, Path)
 
@@ -960,7 +960,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
 
             - ``satisfiability`` -- bool
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
         assert isinstance(solution_file, Path)
 
@@ -1073,7 +1073,7 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
 
             - ``objective_value`` -- float; the objective value of the solution
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
         """
         assert isinstance(solution_file, Path)
 
@@ -1168,7 +1168,7 @@ class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
 
             - ``satisfiability`` -- bool
 
-            - ``assingment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
         assert isinstance(solution_file, Path)
 
