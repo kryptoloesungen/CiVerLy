@@ -955,13 +955,11 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
 
         redirect_stdout = solution_file.open('a')
 
-        # with suppress_output():
-        if True:
-            process = subprocess.Popen(
-                command, stdout=redirect_stdout,
-                stderr=redirect_stdout
-            )
-            errno = process.wait()
+        process = subprocess.Popen(
+            command, stdout=redirect_stdout,
+            stderr=redirect_stdout
+        )
+        errno = process.wait()
 
         redirect_stdout.close()
 
