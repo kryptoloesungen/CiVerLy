@@ -116,10 +116,10 @@ class SOLVER_CVL(ABC):
         # with this we simulate that a solver is not installed albeit it is
         # i.e. this is used for testing only
         ENV_DISABLE_PREFIX = "CIVERLY_DISABLE_"
-        if ENV_DISABLE_PREFIX+self.name in os.environ:
+        if ENV_DISABLE_PREFIX+self.name.upper() in os.environ:
             raise ValueError(
                 f"{self.name} was disabled by setting environment variable "
-                f"{ENV_DISABLE_PREFIX+self.name}"
+                f"{ENV_DISABLE_PREFIX+self.name.upper()}"
             )
 
 
