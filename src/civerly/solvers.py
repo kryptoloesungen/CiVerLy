@@ -11,8 +11,10 @@ import time
 from pathlib import Path
 from enum import Enum
 
+from sage.sat.solvers.dimacs import DIMACS
+
 from civerly.util import suppress_output, _float_or_int
-from civerly.util import _to_dict
+from civerly.util import _to_dict, _generate_constraints_sum_leq_int_LS24
 
 from abc import ABC, abstractmethod
 
@@ -79,54 +81,6 @@ class SOLVER_CVL(ABC):
         # If True, ``invoke`` redirects subprocess stdout/stderr into ``log_file``.
         # Solvers that write their own log via CLI flags leave this False.
         self.store_stdout = False
-
-    @abstractmethod
-    def solve(self, input_file, time_limit=None):
-        """
-        Solve the model in the given file.
-
-        INPUT:
-
-            - ``input_file`` -- path to the file containing the model
-
-            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
-
-        OUTPUT:
-
-            - ``result`` -- a dictionary with at least the following entries:
-
-                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
-                - ``assingment`` -- dictionary or ``None``; the assignment of the variables in the solution
-                - ``solve_time`` -- float; time (in seconds) it took to find this solution
-
-        .. Warning::
-
-            If ``time_limit`` is reached, the solution might be non-optimal.
-        """
-        pass
-
-    def solve_multiple(self, input_file, number_of_solutions, time_limit=None):
-        r"""
-        Find the ``number_of_solutions`` best solutions to the model.
-
-        This method is optional and only implemented for solvers that have corresponding functionality.
-        When implemented ``self.can_solve_multiple`` shall be set to ``True``.
-
-        INPUT:
-
-            - ``input_file`` -- path to the file containing the model
-
-            - ``number_of_solutions`` -- number of solutions to find
-
-            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
-
-        OUTPUT:
-
-            - ``results`` -- a list of at most ``number_of_solutions`` many ``result``, see :meth:`.solve`.
-              If there are less solutions ``results`` may be shorter. ``results`` is ordered; best is at ``results[0]``.
-        """
-        raise NotImplementedError
-
 
     def _check_can_invoke(self, input_file, solution_file, log_file):
         """
@@ -362,19 +316,24 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         # SAT solvers print results to stdout; capture into the log file.
         self.store_stdout = True
 
-    def solve(self, input_file, time_limit=None):
+    def decide(self, input_file, time_limit=None):
         """
-        Solve the model in the given file.
+        Decide whether the CNF in ``input_file`` is satisfiable, and if so,
+        return one satisfying assignment.
+
+        This is the SAT solver's native one-shot operation. Use :meth:`solve`
+        instead to find the minimum-weight satisfying assignment via binary
+        search.
 
         INPUT:
 
-            - ``input_file`` -- path to the file containing the model
+            - ``input_file`` -- path to the file containing the CNF
 
             - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
 
         OUTPUT:
 
-            - ``result`` -- a dictionary with at least the following entries:
+            - ``result`` -- a dictionary with the following entries:
 
                 - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
                 - ``satisfiability`` -- bool or ``None``
@@ -395,6 +354,138 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
         result = {"status": status, "satisfiability": satisfiability, "assingment": assignment, "solve_time": solve_time}
         return result
+
+    def solve(self, input_file, sum_arr_file, solve_range, precision=0, time_limit=None):
+        r"""
+        Find the lowest weight ``w`` in ``solve_range`` for which the CNF in
+        ``input_file``, augmented with ``sum(weight_i * var_i) <= w`` using
+        the sum array stored in ``sum_arr_file``, remains satisfiable.
+
+        Internally, this performs a binary search over the range, calling
+        :meth:`decide` on each constrained CNF.
+
+        INPUT:
+
+            - ``input_file`` -- path to the base CNF
+
+            - ``sum_arr_file`` -- path to the JSON file containing the sum
+              array, i.e. a list of ``(weight, var)`` pairs
+
+            - ``solve_range`` -- ``(lower, upper)`` pair of floats bounding
+              the search
+
+            - ``precision`` -- integer (default ``0``); the weights are
+              scaled by ``10**precision`` before searching, so this is the
+              number of decimal digits considered
+
+            - ``time_limit`` -- float or ``None`` (default ``None``); total
+              time limit in seconds across all iterations
+
+        OUTPUT:
+
+            - ``result`` -- a dictionary with the same shape as
+              :meth:`civerly.solvers.MILP_SOLVER_CVL.solve`:
+
+                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
+                - ``objective_value`` -- the minimum weight (the objective),
+                  or ``None`` if no satisfying assignment was found in the
+                  range or on early termination
+                - ``objective_bounds`` -- ``(lower, upper)`` proven bounds on
+                  the optimum. ``(opt, opt)`` on a tight solve, the still-open
+                  interval on timeout, ``(None, None)`` on error or when no
+                  feasible solution exists.
+                - ``assingment`` -- dictionary; the assignment of the
+                  variables at the minimum weight, empty if unsatisfiable
+                - ``solve_time`` -- float; total time spent
+        """
+        assert isinstance(input_file, Path)
+        assert isinstance(sum_arr_file, Path)
+
+        start_time = time.perf_counter()
+        deadline = start_time + time_limit if time_limit is not None else None
+
+        with sum_arr_file.open('r') as f:
+            sum_arr = json.load(f)
+
+        scale = 10 ** precision
+        W_MIN = int(solve_range[0] * scale)
+        W_MAX = int(solve_range[1] * scale)
+        if W_MIN > W_MAX:
+            raise ValueError(f"Invalid solve_range: {solve_range}")
+
+        def _format_weight(w):
+            return w / scale if precision else int(w)
+
+        def _early_return(status):
+            # On timeout the bounds still narrow the optimum's location.
+            # On error we make no claim about where the optimum lies.
+            if status == SOLVING_STATUS.TIMEOUT:
+                bounds = (_format_weight(W_MIN), _format_weight(W_MAX))
+            else:
+                bounds = (None, None)
+            return {
+                "status": status,
+                "objective_value": None,
+                "objective_bounds": bounds,
+                "assingment": {},
+                "solve_time": time.perf_counter() - start_time,
+            }
+
+        def _decide_at(w):
+            sat = DIMACS()
+            sat.read(str(input_file))
+            constrained = _generate_constraints_sum_leq_int_LS24(sat, sum_arr, int(w))
+            tmp_cnf = input_file.parent / f"{input_file.stem}_obj{w}.cnf"
+            constrained.write(tmp_cnf)
+            if deadline is not None:
+                remaining = deadline - time.perf_counter()
+                if remaining <= 0:
+                    return None  # signal timeout
+            else:
+                remaining = None
+            return self.decide(tmp_cnf, time_limit=remaining)
+
+        last_sat = None
+        while W_MIN < W_MAX:
+            w = (W_MIN + W_MAX) // 2
+            r = _decide_at(w)
+            if r is None:
+                return _early_return(SOLVING_STATUS.TIMEOUT)
+            if r["status"] != SOLVING_STATUS.SUCCESS:
+                return _early_return(r["status"])
+            if r["satisfiability"]:
+                last_sat = r
+                W_MAX = w
+            else:
+                W_MIN = w + 1
+
+        # Loop exited with W_MIN == W_MAX. If we never proved this value SAT,
+        # test it once more to distinguish "optimum found" from "all UNSAT".
+        if last_sat is None:
+            r = _decide_at(W_MIN)
+            if r is None:
+                return _early_return(SOLVING_STATUS.TIMEOUT)
+            if r["status"] != SOLVING_STATUS.SUCCESS:
+                return _early_return(r["status"])
+            if not r["satisfiability"]:
+                # No feasible solution exists in the searched range.
+                return {
+                    "status": SOLVING_STATUS.SUCCESS,
+                    "objective_value": None,
+                    "objective_bounds": (None, None),
+                    "assingment": {},
+                    "solve_time": time.perf_counter() - start_time,
+                }
+            last_sat = r
+
+        opt = _format_weight(W_MIN)
+        return {
+            "status": SOLVING_STATUS.SUCCESS,
+            "objective_value": opt,
+            "objective_bounds": (opt, opt),
+            "assingment": last_sat["assingment"],
+            "solve_time": time.perf_counter() - start_time,
+        }
 
     def _parse_assignment_line(self, line):
         """
@@ -442,17 +533,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
 class LOGIC_MINIMIZER_CVL(SOLVER_CVL, ABC):
     """
-    Abstract base class for implementing an interface to a logic minizers.
+    Abstract base class for implementing an interface to a logic minimizer.
+
+    Logic minimizers expose only :meth:`invoke`; there is no high-level
+    ``solve`` operation because they don't search for an optimum.
     """
     def __init__(self):
         """Initizialize the minimizer interface."""
         super().__init__()
-
-    def solve(self, input_file, time_limit=None):
-        """
-        Logic minimizers must only implement the ``invoke`` method.
-        """
-        raise NotImplementedError
 
 
 class GUROBI_CVL(MILP_SOLVER_CVL):
