@@ -432,7 +432,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             return
 
         assert isinstance(input_file, Path)
-        solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sat"
+        solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sol"
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
         json_file = input_file.parent / f"{input_file.stem}_pool.json"
 
