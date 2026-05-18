@@ -201,7 +201,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         pass
 
 
-class SAT_SOLVER_CVL(SOLVER_CVL):
+class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
     """Abstract base class for implementing an interface to a SAT solver."""
 
     def __init__(self):
