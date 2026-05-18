@@ -578,7 +578,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         """
         assert isinstance(solution_file, Path)
 
-        with open(solution_file, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         if any(["infeasible" in line for line in file_content[:10]]):
