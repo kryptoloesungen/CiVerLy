@@ -16,6 +16,50 @@ from civerly.util import _to_dict
 
 from abc import ABC, abstractmethod
 
+
+class SOLVING_STATUS(Enum):
+    """Indicate if solving was successful or what went wrong."""
+
+    SUCCESS = 1
+    TIMEOUT = 2
+    ERROR = 3
+
+
+class NoSolverWarning(Warning):
+    r"""
+    Warning which will be thrown whenever :meth:`analyse` is called with
+    `model_options.solver = None`.
+
+    EXAMPLES::
+
+        sage: from civerly.model_options import *
+        sage: from civerly.util import suppress_output
+        sage: from civerly.cipher_implementations.aes import AES_CVL
+        sage: import tempfile
+        sage: aes = AES_CVL(6)
+        sage: with tempfile.TemporaryDirectory() as tmpdir:
+        ....:   model_options = MODEL_OPTIONS(
+        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+        ....:     optimization=OPTIMIZATION.MILP,
+        ....:     granularity=GRANULARITY.WORDWISE,
+        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+        ....:     milp_solver=None,
+        ....:     sat_solver=None,
+        ....:     path=Path(tmpdir))
+        ....:   with suppress_output():
+        ....:     aes.analyse(model_options)
+        Traceback (most recent call last):
+        ...
+        NoSolverWarning: No solver has been selected.
+        CiVerLy will return without solving.
+    """
+    def __init__(self):
+        super().__init__(
+            "No solver has been selected. "
+            "CiVerLy will return without solving."
+        )
+
+
 class SOLVER_CVL(ABC):
     """
     Abstract base class for implementing an interface to a solver.
@@ -1100,47 +1144,3 @@ class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         raise NotImplementedError(
             "The dummy logic minimizer does not invoke a subprocess."
         )
-
-
-class SOLVING_STATUS(Enum):
-    """Indicate if solving was successful or what went wrong."""
-
-    SUCCESS = 1
-    TIMEOUT = 2
-    ERROR = 3
-
-
-class NoSolverWarning(Warning):
-    r"""
-    Warning which will be thrown whenever :meth:`analyse` is called with
-    `model_options.solver = None`.
-
-    EXAMPLES::
-
-        sage: from civerly.model_options import *
-        sage: from civerly.util import suppress_output
-        sage: from civerly.cipher_implementations.aes import AES_CVL
-        sage: import tempfile
-        sage: aes = AES_CVL(6)
-        sage: with tempfile.TemporaryDirectory() as tmpdir:
-        ....:   model_options = MODEL_OPTIONS(
-        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-        ....:     optimization=OPTIMIZATION.MILP,
-        ....:     granularity=GRANULARITY.WORDWISE,
-        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-        ....:     milp_solver=None,
-        ....:     sat_solver=None,
-        ....:     path=Path(tmpdir))
-        ....:   with suppress_output():
-        ....:     aes.analyse(model_options)
-        Traceback (most recent call last):
-        ...
-        NoSolverWarning: No solver has been selected.
-        CiVerLy will return without solving.
-    """
-    def __init__(self):
-        super().__init__(
-            "No solver has been selected. "
-            "CiVerLy will return without solving."
-        )
-
