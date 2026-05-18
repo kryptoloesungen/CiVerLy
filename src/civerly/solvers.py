@@ -130,7 +130,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - ``input_file`` -- path to the file containing the model
 
-            - ``time_limit`` -- float or ``none`` (default ``none``); time limit in seconds
+            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
 
         OUTPUT:
 
@@ -216,7 +216,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - ``input_file`` -- path to the file containing the model
 
-            - ``time_limit`` -- float or ``none`` (default ``none``); time limit in seconds
+            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
 
         Output:
 
