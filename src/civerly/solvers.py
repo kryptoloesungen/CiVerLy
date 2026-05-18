@@ -889,7 +889,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
 
         # if there was no error but there is no solution, we conclude that
         # there was a time out
-        if self.status == SOLVING_STATUS.SUCCESS:
+        if status == SOLVING_STATUS.SUCCESS:
             with solution_file.open('r') as file:
                 line = file.readline().strip("\n")
             if line == "c UNKNOWN":
