@@ -72,15 +72,9 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       milp_solver=GUROBI_CVL(),
             ....:       path=Path(tmpdir))
-            ....:   cipher.model(model_options=model_options)
-            ....:   GUROBI_CVL().solve(
-            ....:       input_file=Path(tmpdir) / "Toy1.mps",
-            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
-            ....:   )
-            ....:   GUROBI_CVL()._process_solution_file(
-            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
-            ....:   )[1]
+            ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'
             ...
             0
@@ -94,15 +88,9 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       milp_solver=SCIP_CVL(),
             ....:       path=Path(tmpdir))
-            ....:   cipher.model(model_options=model_options)
-            ....:   SCIP_CVL().solve(
-            ....:       input_file=Path(tmpdir) / "Toy1.mps",
-            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
-            ....:   )
-            ....:   SCIP_CVL()._process_solution_file(
-            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
-            ....:   )[1]
+            ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'
             ...
             0
@@ -116,15 +104,9 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       milp_solver=GLPK_CVL(),
             ....:       path=Path(tmpdir))
-            ....:   cipher.model(model_options=model_options)
-            ....:   GLPK_CVL().solve(
-            ....:       input_file=Path(tmpdir) / "Toy1.mps",
-            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
-            ....:   )
-            ....:   GLPK_CVL()._process_solution_file(
-            ....:       solution_file=Path(tmpdir) / "Toy1.sol",
-            ....:   )[1]
+            ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'
             ...
             0

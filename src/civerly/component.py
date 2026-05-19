@@ -1642,8 +1642,9 @@ class LinearLayer_CVL(Component):
             ....:   sat_model = cipher.model(model_options)  # assigned to suppress repr
             ....:   model_options.sat_solver.solve(
             ....:     Path(tmpdir) / 'LL-doctest.cnf',
-            ....:     Path(tmpdir) / 'LL-doctest.sat',
-            ....:     model_options)
+            ....:     Path(tmpdir) / 'LL-doctest.sum.json',
+            ....:     solve_range=model_options.solve_range,
+            ....:     precision=model_options.sat_precision)
             ....:   _ = cipher.get_trail(model_options)  # assigned to suppress repr
             48 variables and 89 clauses were written to '...'
             0

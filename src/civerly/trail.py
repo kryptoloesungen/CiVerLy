@@ -54,9 +54,9 @@ class TrailNode:
             1792 variables and 4581 clauses were written to ...
             sage: model_options.sat_solver.solve(
             ....:    model_options.path / (cipher.name + ".cnf"),
-            ....:    model_options.path / (cipher.name + ".sat"),
-            ....:    model_options=model_options,
-            ....:    time_limit=None)
+            ....:    model_options.path / (cipher.name + "sum.json"),
+            ....:    solve_range=model_options.solve_range,
+            ....:    precision=model_options.sat_precision)
             ...
             sage: results_and_weight = cipher.read_results(model_options)
             sage: cipher.results == []
