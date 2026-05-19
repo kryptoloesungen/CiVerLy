@@ -1522,10 +1522,19 @@ class Cipher:
                 )
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
+                # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
+                # helper/dummy variables are excluded so that two solutions
+                # are considered the same when they agree on the trail.
+                b = self.milp.get_backend()
+                trail_vars = {
+                    b.col_name(i) for i in range(b.ncols())
+                    if b.col_name(i).startswith("X")
+                }
                 all_results = model_options.milp_solver.solve_multiple(
                     input_file=input_file,
                     milp=self.milp,
                     number_of_solutions=model_options.number_of_solutions,
+                    trail_vars=trail_vars,
                 )
                 weights = []
                 for r in all_results:
@@ -1559,11 +1568,23 @@ class Cipher:
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:
+                # Trail vars: the sum_arr variables (which encode the weight)
+                # plus the input variables. Helper/auxiliary clauses (e.g.
+                # the sum-counter aux vars) are excluded so that two
+                # solutions are considered the same when they agree on the
+                # trail.
+                with open(sum_arr_file, 'r') as f:
+                    sum_arr = json.load(f)
+                trail_vars = (
+                    {int(var) for _, var in sum_arr}
+                    | set(range(1, self.input_length + 1))
+                )
                 all_results = model_options.sat_solver.solve_multiple(
                     input_file=input_file,
                     sum_arr_file=sum_arr_file,
                     solve_range=model_options.solve_range,
                     number_of_solutions=model_options.number_of_solutions,
+                    trail_vars=trail_vars,
                     precision=model_options.sat_precision,
                 )
                 weights = []
