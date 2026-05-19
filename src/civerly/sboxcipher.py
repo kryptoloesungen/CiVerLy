@@ -581,7 +581,7 @@ class SBoxCipher(Cipher):
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     milp_solver=SOLVER.SCIP,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     number_of_solutions=3,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)

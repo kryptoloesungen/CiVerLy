@@ -50,7 +50,7 @@ class GIFT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     milp_solver=SOLVER.SCIP,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options) 
@@ -90,7 +90,7 @@ class GIFT_CVL:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options)
@@ -112,7 +112,7 @@ class GIFT_CVL:
             ....:     solve_range=(0, 10),
             ....:     sat_precision=1,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options)

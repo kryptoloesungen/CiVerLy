@@ -381,7 +381,7 @@ class SKINNY_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
@@ -400,7 +400,7 @@ class SKINNY_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
@@ -437,7 +437,7 @@ class SKINNY_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     milp_solver=SOLVER.GUROBI,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             9264 variables and 10161 constraints were written to '...'
@@ -455,7 +455,7 @@ class SKINNY_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     milp_solver=SOLVER.SCIP,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             9264 variables and 10161 constraints were written to '...'
@@ -473,7 +473,7 @@ class SKINNY_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
@@ -492,7 +492,7 @@ class SKINNY_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)

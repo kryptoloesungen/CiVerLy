@@ -28,7 +28,7 @@ class Toy11:
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       milp_solver=SOLVER.SCIP,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             101 variables and 388 constraints were written to '...'
@@ -49,7 +49,7 @@ class Toy11:
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       sat_solver=SOLVER.CADICAL,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             89 variables and 436 clauses were written to '...'

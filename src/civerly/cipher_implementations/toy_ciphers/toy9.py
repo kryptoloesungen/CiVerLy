@@ -24,7 +24,7 @@ class Toy9:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       milp_solver=SOLVER.SCIP,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             36 variables and 85 constraints were written to '...'
@@ -44,7 +44,7 @@ class Toy9:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             36 variables and 109 clauses were written to '...'

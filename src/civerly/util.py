@@ -758,7 +758,7 @@ def translate_var(cipher, node, local_var):
         ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
         ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
         ....:     sat_solver=SOLVER.CADICAL,
-        ....:     logic_minimizer=ESPRESSO_CVL(),
+        ....:     logic_minimizer=SOLVER.ESPRESSO,
         ....:     path=Path(tmpdir))
         ....:   craft.model(model_options)
         7488 variables and 17201 clauses were written to ...
