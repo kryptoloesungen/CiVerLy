@@ -44,6 +44,7 @@ import warnings
 
 import contextlib
 import random
+import shutil
 import zlib
 import sys
 import os
@@ -608,6 +609,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
         # this is the case if it was generated and then manually solved by
         # the user before
         print(f"Using existing file {file_sol}, make sure it is up to date!")
+        _, results = model_options.milp_solver._process_solution_file(file_sol)
     else:
         for i_im, impossible_point in enumerate(imposset):
             for ic, constr in enumerate(convex_constraints):
@@ -631,14 +633,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
         with suppress_output():
             milp_to_minimize_milp.write_mps(str(file_mps))
 
-        if not isinstance(model_options.milp_solver, NO_MILP_SOLVER_CVL):
-            model_options.milp_solver.solve(
-                input_file=file_mps,
-                solution_file=file_sol,
-            )
-        else:
-            # if there is no milp_solver set in model_options, the user has to solve
-            # the MILP manually
+        if isinstance(model_options.milp_solver, NO_MILP_SOLVER_CVL):
+            # if there is no milp_solver set in model_options, the user has to
+            # solve the MILP manually
             if isinstance(comp, SBox_CVL):
                 comp_in_print = "SBox"
             elif isinstance(comp, LinearLayer_CVL):
@@ -650,8 +647,14 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
             )
             comp._return_immediately_ = True
             return
+        result = model_options.milp_solver.solve(file_mps)
+        results = result["assignment"]
+        # solve writes to <stem>_<solver_name>.sol; canonicalize to
+        # file_sol so the cache check on subsequent runs hits
+        solver_sol = file_mps.parent / f"{file_mps.stem}_{model_options.milp_solver.name}.sol"
+        if solver_sol.exists():
+            shutil.copyfile(solver_sol, file_sol)
     final_choices = []  # solution of reduction algorithm
-    results, _ = model_options.milp_solver._process_solution_file(file_sol)
 
     # STEP 3:
     # use the found solution to generate a minimial MILP that models the
