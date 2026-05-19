@@ -757,7 +757,7 @@ def translate_var(cipher, node, local_var):
         ....:     granularity=GRANULARITY.BITWISE,
         ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
         ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-        ....:     sat_solver=CADICAL_CVL(),
+        ....:     sat_solver=SOLVER.CADICAL,
         ....:     logic_minimizer=ESPRESSO_CVL(),
         ....:     path=Path(tmpdir))
         ....:   craft.model(model_options)

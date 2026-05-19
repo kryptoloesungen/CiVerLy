@@ -269,7 +269,7 @@ class HURDLE_CVL:
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       logic_minimizer=ESPRESSO_CVL(),
-            ....:       sat_solver=CADICAL_CVL(),
+            ....:       sat_solver=SOLVER.CADICAL,
             ....:       path=Path(tmpdir)
             ....:   )
             ....:   cipher.analyse(model_options)
