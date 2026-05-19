@@ -60,7 +60,7 @@ class ChachaQRF_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CADICAL_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
             ....:     solve_range=(0, 8),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)

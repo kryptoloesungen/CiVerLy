@@ -399,7 +399,7 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
@@ -491,7 +491,7 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
