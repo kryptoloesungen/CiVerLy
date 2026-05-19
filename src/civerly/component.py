@@ -1622,7 +1622,6 @@ class LinearLayer_CVL(Component):
             ....:   )
             ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
             ....:   cipher.analyse(model_options)
-            ....:   cipher.generate_report(model_options)
             ....:   arr = [
             ....:     [0, 0, 1, 1],
             ....:     [1, 0, 1, 1],
@@ -1639,16 +1638,9 @@ class LinearLayer_CVL(Component):
             ....:   node = cipher.add_subcipher(
             ....:     linearlayer, [(cipher.IN, (i, i)) for i in range(4)])
             ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
-            ....:   sat_model = cipher.model(model_options)  # assigned to suppress repr
-            ....:   model_options.sat_solver.solve(
-            ....:     Path(tmpdir) / 'LL-doctest.cnf',
-            ....:     Path(tmpdir) / 'LL-doctest.sum.json',
-            ....:     solve_range=model_options.solve_range,
-            ....:     precision=model_options.sat_precision)
-            ....:   _ = cipher.get_trail(model_options)  # assigned to suppress repr
+            ....:   cipher.analyse(model_options)  # assigned to suppress repr
             48 variables and 89 clauses were written to '...'
             0
-            Output file in: ...
             48 variables and 110 clauses were written to '...'
             0
         """
@@ -2139,12 +2131,9 @@ class SBox_CVL(Component):
                 ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
                 ....:     milp_solver=SCIP_CVL(),
                 ....:     path=Path(tmpdir))
-                ....:   with suppress_output():
-                ....:     milp = cipher.analyse(model_options)
-                ....:   results, objective_value = model_options.milp_solver._process_solution_file(
-                ....:     model_options.path / (cipher.name + ".sol")
-                ....:   )
+                ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)
+                ....:   results = cipher.result["assignment"]
                 ....:   in_diff  = vec_to_int(vector(
                 ....:     GF(2), 4,
                 ....:     [results['IN'][i] for i in range(4)]
@@ -2156,6 +2145,7 @@ class SBox_CVL(Component):
                 ....:   ddt = sb.difference_distribution_table()
                 ....:   print(ddt[in_diff][out_diff])
                 ....:   print(ddt[in_diff][out_diff]/16.0 == 2**(-objective_value))
+                36 variables and 66 constraints were written to ...
                 1
                 8
                 True
@@ -2186,16 +2176,9 @@ class SBox_CVL(Component):
                 ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
                 ....:     milp_solver=SCIP_CVL(),
                 ....:     path=Path(tmpdir))
-                ....:   with suppress_output():
-                ....:     milp = cipher.model(model_options)
-                ....:   model_options.milp_solver.solve(
-                ....:     input_file=model_options.path / (cipher.name + ".mps"),
-                ....:     solution_file=model_options.path / (cipher.name + ".sol"),
-                ....:   )
-                ....:   results, objective_value = model_options.milp_solver._process_solution_file(
-                ....:     model_options.path / (cipher.name + ".sol"),
-                ....:   )
+                ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)
+                ....:   results = cipher.result["assignment"]
                 ....:   in_diff  = vec_to_int(vector(
                 ....:     GF(2), 4, [results['IN'][i] for i in range(4)]
                 ....:   ))
@@ -2205,6 +2188,7 @@ class SBox_CVL(Component):
                 ....:   ddt = sb.difference_distribution_table()
                 ....:   print(ddt[in_diff][out_diff])
                 ....:   print(ddt[in_diff][out_diff]/16.0 == 2**(-objective_value))
+                36 variables and 50 constraints were written to ...
                 1
                 8
                 True
@@ -2550,11 +2534,9 @@ class SBox_CVL(Component):
             ....:     sat_solver=CRYPTOMINISAT_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
-            ....:   with suppress_output(): cipher.analyse(model_options)
-            ....:   results, objective_value = model_options.sat_solver._process_solution_file(
-            ....:     model_options.path / (cipher.name + ".sat")
-            ....:   )
+            ....:   objective_value = cipher.analyse(model_options)
             ....:   print(objective_value)
+            ....:   results = cipher.result["assignment"]
             ....:   in_diff  = vec_to_int(
             ....:     vector(GF(2), 4, [results[i+1] for i in range(4)])
             ....:   )
@@ -2563,14 +2545,12 @@ class SBox_CVL(Component):
             ....:   )
             ....:   print(sb.difference_distribution_table()[in_diff][out_diff])
             ....:   print(sb.difference_distribution_table()[in_diff][out_diff]/16.0
-            ....:         == 2**(-int(objective_value)))
+            ....:         == 2**(-objective_value))
+            36 variables and 119 clauses were written to ...
             1
             8
             True
-
-
         """
-
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             ddt = self.S.difference_distribution_table()
         elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:

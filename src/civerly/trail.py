@@ -33,10 +33,10 @@ class TrailNode:
         Initialize model options:
 
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
-            sage: from civerly.model_options import * 
+            sage: from civerly.model_options import *
             sage: import tempfile
             sage: # optional - cryptominisat # optional - espresso
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   cipher = SPECK_CVL(32, 64, R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -46,32 +46,10 @@ class TrailNode:
             ....:     sat_solver=CRYPTOMINISAT_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
-        
-        Solve the model and retrieve results:
-
-            sage: # optional - cryptominisat # optional - espresso
-            sage: cipher.model(model_options)
+            ....:   cipher.analyse(model_options)
+            ....:   cipher.results[0]
             1792 variables and 4581 clauses were written to ...
-            sage: model_options.sat_solver.solve(
-            ....:    model_options.path / (cipher.name + ".cnf"),
-            ....:    model_options.path / (cipher.name + "sum.json"),
-            ....:    solve_range=model_options.solve_range,
-            ....:    precision=model_options.sat_precision)
-            ...
-            sage: results_and_weight = cipher.read_results(model_options)
-            sage: cipher.results == []
-            True
-            
-        Initialize TrailNode:
-            
-            sage: # optional - cryptominisat # optional - espresso
-            sage: from civerly.trail import TrailNode
-            sage: node = TrailNode(cipher, model_options, results_and_weight)
-            sage: cipher.results[0]
             {'in': [...], 'out': [...], 'weight': ...}
-            sage: import shutil 
-            sage: shutil.rmtree(tmpdir)
-        
         """
         self.children : list[TrailNode] = []
         self.right = None

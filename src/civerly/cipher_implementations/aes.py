@@ -83,7 +83,9 @@ we simulate it to continue::
     sage: from pathlib import Path
     sage: input_file = Path("DOCTEST-AES-Models/MixColumn51845.mps")
     sage: solution_file = Path("DOCTEST-AES-Models/MixColumn51845.sol")
-    sage: SCIP_CVL().solve(input_file, solution_file)
+    sage: log_file = Path("DOCTEST-AES-Models/MixColumn51845.log")
+    sage: SCIP_CVL().invoke(input_file, solution_file, log_file)
+    <SOLVING_STATUS.SUCCESS: 1>
 
 Notice that you do not have to keep the sage session alive while you
 solve the model externally. Again, this is something we have to
@@ -120,9 +122,11 @@ generating a report, you would copythe ``AES.sol`` file to the
 
     sage: # optional - scip
     sage: from pathlib import Path
-    sage: SCIP_CVL().solve(input_file=Path("DOCTEST-AES-Models/AES.mps"),
-    ....:       solution_file=Path("DOCTEST-AES-Models/AES.sol")
+    sage: SCIP_CVL().invoke(input_file=Path("DOCTEST-AES-Models/AES.mps"),
+    ....:       solution_file=Path("DOCTEST-AES-Models/AES.sol"),
+    ....:       log_file=Path("DOCTEST-AES-Models/AES.log")
     ....: )
+    <SOLVING_STATUS.SUCCESS: 1>
 
 And again, we simulate restarting CiVerLy::
 
@@ -137,7 +141,7 @@ Now, we first verify that the objective value is indeed 55::
     sage: from civerly.model_options import *
     sage: from pathlib import Path
     sage: sol_file_name = Path("DOCTEST-AES-Models/AES.sol")
-    sage: SCIP_CVL()._process_solution_file(sol_file_name)[1]
+    sage: SCIP_CVL()._process_solution_file(sol_file_name)[0]
     55
 
 Which tells us that there are indeed 55 active S-boxes. To visualize
