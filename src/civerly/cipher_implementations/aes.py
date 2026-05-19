@@ -403,7 +403,7 @@ class AES_CVL:
                 ....:       optimization=OPTIMIZATION.MILP,
                 ....:       granularity=GRANULARITY.WORDWISE,
                 ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:       milp_solver=GLPK_CVL(),
+                ....:       milp_solver=SOLVER.GLPK,
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
                 644 variables and 653 constraints were written to '...'
@@ -418,7 +418,7 @@ class AES_CVL:
                 ....:       optimization=OPTIMIZATION.MILP,
                 ....:       granularity=GRANULARITY.WORDWISE,
                 ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:       milp_solver=GLPK_CVL(),
+                ....:       milp_solver=SOLVER.GLPK,
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
                 640 variables and 641 constraints were written to '...'
