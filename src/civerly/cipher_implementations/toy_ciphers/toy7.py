@@ -42,7 +42,7 @@ class Toy7:
             3
             Output file in: ...
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
             ....:   import Toy7
             sage: from civerly.model_options import *
@@ -54,7 +54,7 @@ class Toy7:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       milp_solver=GUROBI_CVL(),
+            ....:       milp_solver=SCIP_CVL(),
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       solve_range=(0, 10),
             ....:       number_of_solutions=1,
@@ -66,16 +66,16 @@ class Toy7:
             1356 variables and 2507 constraints were written to '...'
             3
         
-        Try to find multiple solutions with gurobi:
+        Try to find multiple solutions with SCIP:
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: del cipher
             sage: cipher = Toy7()
             sage: model_options.number_of_solutions = 5
             sage: cipher.analyse(model_options=model_options)
             ...
             [3, 3, 3, 3, 3]
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: del cipher
             sage: cipher = Toy7()
             sage: model_options.number_of_solutions = 30
@@ -87,7 +87,7 @@ class Toy7:
 
         Delete files:
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: import shutil 
             sage: shutil.rmtree(tmpdir)
             

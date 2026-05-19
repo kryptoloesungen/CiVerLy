@@ -66,7 +66,7 @@ class Toy5:
             8
             Output file in: ...
 
-            sage: # optional - gurobi
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.toy_ciphers.toy5 \
             ....:   import Toy5
             sage: from civerly.model_options import *
@@ -79,7 +79,7 @@ class Toy5:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:       milp_solver=GUROBI_CVL(),
+            ....:       milp_solver=SCIP_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             ....:   cipher.generate_report(model_options)

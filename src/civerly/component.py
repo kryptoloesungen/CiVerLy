@@ -2143,13 +2143,13 @@ class SBox_CVL(Component):
                 ....:   sbox, [(cipher.IN, (i, i)) for i in range(4)]
                 ....: )
                 sage: cipher.add_output([(node, (i, i)) for i in range(4)])
-                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
                 ....:   model_options = MODEL_OPTIONS(
                 ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.BITWISE,
                 ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-                ....:     milp_solver=GUROBI_CVL(),
+                ....:     milp_solver=SCIP_CVL(),
                 ....:     path=Path(tmpdir))
                 ....:   with suppress_output():
                 ....:     milp = cipher.analyse(model_options)
@@ -2190,13 +2190,13 @@ class SBox_CVL(Component):
                 ....:   sbox, [(cipher.IN, (i, i)) for i in range(4)]
                 ....: )
                 sage: cipher.add_output([(node, (i, i)) for i in range(4)])
-                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
                 ....:   model_options = MODEL_OPTIONS(
                 ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.BITWISE,
                 ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:     milp_solver=GUROBI_CVL(),
+                ....:     milp_solver=SCIP_CVL(),
                 ....:     path=Path(tmpdir))
                 ....:   with suppress_output():
                 ....:     milp = cipher.model(model_options)

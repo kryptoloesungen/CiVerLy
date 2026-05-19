@@ -421,13 +421,13 @@ class SKINNY_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=10, name="wordwise-SKINNY-10")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SCIP_CVL(),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             7136 variables and 7521 constraints were written to '...'

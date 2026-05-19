@@ -81,7 +81,7 @@ class DES_F_CVL:
             sage: from civerly.cipher_implementations.des import DES_F_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
             ....:   cipher = DES_F_CVL()
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -89,7 +89,7 @@ class DES_F_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SCIP_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)

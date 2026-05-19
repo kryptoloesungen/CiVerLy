@@ -71,7 +71,7 @@ class Toy4:
 
         The test code for MILP:
 
-            sage: # optional - gurobi
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.toy_ciphers.toy4 \
             ....:   import Toy4
             sage: from civerly.model_options import *
@@ -84,7 +84,7 @@ class Toy4:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:       milp_solver=GUROBI_CVL(),
+            ....:       milp_solver=SCIP_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             ....:   trail = str(cipher.get_trail(model_options))

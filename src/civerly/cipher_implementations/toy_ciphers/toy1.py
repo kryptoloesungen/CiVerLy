@@ -152,13 +152,13 @@ class Toy1:
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   cipher = Toy1()
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
-            ....:       milp_solver=GUROBI_CVL(),
+            ....:       milp_solver=SCIP_CVL(),
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)

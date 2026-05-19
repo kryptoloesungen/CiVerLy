@@ -10,7 +10,7 @@ class Toy9:
 
         TESTS::
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy9 \
             ....:   import Toy9
             sage: from civerly.model_options import *
@@ -23,7 +23,7 @@ class Toy9:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       milp_solver=GUROBI_CVL(),
+            ....:       milp_solver=SCIP_CVL(),
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)

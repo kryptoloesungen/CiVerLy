@@ -13,7 +13,7 @@ class Toy11:
 
         TESTS::
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy11 \
             ....:   import Toy11
             sage: from civerly.model_options import *
@@ -27,7 +27,7 @@ class Toy11:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:       milp_solver=GUROBI_CVL(),
+            ....:       milp_solver=SCIP_CVL(),
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)

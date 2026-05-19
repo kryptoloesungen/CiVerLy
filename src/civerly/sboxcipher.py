@@ -122,9 +122,9 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=GUROBI_CVL(),
+                ....:   milp_solver=SCIP_CVL(),
                 ....:   path=Path(tmpdir))
-                sage: # optional - gurobi
+                sage: # optional - scip
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
                 sage: model_options.milp_solver.process_solution_file(
@@ -145,9 +145,9 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=GUROBI_CVL(),
+                ....:   milp_solver=SCIP_CVL(),
                 ....:   path=Path(tmpdir))
-                sage: # optional - gurobi
+                sage: # optional - scip
                 sage: with suppress_output():
                 ....:   milp = cipher.analyse(model_options)
                 sage: model_options.milp_solver.process_solution_file(

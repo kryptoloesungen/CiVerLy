@@ -67,14 +67,14 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SCIP_CVL(),
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir)
             ....:   )
