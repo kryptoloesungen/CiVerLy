@@ -27,7 +27,7 @@ class Toy4:
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
@@ -45,7 +45,7 @@ class Toy4:
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)

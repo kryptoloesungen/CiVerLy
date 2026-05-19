@@ -155,7 +155,7 @@ class PRESENT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     milp_solver=SOLVER.GUROBI,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
@@ -197,7 +197,7 @@ class PRESENT_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
@@ -218,7 +218,7 @@ class PRESENT_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
@@ -241,7 +241,7 @@ class PRESENT_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
@@ -262,7 +262,7 @@ class PRESENT_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             5312 variables and 12993 clauses were written to '...'
@@ -281,7 +281,7 @@ class PRESENT_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))

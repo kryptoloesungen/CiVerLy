@@ -1994,7 +1994,7 @@ class Cipher:
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:   sat_solver=SOLVER.CADICAL,
-            ....:   logic_minimizer=ESPRESSO_CVL(),
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("DOCTEST-Export"))
             sage: cipher.analyse(model_options)
             ...

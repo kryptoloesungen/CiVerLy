@@ -88,7 +88,7 @@ class ABC_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     solve_range=(0, 10),
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   abc_cipher.analyse(model_options)

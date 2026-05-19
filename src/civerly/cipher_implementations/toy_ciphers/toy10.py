@@ -32,7 +32,7 @@ class Toy10:
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             92 variables and 288 clauses were written to '...'
@@ -53,7 +53,7 @@ class Toy10:
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       sat_solver=SOLVER.CADICAL,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             92 variables and 288 clauses were written to '...'
@@ -74,7 +74,7 @@ class Toy10:
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             122 variables and 690 clauses were written to '...'
@@ -95,7 +95,7 @@ class Toy10:
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       milp_solver=SOLVER.SCIP,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             128 variables and 702 constraints were written to '...'

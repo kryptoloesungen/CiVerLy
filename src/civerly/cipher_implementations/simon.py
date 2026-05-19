@@ -85,7 +85,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -103,7 +103,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -121,7 +121,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -139,7 +139,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -161,7 +161,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -179,7 +179,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -197,7 +197,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -215,7 +215,7 @@ class SIMON_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)

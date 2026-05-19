@@ -136,7 +136,7 @@ class CRAFT_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
             ....:   craft.generate_report(model_options)
@@ -160,7 +160,7 @@ class CRAFT_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CADICAL,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
             ....:   craft.generate_report(model_options)

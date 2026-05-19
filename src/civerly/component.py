@@ -1107,7 +1107,7 @@ class AND_CVL(Component):
             ....:         granularity=GRANULARITY.BITWISE,
             ....:         sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:         sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:         logic_minimizer=ESPRESSO_CVL(),
+            ....:         logic_minimizer=SOLVER.ESPRESSO,
             ....:         path=Path(tmpdir))
             ....:     with suppress_output():
             ....:       result = cipher.analyse(model_options)
@@ -2532,7 +2532,7 @@ class SBox_CVL(Component):
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   objective_value = cipher.analyse(model_options)
             ....:   print(objective_value)
