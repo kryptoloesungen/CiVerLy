@@ -26,7 +26,7 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
@@ -42,7 +42,7 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             382 variables and 1003 clauses were written to '...'
@@ -54,7 +54,7 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             426 variables and 955 clauses were written to '...'

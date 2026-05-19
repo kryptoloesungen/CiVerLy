@@ -392,7 +392,7 @@ def _generate_constraints_sum_leq_int_LS24(sat, sum_arr, num):
         ....:           sat, [(1, cl) for cl in range(1, NUM_CLAUSES+1)], bound
         ....:       )
         ....:       _ = new_sat.write(path / 'constraints.cnf')
-        ....:       _ = CRYPTOMINISAT_CVL().invoke(
+        ....:       _ = SOLVER.CRYPTOMINISAT.invoke(
         ....:           path / 'constraints.cnf',
         ....:           path / 'constraints.sat',
         ....:           path / 'constraints.log',

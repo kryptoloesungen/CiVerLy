@@ -24,7 +24,7 @@ class Toy7:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       solve_range=(0, 8),
             ....:       path=Path(tmpdir))

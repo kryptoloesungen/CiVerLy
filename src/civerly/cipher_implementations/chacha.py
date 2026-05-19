@@ -39,7 +39,7 @@ class ChachaQRF_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     solve_range=(0, 8),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -81,7 +81,7 @@ class ChachaQRF_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             1920 variables and 5797 clauses were written to '...'
@@ -166,7 +166,7 @@ class Chacha_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)

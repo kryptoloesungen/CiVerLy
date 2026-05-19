@@ -84,7 +84,7 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
@@ -102,7 +102,7 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
@@ -160,7 +160,7 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
@@ -178,7 +178,7 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
