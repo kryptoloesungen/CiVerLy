@@ -1524,21 +1524,17 @@ class Cipher:
             if model_options.milp_solver is None:
                 raise NoSolverWarning()
             if model_options.number_of_solutions > 1:
-                all_results = model_options.milp_solver.solve_multiple(
-                    model_options=model_options,
-                    cipher=self
+                raise NotImplementedError(
+                    "solve_multiple needs to be rewritten for the new solver API"
                 )
-                for results_and_weight in all_results:
-                    TrailNode(self, model_options, results_and_weight)
-                return [w for _, w in all_results]
-            else:
-                model_options.milp_solver.solve(
-                    input_file=model_options.path / (self.name + ".mps"),
-                    solution_file=model_options.path / (self.name + ".sol")
-                )
-                results_and_weight = self.read_results(model_options)
-                TrailNode(self, model_options, results_and_weight)
-                return results_and_weight[1]
+            result = model_options.milp_solver.solve(
+                model_options.path / (self.name + ".mps")
+            )
+            results_and_weight = (
+                result["assignment"], result["objective_value"]
+            )
+            TrailNode(self, model_options, results_and_weight)
+            return result["objective_value"]
 
         elif model_options.optimization == OPTIMIZATION.SAT:
             if self.sat is None:
@@ -1552,29 +1548,23 @@ class Cipher:
                 )
             if self._return_immediately_:
                 return
+            if model_options.sat_solver is None:
+                raise NoSolverWarning()
             if model_options.number_of_solutions > 1:
-                all_results = model_options.sat_solver.solve_multiple(
-                    model_options=model_options,
-                    cipher=self
+                raise NotImplementedError(
+                    "solve_multiple needs to be rewritten for the new solver API"
                 )
-                for results_and_weight in all_results:
-                    TrailNode(self, model_options, results_and_weight)
-                return [w for _, w in all_results]
-            else:
-                # if no sat_solver has been selected, we generate all cnf-files
-                # for the given solve_range
-                model_options.sat_solver.solve(
-                    model_options.path / (self.name + ".cnf"),
-                    model_options.path / (self.name + ".sat"),
-                    model_options=model_options,
-                    time_limit=None)
-
-                if model_options.sat_solver is None:
-                    raise NoSolverWarning()
-                else:
-                    results_and_weight = self.read_results(model_options)
-                    TrailNode(self, model_options, results_and_weight)
-                    return results_and_weight[1]
+            result = model_options.sat_solver.solve(
+                model_options.path / (self.name + ".cnf"),
+                sum_arr_file=model_options.path / (self.name + "sum.json"),
+                solve_range=model_options.solve_range,
+                precision=model_options.sat_precision,
+            )
+            results_and_weight = (
+                result["assignment"], result["objective_value"]
+            )
+            TrailNode(self, model_options, results_and_weight)
+            return result["objective_value"]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1706,15 +1696,31 @@ class Cipher:
 
     def read_results(self, model_options):
         r"""
+        Re-read the most recent solution from disk and return
+        ``(assignment, objective_value)`` -- the shape :class:`TrailNode`
+        expects.
+
+        Used by :meth:`generate_report` and :meth:`get_trail` to reconstruct
+        a trail in a fresh session, without re-running :meth:`analyse`.
+
+        .. NOTE::
+
+            The SAT path is not currently functional: the new
+            :meth:`SAT_SOLVER_CVL.solve` does not persist the optimum to a
+            canonical ``.sat`` file, and the per-iteration files don't carry
+            the weight. To re-read a SAT result, call :meth:`analyse` again.
         """
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file = model_options.path / (self.name + ".sol")
-            return model_options.milp_solver._process_solution_file(
-                solution_file)
+            objective_value, assignment = (
+                model_options.milp_solver._process_solution_file(solution_file)
+            )
+            return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
-            solution_file = model_options.path / (self.name + ".sat")
-            return model_options.sat_solver._process_solution_file(
-                solution_file)
+            raise NotImplementedError(
+                "SAT read_results requires weight persistence; call "
+                "analyse() again instead. See TODO in cipher.py."
+            )
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1736,7 +1742,7 @@ class Cipher:
         ``<name>.pdf`` is produced (existing behaviour).
 
         When ``model_options.number_of_solutions > 1``, one PDF per solution
-        is produced, named ``<name>_sol0.pdf``, ``<name>_sol1.pdf``, …
+        is produced, named ``<name>_sol0.pdf``, ``<name>_sol1.pdf``, ...
         The stored :attr:`trail_nodes` (populated by the preceding
         :meth:`analyse` call) are used directly; no solution files are
         re-read.
