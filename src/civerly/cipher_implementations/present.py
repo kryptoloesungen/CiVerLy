@@ -48,7 +48,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             1284 variables and 1341 constraints were written to '...'
@@ -89,7 +89,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             5312 variables and 6081 constraints were written to '...'

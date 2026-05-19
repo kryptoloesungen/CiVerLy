@@ -39,7 +39,7 @@ def benchmark(CM=None, remove_files=False, only_models=False,
         ....:   optimization=OPTIMIZATION.MILP,
         ....:   granularity=GRANULARITY.WORDWISE,
         ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-        ....:   milp_solver=SCIP_CVL(),
+        ....:   milp_solver=SOLVER.SCIP,
         ....:   path=path)
         sage: aes = [AES_CVL(R=r, name=f"{r}r-AES") for r in range(1, 10)]
         sage: CM = [(aes, model_options)]

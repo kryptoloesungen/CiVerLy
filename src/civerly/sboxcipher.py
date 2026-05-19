@@ -122,7 +122,7 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SCIP_CVL(),
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path(tmpdir))
                 sage: cipher.analyse(model_options) # optional - scip
                 135 variables and 154 constraints were written to ...
@@ -141,7 +141,7 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SCIP_CVL(),
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path(tmpdir))
                 sage: cipher.analyse(model_options) # optional - scip
                 Using existing file ..., make sure it is up to date!
@@ -580,7 +580,7 @@ class SBoxCipher(Cipher):
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     number_of_solutions=3,
             ....:     path=Path(tmpdir))

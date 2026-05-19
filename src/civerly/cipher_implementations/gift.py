@@ -31,7 +31,7 @@ class GIFT_CVL:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:       milp_solver=SCIP_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
             ....:       path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options)
@@ -49,7 +49,7 @@ class GIFT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir)
             ....:   )
@@ -68,7 +68,7 @@ class GIFT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   gift_cipher.analyse(model_options) 

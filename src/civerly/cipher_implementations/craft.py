@@ -50,7 +50,7 @@ class CRAFT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
             5896 variables and 6121 constraints were written to '...'
@@ -68,7 +68,7 @@ class CRAFT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
             5856 variables and 6041 constraints were written to '...'
@@ -91,7 +91,7 @@ class CRAFT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
             7440 variables and 9057 constraints were written to '...'
@@ -115,7 +115,7 @@ class CRAFT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
             7728 variables and 8001 constraints were written to '...'

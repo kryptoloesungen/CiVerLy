@@ -20,7 +20,7 @@ given in :class:`civerly.model_options.MODEL_OPTIONS`::
     ....:       optimization=OPTIMIZATION.MILP,
     ....:       granularity=GRANULARITY.WORDWISE,
     ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-    ....:       milp_solver=SCIP_CVL(),
+    ....:       milp_solver=SOLVER.SCIP,
     ....:       path=Path(tmpdir))
     ....:   aes.analyse(model_options)
     3236 variables and 3437 constraints were written to '...'
@@ -40,7 +40,7 @@ requires solving a MILP itself::
     ....:       optimization=OPTIMIZATION.MILP,
     ....:       granularity=GRANULARITY.WORDWISE,
     ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-    ....:       milp_solver=SCIP_CVL(),
+    ....:       milp_solver=SOLVER.SCIP,
     ....:       path=Path(tmpdir))
     ....:   aes.analyse(model_options)
     3200 variables and 3329 constraints were written to '...'
@@ -84,7 +84,7 @@ we simulate it to continue::
     sage: input_file = Path("DOCTEST-AES-Models/MixColumn51845.mps")
     sage: solution_file = Path("DOCTEST-AES-Models/MixColumn51845.sol")
     sage: log_file = Path("DOCTEST-AES-Models/MixColumn51845.log")
-    sage: SCIP_CVL().invoke(input_file, solution_file, log_file)
+    sage: SOLVER.SCIP.invoke(input_file, solution_file, log_file)
     <SOLVING_STATUS.SUCCESS: 1>
 
 Notice that you do not have to keep the sage session alive while you
@@ -122,7 +122,7 @@ generating a report, you would copythe ``AES.sol`` file to the
 
     sage: # optional - scip
     sage: from pathlib import Path
-    sage: SCIP_CVL().invoke(input_file=Path("DOCTEST-AES-Models/AES.mps"),
+    sage: SOLVER.SCIP.invoke(input_file=Path("DOCTEST-AES-Models/AES.mps"),
     ....:       solution_file=Path("DOCTEST-AES-Models/AES.sol"),
     ....:       log_file=Path("DOCTEST-AES-Models/AES.log")
     ....: )
@@ -141,7 +141,7 @@ Now, we first verify that the objective value is indeed 55::
     sage: from civerly.model_options import *
     sage: from pathlib import Path
     sage: sol_file_name = Path("DOCTEST-AES-Models/AES.sol")
-    sage: SCIP_CVL()._process_solution_file(sol_file_name)[0]
+    sage: SOLVER.SCIP._process_solution_file(sol_file_name)[0]
     55
 
 Which tells us that there are indeed 55 active S-boxes. To visualize
