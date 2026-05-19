@@ -36,13 +36,6 @@ class Toy10:
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             92 variables and 288 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
             1
 
             sage: # optional - cadical # optional - espresso
@@ -64,13 +57,6 @@ class Toy10:
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             92 variables and 288 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
             1
 
             sage: # optional - cryptominisat # optional - espresso
@@ -92,13 +78,6 @@ class Toy10:
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             122 variables and 690 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
             1
 
             sage: # optional - scip # optional - espresso

@@ -93,10 +93,6 @@ class ABC_CVL:
             ....:   )
             ....:   abc_cipher.analyse(model_options)
             12640 variables and 44257 clauses were written to '...'
-            [  0 , 10] (trying w =   5) : SAT
-            [  0 ,  5] (trying w =   2) : UNSAT
-            [  3 ,  5] (trying w =   4) : SAT
-            [  3 ,  4] (trying w =   3) : SAT
             3
 
         """

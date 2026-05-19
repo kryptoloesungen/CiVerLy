@@ -203,12 +203,6 @@ class PRESENT_CVL:
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             5312 variables and 13441 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : UNSAT
-            [ 10 , 12] (trying w =  11) : UNSAT
             12
 
             sage: from civerly.cipher_implementations.present \
@@ -230,12 +224,6 @@ class PRESENT_CVL:
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             5312 variables and 13441 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : UNSAT
-            [ 10 , 12] (trying w =  11) : UNSAT
             12
 
         Linear cryptanalysis::
@@ -259,12 +247,6 @@ class PRESENT_CVL:
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             5312 variables and 12993 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : UNSAT
             6
 
             sage: from civerly.cipher_implementations.present \
@@ -284,12 +266,6 @@ class PRESENT_CVL:
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             5312 variables and 12993 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : UNSAT
             6
 
             sage: from civerly.cipher_implementations.present \
@@ -311,13 +287,6 @@ class PRESENT_CVL:
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
 
         Simulate external Espresso minimization::
@@ -346,13 +315,6 @@ class PRESENT_CVL:
             Optimization problem for Espresso has been written to...
             Using existing file ..., make sure it is up to date!
             6512 variables and 16017 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
 
         """

@@ -50,24 +50,10 @@ class Toy3:
             ....:   assert "Unnamed Component" not in trail
             ....:   cipher.generate_report(model_options)
             798 variables and 3591 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
             Output file in: ...
             Using existing file ..., make sure it is up to date!
             812 variables and 3563 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
             Output file in: ...
 
@@ -123,13 +109,6 @@ class Toy3:
             Optimization problem for Espresso has been written to...
             Using existing file ..., make sure it is up to date!
             812 variables and 3563 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
 
 
