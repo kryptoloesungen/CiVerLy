@@ -269,7 +269,7 @@ class AES_CVL:
                 ....:       optimization=OPTIMIZATION.MILP,
                 ....:       granularity=GRANULARITY.WORDWISE,
                 ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:       milp_solver=GUROBI_CVL(),
+                ....:       milp_solver=SOLVER.GUROBI,
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
                 2884 variables and 3085 constraints were written to '...'
@@ -284,7 +284,7 @@ class AES_CVL:
                 ....:       optimization=OPTIMIZATION.MILP,
                 ....:       granularity=GRANULARITY.WORDWISE,
                 ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:       milp_solver=GUROBI_CVL(),
+                ....:       milp_solver=SOLVER.GUROBI,
                 ....:       path=Path(tmpdir))
                 ....:   aes.analyse(model_options)
                 2848 variables and 2977 constraints were written to '...'
@@ -313,7 +313,7 @@ class AES_CVL:
                 ....:       optimization=OPTIMIZATION.MILP,
                 ....:       granularity=GRANULARITY.WORDWISE,
                 ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-                ....:       milp_solver=GUROBI_CVL(),
+                ....:       milp_solver=SOLVER.GUROBI,
                 ....:       path=Path(tmpdir))
                 ....:   cipher.analyse(model_options)
                 ....:   cipher.generate_report(model_options)

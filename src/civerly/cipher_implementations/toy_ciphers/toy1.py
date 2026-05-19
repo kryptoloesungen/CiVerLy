@@ -72,7 +72,7 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:       milp_solver=GUROBI_CVL(),
+            ....:       milp_solver=SOLVER.GUROBI,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'

@@ -135,7 +135,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
@@ -154,7 +154,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
@@ -174,7 +174,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)

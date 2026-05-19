@@ -32,7 +32,7 @@ class WEAK_PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir)
             ....:   )
