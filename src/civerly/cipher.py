@@ -1527,14 +1527,14 @@ class Cipher:
                 raise NotImplementedError(
                     "solve_multiple needs to be rewritten for the new solver API"
                 )
-            result = model_options.milp_solver.solve(
+            self.result = model_options.milp_solver.solve(
                 model_options.path / (self.name + ".mps")
             )
             results_and_weight = (
-                result["assignment"], result["objective_value"]
+                self.result["assignment"], self.result["objective_value"]
             )
             TrailNode(self, model_options, results_and_weight)
-            return result["objective_value"]
+            return self.result["objective_value"]
 
         elif model_options.optimization == OPTIMIZATION.SAT:
             if self.sat is None:
@@ -1554,17 +1554,17 @@ class Cipher:
                 raise NotImplementedError(
                     "solve_multiple needs to be rewritten for the new solver API"
                 )
-            result = model_options.sat_solver.solve(
+            self.result = model_options.sat_solver.solve(
                 model_options.path / (self.name + ".cnf"),
                 sum_arr_file=model_options.path / (self.name + "sum.json"),
                 solve_range=model_options.solve_range,
                 precision=model_options.sat_precision,
             )
             results_and_weight = (
-                result["assignment"], result["objective_value"]
+                self.result["assignment"], self.result["objective_value"]
             )
             TrailNode(self, model_options, results_and_weight)
-            return result["objective_value"]
+            return self.result["objective_value"]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1751,7 +1751,9 @@ class Cipher:
         if model_options.number_of_solutions == 1:
             # ---- single-solution path (unchanged) --------------------------
             # 1. Get results
-            results_and_weight = self.read_results(model_options)
+            results_and_weight = (
+                self.result["assignment"], self.result["objective_value"]
+            )
             # 2. Construct TrailNode
             root_node = TrailNode(self, model_options, results_and_weight)
             # 3. Verify correctness
@@ -1799,7 +1801,9 @@ class Cipher:
         """
 
         if model_options.number_of_solutions == 1:
-            results_and_weight = self.read_results(model_options)
+            results_and_weight = (
+                self.result["assignment"], self.result["objective_value"]
+            )
             root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
             return root_node
