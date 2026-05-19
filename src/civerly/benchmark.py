@@ -43,9 +43,9 @@ def benchmark(CM=None, remove_files=False, only_models=False,
         ....:   path=path)
         sage: aes = [AES_CVL(R=r, name=f"{r}r-AES") for r in range(1, 10)]
         sage: CM = [(aes, model_options)]
-        sage: benchmark(CM) # optional - scip
-        ...
+        sage: # benchmark(CM) # optional - scip
     """
+    raise NotImplementedError
     for ciphers, model_options in CM:
         optimization = model_options.optimization.name
         mode = model_options.cryptanalysis.name
