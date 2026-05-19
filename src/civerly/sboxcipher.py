@@ -124,12 +124,8 @@ class SBoxCipher(Cipher):
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
                 ....:   milp_solver=SCIP_CVL(),
                 ....:   path=Path(tmpdir))
-                sage: # optional - scip
-                sage: with suppress_output():
-                ....:   milp = cipher.analyse(model_options)
-                sage: model_options.milp_solver._process_solution_file(
-                ....:   model_options.path / (cipher.name + ".sol"),
-                ....: )[1]
+                sage: cipher.analyse(model_options) # optional - scip
+                135 variables and 154 constraints were written to ...
                 0
                 sage: R = 2
                 sage: cipher = SBoxCipher(2*n, 2*n, name=name+"Cipher")
@@ -147,15 +143,12 @@ class SBoxCipher(Cipher):
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
                 ....:   milp_solver=SCIP_CVL(),
                 ....:   path=Path(tmpdir))
-                sage: # optional - scip
-                sage: with suppress_output():
-                ....:   milp = cipher.analyse(model_options)
-                sage: model_options.milp_solver._process_solution_file(
-                ....:   model_options.path / (cipher.name + ".sol"),
-                ....: )[1]
+                sage: cipher.analyse(model_options) # optional - scip
+                Using existing file ..., make sure it is up to date!
+                222 variables and 267 constraints were written to ...
                 1
                 sage: import shutil
-                sage: shutil.rmtree(tmpdir)
+                sage: shutil.rmtree(tmpdir) # optional - scip
 
         """
         if model_options.granularity == GRANULARITY.WORDWISE \
