@@ -1794,10 +1794,7 @@ class Cipher:
             )
             return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
-            raise NotImplementedError(
-                "SAT read_results requires weight persistence; call "
-                "analyse() again instead. See TODO in cipher.py."
-            )
+            return self.result["assignment"], self.result["objective_value"]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
