@@ -53,7 +53,6 @@ from civerly.util import suppress_output
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.model_options import CRYPTANALYSIS
-from civerly.solvers import NoSolverWarning
 from civerly.component import Component
 from civerly.trail import TrailNode
 
@@ -1521,8 +1520,6 @@ class Cipher:
                 self._finish_milp(
                     model_options, self.milp
                 )
-            if model_options.milp_solver is None:
-                raise NoSolverWarning()
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
                 all_results = model_options.milp_solver.solve_multiple(
@@ -1559,8 +1556,6 @@ class Cipher:
                 )
             if self._return_immediately_:
                 return
-            if model_options.sat_solver is None:
-                raise NoSolverWarning()
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:
