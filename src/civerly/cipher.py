@@ -1803,6 +1803,8 @@ class Cipher:
             canonical ``.sat`` file, and the per-iteration files don't carry
             the weight. To re-read a SAT result, call :meth:`analyse` again.
         """
+        if hasattr(self, "result"):
+            return self.result["assignment"], self.result["objective_value"]
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file = model_options.path / (self.name + ".sol")
             objective_value, assignment = (
@@ -1810,7 +1812,7 @@ class Cipher:
             )
             return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
-            return self.result["assignment"], self.result["objective_value"]
+            raise NotImplementedError
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1841,9 +1843,7 @@ class Cipher:
         if model_options.number_of_solutions == 1:
             # ---- single-solution path (unchanged) --------------------------
             # 1. Get results
-            results_and_weight = (
-                self.result["assignment"], self.result["objective_value"]
-            )
+            results_and_weight = self.read_results(model_options)
             # 2. Construct TrailNode
             root_node = TrailNode(self, model_options, results_and_weight)
             # 3. Verify correctness
