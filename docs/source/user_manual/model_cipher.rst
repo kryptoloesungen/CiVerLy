@@ -32,7 +32,7 @@ Below, we give an exemplary code snippet that configures the model options for a
    ....:   granularity=GRANULARITY.BITWISE,
    ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
    ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-   ....:   sat_solver=CRYPTOMINISAT_CVL(),
+   ....:   sat_solver=SOLVER.CRYPTOMINISAT,
    ....:   solve_range=(0, 32),
    ....:   path=Path("Models/Cipher"))
 
@@ -77,9 +77,9 @@ General Options
   Hence, ``milp_solver`` must be set to:
 
   * ``None`` or
-  * ``SCIP_CVL()`` or
-  * ``GLPK_CVL()`` or
-  * ``GUROBI_CVL()``.
+  * ``SOLVER.SCIP`` or
+  * ``SOLVER.GLPK`` or
+  * ``SOLVER.GUROBI``.
 
 * ``sat_solver``
 
@@ -90,8 +90,8 @@ General Options
   Hence, ``sat_solver`` must be set to:
 
   * ``None`` or
-  * ``CRYPTOMINISAT_CVL()`` or
-  * ``CADICAL_CVL()``.
+  * ``SOLVER.CRYPTOMINISAT`` or
+  * ``SOLVER.CADICAL``.
 
 * ``logic_minimizer``
 
@@ -101,7 +101,7 @@ General Options
   Hence, ``logic_minimizer`` must be set to:
 
   * ``None`` or
-  * ``ESPRESSO_CVL()``.
+  * ``SOLVER.ESPRESSO``.
 
 * ``path``
 
@@ -161,5 +161,5 @@ Therefore, we strongly recommend to try different options on small instances of 
 For AES-like ciphers, i.e., cipher consisting of an S-box layer, a step permuting the cells and a MixColumns step, we recommend to use wordwise MILP modeling with the ``GENERALIZED_WORDWISE`` linear layer modeling.
 To keep it simple, for everything else we recommend bitwise SAT modeling with the ``MORE_DUMMIES`` linear layer modeling and the ``LOGICAL_COND_ESPRESSO`` modeling for S-boxes.
 
-In terms of solvers, for MILP we recommend ``SCIP_CVL()`` (unless a Gurobi licence is already available).
-For SAT, we recommend ``CRYPTOMINISAT_CVL()``.
+In terms of solvers, for MILP we recommend ``SOLVER.SCIP`` (unless a Gurobi licence is already available).
+For SAT, we recommend ``SOLVER.CRYPTOMINISAT``.
