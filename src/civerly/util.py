@@ -561,7 +561,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
     from civerly.component import SBox_CVL, LinearLayer_CVL
-    from civerly.solvers import NO_MILP_SOLVER_CVL
+    from civerly.solvers import EXTERNAL_MILP_SOLVER_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
 
@@ -634,7 +634,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
         with suppress_output():
             milp_to_minimize_milp.write_mps(str(file_mps))
 
-        if isinstance(model_options.milp_solver, NO_MILP_SOLVER_CVL):
+        if isinstance(model_options.milp_solver, EXTERNAL_MILP_SOLVER_CVL):
             # if there is no milp_solver set in model_options, the user has to
             # solve the MILP manually
             if isinstance(comp, SBox_CVL):

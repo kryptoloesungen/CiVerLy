@@ -40,7 +40,7 @@ from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
-from civerly.solvers import ESPRESSO_CVL, NO_MILP_SOLVER_CVL, NO_LOGIC_MINIMIZER_CVL
+from civerly.solvers import ESPRESSO_CVL, EXTERNAL_MILP_SOLVER_CVL, NO_LOGIC_MINIMIZER_CVL
 
 
 class Component(ABC):
@@ -2321,7 +2321,7 @@ class SBox_CVL(Component):
                     milp_to_minimize_milp.set_objective(sum(Z))
                     with suppress_output():  # to avoid doctest failure
                         milp_to_minimize_milp.write_mps(str(s_file_mps))
-                    if not isinstance(solver, NO_MILP_SOLVER_CVL):
+                    if not isinstance(solver, EXTERNAL_MILP_SOLVER_CVL):
                         solver.solve(s_file_mps)
                         # solve writes to <stem>_<solver_name>.sol; copy to the
                         # canonical s_file_sol so that later
@@ -2335,7 +2335,7 @@ class SBox_CVL(Component):
                     else:  # Remember filename so we can tell the user to solve it
                         new_mps_files.append(s_file_mps)
 
-            if isinstance(solver, NO_MILP_SOLVER_CVL):
+            if isinstance(solver, EXTERNAL_MILP_SOLVER_CVL):
                 print(
                     "SBox MILPs have been written to "
                     f"{', '.join(new_mps_files)}. "

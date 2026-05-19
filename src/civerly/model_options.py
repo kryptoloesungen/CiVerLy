@@ -13,8 +13,8 @@ from civerly.solvers import MILP_SOLVER_CVL, SAT_SOLVER_CVL, LOGIC_MINIMIZER_CVL
 # Import all solvers, even though they are unused here.
 # This way, the user has access to ALL model options
 # when importing `civerly.model_options`.
-from civerly.solvers import NO_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
-from civerly.solvers import NO_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
+from civerly.solvers import EXTERNAL_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
+from civerly.solvers import EXTERNAL_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
 from civerly.solvers import NO_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
 
 
@@ -168,7 +168,7 @@ class MODEL_OPTIONS:
             -> linear_layer_modeling : CONVEX_HULL
             -> sbox_modeling : CONVEX_HULL
             -> milp_solver : <class 'civerly.solvers.SCIP_CVL'>
-            -> sat_solver : <class 'civerly.solvers.NO_SAT_SOLVER_CVL'>
+            -> sat_solver : <class 'civerly.solvers.EXTERNAL_SAT_SOLVER_CVL'>
             -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
@@ -189,8 +189,8 @@ class MODEL_OPTIONS:
             -> granularity : BITWISE
             -> linear_layer_modeling : CONVEX_HULL
             -> sbox_modeling : CONVEX_HULL
-            -> milp_solver : <class 'civerly.solvers.NO_MILP_SOLVER_CVL'>
-            -> sat_solver : <class 'civerly.solvers.NO_SAT_SOLVER_CVL'>
+            -> milp_solver : <class 'civerly.solvers.EXTERNAL_MILP_SOLVER_CVL'>
+            -> sat_solver : <class 'civerly.solvers.EXTERNAL_SAT_SOLVER_CVL'>
             -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
@@ -230,10 +230,10 @@ class MODEL_OPTIONS:
         """
         # set self.{milp, sat}_solver to respective NoneSolver
         if self.milp_solver is None:
-            self.milp_solver = NO_MILP_SOLVER_CVL()
+            self.milp_solver = EXTERNAL_MILP_SOLVER_CVL()
         
         if self.sat_solver is None:
-            self.sat_solver = NO_SAT_SOLVER_CVL()
+            self.sat_solver = EXTERNAL_SAT_SOLVER_CVL()
         
         if self.logic_minimizer is None:
             self.logic_minimizer = NO_LOGIC_MINIMIZER_CVL()

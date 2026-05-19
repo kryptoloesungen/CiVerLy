@@ -1160,7 +1160,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         return ["espresso", "-epos", str(input_file)]
 
 
-class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
+class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
     """
     Dummy MILP solver interface.
 
@@ -1258,7 +1258,7 @@ class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         )
 
 
-class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
+class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
     """
     Dummy SAT solver interface.
 
