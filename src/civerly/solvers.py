@@ -1,5 +1,16 @@
 r"""
 Utils for interacting with MILP and SAT solvers.
+
+.. WARNING::
+
+    The current API passes models to solvers as file paths (``.mps`` for MILP,
+    ``.cnf`` for SAT, plus the ``sum.json`` sidecar for SAT optimization).
+    Eventually this will change to passing in-memory Sage objects directly
+    (:class:`sage.numerical.mip.MixedIntegerLinearProgram` for MILP,
+    :class:`sage.sat.solvers.dimacs.DIMACS` for SAT). Method signatures that
+    take ``input_file`` / ``sum_arr_file`` (and the ``milp`` parameter on
+    :meth:`MILP_SOLVER_CVL.solve_multiple`) are expected to be revised
+    accordingly.
 """
 
 import re
@@ -283,6 +294,85 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             return SOLVING_STATUS.TIMEOUT
         return status
 
+    def solve_multiple(self, input_file, milp, number_of_solutions, time_limit=None):
+        r"""
+        Find up to ``number_of_solutions`` distinct solutions by repeated
+        solving with blocking constraints. Each iteration adds a constraint
+        to ``milp`` excluding the previous assignment (every variable,
+        including helpers) and flushes ``milp`` back to ``input_file`` before
+        the next solve.
+
+        ``milp`` is required because Sage's ``MixedIntegerLinearProgram``
+        cannot reconstruct itself from an MPS file -- the in-memory model
+        must be threaded through from where it was built.
+
+        Stops early if a solve fails or no feasible solution is found.
+
+        INPUT:
+
+            - ``input_file`` -- path to the MPS file; rewritten between iterations
+            - ``milp`` -- in-memory :class:`MixedIntegerLinearProgram` whose
+              state matches ``input_file``
+            - ``number_of_solutions`` -- maximum number of solutions to find
+            - ``time_limit`` -- float or ``None``; per-iteration time limit
+
+        OUTPUT:
+
+            - list of result dicts in the same shape as :meth:`solve` returns,
+              ordered best (lowest objective) first
+        """
+        results = []
+        for i in range(number_of_solutions):
+            r = self.solve(input_file, time_limit=time_limit)
+            results.append(r)
+            done = (r["status"] != SOLVING_STATUS.SUCCESS
+                    or r["objective_value"] is None)
+            if done or i == number_of_solutions - 1:
+                break
+            self._exclude_assignment(milp, r["assignment"])
+            with suppress_output():
+                milp.write_mps(str(input_file))
+        return results
+
+    def _exclude_assignment(self, milp, assignment):
+        r"""
+        Add a constraint to ``milp`` that excludes the exact ``assignment``.
+        The caller is responsible for flushing ``milp`` to disk before the
+        next solve.
+
+        The constraint forces at least one variable to differ from its
+        assigned value:
+
+        .. math::
+            \sum_{x_i = 0} x_i + \sum_{x_i = 1} (1 - x_i) \geq 1
+
+        Unlike :meth:`Cipher.exclude_solution`, which only constrains the
+        trail-level variables, this excludes every variable present in
+        ``assignment``, including helpers.
+        """
+        # Flatten the nested ``{name: {idx: val}}`` shape (from
+        # ``_process_solution_file``) back to the flat MPS variable names.
+        flat = {}
+        for name, sub in assignment.items():
+            if isinstance(sub, dict):
+                for idx, val in sub.items():
+                    flat[f"{name}[{idx}]"] = val
+            else:
+                flat[name] = sub
+
+        b = milp.get_backend()
+        coefs = []
+        n_ones = 0
+        for i in range(b.ncols()):
+            name = b.col_name(i)
+            if name not in flat:
+                continue
+            val = flat[name]
+            n_ones += val
+            coefs.append((i, 1.0 if val == 0 else -1.0))
+        # sum_{x_i=0} x_i - sum_{x_i=1} x_i >= 1 - n_ones
+        b.add_linear_constraint(coefs, 1 - n_ones, None)
+
     @abstractmethod
     def _process_solution_file(self, solution_file):
         """
@@ -487,6 +577,65 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             "solve_time": time.perf_counter() - start_time,
         }
 
+    def solve_multiple(self, input_file, sum_arr_file, solve_range,
+                       number_of_solutions, precision=0, time_limit=None):
+        r"""
+        Find up to ``number_of_solutions`` distinct minimum-weight satisfying
+        assignments by repeated solving with blocking clauses. Each iteration
+        adds a clause excluding the previous assignment (every variable that
+        appears in it) and writes the augmented CNF to a new file.
+
+        Stops early if a solve fails or no satisfying assignment is found in
+        the current range.
+
+        INPUT:
+
+            - ``input_file`` -- path to the base CNF
+            - ``sum_arr_file`` -- path to the JSON file containing the sum
+              array; see :meth:`solve`
+            - ``solve_range`` -- ``(lower, upper)`` pair bounding the search
+            - ``number_of_solutions`` -- maximum number of solutions to find
+            - ``precision`` -- integer (default ``0``); see :meth:`solve`
+            - ``time_limit`` -- float or ``None``; per-iteration time limit
+
+        OUTPUT:
+
+            - list of result dicts in the same shape as :meth:`solve` returns,
+              ordered best (lowest weight) first
+        """
+        results = []
+        cur = input_file
+        for i in range(number_of_solutions):
+            r = self.solve(cur, sum_arr_file, solve_range,
+                           precision=precision, time_limit=time_limit)
+            results.append(r)
+            done = (r["status"] != SOLVING_STATUS.SUCCESS
+                    or r["objective_value"] is None)
+            if done or i == number_of_solutions - 1:
+                break
+            cur = self._exclude_assignment(cur, r["assignment"])
+        return results
+
+    def _exclude_assignment(self, input_file, assignment):
+        r"""
+        Write a copy of the CNF in ``input_file`` with one extra blocking
+        clause that excludes ``assignment``. Returns the path of the new file.
+
+        The blocking clause is the disjunction of the negated literals of the
+        previous satisfying assignment, so the same assignment can no longer
+        satisfy the formula.
+        """
+        sat = DIMACS()
+        sat.read(str(input_file))
+        blocking = tuple(
+            (-v if val == 1 else v)
+            for v, val in assignment.items()
+        )
+        sat.add_clause(blocking)
+        new_file = input_file.parent / f"{input_file.stem}_excl{input_file.suffix}"
+        sat.write(new_file)
+        return new_file
+
     def _parse_assignment_line(self, line):
         """
         Parse a DIMACS-style assignment line into a ``{var: 0/1}`` dictionary.
@@ -609,9 +758,12 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             assignment[name] = value
         return  objective_value, _to_dict(assignment)
 
-    def solve_multiple(self, input_file, number_of_solutions, time_limit=None):
+    def solve_multiple(self, input_file, milp, number_of_solutions, time_limit=None):
         r"""
-        Find the ``number_of_solutions`` best solutions to the model using Gurobi's solution pool.
+        Find the ``number_of_solutions`` best solutions to the model using
+        Gurobi's solution pool. ``milp`` is accepted to match the base
+        signature but is unused (the pool produces all solutions in a single
+        invocation; no blocking constraints need to be added).
 
         Gurobi pool parameters used:
 
@@ -622,7 +774,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
         .. SEEALSO::
 
-            :meth:`civerly.solvers.SOLVER_CVL.solve_multiple`
+            :meth:`civerly.solvers.MILP_SOLVER_CVL.solve_multiple`
 
         TODO: add examples for solve_multiple here
         """

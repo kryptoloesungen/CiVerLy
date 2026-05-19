@@ -1573,13 +1573,24 @@ class Cipher:
                 )
             if model_options.milp_solver is None:
                 raise NoSolverWarning()
+            input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
-                raise NotImplementedError(
-                    "solve_multiple needs to be rewritten for the new solver API"
+                all_results = model_options.milp_solver.solve_multiple(
+                    input_file=input_file,
+                    milp=self.milp,
+                    number_of_solutions=model_options.number_of_solutions,
                 )
-            self.result = model_options.milp_solver.solve(
-                model_options.path / (self.name + ".mps")
-            )
+                weights = []
+                for r in all_results:
+                    if r["objective_value"] is None:
+                        continue
+                    TrailNode(
+                        self, model_options,
+                        (r["assignment"], r["objective_value"]),
+                    )
+                    weights.append(r["objective_value"])
+                return weights
+            self.result = model_options.milp_solver.solve(input_file)
             results_and_weight = (
                 self.result["assignment"], self.result["objective_value"]
             )
@@ -1600,13 +1611,29 @@ class Cipher:
                 return
             if model_options.sat_solver is None:
                 raise NoSolverWarning()
+            input_file = model_options.path / (self.name + ".cnf")
+            sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:
-                raise NotImplementedError(
-                    "solve_multiple needs to be rewritten for the new solver API"
+                all_results = model_options.sat_solver.solve_multiple(
+                    input_file=input_file,
+                    sum_arr_file=sum_arr_file,
+                    solve_range=model_options.solve_range,
+                    number_of_solutions=model_options.number_of_solutions,
+                    precision=model_options.sat_precision,
                 )
+                weights = []
+                for r in all_results:
+                    if r["objective_value"] is None:
+                        continue
+                    TrailNode(
+                        self, model_options,
+                        (r["assignment"], r["objective_value"]),
+                    )
+                    weights.append(r["objective_value"])
+                return weights
             self.result = model_options.sat_solver.solve(
-                model_options.path / (self.name + ".cnf"),
-                sum_arr_file=model_options.path / (self.name + "sum.json"),
+                input_file,
+                sum_arr_file=sum_arr_file,
                 solve_range=model_options.solve_range,
                 precision=model_options.sat_precision,
             )
