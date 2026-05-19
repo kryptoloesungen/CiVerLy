@@ -76,7 +76,6 @@ class Toy1:
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'
-            ...
             0
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
@@ -92,7 +91,6 @@ class Toy1:
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'
-            ...
             0
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
@@ -108,7 +106,6 @@ class Toy1:
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'
-            ...
             0
             sage: from civerly.cipher_implementations.toy_ciphers.toy1 import Toy1
             sage: from civerly.model_options import *
