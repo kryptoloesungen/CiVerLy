@@ -51,8 +51,6 @@ class DES_F_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             582 variables and 4612 clauses were written to '...'
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : UNSAT
             2
 
             sage: from civerly.cipher_implementations.des import DES_F_CVL
@@ -72,8 +70,6 @@ class DES_F_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             582 variables and 4612 clauses were written to '...'
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : UNSAT
             2
 
         Using MILP modeling::
@@ -228,10 +224,6 @@ class DES_CVL:
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             3826 variables and 18250 clauses were written to '...'
-            [  0 , 10] (trying w =   5) : SAT
-            [  0 ,  5] (trying w =   2) : UNSAT
-            [  3 ,  5] (trying w =   4) : SAT
-            [  3 ,  4] (trying w =   3) : UNSAT
             4
 
         """

@@ -79,13 +79,6 @@ class SPECK_CVL:
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
             1788 variables and 4189 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : SAT
-            [  4 ,  5] (trying w =   4) : UNSAT
             5
             Output file in: ...
 
@@ -105,13 +98,6 @@ class SPECK_CVL:
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
             1788 variables and 4189 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : SAT
-            [  4 ,  5] (trying w =   4) : UNSAT
             5
             Output file in: ...
 
@@ -134,12 +120,6 @@ class SPECK_CVL:
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
             2992 variables and 7776 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : UNSAT
             9
             Output file in: ...
 
@@ -159,12 +139,6 @@ class SPECK_CVL:
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options)
             2992 variables and 7776 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : UNSAT
             9
             Output file in: ...
 
@@ -186,13 +160,6 @@ class SPECK_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             1392 variables and 3516 clauses were written to ...
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
             [1, 1, 1, 2, 2]
 
         """

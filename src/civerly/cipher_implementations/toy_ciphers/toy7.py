@@ -36,9 +36,6 @@ class Toy7:
             Using existing file ..., make sure it is up to date!
             Using existing file ..., make sure it is up to date!
             1356 variables and 3621 clauses were written to '...'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : UNSAT
-            [  3 ,  4] (trying w =   3) : SAT
             3
             Output file in: ...
 

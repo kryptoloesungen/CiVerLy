@@ -386,10 +386,6 @@ class SKINNY_CVL:
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19553 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : SAT
-            [ 10 , 12] (trying w =  11) : SAT
-            [ 10 , 11] (trying w =  10) : SAT
             10
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -409,10 +405,6 @@ class SKINNY_CVL:
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19553 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : SAT
-            [ 10 , 12] (trying w =  11) : SAT
-            [ 10 , 11] (trying w =  10) : SAT
             10
 
         Modeling linear cryptanalysis::
@@ -486,9 +478,6 @@ class SKINNY_CVL:
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19313 clauses were written to '...'
-            [  4 , 10] (trying w =   7) : SAT
-            [  4 ,  7] (trying w =   5) : SAT
-            [  4 ,  5] (trying w =   4) : UNSAT
             5
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -508,9 +497,6 @@ class SKINNY_CVL:
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19313 clauses were written to '...'
-            [  4 , 10] (trying w =   7) : SAT
-            [  4 ,  7] (trying w =   5) : SAT
-            [  4 ,  5] (trying w =   4) : UNSAT
             5
 
         """

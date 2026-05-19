@@ -274,12 +274,6 @@ class HURDLE_CVL:
             ....:   )
             ....:   cipher.analyse(model_options)
             7168 variables and 88545 clauses were written to ...
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : UNSAT
-            [ 10 , 12] (trying w =  11) : UNSAT
             12
 
         """

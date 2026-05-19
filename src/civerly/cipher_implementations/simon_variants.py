@@ -39,9 +39,6 @@ class SIMON_Variants_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             2982 variables and 6861 clauses were written to '...'
-            [  4 , 10] (trying w =   7) : UNSAT
-            [  8 , 10] (trying w =   9) : SAT
-            [  8 ,  9] (trying w =   8) : SAT
             8
 
             sage: from civerly.cipher_implementations.simon_variants \
@@ -62,9 +59,6 @@ class SIMON_Variants_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             3216 variables and 7329 clauses were written to '...'
-            [  4 , 10] (trying w =   7) : SAT
-            [  4 ,  7] (trying w =   5) : UNSAT
-            [  6 ,  7] (trying w =   6) : SAT
             6
 
             sage: from civerly.cipher_implementations.simon_variants \
@@ -85,9 +79,6 @@ class SIMON_Variants_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             2982 variables and 6861 clauses were written to '...'
-            [  4 , 10] (trying w =   7) : UNSAT
-            [  8 , 10] (trying w =   9) : UNSAT
-            [ 10 , 10] (trying w =  10) : SAT
             10
 
             sage: from civerly.cipher_implementations.simon_variants \
@@ -108,9 +99,6 @@ class SIMON_Variants_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             2982 variables and 6861 clauses were written to '...'
-            [  8 , 16] (trying w =  12) : SAT
-            [  8 , 12] (trying w =  10) : UNSAT
-            [ 11 , 12] (trying w =  11) : UNSAT
             12
 
         As stated in [KLT15], there exist parameters which yield an optimal
@@ -135,8 +123,6 @@ class SIMON_Variants_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             4842 variables and 11221 clauses were written to '...'
-            [ 24 , 26] (trying w =  25) : SAT
-            [ 24 , 25] (trying w =  24) : UNSAT
             25
 
             sage: from civerly.cipher_implementations.simon_variants \
@@ -157,8 +143,6 @@ class SIMON_Variants_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             4842 variables and 11221 clauses were written to '...'
-            [ 24 , 26] (trying w =  25) : UNSAT
-            [ 26 , 26] (trying w =  26) : SAT
             26
 
             sage: from civerly.cipher_implementations.simon_variants \
@@ -179,8 +163,6 @@ class SIMON_Variants_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             4842 variables and 11221 clauses were written to '...'
-            [ 24 , 26] (trying w =  25) : UNSAT
-            [ 26 , 26] (trying w =  26) : SAT
             26
 
         Scaling every parameter in SIMON by the same amount should leave

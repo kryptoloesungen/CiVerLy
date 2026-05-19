@@ -45,24 +45,10 @@ class Toy5:
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             2940 variables and 13997 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
             Output file in: ...
             Using existing file ..., make sure it is up to date!
             3256 variables and 11381 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
             Output file in: ...
 

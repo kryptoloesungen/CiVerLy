@@ -52,8 +52,6 @@ class ASCON_CVL:
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             20384 variables and 51649 clauses were written to '...'
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
             Output file in: ...
 

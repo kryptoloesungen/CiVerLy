@@ -95,13 +95,6 @@ class GIFT_CVL:
             ....:   )
             ....:   gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : UNSAT
-            [  2 ,  3] (trying w =   2) : UNSAT
             3
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
@@ -124,13 +117,6 @@ class GIFT_CVL:
             ....:   )
             ....:   gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to '...'
-            [ 0.0 ,10.0] (trying w =  5.0) : SAT
-            [ 0.0 , 5.0] (trying w =  2.5) : UNSAT
-            [ 2.6 , 5.0] (trying w =  3.8) : SAT
-            [ 2.6 , 3.8] (trying w =  3.2) : UNSAT
-            [ 3.3 , 3.8] (trying w =  3.5) : SAT
-            [ 3.3 , 3.5] (trying w =  3.4) : SAT
-            [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
             3.4
 
         Simulate external Espresso minimization::
@@ -162,13 +148,6 @@ class GIFT_CVL:
             Optimization problem for Espresso has been written to...
             Using existing file ..., make sure it is up to date!
             2560 variables and 6401 clauses were written to '...'
-            [ 0.0 ,10.0] (trying w =  5.0) : SAT
-            [ 0.0 , 5.0] (trying w =  2.5) : UNSAT
-            [ 2.6 , 5.0] (trying w =  3.8) : SAT
-            [ 2.6 , 3.8] (trying w =  3.2) : UNSAT
-            [ 3.3 , 3.8] (trying w =  3.5) : SAT
-            [ 3.3 , 3.5] (trying w =  3.4) : SAT
-            [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
             3.4
 
         """
