@@ -15,7 +15,8 @@ from civerly.solvers import MILP_SOLVER_CVL, SAT_SOLVER_CVL, LOGIC_MINIMIZER_CVL
 # when importing `civerly.model_options`.
 from civerly.solvers import EXTERNAL_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
 from civerly.solvers import EXTERNAL_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
-from civerly.solvers import NO_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
+from civerly.solvers import EXTERNAL_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
+from civerly.solvers import SOLVER
 
 
 
@@ -169,7 +170,7 @@ class MODEL_OPTIONS:
             -> sbox_modeling : CONVEX_HULL
             -> milp_solver : <class 'civerly.solvers.SCIP_CVL'>
             -> sat_solver : <class 'civerly.solvers.EXTERNAL_SAT_SOLVER_CVL'>
-            -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
+            -> logic_minimizer : <class 'civerly.solvers.EXTERNAL_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
@@ -191,7 +192,7 @@ class MODEL_OPTIONS:
             -> sbox_modeling : CONVEX_HULL
             -> milp_solver : <class 'civerly.solvers.EXTERNAL_MILP_SOLVER_CVL'>
             -> sat_solver : <class 'civerly.solvers.EXTERNAL_SAT_SOLVER_CVL'>
-            -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
+            -> logic_minimizer : <class 'civerly.solvers.EXTERNAL_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
@@ -236,7 +237,7 @@ class MODEL_OPTIONS:
             self.sat_solver = EXTERNAL_SAT_SOLVER_CVL()
         
         if self.logic_minimizer is None:
-            self.logic_minimizer = NO_LOGIC_MINIMIZER_CVL()
+            self.logic_minimizer = EXTERNAL_LOGIC_MINIMIZER_CVL()
         
         if self.solve_range is None and self.optimization == OPTIMIZATION.SAT:
             self.solve_range = (0, 100)
@@ -471,7 +472,7 @@ class MODEL_OPTIONS:
         if not isinstance(self.logic_minimizer, LOGIC_MINIMIZER_CVL):
             raise InvalidModelOptionException(
                 self.logic_minimizer,
-                message="logic_minimizer must be either NO_LOGIC_MINIMIZER_CVL or "
+                message="logic_minimizer must be either EXTERNAL_LOGIC_MINIMIZER_CVL or "
                 "ESPRESSO_CVL."
             )
 

@@ -1334,7 +1334,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         )
 
 
-class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
+class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
     """
     Dummy logic minimizer interface.
 
@@ -1380,3 +1380,22 @@ class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         raise NotImplementedError(
             "The dummy logic minimizer does not invoke a subprocess."
         )
+
+
+class SOLVER:
+    """
+    Registry of pre-instantiated solver objects, ready to use in
+    :class:`civerly.model_options.MODEL_OPTIONS`.
+
+    Each attribute is a single shared instance; instantiate the corresponding
+    class directly (e.g. ``SCIP_CVL()``) if you need a separate one.
+    """
+    SCIP = SCIP_CVL()
+    GLPK = GLPK_CVL()
+    GUROBI = GUROBI_CVL()
+    CRYPTOMINISAT = CRYPTOMINISAT_CVL()
+    CADICAL = CADICAL_CVL()
+    ESPRESSO = ESPRESSO_CVL()
+    EXTERNAL_MILP_SOLVER = EXTERNAL_MILP_SOLVER_CVL()
+    EXTERNAL_SAT_SOLVER = EXTERNAL_SAT_SOLVER_CVL()
+    EXTERNAL_LOGIC_MINIMIZER = EXTERNAL_LOGIC_MINIMIZER_CVL()

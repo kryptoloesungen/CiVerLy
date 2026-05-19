@@ -40,7 +40,7 @@ from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
-from civerly.solvers import ESPRESSO_CVL, EXTERNAL_MILP_SOLVER_CVL, NO_LOGIC_MINIMIZER_CVL
+from civerly.solvers import ESPRESSO_CVL, EXTERNAL_MILP_SOLVER_CVL, EXTERNAL_LOGIC_MINIMIZER_CVL
 
 
 class Component(ABC):
@@ -2463,7 +2463,7 @@ class SBox_CVL(Component):
                     _write_espresso_input(
                         posset, esp_file_name, model_options.path
                     )
-                    if isinstance(model_options.logic_minimizer, NO_LOGIC_MINIMIZER_CVL):
+                    if isinstance(model_options.logic_minimizer, EXTERNAL_LOGIC_MINIMIZER_CVL):
                         print(
                             "Optimization problem for Espresso has been "
                             f"written to {esp_file_in}.\n"
@@ -2606,7 +2606,7 @@ class SBox_CVL(Component):
                 _write_espresso_input(
                     posset, esp_file_name, model_options.path
                 )
-                if isinstance(model_options.logic_minimizer, NO_LOGIC_MINIMIZER_CVL):
+                if isinstance(model_options.logic_minimizer, EXTERNAL_LOGIC_MINIMIZER_CVL):
                     print(
                         "Optimization problem for Espresso has been "
                         f"written to '{esp_file_in}'.\n"
