@@ -87,7 +87,7 @@ class Toy1:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:       milp_solver=SCIP_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             474 variables and 346 constraints were written to '...'
@@ -116,7 +116,7 @@ class Toy1:
             ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
-            ....:       milp_solver=SCIP_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)

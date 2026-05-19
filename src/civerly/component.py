@@ -2129,7 +2129,7 @@ class SBox_CVL(Component):
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.BITWISE,
                 ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-                ....:     milp_solver=SCIP_CVL(),
+                ....:     milp_solver=SOLVER.SCIP,
                 ....:     path=Path(tmpdir))
                 ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)
@@ -2174,7 +2174,7 @@ class SBox_CVL(Component):
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.BITWISE,
                 ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:     milp_solver=SCIP_CVL(),
+                ....:     milp_solver=SOLVER.SCIP,
                 ....:     path=Path(tmpdir))
                 ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)

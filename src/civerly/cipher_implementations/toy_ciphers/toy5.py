@@ -65,7 +65,7 @@ class Toy5:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:       sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:       milp_solver=SCIP_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             ....:   cipher.generate_report(model_options)

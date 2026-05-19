@@ -159,7 +159,7 @@ class MODEL_OPTIONS:
         ....:     granularity=GRANULARITY.BITWISE,
         ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
         ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-        ....:     milp_solver=SCIP_CVL(),
+        ....:     milp_solver=SOLVER.SCIP,
         ....:     path=Path("./CiVerLy-Models/"))
         sage: model_options
         MODEL_OPTIONS:
@@ -260,7 +260,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./CiVerLy-Models/"))
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -268,7 +268,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./CiVerLy-Models/"))
             Traceback (most recent call last):
             ...
@@ -283,7 +283,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./CiVerLy-Models/"))
             Traceback (most recent call last):
             ...

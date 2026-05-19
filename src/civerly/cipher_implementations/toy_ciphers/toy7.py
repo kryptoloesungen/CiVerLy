@@ -51,7 +51,7 @@ class Toy7:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       milp_solver=SCIP_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       solve_range=(0, 10),
             ....:       number_of_solutions=1,
