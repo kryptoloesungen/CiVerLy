@@ -51,7 +51,6 @@ class SOLVER_CVL(ABC):
         shared :meth:`invoke` template interprets the solver's behavior.
         """
         self.name = "GenericSolver"
-        self.can_solve_multiple = False
         # exit-code -> SOLVING_STATUS. Unknown codes default to ERROR.
         self.errno_map = {0: SOLVING_STATUS.SUCCESS}
         # If True, ``invoke`` redirects subprocess stdout/stderr into ``log_file``.
@@ -695,7 +694,6 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         self.name = "Gurobi"
         self.timeout_string = r"Time limit reached"
         self.bounds_regexp = r'Best objective (\S+), best bound (\S+), gap'
-        self.can_solve_multiple = True
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
         """Build the Gurobi CLI command list."""
