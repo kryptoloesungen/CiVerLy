@@ -8,6 +8,7 @@ corresponding evaluation (e.g. calling ``SBox_CVL`` performs a table lookup of
 the SBox with which the component is initialized).
 """
 import os
+import shutil
 import json
 import zlib
 from math import log2, gcd, ceil
@@ -2350,9 +2351,16 @@ class SBox_CVL(Component):
                     with suppress_output():  # to avoid doctest failure
                         milp_to_minimize_milp.write_mps(str(s_file_mps))
                     if not isinstance(solver, NO_MILP_SOLVER_CVL):
-                        solver.solve(
-                            input_file=s_file_mps, solution_file=s_file_sol
+                        solver.solve(s_file_mps)
+                        # solve writes to <stem>_<solver_name>.sol; copy to the
+                        # canonical s_file_sol so that later
+                        # _process_solution_file calls and cache checks find it.
+                        solver_sol = (
+                            s_file_mps.parent
+                            / f"{s_file_mps.stem}_{solver.name}.sol"
                         )
+                        if solver_sol.exists():
+                            shutil.copyfile(solver_sol, s_file_sol)
                     else:  # Remember filename so we can tell the user to solve it
                         new_mps_files.append(s_file_mps)
 
@@ -2376,7 +2384,7 @@ class SBox_CVL(Component):
                     "former check or generation"
                 )
 
-                results, _ = model_options.milp_solver._process_solution_file(s_file_sol)
+                _, results = model_options.milp_solver._process_solution_file(s_file_sol)
                 assert 'Z' in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "
                     f"Found {results.keys()}, expected 'Z'"
@@ -2495,8 +2503,10 @@ class SBox_CVL(Component):
                         self._return_immediately_ = True
                         return
                     elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
-                        model_options.logic_minimizer.solve(
-                            esp_file_in, esp_file_out
+                        model_options.logic_minimizer.invoke(
+                            esp_file_in,
+                            esp_file_out,
+                            esp_file_out.with_suffix(".log"),
                         )
 
                 clauses = _read_espresso_output(esp_file_out)
@@ -2640,8 +2650,10 @@ class SBox_CVL(Component):
                     self._return_immediately_ = True
                     return
                 elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
-                    model_options.logic_minimizer.solve(
-                        esp_file_in, esp_file_out
+                    model_options.logic_minimizer.invoke(
+                        esp_file_in,
+                        esp_file_out,
+                        esp_file_out.with_suffix(".log"),
                     )
 
             clauses = _read_espresso_output(esp_file_out)
