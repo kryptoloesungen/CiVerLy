@@ -24,10 +24,49 @@ from enum import Enum
 
 from sage.sat.solvers.dimacs import DIMACS
 
-from civerly.util import suppress_output, _float_or_int
-from civerly.util import _to_dict, _generate_constraints_sum_leq_int_LS24
+from civerly.util import suppress_output
 
 from abc import ABC, abstractmethod
+
+
+def _float_or_int(value):
+    """
+    Cast `value` to float or int if possible.
+
+    EXAMPLES::
+
+        sage: from civerly.solvers import _float_or_int
+        sage: _float_or_int(42.0)
+        42
+        sage: _float_or_int(42.5)
+        42.5
+        sage: _float_or_int("42.000")
+        42
+        sage: _float_or_int("42.001")
+        42.001
+        sage: _float_or_int("3.415037499300e+00")
+        3.4150374993
+    """
+    value = float(value)
+    if value.is_integer() or abs(value - int(round(value))) < 1e-8:
+        value = int(round(value))
+    else:
+        value = round(value, 10)
+    return value
+
+
+def _to_dict(flat_results):
+    r"""
+    Convert a flat results dict ``{'Z[0]': 1, 'Z[1]': 2}`` to a nested one
+    ``{'Z': {0: 1, 1: 2}}``, grouping by variable name and using the
+    bracket index as an integer key.
+    """
+    nested = {}
+    for variable, value in flat_results.items():
+        var_name, rest = variable.split("[", 1)
+        var_index = int(rest.rstrip("]"))
+        nested.setdefault(var_name, {})[var_index] = value
+    return nested
 
 
 class SOLVING_STATUS(Enum):
@@ -496,7 +535,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         def _decide_at(w):
             sat = DIMACS()
             sat.read(str(input_file))
-            constrained = _generate_constraints_sum_leq_int_LS24(sat, sum_arr, int(w))
+            constrained = self._generate_constraints_sum_leq_int_LS24(sat, sum_arr, int(w))
             tmp_cnf = input_file.parent / f"{input_file.stem}_obj{w}.cnf"
             constrained.write(tmp_cnf)
             if deadline is not None:
@@ -669,6 +708,102 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
         pass
+
+    def _generate_constraints_sum_leq_int_LS24(self, sat, sum_arr, num):
+        r"""
+        Helper method to implement a sequential counter in SAT, in order to model
+        the constraint :math:`sum(arr) \leq num` as a SAT-formula.
+        The constraints are given in
+        https://link.springer.com/chapter/10.1007/978-3-031-54776-8_14,
+        section 3.4.
+
+        .. NOTE::
+
+            There is a typo in this paper, as the sum that we want to bound should
+            go from :math:`0 \leq i \leq l-1` instead of :math:`l`.
+            Therefore, the last constraint must be
+            :math:`\bar{u_{l-1}} \lor \bar{a_{l-2, w-1}}` instead of
+            :math:`\bar{u_{l}} \lor \bar{a_{l-1, w-1}}`.
+
+        TESTS::
+
+            sage: # optional - cryptominisat
+            sage: from sage.sat.solvers.dimacs import DIMACS
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: from pathlib import Path
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: path = Path(tmpdir)
+            sage: for NUM_CLAUSES in range(1, 20):
+            ....:   sat = DIMACS()
+            ....:   for i in range(1, NUM_CLAUSES + 1): sat.add_clause((i,))
+            ....:   for bound in range(NUM_CLAUSES + 4):
+            ....:       new_sat = SOLVER.CRYPTOMINISAT._generate_constraints_sum_leq_int_LS24(
+            ....:           sat, [(1, cl) for cl in range(1, NUM_CLAUSES+1)], bound
+            ....:       )
+            ....:       _ = new_sat.write(path / 'constraints.cnf')
+            ....:       _ = SOLVER.CRYPTOMINISAT.invoke(
+            ....:           path / 'constraints.cnf',
+            ....:           path / 'constraints.sat',
+            ....:           path / 'constraints.log',
+            ....:       )
+            ....:       with open(path /'constraints.sat') as f:
+            ....:           status = f.readlines()[0].strip('\n')
+            ....:           f.close()
+            ....:       if status == 'SAT':
+            ....:           if bound != NUM_CLAUSES:
+            ....:               raise AssertionError(
+            ....:                   "The constraints don't assert correct bound!")
+            ....:           else: break
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
+
+        If everything works correctly, then a constraint system which requires
+        :math:`w` many variables to be SAT only becomes possible to solve if we
+        append constraints that bound the weight to at least :math:`w`.
+        This is exactly what is checked in the doctests above.
+        """
+        new_sat = DIMACS()
+        for _ in range(sat.nvars()):
+            new_sat.var()  # set counter to ``sat.nvars()``
+        assert sat.nvars() == new_sat.nvars()
+
+        for clause in sat.clauses():  # copy clauses
+            new_sat.add_clause(clause[0])
+
+        # instead of e.g. [(3, 124), (2, 158)], we have [124, 124, 124, 158, 158]
+        u = []
+        for arr_with_mults in [factor*[entry] for factor, entry in sum_arr]:
+            u += arr_with_mults
+
+        L = len(u)
+
+        # special, trivial case for sum_arr with less elements than bound
+        if L <= num:
+            return new_sat
+
+        # special, trivial case for w = 0
+        if num == 0:
+            for i in range(L):
+                new_sat.add_clause((-u[i], ))
+            return new_sat
+
+        # auxilary vars a_{i,j}
+        a = [[new_sat.var() for _ in range(num)] for _ in range(L)]
+
+        new_sat.add_clause((-u[0], a[0][0]))
+        for j in range(1, num):
+            new_sat.add_clause((-a[0][j], ))
+        for i in range(1, L-1):
+            new_sat.add_clause((-u[i], a[i][0]))
+            new_sat.add_clause((-a[i-1][0], a[i][0]))
+            for j in range(1, num):
+                new_sat.add_clause((-u[i], -a[i-1][j-1], a[i][j]))
+                new_sat.add_clause((-a[i-1][j], a[i][j]))
+            new_sat.add_clause((-u[i], -a[i-1][num-1]))
+        new_sat.add_clause((-u[L-1], -a[L-2][num-1]))
+
+        return new_sat
 
 class LOGIC_MINIMIZER_CVL(SOLVER_CVL, ABC):
     """
