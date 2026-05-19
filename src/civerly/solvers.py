@@ -259,13 +259,13 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             return SOLVING_STATUS.TIMEOUT
         return status
 
-    def solve_multiple(self, input_file, milp, number_of_solutions, time_limit=None):
+    def solve_multiple(self, input_file, milp, number_of_solutions,
+                       trail_vars=None, time_limit=None):
         r"""
         Find up to ``number_of_solutions`` distinct solutions by repeated
         solving with blocking constraints. Each iteration adds a constraint
-        to ``milp`` excluding the previous assignment (every variable,
-        including helpers) and flushes ``milp`` back to ``input_file`` before
-        the next solve.
+        to ``milp`` excluding the previous assignment and flushes ``milp``
+        back to ``input_file`` before the next solve.
 
         ``milp`` is required because Sage's ``MixedIntegerLinearProgram``
         cannot reconstruct itself from an MPS file -- the in-memory model
@@ -279,6 +279,11 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             - ``milp`` -- in-memory :class:`MixedIntegerLinearProgram` whose
               state matches ``input_file``
             - ``number_of_solutions`` -- maximum number of solutions to find
+            - ``trail_vars`` -- optional iterable of MPS variable names that
+              define "the trail". When provided, exclusion constraints only
+              involve these variables; assignments that differ only on
+              helper variables are treated as the same solution. When
+              ``None``, every variable in the assignment is used.
             - ``time_limit`` -- float or ``None``; per-iteration time limit
 
         OUTPUT:
@@ -294,16 +299,15 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
                     or r["objective_value"] is None)
             if done or i == number_of_solutions - 1:
                 break
-            self._exclude_assignment(milp, r["assignment"])
+            self._exclude_assignment(milp, r["assignment"], trail_vars=trail_vars)
             with suppress_output():
                 milp.write_mps(str(input_file))
         return results
 
-    def _exclude_assignment(self, milp, assignment):
+    def _exclude_assignment(self, milp, assignment, trail_vars=None):
         r"""
-        Add a constraint to ``milp`` that excludes the exact ``assignment``.
-        The caller is responsible for flushing ``milp`` to disk before the
-        next solve.
+        Add a constraint to ``milp`` that excludes ``assignment``. The caller
+        is responsible for flushing ``milp`` to disk before the next solve.
 
         The constraint forces at least one variable to differ from its
         assigned value:
@@ -311,9 +315,9 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         .. math::
             \sum_{x_i = 0} x_i + \sum_{x_i = 1} (1 - x_i) \geq 1
 
-        Unlike :meth:`Cipher.exclude_solution`, which only constrains the
-        trail-level variables, this excludes every variable present in
-        ``assignment``, including helpers.
+        If ``trail_vars`` is provided, only variables whose MPS name is in
+        ``trail_vars`` participate in the constraint; helpers are ignored.
+        Otherwise every variable in ``assignment`` is constrained.
         """
         # Flatten the nested ``{name: {idx: val}}`` shape (from
         # ``_process_solution_file``) back to the flat MPS variable names.
@@ -324,6 +328,10 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
                     flat[f"{name}[{idx}]"] = val
             else:
                 flat[name] = sub
+
+        if trail_vars is not None:
+            trail_vars = set(trail_vars)
+            flat = {name: val for name, val in flat.items() if name in trail_vars}
 
         b = milp.get_backend()
         coefs = []
@@ -543,12 +551,13 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         }
 
     def solve_multiple(self, input_file, sum_arr_file, solve_range,
-                       number_of_solutions, precision=0, time_limit=None):
+                       number_of_solutions, trail_vars=None,
+                       precision=0, time_limit=None):
         r"""
         Find up to ``number_of_solutions`` distinct minimum-weight satisfying
         assignments by repeated solving with blocking clauses. Each iteration
-        adds a clause excluding the previous assignment (every variable that
-        appears in it) and writes the augmented CNF to a new file.
+        adds a clause excluding the previous assignment and writes the
+        augmented CNF to a new file.
 
         Stops early if a solve fails or no satisfying assignment is found in
         the current range.
@@ -560,6 +569,12 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
               array; see :meth:`solve`
             - ``solve_range`` -- ``(lower, upper)`` pair bounding the search
             - ``number_of_solutions`` -- maximum number of solutions to find
+            - ``trail_vars`` -- optional iterable of CNF variable indices
+              (ints) that define "the trail". When provided, the blocking
+              clause is built only over these variables; assignments that
+              differ only on helper variables are treated as the same
+              solution. When ``None``, every variable in the assignment is
+              used.
             - ``precision`` -- integer (default ``0``); see :meth:`solve`
             - ``time_limit`` -- float or ``None``; per-iteration time limit
 
@@ -578,25 +593,36 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                     or r["objective_value"] is None)
             if done or i == number_of_solutions - 1:
                 break
-            cur = self._exclude_assignment(cur, r["assignment"])
+            cur = self._exclude_assignment(
+                cur, r["assignment"], trail_vars=trail_vars
+            )
         return results
 
-    def _exclude_assignment(self, input_file, assignment):
+    def _exclude_assignment(self, input_file, assignment, trail_vars=None):
         r"""
         Write a copy of the CNF in ``input_file`` with one extra blocking
         clause that excludes ``assignment``. Returns the path of the new file.
 
         The blocking clause is the disjunction of the negated literals of the
-        previous satisfying assignment, so the same assignment can no longer
-        satisfy the formula.
+        previous satisfying assignment. If ``trail_vars`` is provided, only
+        variables whose CNF index is in ``trail_vars`` participate in the
+        clause; helpers are ignored.
         """
         sat = DIMACS()
         sat.read(str(input_file))
-        blocking = tuple(
-            (-v if val == 1 else v)
-            for v, val in assignment.items()
-        )
-        sat.add_clause(blocking)
+        if trail_vars is not None:
+            trail_vars = set(trail_vars)
+            literals = [
+                (-v if val == 1 else v)
+                for v, val in assignment.items()
+                if v in trail_vars
+            ]
+        else:
+            literals = [
+                (-v if val == 1 else v)
+                for v, val in assignment.items()
+            ]
+        sat.add_clause(tuple(literals))
         new_file = input_file.parent / f"{input_file.stem}_excl{input_file.suffix}"
         sat.write(new_file)
         return new_file
@@ -723,12 +749,15 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             assignment[name] = value
         return  objective_value, _to_dict(assignment)
 
-    def solve_multiple(self, input_file, milp, number_of_solutions, time_limit=None):
+    def solve_multiple(self, input_file, milp, number_of_solutions,
+                       trail_vars=None, time_limit=None):
         r"""
         Find the ``number_of_solutions`` best solutions to the model using
-        Gurobi's solution pool. ``milp`` is accepted to match the base
-        signature but is unused (the pool produces all solutions in a single
-        invocation; no blocking constraints need to be added).
+        Gurobi's solution pool. ``milp`` and ``trail_vars`` are accepted to
+        match the base signature but are unused: the pool produces all
+        solutions in a single invocation, and Gurobi's CLI does not expose a
+        "distinct only over these variables" knob -- the pool's distinctness
+        criterion is over full assignments (helpers included).
 
         Gurobi pool parameters used:
 
