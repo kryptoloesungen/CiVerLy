@@ -31,7 +31,7 @@ class Toy10:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
@@ -73,7 +73,7 @@ class Toy10:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)

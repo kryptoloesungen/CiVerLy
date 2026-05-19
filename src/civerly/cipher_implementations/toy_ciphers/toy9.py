@@ -43,7 +43,7 @@ class Toy9:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)

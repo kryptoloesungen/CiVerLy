@@ -43,7 +43,7 @@ class TrailNode:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
@@ -299,7 +299,7 @@ class TrailNode:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir))
             sage: cipher.analyse(model_options) # optional - cryptominisat espresso
@@ -412,7 +412,7 @@ class TrailNode:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       number_of_solutions=2,
             ....:       path=Path(tmpdir))

@@ -87,7 +87,7 @@ class ABC_CVL:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     solve_range=(0, 10),
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=ESPRESSO_CVL(),
             ....:     path=Path(tmpdir)
             ....:   )
