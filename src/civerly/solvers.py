@@ -47,9 +47,14 @@ def _float_or_int(value):
 
 def _to_dict(flat_results):
     r"""
-    Convert a flat results dict ``{'Z[0]': 1, 'Z[1]': 2}`` to a nested one
-    ``{'Z': {0: 1, 1: 2}}``, grouping by variable name and using the
-    bracket index as an integer key.
+    Convert a flat results dict to a nested one, grouping by variable
+    name and using the bracket index as an integer key.
+
+    EXAMPLES::
+
+        sage: from civerly.solvers import _to_dict
+        sage: _to_dict({'Z[0]': 1, 'Z[1]': 2})
+        {'Z': {0: 1, 1: 2}}
     """
     nested = {}
     for variable, value in flat_results.items():
