@@ -1297,17 +1297,15 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
 
 class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
     """
-    Dummy MILP solver interface.
-
-    If one of the supported solvers is used externally, this interface can be used to parse the results.
+    Interface for external MILP solver.
 
     TODO: add example
     """
 
     def __init__(self):
-        """Initizialize the dummy interface."""
+        """Initizialize the interface."""
         super().__init__()
-        self.name = "DummyMILPSolver"
+        self.name = "ExternalMILPSolver"
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
@@ -1387,25 +1385,23 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         # TODO: determine solver and call corresponding method
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Unused: the dummy overrides :meth:`invoke` and never runs a subprocess."""
+        """Unused: :meth:`invoke` and never runs a subprocess."""
         raise NotImplementedError(
-            "The dummy MILP solver does not invoke a subprocess."
+            "The external MILP solver is not invoked by CiVerLy."
         )
 
 
 class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
     """
-    Dummy SAT solver interface.
-
-    If one of the supported solvers is used externally, this interface can be used to parse the results.
+    Interface for external SAT solver.
 
     TODO: add example
     """
 
     def __init__(self):
-        """Initizialize the dummy interface."""
+        """Initizialize the interface."""
         super().__init__()
-        self.name = "DummySATSolver"
+        self.name = "ExternalSATSolver"
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
@@ -1463,25 +1459,23 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             raise ValueError("Unknown solution format")
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Unused: the dummy overrides :meth:`invoke` and never runs a subprocess."""
+        """Unused: :meth:`invoke` and never runs a subprocess."""
         raise NotImplementedError(
-            "The dummy SAT solver does not invoke a subprocess."
+            "The external SAT solver is not invoked by CiVerLy."
         )
 
 
 class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
     """
-    Dummy logic minimizer interface.
-
-    If one of the supported minimizers is used externally, this interface can be used to parse the results.
+    Interface for external logic minimizer.
 
     TODO: add example
     """
 
     def __init__(self):
-        """Initizialize the dummy interface."""
+        """Initizialize the interface."""
         super().__init__()
-        self.name = "DummyLogicMinimizer"
+        self.name = "ExternalLogicMinimizer"
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
@@ -1511,9 +1505,9 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         return SOLVING_STATUS.SUCCESS
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Unused: the dummy overrides :meth:`invoke` and never runs a subprocess."""
+        """Unused: :meth:`invoke` and never runs a subprocess."""
         raise NotImplementedError(
-            "The dummy logic minimizer does not invoke a subprocess."
+            "The external logic minimizer is not invoked by CiVerLy."
         )
 
 
