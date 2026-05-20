@@ -1312,7 +1312,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
     """
     Interface to the Espresso minimizer, see e.g. https://github.com/hadipourh/espresso.
 
-    TODO: add examples for invoke
+    TODO: add examples for invoke; complete docstrings
     """
     def __init__(self):
         """Initizialize the Espresso interface."""
@@ -1355,9 +1355,52 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
     """
     Interface for external MILP solver.
 
-    TODO: add example
-    """
+    EXAMPLES:
 
+        Simulate external MILP solver::
+
+            sage: # optional - scip
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: aes = AES_CVL(R=10)
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+            ....:     milp_solver=None,
+            ....:     path=Path(tmpdir))
+            sage: aes.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalMILPSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.SCIP.invoke(
+            ....:     model_options.path / "MixColumn51845.mps",
+            ....:     model_options.path / "MixColumn51845.0ea31e4f.sol",
+            ....:     model_options.path / "MixColumn51845.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: aes.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalMILPSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.SCIP.invoke(
+            ....:     model_options.path / "AES.mps",
+            ....:     model_options.path / "AES.216bd044.sol",
+            ....:     model_options.path / "AES.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: aes.analyse(model_options)
+            Using existing MILP model, make sure it is up to date!
+            2848 variables and 2977 constraints were written to ...
+            Using existing file ..., make sure it is up to date!
+            55
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
+    """
     def __init__(self):
         """Initizialize the interface."""
         super().__init__()
