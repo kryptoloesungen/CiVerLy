@@ -567,10 +567,16 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             return w / scale if precision else int(w)
 
         def _early_return(status):
-            # On timeout the bounds still narrow the optimum's location.
-            # On error we make no claim about where the optimum lies.
             if status == SOLVING_STATUS.TIMEOUT:
                 bounds = (_format_weight(W_MIN), _format_weight(W_MAX))
+                if last_sat is not None:
+                    return {
+                        "status": status,
+                        "objective_value": _format_weight(W_MAX),
+                        "objective_bounds": bounds,
+                        "assignment": last_sat["assignment"],
+                        "solve_time": time.perf_counter() - start_time,
+                    }
             else:
                 bounds = (None, None)
             return {
@@ -590,7 +596,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             if deadline is not None:
                 remaining = deadline - time.perf_counter()
                 if remaining <= 0:
-                    return None  # signal timeout
+                    return SOLVING_STATUS.TIMEOUT
             else:
                 remaining = None
             return self.decide(tmp_cnf, time_limit=remaining)
@@ -599,10 +605,12 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         while W_MIN < W_MAX:
             w = (W_MIN + W_MAX) // 2
             r = _decide_at(w)
-            if r is None:
+
+            if r["status"] == SOLVING_STATUS.TIMEOUT:
                 return _early_return(SOLVING_STATUS.TIMEOUT)
-            if r["status"] != SOLVING_STATUS.SUCCESS:
+            elif r["status"] != SOLVING_STATUS.SUCCESS:
                 return _early_return(r["status"])
+
             if r["satisfiability"]:
                 last_sat = r
                 W_MAX = w
@@ -613,20 +621,17 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         # test it once more to distinguish "optimum found" from "all UNSAT".
         if last_sat is None:
             r = _decide_at(W_MIN)
-            if r is None:
+
+            if r["status"] == SOLVING_STATUS.TIMEOUT:
                 return _early_return(SOLVING_STATUS.TIMEOUT)
-            if r["status"] != SOLVING_STATUS.SUCCESS:
+            elif r["status"] != SOLVING_STATUS.SUCCESS:
                 return _early_return(r["status"])
-            if not r["satisfiability"]:
+
+            if r["satisfiability"]:
+                last_sat = r
+            else:
                 # No feasible solution exists in the searched range.
-                return {
-                    "status": SOLVING_STATUS.SUCCESS,
-                    "objective_value": None,
-                    "objective_bounds": (None, None),
-                    "assignment": {},
-                    "solve_time": time.perf_counter() - start_time,
-                }
-            last_sat = r
+                return _early_return(SOLVING_STATUS.SUCCESS)
 
         opt = _format_weight(W_MIN)
         return {
