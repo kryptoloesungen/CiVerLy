@@ -132,8 +132,10 @@ class MODEL_OPTIONS:
           :class:`civerly.model_options.SBOX_MODELING`
 
         - ``milp_solver`` -- see :class:`civerly.solvers.MILP_SOLVER_CVL`
-        
-        - ``sat_solver`` -- see :class:`civerly.solvers.MILP_SOLVER_CVL`
+
+        - ``sat_solver`` -- see :class:`civerly.solvers.SAT_SOLVER_CVL`
+
+        - ``logic_minimizer`` -- see :class:`civerly.solvers.LOGIC_MINIMIZER_CVL`
 
         - ``solve_range`` -- tuple; The range of weights for which CiVerLy
           should generate models and solve them
@@ -141,11 +143,11 @@ class MODEL_OPTIONS:
         - ``sat_precision`` -- int; The number of decimal places which is used
           to find the optimal SAT-bound
 
+        - ``number_of_solutions`` -- number of solutions to find
+
         - ``path`` -- Path; directory where models will be written to
 
         - ``write_to_file`` -- bool; decides if files are written or not
-
-        - ``espresso`` -- bool; decides if Espresso should be used or not
 
     Below we show how to use a valid configuration of the model options.
 
