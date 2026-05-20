@@ -542,12 +542,16 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 - ``assignment`` -- dictionary; the assignment of the
                   variables at the minimum weight, empty if unsatisfiable
                 - ``solve_time`` -- float; total time spent
+                - ``trace`` -- an additional dicitionary that holds the result
+                  of each call to :meth:``decide``. The keys of ``trace``
+                  correspond to the tested weights.
         """
         assert isinstance(input_file, Path)
         assert isinstance(sum_arr_file, Path)
 
         start_time = time.perf_counter()
         deadline = start_time + time_limit if time_limit is not None else None
+        trace = {}
 
         with sum_arr_file.open('r') as f:
             sum_arr = json.load(f)
@@ -580,6 +584,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 "objective_bounds": bounds,
                 "assignment": {},
                 "solve_time": time.perf_counter() - start_time,
+                "trace": trace,
             }
 
         def _decide_at(w):
@@ -594,7 +599,8 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                     return SOLVING_STATUS.TIMEOUT
             else:
                 remaining = None
-            return self.decide(tmp_cnf, time_limit=remaining)
+            trace[w] = self.decide(tmp_cnf, time_limit=remaining)
+            return trace[w]
 
         last_sat = None
         while W_MIN < W_MAX:
@@ -635,6 +641,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             "objective_bounds": (opt, opt),
             "assignment": last_sat["assignment"],
             "solve_time": time.perf_counter() - start_time,
+            "trace": trace,
         }
 
     def solve_multiple(self, input_file, sum_arr_file, solve_range,
@@ -1284,7 +1291,32 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
               3: 0,
             ...
               6464: 0},
-            'solve_time': 1.5007964510004967}
+            'solve_time': 1.5007964510004967,
+            'trace': {
+             50: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.30154894801671617},
+             25: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.28024723200360313},
+             12: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.1579511149902828},
+             6: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.12510626600123942},
+             3: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': False,
+              'assignment': {},
+              'solve_time': 0.16972918799729086},
+             5: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': False,
+              'assignment': {},
+              'solve_time': 0.26149826901382767}}}
 
         Again, but this time more rounds and with a timeout (which finds a non-optimal solution)::
 
@@ -1315,7 +1347,9 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
              'objective_bounds': (13, 25),
              'assignment': ...
             ...
-            'solve_time': 5.105086910014506}
+            'solve_time': 5.105086910014506,
+            'trace': ...
+            ...
     """
     def __init__(self):
         """Initizialize the CryptoMinisat interface."""
