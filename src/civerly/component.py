@@ -8,7 +8,6 @@ corresponding evaluation (e.g. calling ``SBox_CVL`` performs a table lookup of
 the SBox with which the component is initialized).
 """
 import os
-import shutil
 import json
 import zlib
 from math import log2, gcd, ceil
@@ -40,7 +39,6 @@ from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
-from civerly.solvers import ESPRESSO_CVL, EXTERNAL_MILP_SOLVER_CVL, EXTERNAL_LOGIC_MINIMIZER_CVL
 
 
 class Component(ABC):
@@ -1622,6 +1620,9 @@ class LinearLayer_CVL(Component):
             ....:   )
             ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
             ....:   cipher.analyse(model_options)
+            48 variables and 89 clauses were written to '...'
+            0
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   arr = [
             ....:     [0, 0, 1, 1],
             ....:     [1, 0, 1, 1],
@@ -1638,9 +1639,7 @@ class LinearLayer_CVL(Component):
             ....:   node = cipher.add_subcipher(
             ....:     linearlayer, [(cipher.IN, (i, i)) for i in range(4)])
             ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
-            ....:   cipher.analyse(model_options)  # assigned to suppress repr
-            48 variables and 89 clauses were written to '...'
-            0
+            ....:   cipher.analyse(model_options)
             48 variables and 110 clauses were written to '...'
             0
         """
