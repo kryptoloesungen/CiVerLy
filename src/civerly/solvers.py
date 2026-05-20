@@ -15,6 +15,7 @@ Utils for interacting with MILP and SAT solvers.
 
 import re
 import json
+import hashlib
 import subprocess
 import os
 import warnings
@@ -67,6 +68,15 @@ def _to_dict(flat_results):
         var_index = int(rest.rstrip("]"))
         nested.setdefault(var_name, {})[var_index] = value
     return nested
+
+def _content_hash(path, length=8):
+    r"""
+    Return the first ``length`` hex digits of the SHA-256 of the file at
+    ``path``. Used to make solution-file names depend on model content so
+    that a stale solution file from a previous model is not picked up by
+    the cache.
+    """
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:length]
 
 
 class SOLVING_STATUS(Enum):
@@ -220,9 +230,25 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             If ``time_limit`` is reached, the solution might be non-optimal.
         """
-        start_time = time.perf_counter()
-        solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sol"
+        h = _content_hash(input_file)
+        solution_file = input_file.parent / f"{input_file.stem}.{h}.sol"
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
+
+        if solution_file.exists():
+            print(
+                f"Using existing file {solution_file}, "
+                "make sure it is up to date!"
+            )
+            objective_value, assignment = self._process_solution_file(solution_file)
+            return {
+                "status": SOLVING_STATUS.SUCCESS,
+                "objective_value": objective_value,
+                "objective_bounds": (objective_value, objective_value),
+                "assignment": assignment,
+                "solve_time": 0.0,
+            }
+
+        start_time = time.perf_counter()
         status = self.invoke(input_file, solution_file, log_file, time_limit=time_limit)
         solve_time = time.perf_counter() - start_time
 
@@ -441,9 +467,24 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 - ``assignment`` -- dictionary; the assignment of the variables in the solution
                 - ``solve_time`` -- float; time (in seconds) it took to find this solution
         """
-        start_time = time.perf_counter()
-        solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sat"
+        h = _content_hash(input_file)
+        solution_file = input_file.parent / f"{input_file.stem}.{h}.sat"
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
+
+        if solution_file.exists():
+            print(
+                f"Using existing file {solution_file}, "
+                "make sure it is up to date!"
+            )
+            satisfiability, assignment = self._process_solution_file(solution_file)
+            return {
+                "status": SOLVING_STATUS.SUCCESS,
+                "satisfiability": satisfiability,
+                "assignment": assignment,
+                "solve_time": 0.0,
+            }
+
+        start_time = time.perf_counter()
         status = self.invoke(input_file, solution_file, log_file, time_limit=time_limit)
         solve_time = time.perf_counter() - start_time
 
