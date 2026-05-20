@@ -1,16 +1,5 @@
 r"""
 Utils for interacting with MILP and SAT solvers.
-
-.. WARNING::
-
-    The current API passes models to solvers as file paths (``.mps`` for MILP,
-    ``.cnf`` for SAT, plus the ``sum.json`` sidecar for SAT optimization).
-    Eventually this will change to passing in-memory Sage objects directly
-    (:class:`sage.numerical.mip.MixedIntegerLinearProgram` for MILP,
-    :class:`sage.sat.solvers.dimacs.DIMACS` for SAT). Method signatures that
-    take ``input_file`` / ``sum_arr_file`` (and the ``milp`` parameter on
-    :meth:`MILP_SOLVER_CVL.solve_multiple`) are expected to be revised
-    accordingly.
 """
 
 import re
