@@ -1255,7 +1255,71 @@ class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
     """
     Interface to the CryptoMinisat SAT solver, see https://github.com/msoos/cryptominisat.
 
-    TODO: add examples for solve
+    EXAMPLES:
+
+        Solve a model for PRESENT::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir: # random
+            ....:   present_cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   _ = present_cipher.model(model_options)
+            ....:   SOLVER.CRYPTOMINISAT.solve(
+            ....:     model_options.path / "PRESENT.cnf",
+            ....:     model_options.path / "PRESENTsum.json",
+            ....:     model_options.solve_range,
+            ....:     model_options.sat_precision)
+            5312 variables and 12993 clauses were written to ...
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+             'objective_value': 6,
+             'objective_bounds': (6, 6),
+             'assignment': {1: 0,
+              2: 0,
+              3: 0,
+            ...
+              6464: 0},
+            'solve_time': 1.5007964510004967}
+
+        Again, but this time more rounds and with a timeout (which finds a non-optimal solution)::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir: # random
+            ....:   present_cipher = PRESENT_CVL(R=13)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   _ = present_cipher.model(model_options)
+            ....:   SOLVER.CRYPTOMINISAT.solve(
+            ....:     model_options.path / "PRESENT.cnf",
+            ....:     model_options.path / "PRESENTsum.json",
+            ....:     model_options.solve_range,
+            ....:     model_options.sat_precision,
+            ....:     time_limit=5)
+            16112 variables and 40209 clauses were written to ...
+            {'status': <SOLVING_STATUS.TIMEOUT: 2>,
+             'objective_value': 25,
+             'objective_bounds': (13, 25),
+             'assignment': ...
+            ...
+            'solve_time': 5.105086910014506}
     """
     def __init__(self):
         """Initizialize the CryptoMinisat interface."""
@@ -1306,7 +1370,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
     """
     Interface to the CaDiCaL SAT solver, see https://github.com/arminbiere/cadical.
 
-    TODO: add examples for solve
+    See :class:`civerly.solvers.CRYPTOMINISAT_CVL` for examples.
     """
     def __init__(self):
         """Initizialize the CaDiCaL interface."""
