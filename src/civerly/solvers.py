@@ -105,7 +105,11 @@ class SOLVER_CVL(ABC):
 
     def _check_can_invoke(self, input_file, solution_file, log_file):
         """
-        Verify the inputs and honor the ``CIVERLY_DISABLE_<NAME>`` env override.
+        Verify the inputs and check if a solver has been disabled.
+
+        You can disable a solver by setting the environment variable
+        ``CIVERLY_DISABLE_<NAME>``. We use this to simulate that a solver
+        is not installed albeit it is. This is used for testing only.
 
         This is called by :meth:`invoke` and is also exposed for subclasses
         that override :meth:`invoke` entirely and still need the standard
@@ -115,9 +119,6 @@ class SOLVER_CVL(ABC):
         assert isinstance(solution_file, Path)
         assert isinstance(log_file, Path)
 
-        # you can disable a solver by setting an environment variable
-        # with this we simulate that a solver is not installed albeit it is
-        # i.e. this is used for testing only
         ENV_DISABLE_PREFIX = "CIVERLY_DISABLE_"
         if ENV_DISABLE_PREFIX+self.name.upper() in os.environ:
             raise ValueError(
