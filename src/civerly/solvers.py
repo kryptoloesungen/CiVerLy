@@ -357,6 +357,8 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - list of result dicts in the same shape as :meth:`solve` returns,
               ordered best (lowest objective) first
+
+        TODO: add examples
         """
         results = []
         for i in range(number_of_solutions):
