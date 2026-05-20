@@ -2419,31 +2419,14 @@ class SBox_CVL(Component):
                 esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
                 esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
 
-                if os.path.exists(esp_file_out):
-                    print(
-                        f"Using existing file {esp_file_out}, "
-                        "make sure it is up to date!"
-                    )
-                else:
-                    _write_espresso_input(
-                        posset, esp_file_name, model_options.path
-                    )
-                    if isinstance(model_options.logic_minimizer, EXTERNAL_LOGIC_MINIMIZER_CVL):
-                        print(
-                            "Optimization problem for Espresso has been "
-                            f"written to {esp_file_in}.\n"
-                            "In order to minimize the clauses, execute:\n\n"
-                            "\t> espresso -epos "
-                            f"{esp_file_in} > {esp_file_out}"
-                        )
-                        self._return_immediately_ = True
-                        return
-                    elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
-                        model_options.logic_minimizer.invoke(
-                            esp_file_in,
-                            esp_file_out,
-                            esp_file_out.with_suffix(".log"),
-                        )
+                _write_espresso_input(
+                    posset, esp_file_name, model_options.path
+                )
+                model_options.logic_minimizer.invoke(
+                    esp_file_in,
+                    esp_file_out,
+                    esp_file_out.with_suffix(".log"),
+                )
 
                 clauses = _read_espresso_output(esp_file_out)
 
@@ -2562,31 +2545,14 @@ class SBox_CVL(Component):
             esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
             esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
 
-            if os.path.exists(esp_file_out):
-                print(
-                    f"Using existing file {esp_file_out}, "
-                    "make sure it is up to date!"
-                )
-            else:
-                _write_espresso_input(
-                    posset, esp_file_name, model_options.path
-                )
-                if isinstance(model_options.logic_minimizer, EXTERNAL_LOGIC_MINIMIZER_CVL):
-                    print(
-                        "Optimization problem for Espresso has been "
-                        f"written to '{esp_file_in}'.\n"
-                        "In order to minimize the clauses, execute:\n\n"
-                        "\t$ espresso -epos "
-                        f"{esp_file_in} > {esp_file_out}"
-                    )
-                    self._return_immediately_ = True
-                    return
-                elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
-                    model_options.logic_minimizer.invoke(
-                        esp_file_in,
-                        esp_file_out,
-                        esp_file_out.with_suffix(".log"),
-                    )
+            _write_espresso_input(
+                posset, esp_file_name, model_options.path
+            )
+            model_options.logic_minimizer.invoke(
+                esp_file_in,
+                esp_file_out,
+                esp_file_out.with_suffix(".log"),
+            )
 
             clauses = _read_espresso_output(esp_file_out)
 
