@@ -845,17 +845,28 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
     def _generate_constraints_sum_leq_int_LS24(self, sat, sum_arr, num):
         r"""
-        Helper method to implement a sequential counter in SAT, in order to model
-        the constraint :math:`sum(arr) \leq num` as a SAT-formula.
-        The constraints are given in
-        https://link.springer.com/chapter/10.1007/978-3-031-54776-8_14,
-        section 3.4.
+        Add constraints for :math:`sum(arr) \leq num` to the model.
+
+        INPUT:
+
+            - ``sat``-- sat model as ``DIMACS`` instance
+
+            - ``sum_arr_file`` -- path to the JSON file containing the sum
+              array, i.e. a list of ``(weight, var)`` pairs
+
+            - ``num``-- bound to insert
+
+        OUTPUT:
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
 
         .. NOTE::
 
-            There is a typo in this paper, as the sum that we want to bound should
-            go from :math:`0 \leq i \leq l-1` instead of :math:`l`.
-            Therefore, the last constraint must be
+            The constraints are given in
+            https://link.springer.com/chapter/10.1007/978-3-031-54776-8_14,
+            section 3.4. However, there is a typo in this paper, as the sum
+            that we want to bound should go from :math:`0 \leq i \leq l-1`
+            instead of :math:`l`. Therefore, the last constraint must be
             :math:`\bar{u_{l-1}} \lor \bar{a_{l-2, w-1}}` instead of
             :math:`\bar{u_{l}} \lor \bar{a_{l-1, w-1}}`.
 
@@ -891,11 +902,6 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             ....:           else: break
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
-
-        If everything works correctly, then a constraint system which requires
-        :math:`w` many variables to be SAT only becomes possible to solve if we
-        append constraints that bound the weight to at least :math:`w`.
-        This is exactly what is checked in the doctests above.
         """
         new_sat = DIMACS()
         for _ in range(sat.nvars()):
@@ -1717,9 +1723,96 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
     """
     Interface for external SAT solver.
 
-    TODO: add example
-    """
+    EXAMPLES:
 
+        Solve a model for PRESENT::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.util import suppress_output
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: present_cipher = PRESENT_CVL(R=4)
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   sat_solver=None,
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
+            ....:   path=Path(tmpdir))
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj50.cnf",
+            ....:   model_options.path / "PRESENT_obj50.a98e6805.sat",
+            ....:   model_options.path / "PRESENT_obj50.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj25.cnf",
+            ....:   model_options.path / "PRESENT_obj25.dd3d0526.sat",
+            ....:   model_options.path / "PRESENT_obj25.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj12.cnf",
+            ....:   model_options.path / "PRESENT_obj12.e13dbb97.sat",
+            ....:   model_options.path / "PRESENT_obj12.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj6.cnf",
+            ....:   model_options.path / "PRESENT_obj6.9be36b0e.sat",
+            ....:   model_options.path / "PRESENT_obj6.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj3.cnf",
+            ....:   model_options.path / "PRESENT_obj3.964d2184.sat",
+            ....:   model_options.path / "PRESENT_obj3.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj5.cnf",
+            ....:   model_options.path / "PRESENT_obj5.2c115958.sat",
+            ....:   model_options.path / "PRESENT_obj5.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: present_cipher.analyse(model_options)
+            Using existing SAT model, make sure it is up to date!
+            5312 variables and 12993 clauses were written to ...
+            Using existing file ...PRESENT_obj50.a98e6805.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj25.dd3d0526.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj12.e13dbb97.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj6.9be36b0e.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj3.964d2184.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj5.2c115958.sat, make sure it is up to date!
+            6
+    """
     def __init__(self):
         """Initizialize the interface."""
         super().__init__()
@@ -1754,7 +1847,6 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             f"{self.name}: solve {input_file} externally and place the "
             f"result at {solution_file}, then re-run."
         )
-
 
     def _process_solution_file(self, solution_file):
         """
