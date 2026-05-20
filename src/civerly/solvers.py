@@ -87,6 +87,14 @@ class SOLVING_STATUS(Enum):
     ERROR = 3
 
 
+class ExternalSolveRequired(Exception):
+    """
+    Raised when an external solver is invoked but the solution file is not
+    yet present. Provide a solution at the path shown in the message and
+    re-run.
+    """
+
+
 class SOLVER_CVL(ABC):
     """
     Abstract base class for implementing an interface to a solver.
@@ -1317,13 +1325,20 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
 
         Espresso writes its output to stdout, so it cannot use the shared
         template (which would redirect to ``log_file`` at best). The
-        ``time_limit`` parameter is ignored.
+        ``time_limit`` parameter is ignored. If ``solution_file`` already
+        exists, the call is a no-op (cache hit).
 
         .. SEEALSO::
 
             :meth:`civerly.solvers.SOLVER_CVL.invoke`
         """
         self._check_can_invoke(input_file, solution_file, log_file)
+        if solution_file.exists():
+            print(
+                f"Using existing file {solution_file}, "
+                "make sure it is up to date!"
+            )
+            return SOLVING_STATUS.SUCCESS
         command = self._build_command(input_file, solution_file, log_file, time_limit)
         with solution_file.open('a') as redirect:
             errno = subprocess.Popen(
@@ -1350,13 +1365,17 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
-        Raise an exception stating what files are expected. If they already exists, do nothing.
+        Signal that the user must solve the MILP externally.
+
+        If ``solution_file`` already exists (e.g. the user provided it before
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        exception is raised carrying the input and expected output paths.
 
         INPUT:
 
             - ``input_file``-- path to the file containing the model
 
-            - ``solution_file``-- path of the file in which the solver writes the solution
+            - ``solution_file``-- path where the user must place the solution
 
             - ``log_file``-- path to the solver's log file
 
@@ -1364,20 +1383,15 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
 
         OUTPUT:
 
-            - Status, see :class:`civerly.solvers.SOLVING_STATUS`.
+            - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
         """
         self._check_can_invoke(input_file, solution_file, log_file)
-
-        # TODO:
-        # if solution and log file are there: continue
-        # else:
-        # raise Exception stating the names of the files that are expected
-        status = SOLVING_STATUS.SUCCESS
-
-        # TODO: for MILP we should handle time out / interruptions also for external solvers.
-        # to this end, we should outsource the check for a time out to a dedicated method which we can then overwrite in here.
-
-        return status
+        if solution_file.exists():
+            return SOLVING_STATUS.SUCCESS
+        raise ExternalSolveRequired(
+            f"{self.name}: solve {input_file} externally and place the "
+            f"result at {solution_file}, then re-run."
+        )
 
     def _process_solution_file(self, solution_file):
         """
@@ -1446,13 +1460,17 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
-        Raise an exception stating what files are expected. If they already exists, do nothing.
+        Signal that the user must solve the SAT externally.
+
+        If ``solution_file`` already exists (e.g. the user provided it before
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        exception is raised carrying the input and expected output paths.
 
         INPUT:
 
             - ``input_file``-- path to the file containing the model
 
-            - ``solution_file``-- path of the file in which the solver writes the solution
+            - ``solution_file``-- path where the user must place the solution
 
             - ``log_file``-- path to the solver's log file
 
@@ -1460,16 +1478,15 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
 
         OUTPUT:
 
-            - :attr:`civerly.solvers.SOLVING_STATUS.SUCCESS`
+            - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
         """
         self._check_can_invoke(input_file, solution_file, log_file)
-
-        # TODO:
-        # if solution and log file are there: continue
-        # else:
-        # raise Exception stating the names of the files that are expected
-
-        return SOLVING_STATUS.SUCCESS
+        if solution_file.exists():
+            return SOLVING_STATUS.SUCCESS
+        raise ExternalSolveRequired(
+            f"{self.name}: solve {input_file} externally and place the "
+            f"result at {solution_file}, then re-run."
+        )
 
 
     def _process_solution_file(self, solution_file):
@@ -1520,13 +1537,17 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
 
     def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
-        Raise an exception stating what files are expected. If they already exists, do nothing.
+        Signal that the user must minimize the input externally.
+
+        If ``solution_file`` already exists (e.g. the user provided it before
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        exception is raised carrying the input and expected output paths.
 
         INPUT:
 
             - ``input_file``-- path to the file containing the model
 
-            - ``solution_file``-- path of the file in which the solver writes the solution
+            - ``solution_file``-- path where the user must place the output
 
             - ``log_file``-- path to the solver's log file
 
@@ -1534,16 +1555,15 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
 
         OUTPUT:
 
-            - :attr:`civerly.solvers.SOLVING_STATUS.SUCCESS`
+            - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
         """
         self._check_can_invoke(input_file, solution_file, log_file)
-
-        # TODO:
-        # if solution and log file are there: continue
-        # else:
-        # raise Exception stating the names of the files that are expected
-
-        return SOLVING_STATUS.SUCCESS
+        if solution_file.exists():
+            return SOLVING_STATUS.SUCCESS
+        raise ExternalSolveRequired(
+            f"{self.name}: minimize {input_file} externally and place the "
+            f"result at {solution_file}, then re-run."
+        )
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
         """Unused: :meth:`invoke` and never runs a subprocess."""
