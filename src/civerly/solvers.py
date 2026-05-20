@@ -954,6 +954,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
         TODO: add examples for solve_multiple here
         """
+        raise NotImplementedError
         def _solutionpooljson_to_solfiles(json_file, solution_file):
             """Helper function to convert solutions from json to .sol files."""
             with json_file.open('r') as f:
