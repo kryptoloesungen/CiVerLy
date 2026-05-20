@@ -870,7 +870,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
     """
     Interface to the Gurobi MILP solver, see https://www.gurobi.com/.
 
-    TODO: add examples for solve here
+    See :class:`civerly.solvers.SCIP_CVL` for examples.
     """
     def __init__(self):
         """Initizialize the Gurobi interface."""
@@ -1020,8 +1020,71 @@ class SCIP_CVL(MILP_SOLVER_CVL):
     """
     Interface to the SCIP solver, see https://scipopt.org/.
 
-    TODO: add examples for solve
-    """
+    EXAMPLES:
+
+        Solve a model for the AES::
+
+            sage: # optional - scip
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip # random
+            ....:   aes = AES_CVL(R=10)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       path=Path(tmpdir))
+            ....:   aes.model(model_options)
+            ....:   SOLVER.SCIP.solve(model_options.path / "AES.mps")
+            2884 variables and 3085 constraints were written to ...
+            Boolean Program (minimization, 2884 variables, 3085 constraints)
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+             'objective_value': 55,
+             'objective_bounds': (55, 55),
+             'assignment': {'OUT': {13: 0,
+            ...
+               2: 0},
+              'X0': {1: 0,
+            ...
+               30: 0},
+            ...
+              'X12': {1: 0,
+            ...
+               31: 0,
+               30: 0},
+              'IN': {0: 0,
+            ...
+               15: 0}},
+             'solve_time': 0.2824276300088968}
+
+        Solve a model for CRAFT with a time limit (the identified solution is non-optimal)::
+
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: craft = CRAFT_CVL(15)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip # random
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   craft.model(model_options)
+            ....:   SOLVER.SCIP.solve(model_options.path / "CRAFT.mps", time_limit=5)
+            8736 variables and 9021 constraints were written to ...
+            Boolean Program (minimization, 8736 variables, 9021 constraints)
+            {'status': <SOLVING_STATUS.TIMEOUT: 2>,
+             'objective_value': 73,
+             'objective_bounds': (34.3498121721, 73),
+             'assignment': {'OUT': {2: 0,
+            ...
+            'solve_time': 5.063110857998254}
+     """
     def __init__(self):
         """Initizialize the SCIP interface."""
         super().__init__()
@@ -1103,7 +1166,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
     """
     Interface to the GLPK solver, see https://www.gnu.org/software/glpk/.
 
-    TODO: add examples for solve
+    See :class:`civerly.solvers.SCIP_CVL` for examples.
     """
     def __init__(self):
         """Initizialize the GLPK interface."""
