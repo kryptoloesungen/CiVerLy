@@ -358,7 +358,43 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             - list of result dicts in the same shape as :meth:`solve` returns,
               ordered best (lowest objective) first
 
-        TODO: add examples
+
+        EXAMPLES:
+
+            Solve a model for the AES::
+
+                sage: # optional - scip
+                sage: from civerly.cipher_implementations.aes import AES_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
+                ....:   aes = AES_CVL(R=10)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:       optimization=OPTIMIZATION.MILP,
+                ....:       granularity=GRANULARITY.WORDWISE,
+                ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+                ....:       milp_solver=SOLVER.SCIP,
+                ....:       path=Path(tmpdir))
+                ....:   model = aes.model(model_options)
+                ....:   r = SOLVER.SCIP.solve_multiple(model_options.path / "AES.mps", model, 5)
+                2884 variables and 3085 constraints were written to ...
+                sage: len(r)
+                5
+                sage: r[0] # random
+                {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                 'objective_value': 55,
+                 'objective_bounds': (55, 55),
+                 'assignment': ...
+                ...
+                 'solve_time': 0.29395343200303614}
+                sage: r[4] # random
+                {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                 'objective_value': 55,
+                 'objective_bounds': (55, 55),
+                 'assignment': ...
+                ...
+                 'solve_time': 0.4183877219911665}
         """
         results = []
         for i in range(number_of_solutions):
@@ -678,6 +714,45 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - list of result dicts in the same shape as :meth:`solve` returns,
               ordered best (lowest weight) first
+
+        EXAMPLES:
+
+            Solve a model for SKINNY::
+
+                sage: # optional - cryptominisat  # optional - espresso
+                sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   skinny = SKINNY_CVL(64, 64, R=3)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     solve_range=(0, 100),
+                ....:     path=Path(tmpdir))
+                ....:   model = skinny.model(model_options)
+                ....:   r = SOLVER.CRYPTOMINISAT.solve_multiple(
+                ....:         model_options.path / "SKINNY.cnf",
+                ....:         model_options.path / "SKINNYsum.json",
+                ....:         model_options.solve_range, 5)
+                8976 variables and 19313 clauses were written to ...
+                sage: len(r)
+                5
+                sage: r[0] # random
+                {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                 'objective_value': 5,
+                 'objective_bounds': (5, 5),
+                 'assignment': ...
+                ...
+                 'solve_time': 1.262912990001496,
+                 'trace': ...
+                ...
+                }
         """
         results = []
         cur = input_file
