@@ -1527,9 +1527,44 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
     """
     Interface for external logic minimizer.
 
-    TODO: add example
-    """
+    EXAMPLES:
 
+        Simulate external Espresso minimization::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.cipher_implementations.gift import GIFT_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: gift_cipher = GIFT_CVL(R=2)
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:   solve_range=(0, 10),
+            ....:   sat_precision=1,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:   logic_minimizer=None,
+            ....:   path=Path(tmpdir))
+            sage: gift_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer:
+            minimize ... externally and place the result at ..., then re-run.
+            sage: SOLVER.ESPRESSO.invoke(
+            ....:     model_options.path / "espresso-d1bda7a_in.pla",
+            ....:     model_options.path / "espresso-d1bda7a_out.pla",
+            ....:     model_options.path / "espresso-d1bda7a_out.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: gift_cipher.analyse(model_options)
+            2560 variables and 6401 clauses were written to '...'
+            3.4
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
+    """
     def __init__(self):
         """Initizialize the interface."""
         super().__init__()

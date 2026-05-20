@@ -288,35 +288,6 @@ class PRESENT_CVL:
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
             8
-
-        Simulate external Espresso minimization::
-
-            sage: from civerly.cipher_implementations.present \
-            ....:   import PRESENT_CVL
-            sage: from civerly.model_options import *
-            sage: import os
-            sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
-            ....:   present_cipher = PRESENT_CVL(R=5)
-            ....:   model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:     optimization=OPTIMIZATION.SAT,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=None,
-            ....:     path=Path(tmpdir))
-            ....:   present_cipher.analyse(model_options)
-            ....:   _ = os.popen("espresso -epos "
-            ....:   f"{tmpdir}/espresso-1c52f72b_in.pla > "
-            ....:   f"{tmpdir}/espresso-1c52f72b_out.pla").read()
-            ....:   present_cipher.analyse(model_options)
-            Optimization problem for Espresso has been written to...
-            Using existing file ..., make sure it is up to date!
-            6512 variables and 16017 clauses were written to '...'
-            8
-
         """
         if name is None:
             name = "PRESENT"

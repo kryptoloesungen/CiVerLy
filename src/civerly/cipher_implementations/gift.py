@@ -118,38 +118,6 @@ class GIFT_CVL:
             ....:   gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to '...'
             3.4
-
-        Simulate external Espresso minimization::
-
-            sage: from civerly.cipher_implementations.gift import GIFT_CVL
-            sage: from civerly.model_options import *
-            sage: from pathlib import Path
-            sage: import os
-            sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
-            ....:   gift_cipher = GIFT_CVL(R=2)
-            ....:   model_options = MODEL_OPTIONS(
-            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:     optimization=OPTIMIZATION.SAT,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:     solve_range=(0, 10),
-            ....:     sat_precision=1,
-            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=None,
-            ....:     path=Path(tmpdir)
-            ....:   )
-            ....:   gift_cipher.analyse(model_options)
-            ....:   _ = os.popen("espresso -epos "
-            ....:   f"{tmpdir}/espresso-d1bda7a_in.pla > "
-            ....:   f"{tmpdir}/espresso-d1bda7a_out.pla").read()
-            ....:   gift_cipher.analyse(model_options)
-            Optimization problem for Espresso has been written to...
-            Using existing file ..., make sure it is up to date!
-            2560 variables and 6401 clauses were written to '...'
-            3.4
-
         """
         if name is None:
             name = "GIFT"
