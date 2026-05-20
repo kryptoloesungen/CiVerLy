@@ -21,7 +21,7 @@ from abc import ABC, abstractmethod
 
 def _float_or_int(value):
     """
-    Cast `value` to float or int if possible.
+    Cast ``value`` to float or int if possible.
 
     EXAMPLES::
 
