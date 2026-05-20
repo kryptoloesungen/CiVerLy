@@ -9,6 +9,7 @@ import subprocess
 import os
 import warnings
 import time
+import tempfile
 from pathlib import Path
 from enum import Enum
 
@@ -938,17 +939,6 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
         return new_sat
 
-class LOGIC_MINIMIZER_CVL(SOLVER_CVL, ABC):
-    """
-    Abstract base class for implementing an interface to a logic minimizer.
-
-    Logic minimizers expose only :meth:`invoke`; there is no high-level
-    ``solve`` operation because they don't search for an optimum.
-    """
-    def __init__(self):
-        """Initizialize the minimizer interface."""
-        super().__init__()
-
 
 class GUROBI_CVL(MILP_SOLVER_CVL):
     """
@@ -1547,49 +1537,6 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         return True, self._parse_assignment_line(joined)
 
 
-class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
-    """
-    Interface to the Espresso minimizer, see e.g. https://github.com/hadipourh/espresso.
-
-    TODO: add examples for invoke; complete docstrings
-    """
-    def __init__(self):
-        """Initizialize the Espresso interface."""
-        super().__init__()
-        self.name = "Espresso"
-
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the Espresso minimizer via its CLI.
-
-        Espresso writes its output to stdout, so it cannot use the shared
-        template (which would redirect to ``log_file`` at best). The
-        ``time_limit`` parameter is ignored. If ``solution_file`` already
-        exists, the call is a no-op (cache hit).
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        self._check_can_invoke(input_file, solution_file, log_file)
-        if solution_file.exists():
-            print(
-                f"Using existing file {solution_file}, "
-                "make sure it is up to date!"
-            )
-            return SOLVING_STATUS.SUCCESS
-        command = self._build_command(input_file, solution_file, log_file, time_limit)
-        with solution_file.open('a') as redirect:
-            errno = subprocess.Popen(
-                command, stdout=redirect, stderr=redirect
-            ).wait()
-        return self.errno_map.get(errno, SOLVING_STATUS.ERROR)
-
-    def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Build the Espresso CLI command list."""
-        return ["espresso", "-epos", str(input_file)]
-
-
 class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
     """
     Interface for external MILP solver.
@@ -1843,6 +1790,143 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         )
 
 
+class LOGIC_MINIMIZER_CVL(ABC):
+    """
+    Abstract base class for implementing an interface to a logic minimizer.
+    """
+    def __init__(self):
+        """Initizialize the minimizer interface."""
+        super().__init__()
+
+    def solve(self, pla_file, possible_transitions):
+        """
+        Minimize the description of the possible transitions.
+
+        TODO: explain the format of the transistions
+
+        INPUT:
+
+            - ``pla_file`` -- pla file is written to this path
+
+            - ``possible_transitions`` -- set of all possible transitions
+
+        OUTPUT:
+
+            - ``clauses`` -- minimized description of all possible transitions
+        """
+        assert isinstance(pla_file, Path)
+        solution_file = pla_file.with_name(pla_file.stem + "_out.pla")
+        self._write_pla(pla_file, possible_transitions)
+        self.invoke(pla_file, solution_file)
+        return self._read_pla(solution_file)
+
+    @abstractmethod
+    def invoke(self, input_file, solution_file):
+        """
+        Invoke the minimizer via its CLI.
+
+        INPUT:
+
+            - ``input_file``-- path to the file containing the model
+
+            - ``solution_file``-- path of the file in which the solver writes the solution
+        """
+        pass
+
+    def _check_can_invoke(self):
+        """
+        Check if a solver has been disabled.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL._check_can_invoke`
+        """
+        SOLVER.SCIP._check_can_invoke(Path(), Path(), Path())
+
+    def _write_pla(self, pla_file, possible_transitions):
+        """
+        Write the possible transitions to a ``.pla`` file.
+
+        INPUT:
+
+            - ``pla_file``-- path to the pla_file
+
+            - ``possible_transitions`` -- set of all possible transitions
+        """
+        # create espresso input
+        content = [f'.i {len(possible_transitions[0])}', '.o 1']
+        for possible_transition in possible_transitions:
+            content.append(
+                ''.join([str(t) for t in possible_transition]) + ' 1'
+            )
+        content.append('.e')
+        content = '\n'.join(content) + '\n'
+
+        # write to file
+        with pla_file.open("w") as f:
+            f.write(content)
+
+    def _read_pla(self, pla_file):
+        """
+        Read the possible transitions from a ``.pla`` file.
+
+        INPUT:
+
+            - ``pla_file``-- path to the pla_file
+
+        OUTPUT:
+
+            - ``clauses`` -- clauses described by the file
+        """
+
+        with pla_file.open("r") as f:
+            content = f.read().splitlines()
+        clause_length = int(content[0].split(" ")[1])
+
+        clauses = []
+        for line in content:
+            if line[0] not in ['0', '1', '-']:
+                continue  # skip the header lines
+            if line[-1] == '1':  # only take the CNF-clauses
+                # i+1 to avoid sign errors
+                # NOTE: in post-processing, we must subtract -1 again
+                clause = tuple(
+                    (-1)**int(line[i]) * (i + 1)
+                    for i in range(clause_length)
+                    if line[i] != '-'
+                )
+                clauses.append(clause)
+        return clauses
+
+class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
+    """
+    Interface to the Espresso minimizer, see e.g. https://github.com/hadipourh/espresso.
+    """
+    def __init__(self):
+        """Initizialize the Espresso interface."""
+        super().__init__()
+        self.name = "Espresso"
+
+    def invoke(self, input_file, solution_file):
+        """
+        Invoke the Espresso minimizer via its CLI.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.LOGIC_MINIMIZER_CVL.invoke`
+        """
+        self._check_can_invoke()
+        if solution_file.exists():
+            print(
+                f"Using existing file {solution_file}, "
+                "make sure it is up to date!"
+            )
+        else:
+            command = ["espresso", "-epos", str(input_file)]
+            with solution_file.open('a') as redirect:
+                subprocess.Popen(command, stdout=redirect, stderr=redirect).wait()
+
+
 class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
     """
     Interface for external logic minimizer.
@@ -1875,10 +1959,8 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
             civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer:
             minimize ... externally and place the result at ..., then re-run.
             sage: SOLVER.ESPRESSO.invoke(
-            ....:     model_options.path / "espresso-d1bda7a_in.pla",
-            ....:     model_options.path / "espresso-d1bda7a_out.pla",
-            ....:     model_options.path / "espresso-d1bda7a_out.log")
-            <SOLVING_STATUS.SUCCESS: 1>
+            ....:     model_options.path / "espresso-d1bda7a.pla",
+            ....:     model_options.path / "espresso-d1bda7a_out.pla")
             sage: gift_cipher.analyse(model_options)
             2560 variables and 6401 clauses were written to '...'
             3.4
@@ -1890,7 +1972,7 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         super().__init__()
         self.name = "ExternalLogicMinimizer"
 
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
+    def invoke(self, input_file, solution_file):
         """
         Signal that the user must minimize the input externally.
 
@@ -1912,19 +1994,11 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
 
             - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
         """
-        self._check_can_invoke(input_file, solution_file, log_file)
-        if solution_file.exists():
-            return SOLVING_STATUS.SUCCESS
-        raise ExternalSolveRequired(
-            f"{self.name}: minimize {input_file} externally and place the "
-            f"result at {solution_file}, then re-run."
-        )
-
-    def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Unused: :meth:`invoke` and never runs a subprocess."""
-        raise NotImplementedError(
-            "The external logic minimizer is not invoked by CiVerLy."
-        )
+        if not solution_file.exists():
+            raise ExternalSolveRequired(
+                f"{self.name}: minimize {input_file} externally and place the "
+                f"result at {solution_file}, then re-run."
+            )
 
 
 class SOLVER:
