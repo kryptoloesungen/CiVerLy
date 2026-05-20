@@ -1430,7 +1430,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         """
         self._check_can_invoke(input_file, solution_file, log_file)
         if solution_file.exists():
-            return SOLVING_STATUS.SUCCESS
+            return self._check_timeout(log_file, None, SOLVING_STATUS.SUCCESS)
         raise ExternalSolveRequired(
             f"{self.name}: solve {input_file} externally and place the "
             f"result at {solution_file}, then re-run."
@@ -1479,14 +1479,52 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
 
             - tuple of floats; lower and upper bound for the optimal objective value
         """
-        assert isinstance(log_file, Path)
-        # TODO: determine solver and call corresponding method
+        regexps =  [
+            SOLVER.SCIP.bounds_regexp,
+            SOLVER.GUROBI.bounds_regexp,
+            SOLVER.GLPK.bounds_regexp,
+            ]
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=r"No objective bounds found in .*")
+            for regexp in regexps:
+                self.bounds_regexp = regexp
+                lower, upper = super()._get_objective_bounds(log_file)
+                if (lower, upper) != (None, None):
+                    return lower, upper
+        warnings.warn(f"No objective bounds found in {log_file}")
+        return None, None
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
         """Unused: :meth:`invoke` and never runs a subprocess."""
         raise NotImplementedError(
             "The external MILP solver is not invoked by CiVerLy."
         )
+
+    def _check_timeout(self, log_file, time_limit, status):
+        """
+        Check the log file for a timeout report and update ``status`` accordingly.
+
+        ``log_file`` is searched for all known ``timeout_string`` and ``SOLVING_STATUS.TIMEOUT`` is returned on a hit.
+
+        INPUT:
+
+            - ``log_file`` -- path to the log file
+            - ``time_limit``; ignored
+            - ``status`` -- the current :class:`SOLVING_STATUS`
+
+        OUTPUT:
+
+            - the (possibly updated) :class:`SOLVING_STATUS`
+        """
+        timeout_strings = [
+            SOLVER.SCIP.timeout_string,
+            SOLVER.GUROBI.timeout_string,
+            SOLVER.GLPK.timeout_string,
+        ]
+        for timeout_string in timeout_strings:
+            self.timeout_string = timeout_string
+            status = super()._check_timeout(log_file, 0, status)
+        return status
 
 
 class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
