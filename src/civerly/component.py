@@ -2282,80 +2282,45 @@ class SBox_CVL(Component):
                     return True
                 return False
 
-            new_mps_files = []
-            reduction_solution_files = dict()
+            reduction_solution = dict()
             for prob, impossible_points in impossible_points_for_prob.items():
                 s_file_mps = model_options.path / f"{s_file_name}.p{prob}.mps"
-                s_file_sol = model_options.path / f"{s_file_name}.p{prob}.sol"
-                reduction_solution_files[prob] = s_file_sol
+                
 
-                if os.path.exists(s_file_sol):
-                    print(
-                        f"Using existing file {s_file_sol}, "
-                        "make sure it is up to date!"
+                # Generate the reduction-MILP and write into an .mps file.
+                # We add equations to make sure that each impossible point is
+                # removed by at least one equation. Here, impossible means
+                # that the probability does not match the desired one.
+                # The solver handles the "solution already on disk" cache
+                # check internally and (for an external solver) aborts via
+                # :class:`ExternalSolveRequired` when the user must solve.
+                milp_to_minimize_milp = MixedIntegerLinearProgram(
+                    maximization=False, solver="GLPK")  # Reduction MILP
+                Z = milp_to_minimize_milp.new_variable(
+                    name="Z", binary=True)
+                for point in impossible_points:
+                    # Add a reduction inequation ensuring that each
+                    # impossible point is removed by at least one
+                    # inequation
+                    milp_to_minimize_milp.add_constraint(
+                        sum([
+                            Z[ineq_index]
+                            for ineq_index, inequation in enumerate(
+                                inequations_for_prob[prob]
+                            )
+                            if removes(inequation, point)
+                        ]) >= 1
                     )
-                else:
-                    # Generate the reduction-MILP and write into an .mps file
-                    # In essence, we add equations to make sure that each
-                    # impossible point is removed by at least one equation.
-                    # Here, impossible means that the probability does not
-                    # match the desired one.
-                    milp_to_minimize_milp = MixedIntegerLinearProgram(
-                        maximization=False, solver="GLPK")  # Reduction MILP
-                    Z = milp_to_minimize_milp.new_variable(
-                        name="Z", binary=True)
-                    for point in impossible_points:
-                        # Add a reduction inequation ensuring that each
-                        # impossible point is removed by at least one
-                        # inequation
-                        milp_to_minimize_milp.add_constraint(
-                            sum([
-                                Z[ineq_index]
-                                for ineq_index, inequation in enumerate(
-                                    inequations_for_prob[prob]
-                                )
-                                if removes(inequation, point)
-                            ]) >= 1
-                        )
 
-                    milp_to_minimize_milp.set_objective(sum(Z))
-                    with suppress_output():  # to avoid doctest failure
-                        milp_to_minimize_milp.write_mps(str(s_file_mps))
-                    if not isinstance(solver, EXTERNAL_MILP_SOLVER_CVL):
-                        solver.solve(s_file_mps)
-                        # solve writes to <stem>_<solver_name>.sol; copy to the
-                        # canonical s_file_sol so that later
-                        # _process_solution_file calls and cache checks find it.
-                        solver_sol = (
-                            s_file_mps.parent
-                            / f"{s_file_mps.stem}_{solver.name}.sol"
-                        )
-                        if solver_sol.exists():
-                            shutil.copyfile(solver_sol, s_file_sol)
-                    else:  # Remember filename so we can tell the user to solve it
-                        new_mps_files.append(s_file_mps)
-
-            if isinstance(solver, EXTERNAL_MILP_SOLVER_CVL):
-                print(
-                    "SBox MILPs have been written to "
-                    f"{', '.join(new_mps_files)}. "
-                    "In order to continue the modeling, solve the generated "
-                    "MILPs by providing solution files with the names "
-                    f"{', '.join(new_mps_files).replace('.mps', '.sol')}."
-                )
-                self._return_immediately_ = True
-                return
+                milp_to_minimize_milp.set_objective(sum(Z))
+                with suppress_output():  # to avoid doctest failure
+                    milp_to_minimize_milp.write_mps(str(s_file_mps))
+                reduction_solution[prob] = solver.solve(s_file_mps)["assignment"]
 
             selected_inequations = {
-                prob: [] for prob in reduction_solution_files.keys()
+                prob: [] for prob in reduction_solution.keys()
             }
-            for prob, s_file_sol in reduction_solution_files.items():
-                assert os.path.exists(s_file_sol), (
-                    "ERROR: Solution file missing despite a "
-                    "former check or generation"
-                )
-
-                _, results = model_options.milp_solver._process_solution_file(s_file_sol)
+            for prob, results in reduction_solution.items():
                 assert 'Z' in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "
                     f"Found {results.keys()}, expected 'Z'"

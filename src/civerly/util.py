@@ -435,7 +435,6 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
     from civerly.component import SBox_CVL, LinearLayer_CVL
-    from civerly.solvers import EXTERNAL_MILP_SOLVER_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
 
@@ -475,60 +474,35 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
         )
     # ------------------------------------------------------------------------
     file_mps = model_options.path / (file_name + ".mps")
-    file_sol = model_options.path / (file_name + ".sol")
 
     # STEP 2.2:
-    # write MILP to file and solve it ...
-    if os.path.exists(file_sol):
-        # ... unless a solution already exists
-        # this is the case if it was generated and then manually solved by
-        # the user before
-        print(f"Using existing file {file_sol}, make sure it is up to date!")
-        _, results = model_options.milp_solver._process_solution_file(file_sol)
-    else:
-        for i_im, impossible_point in enumerate(imposset):
-            for ic, constr in enumerate(convex_constraints):
-                if constr.is_inequality():
-                    outcome = constr.eval(impossible_point) >= 0
-                elif constr.is_equation():
-                    outcome = constr.eval(impossible_point) == 0
-                if outcome is False:
-                    R_bar[i_im].append(ic)
-        milp_to_minimize_milp = MixedIntegerLinearProgram(
-            maximization=False, solver="GLPK"
-        )
-        Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
-        for r_arr in R_bar:
-            if len(r_arr) > 0:
-                milp_to_minimize_milp.add_constraint(
-                    sum([Z[r] for r in r_arr]) >= 1
-                )
-        milp_to_minimize_milp.set_objective(sum(Z))
-        # suppress_output in order to not make doctests fail
-        with suppress_output():
-            milp_to_minimize_milp.write_mps(str(file_mps))
-
-        if isinstance(model_options.milp_solver, EXTERNAL_MILP_SOLVER_CVL):
-            # if there is no milp_solver set in model_options, the user has to
-            # solve the MILP manually
-            if isinstance(comp, SBox_CVL):
-                comp_in_print = "SBox"
-            elif isinstance(comp, LinearLayer_CVL):
-                comp_in_print = "LinearLayer"
-            print(
-                f"{comp_in_print} MILP has been written to {file_mps}. "
-                "In order to continue the modeling, solve the generated MILP "
-                f"by providing a solution file with the name {file_sol}."
+    # Write the reduction MILP and solve it. The solver itself handles the
+    # "solution already on disk" cache check and (for an external solver)
+    # aborts via :class:`ExternalSolveRequired` when the user must solve.
+    for i_im, impossible_point in enumerate(imposset):
+        for ic, constr in enumerate(convex_constraints):
+            if constr.is_inequality():
+                outcome = constr.eval(impossible_point) >= 0
+            elif constr.is_equation():
+                outcome = constr.eval(impossible_point) == 0
+            if outcome is False:
+                R_bar[i_im].append(ic)
+    milp_to_minimize_milp = MixedIntegerLinearProgram(
+        maximization=False, solver="GLPK"
+    )
+    Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
+    for r_arr in R_bar:
+        if len(r_arr) > 0:
+            milp_to_minimize_milp.add_constraint(
+                sum([Z[r] for r in r_arr]) >= 1
             )
-            comp._return_immediately_ = True
-            return
-        result = model_options.milp_solver.solve(file_mps)
-        results = result["assignment"]
-        # solve writes to <stem>_<solver_name>.sol; canonicalize to
-        # file_sol so the cache check on subsequent runs hits
-        solver_sol = file_mps.parent / f"{file_mps.stem}_{model_options.milp_solver.name}.sol"
-        if solver_sol.exists():
-            shutil.copyfile(solver_sol, file_sol)
+    milp_to_minimize_milp.set_objective(sum(Z))
+    # suppress_output in order to not make doctests fail
+    with suppress_output():
+        milp_to_minimize_milp.write_mps(str(file_mps))
+
+    result = model_options.milp_solver.solve(file_mps)
+    results = result["assignment"]
     final_choices = []  # solution of reduction algorithm
 
     # STEP 3:
