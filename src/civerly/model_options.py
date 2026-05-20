@@ -219,7 +219,7 @@ class MODEL_OPTIONS:
         for attribute, value in self.__dict__.items():
             if isinstance(value, Enum):
                 string += f"\n\t-> {attribute} : {value.__dict__['_name_']}"
-            elif isinstance(value, SOLVER_CVL):
+            elif isinstance(value, (SOLVER_CVL, LOGIC_MINIMIZER_CVL)):
                 string += f"\n\t-> {attribute} : {type(value)}"
             elif not isinstance(value, bool):  # skip write_to_file
                 string += f"\n\t-> {attribute} : {value}"

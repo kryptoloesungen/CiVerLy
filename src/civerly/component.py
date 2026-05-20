@@ -31,8 +31,6 @@ from civerly.util import list_of_predecessor_vector_indices
 from civerly.util import hw, hw_tau, suppress_output
 from civerly.util import reduction_algorithm_ST17
 from civerly.util import vec_to_int, int_to_vec
-from civerly.util import _write_espresso_input
-from civerly.util import _read_espresso_output
 from civerly.util import translate_sat_clause
 from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
 from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
@@ -2414,20 +2412,9 @@ class SBox_CVL(Component):
                 esp_file_name = f"espresso-{zlib.crc32("".join([
                     str(int("".join(map(str, pos)), 2))
                     for pos in sorted(posset)
-                ]).encode("utf-8")):x}"  # rule for espresso file names
-                esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
-                esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
-
-                _write_espresso_input(
-                    posset, esp_file_name, model_options.path
-                )
-                model_options.logic_minimizer.invoke(
-                    esp_file_in,
-                    esp_file_out,
-                    esp_file_out.with_suffix(".log"),
-                )
-
-                clauses = _read_espresso_output(esp_file_out)
+                ]).encode("utf-8")):x}.pla"
+                pla_file = model_options.path / esp_file_name
+                clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
                 n_in, n_out = self.input_length, self.output_length
                 VAR = [self.MILP_IN[v] for v in range(n_in)] \
@@ -2540,20 +2527,9 @@ class SBox_CVL(Component):
             esp_file_name = f"espresso-{zlib.crc32("".join([
                 str(int("".join(map(str, pos)), 2))
                 for pos in sorted(posset)
-            ]).encode("utf-8")):x}"  # rule for espresso file names
-            esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
-            esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
-
-            _write_espresso_input(
-                posset, esp_file_name, model_options.path
-            )
-            model_options.logic_minimizer.invoke(
-                esp_file_in,
-                esp_file_out,
-                esp_file_out.with_suffix(".log"),
-            )
-
-            clauses = _read_espresso_output(esp_file_out)
+            ]).encode("utf-8")):x}.pla"  # rule for espresso file names
+            pla_file = model_options.path / esp_file_name
+            clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
             for clause in clauses:
                 self.sat.add_clause(translate_sat_clause(SAT_VARS, clause))
