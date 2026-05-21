@@ -602,9 +602,14 @@ class Cipher:
             ....:   0x09cc2a7e2222eeee
             True
 
-        """
+"""
         if not hasattr(self, '_rk_components'):
             raise AttributeError(f"{self.name} has no key schedule")
+        if self.key_schedule is None:
+            raise NotImplementedError(
+                f"{self.name} has no key schedule implemented. "
+                f"Omit set_master_key() to use the default zero-key behavior."
+            )
         rks = self.key_schedule(k)
         for comp, val in zip(self._rk_components, rks):
             comp.const = val
