@@ -135,3 +135,36 @@ Notice that there is a special node in the cipher that represents its inputs, wh
 The last step of implementing a cipher is to declare its outputs which is done by using the ``add_output`` method. If not all outputs have been specified, the cipher is not considered to be finished and therefore can not be evaluated nor modeled.
 Whether this is the case or not is indicated by the ``is_valid`` attribute, which is only set to True if all outputs have been specified.
 Once we have finished implementing the cipher, we can evaluate it, e.g., to verify test vectors, by simply calling its ``eval`` method.
+
+Key Schedules
+-------------
+
+CiVerLy supports attaching a key schedule to a cipher for correctness testing.
+Calling :meth:`civerly.cipher.Cipher.set_master_key` derives the round keys
+from a master key and injects them into the cipher's
+``RoundkeyXOR_CVL`` nodes, so that ``eval`` produces the correct ciphertext
+for a given key.
+
+Note that the key schedule has **no effect on the MILP or SAT model** — round
+key nodes are transparent pass-throughs in the cryptanalysis model and do not
+influence the result.
+
+To attach a key schedule to a cipher, two attributes must be set on the cipher
+instance:
+
+- ``cipher.key_schedule`` — a callable that takes the master key as an integer
+  and returns a list of ``R+1`` round key integers (one per round key node).
+- ``cipher._rk_components`` — an ordered list of the ``RoundkeyXOR_CVL`` nodes
+  in the cipher DAG, matching the order of the round keys returned by
+  ``key_schedule``.
+
+The recommended approach is to implement the key schedule as a
+:class:`civerly.keyschedule.KeySchedule` DAG using standard CiVerLy
+components, which allows the key expansion itself to be verified for
+correctness. Alternatively, any callable that returns round keys in the correct
+list format is accepted, for example a plain Python function.
+
+For complete reference implementations see:
+
+- :mod:`civerly.cipher_implementations.aes` — ``AES_KeySchedule_CVL``
+- :mod:`civerly.cipher_implementations.speck` — ``SPECK_KeySchedule_CVL``
