@@ -47,15 +47,42 @@ from copy import deepcopy
 import subprocess
 import json
 import glob
+from pathlib import Path
 
+from civerly.util import _before_brackets, _between_brackets
 from civerly.util import translate_sat_clause
 from civerly.util import suppress_output
+from civerly.util import _read_mps
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.model_options import CRYPTANALYSIS
 from civerly.solvers import NoSolverWarning
 from civerly.component import Component
 from civerly.trail import TrailNode
+
+
+class _LinearFuncDict:
+    r"""
+    Minimal ``MIPVariable``-compatible wrapper built from a pre-populated
+    ``{int_key: LinearFunction}`` dict.  Used when reconstructing a MILP
+    from an MPS file so that ``X[i][j]`` / ``MILP_IN[k]`` return the correct
+    ``LinearFunction`` without allocating new backend variables.
+    """
+
+    def __init__(self, d):
+        self._d = d
+
+    def __getitem__(self, key):
+        return self._d[key]
+
+    def __iter__(self):
+        return iter(self._d.values())
+
+    def __len__(self):
+        return len(self._d)
+
+    def items(self):
+        return self._d.items()
 
 
 class CipherNotValidException(Exception):
@@ -1475,11 +1502,13 @@ class Cipher:
             sat.add_clause(tup)
 
         if model_options.write_to_file:
-            sat.write()
+            cnf_target = str(
+                model_options.path / (self.name.replace(' ', '_') + ".cnf")
+            )
+            sat.write(cnf_target)
             print(
                 f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
-                "were written to "
-                f"'{str(model_options.path / (self.name + '.cnf'))}'"
+                f"were written to '{cnf_target}'"
             )
 
         self.sat = sat
@@ -1842,18 +1871,39 @@ class Cipher:
             "edges": edge_dicts,
             "outputs": output_dicts,
             "results": self.results,
+            # Model state flags
+            "has_milp": self.milp is not None,
+            "has_sat": self.sat is not None,
+            # MILP auxiliary state (set after Cipher.model())
+            "sum_arr_milp": getattr(self, "sum_arr_milp", None),
+            "dictionaries_milp": getattr(self, "dictionaries_milp", None),
+            "inv_dictionaries_milp": getattr(self, "inv_dictionaries_milp", None),
+            # SAT auxiliary state (set after Cipher.model())
+            "sum_arr_sat": getattr(self, "sum_arr_sat", None),
+            "SAT_IN": getattr(self, "SAT_IN", None),
+            "SAT_OUT": getattr(self, "SAT_OUT", None),
+            "dictionaries_sat": getattr(self, "dictionaries_sat", None),
+            "inv_dictionaries_sat": getattr(self, "inv_dictionaries_sat", None),
         }
 
     def export(self, path):
         r"""
-        Write ``self`` to a JSON file at ``path``.
+        Write ``self`` to a directory at ``path``.
 
-        The file can be loaded back with :meth:`Cipher.load`.
+        The directory is created if it does not exist.  It will contain:
+
+        - ``cipher.json``  — all JSON-serialisable attributes plus flags
+          indicating whether a MILP or SAT model was present.
+        - ``cipher.mps``   — (optional) MILP model in MPS format, written
+          only when ``self.milp`` is not ``None``.
+        - ``cipher.cnf``   — (optional) SAT model in DIMACS CNF format,
+          written only when ``self.sat`` is not ``None``.
+
+        The bundle can be reloaded with :meth:`Cipher.load`.
 
         INPUT:
 
-            - ``path`` -- string or path-like; Destination file path.
-              The ``.json`` extension is conventional but not enforced.
+            - ``path`` -- string or path-like; Destination directory path.
 
         EXAMPLES::
 
@@ -1872,8 +1922,7 @@ class Cipher:
             sage: cipher.add_output([(node0, (i, i)) for i in range(3)])
             sage: cipher.add_output([(node1, (i, i + 3)) for i in range(3)])
             sage: cipher.add_output([(node2, (i, i + 6)) for i in range(3)])
-            sage: with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
-            ....:     tmp = f.name
+            sage: tmp = tempfile.mkdtemp()
 
         Before analysis, ``results`` is ``[]`` and round-trips as such::
 
@@ -1884,7 +1933,7 @@ class Cipher:
             True
 
         After analysis, ``results`` holds the trail bit-patterns and is
-        preserved verbatim through the JSON file::
+        preserved verbatim through the export bundle::
 
             sage: from civerly.model_options import *
             sage: model_options = MODEL_OPTIONS(
@@ -1902,27 +1951,41 @@ class Cipher:
             sage: cipher.export(tmp)
             Object 'test' has been exported to ...
             sage: loaded = Cipher.load(tmp)
-            sage: os.unlink(tmp)
+            sage: import shutil; shutil.rmtree(tmp)
             sage: cipher == loaded and loaded.results == cipher.results
             True
 
         Again with a different cipher type::
+
             sage: import tempfile
             sage: from civerly.cipher import Cipher
             sage: from civerly.cipher_implementations.aes import AES_CVL
             sage: aes = AES_CVL(4)
-            sage: with tempfile.NamedTemporaryFile(suffix='.json') as f:
-            ....:   tmp = f.name
-            ....:   aes.export(tmp)
-            ....:   loaded = Cipher.load(tmp)
-            ....:   aes == loaded
+            sage: tmp = tempfile.mkdtemp()
+            sage: aes.export(tmp)
             Object 'AES' has been exported to ...
+            sage: loaded = Cipher.load(tmp)
+            sage: import shutil; shutil.rmtree(tmp)
+            sage: aes == loaded
             True
 
         """
-        with open(path, "w") as f:
+        export_dir = Path(path)
+        export_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write JSON bundle (everything that is plain-Python serialisable)
+        with open(export_dir / "cipher.json", "w") as f:
             json.dump(self._to_dict(), f, default=lambda obj: int(obj))
-        print(f"Object '{self.name}' has been exported to {path}.")
+
+        # Write MILP model if present
+        if self.milp is not None:
+            self.milp.write_mps(str(export_dir / "cipher.mps"))
+
+        # Write SAT model if present
+        if self.sat is not None:
+            self.sat.write(str(export_dir / "cipher.cnf"))
+
+        print(f"Object '{self.name}' has been exported to {export_dir}.")
 
     @classmethod
     def _init_from_dict(cls, d):
@@ -2006,6 +2069,32 @@ class Cipher:
 
         cipher.results = d["results"]
 
+        # Restore MILP auxiliary state (plain Python, stored in JSON)
+        if d.get("sum_arr_milp") is not None:
+            cipher.sum_arr_milp = d["sum_arr_milp"]
+        if d.get("dictionaries_milp") is not None:
+            cipher.dictionaries_milp = d["dictionaries_milp"]
+        if d.get("inv_dictionaries_milp") is not None:
+            cipher.inv_dictionaries_milp = d["inv_dictionaries_milp"]
+
+        # Restore SAT auxiliary state (plain Python, stored in JSON)
+        # dictionaries_sat / inv_dictionaries_sat have integer keys that
+        # become strings in JSON — convert them back.
+        if d.get("sum_arr_sat") is not None:
+            cipher.sum_arr_sat = d["sum_arr_sat"]
+        if d.get("SAT_IN") is not None:
+            cipher.SAT_IN = d["SAT_IN"]
+        if d.get("SAT_OUT") is not None:
+            cipher.SAT_OUT = d["SAT_OUT"]
+        if d.get("dictionaries_sat") is not None:
+            cipher.dictionaries_sat = [{
+                int(k): v for k, v in dd.items()
+            } for dd in d["dictionaries_sat"]]
+        if d.get("inv_dictionaries_sat") is not None:
+            cipher.inv_dictionaries_sat = [{
+                int(k): v for k, v in dd.items()
+            } for dd in d["inv_dictionaries_sat"]]
+
     @classmethod
     def _from_dict(cls, d):
         r"""
@@ -2019,18 +2108,138 @@ class Cipher:
     @classmethod
     def load(cls, path):
         r"""
-        Load and return a :class:`Cipher` from the JSON file at ``path``
-        that was previously written by :meth:`export`.
+        Load and return a :class:`Cipher` from the export directory at
+        ``path`` that was previously written by :meth:`export`.
 
         INPUT:
 
-            - ``path`` -- string or path-like; Path to the JSON file.
+            - ``path`` -- string or path-like; Path to the export directory.
 
         OUTPUT: A reconstructed :class:`Cipher` instance.
+
+        TESTS::
+
+            sage: # optional - scip, espresso
+            sage: import tempfile
+            sage: from civerly.cipher import Cipher
+            sage: from civerly.model_options import *
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: cipher = PRESENT_CVL(4)
+            sage: tmp = tempfile.mkdtemp()
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.MILP,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   milp_solver=SCIP_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
+            ....:   path=Path(tmp))
+            sage: cipher.analyse(model_options)
+            5312 variables and 8641 constraints were written to '...'
+            12
+            sage: cipher.export(tmp)
+            Writing problem data to...
+            31602 records were written
+            Object 'PRESENT' has been exported to ...
+            sage: loaded = Cipher.load(tmp)
+            sage: loaded.get_trail(model_options) == cipher.get_trail(model_options)
+            True
+            sage: loaded == cipher
+            True
+            sage: import shutil
+            sage: shutil.rmtree(tmp)
+
+
+            sage: # optional - cadical, espresso
+            sage: import tempfile
+            sage: from civerly.cipher import Cipher
+            sage: from civerly.model_options import *
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: cipher = PRESENT_CVL(4)
+            sage: tmp = tempfile.mkdtemp()
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
+            ....:   path=Path(tmp))
+            sage: cipher.analyse(model_options)
+            5312 variables and 13441 clauses were written to...
+            12
+            sage: cipher.export(tmp)
+            Object 'PRESENT' has been exported to ...
+            sage: loaded = Cipher.load(tmp)
+            sage: loaded.get_trail(model_options) == cipher.get_trail(model_options)
+            True
+            sage: loaded == cipher
+            True
+            sage: import shutil
+            sage: shutil.rmtree(tmp)
+
         """
-        with open(path) as f:
+
+        export_dir = Path(path)
+        with open(export_dir / "cipher.json") as f:
             d = json.load(f)
-        return cls._from_dict(d)
+
+        cipher = cls._from_dict(d)
+
+        # Reconstruct MILP from MPS file when present
+        mps_path = export_dir / "cipher.mps"
+        if mps_path.exists() and d.get("has_milp"):
+            cipher.milp = _read_mps(str(mps_path))
+            backend = cipher.milp.get_backend()
+
+            # Rebuild self.X, self.MILP_IN, self.MILP_OUT as _LinearFuncDict
+            # wrappers so callers can use X[i][j] exactly as before.
+            lf_parent = cipher.milp.linear_functions_parent()
+            name_to_col = {
+                backend.col_name(j): j for j in range(backend.ncols())
+            }
+
+            def _lf(col_name):
+                return lf_parent({name_to_col[col_name]: 1})
+
+            # dictionaries_milp maps "X5[3]" -> "IN[0]"; its keys cover every
+            # backend variable, so we can reconstruct X, MILP_IN, MILP_OUT.
+            if hasattr(cipher, "dictionaries_milp") and \
+                    cipher.dictionaries_milp is not None:
+
+                # X is a list indexed by node number; each entry is a
+                # _LinearFuncDict mapping bit-index -> LinearFunction.
+                x_dicts = {}
+                milp_in_dict = {}
+                milp_out_dict = {}
+
+                for var_name in name_to_col:
+                    prefix = var_name[:var_name.index("[")]
+                    idx = _between_brackets(var_name)
+                    lf = _lf(var_name)
+                    if prefix == "IN":
+                        milp_in_dict[idx] = lf
+                    elif prefix == "OUT":
+                        milp_out_dict[idx] = lf
+                    else:
+                        node_idx = _before_brackets(var_name)
+                        x_dicts.setdefault(node_idx, {})[idx] = lf
+
+                cipher.X = list(map(_LinearFuncDict, x_dicts))
+                cipher.MILP_IN    = _LinearFuncDict(milp_in_dict)
+                cipher.MILP_OUT   = _LinearFuncDict(milp_out_dict)
+
+        # Reconstruct SAT from CNF file when present
+        cnf_path = export_dir / "cipher.cnf"
+        if cnf_path.exists() and d["has_sat"]:
+
+            sat = DIMACS()
+            sat.read(str(cnf_path))
+            cipher.sat = sat
+
+        return cipher
 
     def _latex_header(self, model_options, objective_value) -> str:
         r"""
