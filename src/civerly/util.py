@@ -781,6 +781,149 @@ def translate_var(cipher, node, local_var):
 
     return var
 
+@staticmethod
+def _read_mps(path):
+    r"""
+    Parse a fixed-format MPS file written by
+    :meth:`MixedIntegerLinearProgram.write_mps` and return a
+    :class:`sage.numerical.mip.MixedIntegerLinearProgram` containing
+    the variables, constraints, and objective from the file.
+
+    This is needed because
+    :class:`sage.numerical.backends.glpk_backend.GLPKBackend` does not
+    have a ``read_mps`` method implemented.
+
+    INPUT:
+
+        - ``path`` -- string or path-like; path to the ``.mps`` file.
+
+    OUTPUT:
+
+        A :class:`~sage.numerical.mip.MixedIntegerLinearProgram` instance
+        (minimization, GLPK solver) ready to be solved.
+    """
+    from sage.numerical.mip import MixedIntegerLinearProgram
+
+    section = None
+    obj_row = None         # name of the N-type (objective) row
+    row_order = []         # [(row_name, row_type), ...] for constraint rows
+    var_order = []         # variable names in order of first appearance
+    var_seen = set()
+    var_coeffs = {}        # var_name -> {row_name: float}
+    rhs = {}               # row_name -> float
+    bounds_data = {}       # var_name -> {'lower': float|None, 'upper': float|None}
+    var_integer = set()    # variables declared inside an INTORG…INTEND block
+    in_integer_block = False
+
+    with open(path) as fh:
+        for raw in fh:
+            line = raw.rstrip('\n')
+            if not line or line[0] in ('*', '$'):
+                continue  # blank line or comment
+
+            # Section headers start at column 0 (no leading whitespace)
+            if line[0] not in (' ', '\t'):
+                section = line.split()[0].upper()
+                continue
+
+            tokens = line.split()
+            if not tokens:
+                continue
+
+            if section == 'ROWS':
+                rtype, rname = tokens[0].upper(), tokens[1]
+                if rtype == 'N':
+                    if obj_row is None:
+                        obj_row = rname
+                else:
+                    row_order.append((rname, rtype))
+
+            elif section == 'COLUMNS':
+                if len(tokens) >= 3 and tokens[1] == "'MARKER'":
+                    in_integer_block = (tokens[2] == "'INTORG'")
+                    continue
+                vname = tokens[0]
+                if vname not in var_seen:
+                    var_order.append(vname)
+                    var_seen.add(vname)
+                    var_coeffs[vname] = {}
+                    if in_integer_block:
+                        var_integer.add(vname)
+                i = 1
+                while i + 1 < len(tokens):
+                    var_coeffs[vname][tokens[i]] = float(tokens[i + 1])
+                    i += 2
+
+            elif section == 'RHS':
+                i = 1
+                while i + 1 < len(tokens):
+                    rhs[tokens[i]] = float(tokens[i + 1])
+                    i += 2
+
+            elif section == 'BOUNDS':
+                btype = tokens[0].upper()
+                vname = tokens[2]
+                val = float(tokens[3]) if len(tokens) > 3 else None
+                if vname not in bounds_data:
+                    bounds_data[vname] = {'lower': 0.0, 'upper': None}
+                b = bounds_data[vname]
+                if btype == 'UP':
+                    b['upper'] = val
+                elif btype == 'LO':
+                    b['lower'] = val
+                elif btype == 'FX':
+                    b['lower'] = b['upper'] = val
+                elif btype == 'FR':
+                    b['lower'] = b['upper'] = None
+                elif btype == 'MI':
+                    b['lower'] = None
+                elif btype == 'BV':
+                    b['lower'], b['upper'] = 0.0, 1.0
+                    var_integer.add(vname)
+
+    # --- Build the MILP from the parsed data ---
+    milp = MixedIntegerLinearProgram(maximization=False, solver="GLPK")
+    backend = milp.get_backend()
+    var_to_col = {}
+    obj_coeffs = []
+
+    for col_idx, vname in enumerate(var_order):
+        b = bounds_data.get(vname, {'lower': 0.0, 'upper': None})
+        lower = b.get('lower', 0.0)
+        upper = b.get('upper', None)
+        is_int = vname in var_integer
+        is_bin = is_int and lower == 0.0 and upper == 1.0
+        obj_coeff = var_coeffs[vname].get(obj_row, 0.0) if obj_row else 0.0
+        obj_coeffs.append(obj_coeff)
+        var_to_col[vname] = col_idx
+        backend.add_variable(
+            lower_bound=lower,
+            upper_bound=upper,
+            binary=is_bin,
+            integer=is_int and not is_bin,
+            obj=obj_coeff,
+            name=vname,
+        )
+
+    if obj_coeffs:
+        backend.set_objective(obj_coeffs)
+
+    for rname, rtype in row_order:
+        coeffs = [
+            (var_to_col[vname], var_coeffs[vname][rname])
+            for vname in var_order
+            if rname in var_coeffs[vname]
+        ]
+        rhs_val = rhs.get(rname, 0.0)
+        if rtype == 'L':
+            lb, ub = None, rhs_val
+        elif rtype == 'G':
+            lb, ub = rhs_val, None
+        else:  # 'E'
+            lb, ub = rhs_val, rhs_val
+        backend.add_linear_constraint(coeffs, lb, ub, name=rname)
+
+    return milp
 
 
 
