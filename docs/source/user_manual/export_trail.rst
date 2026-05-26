@@ -14,7 +14,9 @@ See the following example to understand how to export and load Cipher objects.
     sage: # First, analyse some cipher
     sage: from civerly.cipher_implementations.present import PRESENT_CVL
     sage: from civerly.model_options import *
+    sage: import tempfile
     sage: cipher = PRESENT_CVL(4)
+    sage: tmpdir = tempfile.mkdtemp()
     sage: model_options = MODEL_OPTIONS(
     ....:     optimization=OPTIMIZATION.MILP,
     ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -23,25 +25,26 @@ See the following example to understand how to export and load Cipher objects.
     ....:     milp_solver=SCIP_CVL(),
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
     ....:     logic_minimizer=ESPRESSO_CVL(),
-    ....:     path=Path("export-example")
+    ....:     path=Path(tmpdir),
     ....: )
     sage: cipher.analyse(model_options)
-    5312 variables and 8641 constraints were written to 'export-example/PRESENT.mps'
+    5312 variables and 8641 constraints were written to ...
     12
     sage: input_difference = cipher.results[0]['in']
     sage: output_difference = cipher.results[0]['out']
     sage: # Export the cipher together with its results
-    sage: import tempfile
-    sage: f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
-    sage: tmpfile_name = f.name
-    sage: cipher.export(tmpfile_name)
+    sage: cipher.export(model_options.path)
+    Writing problem data to...
+    31602 records were written
     Object 'PRESENT' has been exported to ...
     sage: # Load the cipher from scratch
-    sage: loaded = cipher.load(tmpfile_name)
+    sage: loaded = cipher.load(model_options.path)
     sage: # The results are still the same
     sage: loaded.results[0]['in'] == input_difference
     True
     sage: loaded.results[0]['out'] == output_difference
     True
+    sage: import shutil
+    sage: shutil.rmtree(tmpdir)
 
 

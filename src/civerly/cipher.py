@@ -1971,7 +1971,8 @@ class Cipher:
 
         """
         export_dir = Path(path)
-        export_dir.mkdir(parents=True, exist_ok=True)
+        if not export_dir.exists():
+            export_dir.mkdir(parents=True, exist_ok=True)
 
         # Write JSON bundle (everything that is plain-Python serialisable)
         with open(export_dir / "cipher.json", "w") as f:
