@@ -1602,7 +1602,6 @@ class Cipher:
                 )
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
-                start_time = time.perf_counter()
                 # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
                 # helper/dummy variables are excluded so that two solutions
                 # are considered the same when they agree on the trail.
@@ -1617,9 +1616,10 @@ class Cipher:
                     number_of_solutions=model_options.number_of_solutions,
                     trail_vars=trail_vars,
                 )
-                self._solve_time = time.perf_counter() - start_time
+                self._solve_time = 0
                 weights = []
                 for r in all_results:
+                    self._solve_time = self._solve_time + r["solve_time"]
                     if r["objective_value"] is None:
                         continue
                     TrailNode(
@@ -1630,9 +1630,8 @@ class Cipher:
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return weights
             else:
-                start_time = time.perf_counter()
                 self.result = model_options.milp_solver.solve(input_file)
-                self._solve_time = time.perf_counter() - start_time
+                self._solve_time = self.result["solve_time"]
                 results_and_weight = (
                     self.result["assignment"], self.result["objective_value"]
                 )
@@ -1674,9 +1673,10 @@ class Cipher:
                     trail_vars=trail_vars,
                     precision=model_options.sat_precision,
                 )
-                self._solve_time = time.perf_counter() - start_time
+                self._solve_time = 0
                 weights = []
                 for r in all_results:
+                    self._solve_time = self._solve_time + r["solve_time"]
                     if r["objective_value"] is None:
                         continue
                     TrailNode(
@@ -1689,15 +1689,13 @@ class Cipher:
             else:
                 # if no sat_solver has been selected, we generate all cnf-files
                 # for the given solve_range
-                start_time = time.perf_counter()
-
                 self.result = model_options.sat_solver.solve(
                     input_file,
                     sum_arr_file=sum_arr_file,
                     solve_range=model_options.solve_range,
                     precision=model_options.sat_precision,
                 )
-                self._solve_time = time.perf_counter() - start_time
+                self._solve_time = self.result["solve_time"]
                 results_and_weight = (
                     self.result["assignment"], self.result["objective_value"]
                 )
