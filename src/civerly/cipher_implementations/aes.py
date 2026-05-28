@@ -338,7 +338,7 @@ class AES_CVL:
         By default round keys are zero, which leaves correctness of the
         data path verifiable without a key schedule.  Pass a 128-bit master
         key ``k`` to inject the real AES-128 round keys via
-        :meth:`civerly.cipher.Cipher.set_master_key`.
+        :meth:`civerly.cipher.Cipher.set_round_keys`.
 
         INPUT:
 
@@ -574,7 +574,7 @@ class AES_CVL:
         self.aes_cipher = aes_cipher
 
         if k is not None:
-            aes_cipher.set_master_key(k)
+            aes_cipher.set_round_keys(k)
 
     def __new__(cls, *args, **kwargs):
         """Instantiate the AES."""

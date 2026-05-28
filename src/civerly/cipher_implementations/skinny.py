@@ -741,7 +741,7 @@ class SKINNY_CVL:
         # support. SKINNY has two tweakey additions per round (atk1, atk2),
         # stored as a flat list: [atk1_r0, atk2_r0, atk1_r1, atk2_r1, ...].
         # Set key_schedule to a callable returning 2*R values in the same order
-        # to enable set_master_key(k).
+        # to enable set_round_keys(k).
         # ------------------------------------------------ #
         skinny_cipher._rk_components = []
         for r in range(R):

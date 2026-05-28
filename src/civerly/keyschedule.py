@@ -11,7 +11,7 @@ class KeySchedule(Cipher):
     concatenated.
 
     To use a key schedule, pass the master key to
-    :meth:`civerly.cipher.Cipher.set_master_key`::
+    :meth:`civerly.cipher.Cipher.set_round_keys`::
 
         sage: from civerly.cipher_implementations.aes import AES_CVL
         sage: from civerly.util import int_to_vec, vec_to_int
@@ -35,7 +35,7 @@ class KeySchedule(Cipher):
 
     The list length must equal the number of ``RK_CVL`` components registered
     on the cipher (i.e. ``len(cipher._rk_components)``).  When
-    :meth:`civerly.cipher.Cipher.set_master_key` is called, it iterates over
+    :meth:`civerly.cipher.Cipher.set_round_keys` is called, it iterates over
     that list and writes each value into the corresponding ``RK_CVL``
     constant, so that subsequent ``cipher.eval()`` calls use the correct keys.
 

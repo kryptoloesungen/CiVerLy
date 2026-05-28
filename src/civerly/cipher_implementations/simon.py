@@ -324,7 +324,7 @@ class SIMON_CVL:
         # Collect references to all RoundkeyXOR_CVL components for key schedule
         # support. Each entry points to the KeyAdd component inside the
         # corresponding round node. Set key_schedule to a callable returning
-        # R round keys to enable set_master_key(k).
+        # R round keys to enable set_round_keys(k).
         # ------------------------------------------------ #
         simon_cipher._rk_components = [
             simon_cipher.nodes[r+1].nodes[node_keyxor] for r in range(R)

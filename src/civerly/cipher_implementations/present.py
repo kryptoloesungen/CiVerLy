@@ -423,7 +423,7 @@ class PRESENT_CVL:
         # support. Each entry points to the KeyAdd component inside the
         # corresponding round node, plus the final whitening key at nodes[R+1].
         # Set key_schedule to a callable returning R+1 round keys to enable
-        # set_master_key(k).
+        # set_round_keys(k).
         # ------------------------------------------------ #
         present_cipher._rk_components = (
             [present_cipher.nodes[r+1].nodes[node_rk] for r in range(R)]

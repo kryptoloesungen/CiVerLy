@@ -323,7 +323,7 @@ class HURDLE_CVL:
         self.cipher = cipher
 
         if k is not None:
-            cipher.set_master_key(k)
+            cipher.set_round_keys(k)
 
     def __new__(cls, *args, **kwargs):
         instance = super(HURDLE_CVL, cls).__new__(cls)
