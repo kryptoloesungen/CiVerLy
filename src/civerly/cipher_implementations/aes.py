@@ -241,7 +241,7 @@ class AES_KeySchedule_CVL(KeySchedule):
 
         self.add_output(output_edges)
 
-    def __call__(self, k):
+    def eval(self, k):
         r"""
         Expand master key ``k`` into a list of R+1 round-key integers.
 
@@ -252,8 +252,9 @@ class AES_KeySchedule_CVL(KeySchedule):
         OUTPUT: List of R+1 integers.
         """
         from civerly.util import int_to_vec, vec_to_int
+        from civerly.cipher import Cipher
         n = self.input_length
-        bits = self.eval(int_to_vec(k, n))
+        bits = Cipher.eval(self, int_to_vec(k, n))
         return [vec_to_int(bits[i*n:(i+1)*n]) for i in range(self.output_length // n)]
 
     @staticmethod

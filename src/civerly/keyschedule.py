@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from civerly.cipher import Cipher
 
 
@@ -5,10 +7,9 @@ class KeySchedule(Cipher):
     r"""
     Base class for cipher key schedules implemented as CiVerLy DAGs.
 
-    Subclass ``KeySchedule`` and build the key expansion as a CiVerLy DAG
-    using standard components (``XOR_CVL``, ``SBox_CVL``, etc.).  The
-    schedule takes the master key as input and outputs all round keys
-    concatenated.
+    Subclass ``KeySchedule``, build the key expansion as a CiVerLy DAG in
+    ``__init__``, and implement :meth:`eval` to convert a master key integer
+    into the list of round-key integers.
 
     To use a key schedule, pass the master key to
     :meth:`civerly.cipher.Cipher.set_round_keys`::
@@ -25,9 +26,9 @@ class KeySchedule(Cipher):
 
     **Implementing a subclass**
 
-    Every subclass must override ``__call__`` with the following contract:
+    Every subclass must implement :meth:`eval`:
 
-    - **Input:** ``k`` -- the master key as a Python integer.
+    - **Input:** ``master_key`` -- the master key as a Python integer.
 
     - **Output:** a list of round-key integers, one entry per round key, in
       round order (round key 0 first).  Each integer represents a single
@@ -41,17 +42,33 @@ class KeySchedule(Cipher):
 
     The typical implementation pattern is::
 
-        def __call__(self, k):
+        def eval(self, master_key):
             from civerly.util import int_to_vec, vec_to_int
             n = self.input_length          # master-key size in bits
             rk_size = n                    # size of one round key in bits
-            bits = self.eval(int_to_vec(k, n))
+            bits = Cipher.eval(self, int_to_vec(master_key, n))
             return [vec_to_int(bits[i*rk_size:(i+1)*rk_size])
                     for i in range(self.output_length // rk_size)]
 
-    Note that this ``__call__`` signature (integer in, list of integers out)
-    intentionally differs from the inherited ``Cipher.__call__`` (bit-vector
-    in, bit-vector out) and must be overridden in every ``KeySchedule``
-    subclass.
+    Note that ``Cipher.eval`` must be called explicitly here because
+    ``KeySchedule.eval`` overrides it with a different signature (integer in,
+    list of integers out).
     """
-    pass
+
+    def __call__(self, master_key):
+        r"""
+        See :meth:`eval`.
+        """
+        return self.eval(master_key)
+
+    @abstractmethod
+    def eval(self, master_key):
+        r"""
+        Expand ``master_key`` into a list of round-key integers.
+
+        INPUT:
+
+            - ``master_key`` -- integer; the master key.
+
+        OUTPUT: list of integers, one per round key, in round order.
+        """
