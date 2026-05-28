@@ -196,16 +196,6 @@ class ABC_CVL:
             ])
         cipher.add_output([(node, (i, i)) for i in range(128)])
 
-        # Collect references to all RoundkeyXOR_CVL components for key schedule
-        # support. Each entry points to the KeyAdd component inside the
-        # corresponding round node. Set key_schedule to a callable returning
-        # R round keys to enable set_round_keys(k).
-        # ------------------------------------------------ #
-        cipher._rk_components = [
-            cipher.nodes[r+1].nodes[node_rk] for r in range(R)
-        ]
-        cipher.key_schedule = None
-
         self.cipher = cipher
 
     def __new__(cls, *args, **kwargs):
