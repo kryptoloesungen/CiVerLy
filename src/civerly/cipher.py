@@ -446,6 +446,9 @@ class Cipher:
         # Used by generate_report() and get_trail() to avoid re-reading
         # solution files.
         self.trail_nodes = []
+
+        # flag to stop when a model needs to be solved externally
+        self._return_immediately_ = False
         
         self.milp = None
         self.sat = None
@@ -1252,8 +1255,6 @@ class Cipher:
         model_options_ = replace(model_options, write_to_file=False)
         model_options, model_options_ = model_options_, model_options
 
-        # flag to stop when a model needs to be solved externally
-        self._return_immediately_ = False
 
         # ------------------------------------------------------------------------
         cnf_file_name = (
