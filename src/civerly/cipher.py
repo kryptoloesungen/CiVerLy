@@ -575,7 +575,7 @@ class Cipher:
         assert isinstance(self.__is_valid, bool)
         return self.__is_valid
 
-    def set_master_key(self, k: int):
+    def set_round_keys(self, k: int):
         r"""
         Derive round keys from master key ``k`` and inject them into the
         cipher's round key components.
@@ -597,18 +597,22 @@ class Cipher:
             sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle = HURDLE_CVL(R=1)
-            sage: hurdle.set_master_key(0x99990099991188992277993366994455)
+            sage: hurdle.set_round_keys(0x99990099991188992277993366994455)
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0x09cc2a7e2222eeee
             True
 
 """
         if not hasattr(self, '_rk_components'):
-            raise AttributeError(f"{self.name} has no key schedule")
+            raise AttributeError(
+                f"{self.name} has no _rk_components attribute. "
+                f"Set self._rk_components to the list of RK_CVL components "
+                f"in the cipher's __init__ to enable set_round_keys()."
+            )
         if self.key_schedule is None:
             raise NotImplementedError(
                 f"{self.name} has no key schedule implemented. "
-                f"Omit set_master_key() to use the default zero-key behavior."
+                f"Omit set_round_keys() to use the default zero-key behavior."
             )
         rks = self.key_schedule(k)
         for comp, val in zip(self._rk_components, rks):

@@ -140,7 +140,7 @@ Key Schedules
 -------------
 
 CiVerLy supports attaching a key schedule to a cipher for correctness testing.
-Calling :meth:`civerly.cipher.Cipher.set_master_key` derives the round keys
+Calling :meth:`civerly.cipher.Cipher.set_round_keys` derives the round keys
 from a master key and injects them into the cipher's
 ``RoundkeyXOR_CVL`` nodes, so that ``eval`` produces the correct ciphertext
 for a given key.
