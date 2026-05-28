@@ -293,17 +293,6 @@ class DES_CVL:
         des.add_output([(current, (i, i)) for i in range(64)])
         # ------------------------------------------------------------------- #
 
-        # Collect references to all RoundkeyXOR_CVL components for key schedule
-        # support. Each entry points to the KeyAdd component inside DES_F inside
-        # the corresponding round node (nodes[r+2] since nodes[1] is the IP
-        # permutation). Set key_schedule to a callable returning R round keys
-        # to enable set_round_keys(k).
-        # ------------------------------------------------------------------- #
-        des._rk_components = [
-            des.nodes[r+2].nodes[f_node].nodes[2] for r in range(R)
-        ]
-        des.key_schedule = None
-
         self.des = des
 
     def __new__(cls, *args, **kwargs):

@@ -737,23 +737,6 @@ class SKINNY_CVL:
 
         skinny_cipher.add_output([(node_cipher, (i, i)) for i in range(16)])
 
-        # Collect references to all RoundkeyXOR_CVL components for key schedule
-        # support. SKINNY has two tweakey additions per round (atk1, atk2),
-        # stored as a flat list: [atk1_r0, atk2_r0, atk1_r1, atk2_r1, ...].
-        # Set key_schedule to a callable returning 2*R values in the same order
-        # to enable set_round_keys(k).
-        # ------------------------------------------------ #
-        skinny_cipher._rk_components = []
-        for r in range(R):
-            rnd = skinny_cipher.nodes[r+1]
-            skinny_cipher._rk_components.append(
-                rnd.nodes[node_round_tweakey].nodes[node_atk1]
-            )
-            skinny_cipher._rk_components.append(
-                rnd.nodes[node_round_tweakey].nodes[node_atk2]
-            )
-        skinny_cipher.key_schedule = None
-
         self.skinny_cipher = skinny_cipher
 
     def __new__(cls, *args, **kwargs):
