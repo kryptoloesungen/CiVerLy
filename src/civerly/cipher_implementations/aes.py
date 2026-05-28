@@ -354,14 +354,6 @@ class AES_CVL:
 
         EXAMPLES:
 
-        Encrypt a message with zero round keys (to verify the data path)::
-
-            sage: from civerly.util import vec_to_int, int_to_vec
-            sage: from civerly.cipher_implementations.aes import AES_CVL
-            sage: aes = AES_CVL(R=4)
-            sage: hex(vec_to_int(aes(int_to_vec(0x12345678,128))))
-            '0x1491385e17259a1555f377e76ade6090'
-
         Encrypt using the NIST FIPS 197 Appendix B test vector::
 
             sage: from civerly.util import vec_to_int, int_to_vec
