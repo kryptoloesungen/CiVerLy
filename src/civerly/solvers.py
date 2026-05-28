@@ -614,6 +614,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                         "objective_bounds": bounds,
                         "assignment": last_sat["assignment"],
                         "solve_time": time.perf_counter() - start_time,
+                        "trace": trace,
                     }
             else:
                 bounds = (None, None)
@@ -629,7 +630,9 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         def _decide_at(w):
             sat = DIMACS()
             sat.read(str(input_file))
+            start_time_model = time.perf_counter()
             constrained = self._generate_constraints_sum_leq_int_LS24(sat, sum_arr, int(w))
+            model_time = time.perf_counter() - start_time_model
             tmp_cnf = input_file.parent / f"{input_file.stem}_obj{w}.cnf"
             constrained.write(tmp_cnf)
             if deadline is not None:
@@ -639,6 +642,8 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             else:
                 remaining = None
             trace[w] = self.decide(tmp_cnf, time_limit=remaining)
+            trace[w]["model"] = constrained
+            trace[w]["model_time"] = model_time
             return trace[w]
 
         last_sat = None
