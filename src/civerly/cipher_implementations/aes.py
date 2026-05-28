@@ -175,77 +175,6 @@ from sage.matrix.special import identity_matrix, block_matrix
 from sage.crypto.sboxes import AES as AES_S
 
 
-def _make_ks_step(rcon_val):
-    """One AES-128 key-expansion step as a SBoxCipher(128 -> 128).
-
-    Takes the current 128-bit key word [w0|w1|w2|w3] and outputs the
-    next 128-bit key [new_w0|new_w1|new_w2|new_w3]:
-
-        g = ConstXOR(SubWord(RotWord(w3)), rcon_val)
-        new_w0 = w0 ^ g
-        new_w1 = w1 ^ new_w0
-        new_w2 = w2 ^ new_w1
-        new_w3 = w3 ^ new_w2
-    """
-    step = SBoxCipher(128, 128, name="KS-step")
-
-    # RotWord: cyclic left-shift of w3 (bits 96-127) by one byte.
-    # In MSB-first, RotWord([B0,B1,B2,B3]) -> [B1,B2,B3,B0].
-    # PermuteLayer_CVL convention: perm[i]=j means input bit i -> output bit j.
-    # Input byte b (bits 8b..8b+7) lands at output byte (b-1)%4, so
-    # input bit i goes to output bit (i-8)%32.
-    rot_perm = [(i - 8) % 32 for i in range(32)]
-    node_rot = step.add_subcipher(
-        PermuteLayer_CVL(rot_perm, name="RotWord"),
-        [(step.IN, (96 + i, i)) for i in range(32)],
-    )
-
-    # SubWord: apply AES S-box to each byte of the rotated word.
-    sb_nodes = [
-        step.add_subcipher(
-            SBox_CVL(AES_S, name=f"SubWord_S{b}"),
-            [(node_rot, (8*b + i, i)) for i in range(8)],
-        )
-        for b in range(4)
-    ]
-
-    # Rcon XOR on the 32-bit SubWord result.
-    node_rcon = step.add_subcipher(
-        ConstXOR_CVL(32, rcon_val, name="Rcon"),
-        [(sb_nodes[b], (i, 8*b + i)) for b in range(4) for i in range(8)],
-    )
-
-    # Chain-XOR the four new key words.
-    node_w0 = step.add_subcipher(
-        XOR_CVL(32, name="XOR_w0"),
-        [(step.IN, (i, i)) for i in range(32)]
-        + [(node_rcon, (i, 32 + i)) for i in range(32)],
-    )
-    node_w1 = step.add_subcipher(
-        XOR_CVL(32, name="XOR_w1"),
-        [(step.IN, (32 + i, i)) for i in range(32)]
-        + [(node_w0, (i, 32 + i)) for i in range(32)],
-    )
-    node_w2 = step.add_subcipher(
-        XOR_CVL(32, name="XOR_w2"),
-        [(step.IN, (64 + i, i)) for i in range(32)]
-        + [(node_w1, (i, 32 + i)) for i in range(32)],
-    )
-    node_w3 = step.add_subcipher(
-        XOR_CVL(32, name="XOR_w3"),
-        [(step.IN, (96 + i, i)) for i in range(32)]
-        + [(node_w2, (i, 32 + i)) for i in range(32)],
-    )
-
-    step.add_output(
-        [(node_w0, (i, i)) for i in range(32)]
-        + [(node_w1, (i, 32 + i)) for i in range(32)]
-        + [(node_w2, (i, 64 + i)) for i in range(32)]
-        + [(node_w3, (i, 96 + i)) for i in range(32)],
-    )
-    return step
-
-
 class AES_KeySchedule_CVL(KeySchedule):
     def __init__(self, R):
         r"""
@@ -305,7 +234,7 @@ class AES_KeySchedule_CVL(KeySchedule):
         node = self.IN
         for r in range(R):
             node = self.add_subcipher(
-                _make_ks_step(Rcon[r]),
+                self._make_ks_step(Rcon[r]),
                 [(node, (i, i)) for i in range(128)],
             )
             output_edges += [(node, (i, i + 128 * (r + 1))) for i in range(128)]
@@ -326,6 +255,77 @@ class AES_KeySchedule_CVL(KeySchedule):
         n = self.input_length
         bits = self.eval(int_to_vec(k, n))
         return [vec_to_int(bits[i*n:(i+1)*n]) for i in range(self.output_length // n)]
+
+    @staticmethod
+    def _make_ks_step(rcon_val):
+        """One AES-128 key-expansion step as a SBoxCipher(128 -> 128).
+
+        Takes the current 128-bit key word [w0|w1|w2|w3] and outputs the
+        next 128-bit key [new_w0|new_w1|new_w2|new_w3]:
+
+            g = ConstXOR(SubWord(RotWord(w3)), rcon_val)
+            new_w0 = w0 ^ g
+            new_w1 = w1 ^ new_w0
+            new_w2 = w2 ^ new_w1
+            new_w3 = w3 ^ new_w2
+        """
+        step = SBoxCipher(128, 128, name="KS-step")
+
+        # RotWord: cyclic left-shift of w3 (bits 96-127) by one byte.
+        # In MSB-first, RotWord([B0,B1,B2,B3]) -> [B1,B2,B3,B0].
+        # PermuteLayer_CVL convention: perm[i]=j means input bit i -> output bit j.
+        # Input byte b (bits 8b..8b+7) lands at output byte (b-1)%4, so
+        # input bit i goes to output bit (i-8)%32.
+        rot_perm = [(i - 8) % 32 for i in range(32)]
+        node_rot = step.add_subcipher(
+            PermuteLayer_CVL(rot_perm, name="RotWord"),
+            [(step.IN, (96 + i, i)) for i in range(32)],
+        )
+
+        # SubWord: apply AES S-box to each byte of the rotated word.
+        sb_nodes = [
+            step.add_subcipher(
+                SBox_CVL(AES_S, name=f"SubWord_S{b}"),
+                [(node_rot, (8*b + i, i)) for i in range(8)],
+            )
+            for b in range(4)
+        ]
+
+        # Rcon XOR on the 32-bit SubWord result.
+        node_rcon = step.add_subcipher(
+            ConstXOR_CVL(32, rcon_val, name="Rcon"),
+            [(sb_nodes[b], (i, 8*b + i)) for b in range(4) for i in range(8)],
+        )
+
+        # Chain-XOR the four new key words.
+        node_w0 = step.add_subcipher(
+            XOR_CVL(32, name="XOR_w0"),
+            [(step.IN, (i, i)) for i in range(32)]
+            + [(node_rcon, (i, 32 + i)) for i in range(32)],
+        )
+        node_w1 = step.add_subcipher(
+            XOR_CVL(32, name="XOR_w1"),
+            [(step.IN, (32 + i, i)) for i in range(32)]
+            + [(node_w0, (i, 32 + i)) for i in range(32)],
+        )
+        node_w2 = step.add_subcipher(
+            XOR_CVL(32, name="XOR_w2"),
+            [(step.IN, (64 + i, i)) for i in range(32)]
+            + [(node_w1, (i, 32 + i)) for i in range(32)],
+        )
+        node_w3 = step.add_subcipher(
+            XOR_CVL(32, name="XOR_w3"),
+            [(step.IN, (96 + i, i)) for i in range(32)]
+            + [(node_w2, (i, 32 + i)) for i in range(32)],
+        )
+
+        step.add_output(
+            [(node_w0, (i, i)) for i in range(32)]
+            + [(node_w1, (i, 32 + i)) for i in range(32)]
+            + [(node_w2, (i, 64 + i)) for i in range(32)]
+            + [(node_w3, (i, 96 + i)) for i in range(32)],
+        )
+        return step
 
 
 class AES_CVL:
