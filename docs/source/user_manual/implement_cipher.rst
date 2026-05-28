@@ -152,17 +152,31 @@ influence the result.
 To attach a key schedule to a cipher, two attributes must be set on the cipher
 instance:
 
-- ``cipher.key_schedule`` — a callable that takes the master key as an integer
-  and returns a list of ``R+1`` round key integers (one per round key node).
+- ``cipher.key_schedule`` — a :class:`civerly.keyschedule.KeySchedule` instance
+  whose :meth:`~civerly.keyschedule.KeySchedule.eval` method takes the master
+  key as an integer and returns a list of round-key integers (one per round key
+  node).
 - ``cipher._rk_components`` — an ordered list of the ``RoundkeyXOR_CVL`` nodes
   in the cipher DAG, matching the order of the round keys returned by
   ``key_schedule``.
 
-The recommended approach is to implement the key schedule as a
-:class:`civerly.keyschedule.KeySchedule` DAG using standard CiVerLy
-components, which allows the key expansion itself to be verified for
-correctness. Alternatively, any callable that returns round keys in the correct
-list format is accepted, for example a plain Python function.
+To implement a key schedule, subclass :class:`civerly.keyschedule.KeySchedule`,
+build the key expansion as a CiVerLy DAG in ``__init__``, and implement
+:meth:`~civerly.keyschedule.KeySchedule.eval` to convert the master key integer
+into the list of round-key integers.  The abstract method enforces this contract
+at class definition time — forgetting ``eval`` raises a ``TypeError`` before any
+cipher is instantiated.
+
+Inside ``eval``, call ``Cipher.eval(self, ...)`` explicitly to evaluate the DAG,
+since ``KeySchedule.eval`` overrides ``Cipher.eval`` with a different signature::
+
+    def eval(self, master_key):
+        from civerly.util import int_to_vec, vec_to_int
+        from civerly.cipher import Cipher
+        n = self.input_length
+        bits = Cipher.eval(self, int_to_vec(master_key, n))
+        return [vec_to_int(bits[i*n:(i+1)*n])
+                for i in range(self.output_length // n)]
 
 For complete reference implementations see:
 

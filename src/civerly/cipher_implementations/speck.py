@@ -182,7 +182,7 @@ class SPECK_KeySchedule_CVL(KeySchedule):
         self._n = n
         self._R = R
 
-    def __call__(self, k):
+    def eval(self, k):
         r"""
         Expand master key ``k`` into a list of ``R`` round-key integers.
 
@@ -193,7 +193,8 @@ class SPECK_KeySchedule_CVL(KeySchedule):
         OUTPUT: List of ``R`` integers, one per round.
         """
         from civerly.util import int_to_vec, vec_to_int
-        bits = self.eval(int_to_vec(k, self.input_length))
+        from civerly.cipher import Cipher
+        bits = Cipher.eval(self, int_to_vec(k, self.input_length))
         n = self._n
         return [vec_to_int(bits[i * n:(i + 1) * n]) for i in range(self._R)]
 
