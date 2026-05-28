@@ -60,31 +60,6 @@ from civerly.solvers import NoSolverWarning
 from civerly.component import Component
 from civerly.trail import TrailNode
 
-
-class _LinearFuncDict:
-    r"""
-    Minimal ``MIPVariable``-compatible wrapper built from a pre-populated
-    ``{int_key: LinearFunction}`` dict.  Used when reconstructing a MILP
-    from an MPS file so that ``X[i][j]`` / ``MILP_IN[k]`` return the correct
-    ``LinearFunction`` without allocating new backend variables.
-    """
-
-    def __init__(self, d):
-        self._d = d
-
-    def __getitem__(self, key):
-        return self._d[key]
-
-    def __iter__(self):
-        return iter(self._d.values())
-
-    def __len__(self):
-        return len(self._d)
-
-    def items(self):
-        return self._d.items()
-
-
 class CipherNotValidException(Exception):
     def __init__(self):
         r"""
@@ -2121,6 +2096,8 @@ class Cipher:
 
         TESTS::
 
+        Reconstruct a cipher after analysing with MILP:
+
             sage: # optional - scip, espresso
             sage: import tempfile
             sage: from civerly.cipher import Cipher
@@ -2152,6 +2129,37 @@ class Cipher:
             sage: import shutil
             sage: shutil.rmtree(tmp)
 
+        Same with SAT:
+
+            sage: # optional - cadical, espresso
+            sage: import tempfile
+            sage: from civerly.cipher import Cipher
+            sage: from civerly.model_options import *
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: cipher = PRESENT_CVL(4)
+            sage: tmp = tempfile.mkdtemp()
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   sat_solver=CADICAL_CVL(),
+            ....:   logic_minimizer=ESPRESSO_CVL(),
+            ....:   path=Path(tmp))
+            sage: cipher.analyse(model_options)
+            5312 variables and 13441 clauses were written to...
+            12
+            sage: cipher.export(tmp)
+            Object 'PRESENT' has been exported to ...
+            sage: loaded = Cipher.load(tmp)
+            sage: loaded.analyse(model_options)
+            Using existing SAT model, make sure it is up to date!
+            ...
+            12
+            sage: import shutil
+            sage: shutil.rmtree(tmp)
+            
 
             sage: # optional - cadical, espresso
             sage: import tempfile
@@ -2196,23 +2204,27 @@ class Cipher:
             cipher.milp = _read_mps(str(mps_path))
             backend = cipher.milp.get_backend()
 
-            # Rebuild self.X, self.MILP_IN, self.MILP_OUT as _LinearFuncDict
-            # wrappers so callers can use X[i][j] exactly as before.
+            # Rebuild the attributes self.X, self.MILP_IN, self.MILP_OUT
+            # from self.milp
             lf_parent = cipher.milp.linear_functions_parent()
             name_to_col = {
                 backend.col_name(j): j for j in range(backend.ncols())
             }
 
             def _lf(col_name):
+                """
+                translates the variable name to the actual MIPVariable,
+                by constructing a (trivial) linear function with this variable.
+
+                Example: X6[62] -> x_5119
+                """
                 return lf_parent({name_to_col[col_name]: 1})
 
-            # dictionaries_milp maps "X5[3]" -> "IN[0]"; its keys cover every
-            # backend variable, so we can reconstruct X, MILP_IN, MILP_OUT.
+            # reconstruct X, MILP_IN, MILP_OUT from dictionaries_milp
             if hasattr(cipher, "dictionaries_milp") and \
                     cipher.dictionaries_milp is not None:
 
-                # X is a list indexed by node number; each entry is a
-                # _LinearFuncDict mapping bit-index -> LinearFunction.
+                # X is a list indexed by node number
                 x_dicts = {}
                 milp_in_dict = {}
                 milp_out_dict = {}
@@ -2227,11 +2239,15 @@ class Cipher:
                         milp_out_dict[idx] = lf
                     else:
                         node_idx = _before_brackets(var_name)
-                        x_dicts.setdefault(node_idx, {})[idx] = lf
+                        # x_dicts.setdefault(node_idx, {})
+                        x_dicts[node_idx][idx] = lf
 
-                cipher.X = list(map(_LinearFuncDict, x_dicts))
-                cipher.MILP_IN    = _LinearFuncDict(milp_in_dict)
-                cipher.MILP_OUT   = _LinearFuncDict(milp_out_dict)
+                # add attributes X, MILP_IN, MILP_OUT.
+                # These are not MIPVariable objects, but rather
+                # just dictionaries of linear functions (so functionality-wise the absolute same)
+                cipher.X = x_dicts
+                cipher.MILP_IN  = milp_in_dict
+                cipher.MILP_OUT = milp_out_dict
 
         # Reconstruct SAT from CNF file when present
         cnf_path = export_dir / "cipher.cnf"
