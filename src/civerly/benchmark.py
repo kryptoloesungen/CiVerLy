@@ -7,20 +7,19 @@ from civerly.model_options import InvalidModelOptionException
 
 
 def benchmark(CM):
+    r"""
     Generate benchmarks for the given ciphers and models.
-
-    The results are printed as latex code.
 
     INPUT:
 
         - ``CM`` -- list; list of tuples ``(ciphers, model_options)`` where
           ``ciphers`` is a list of ciphers.
-        - ``solving_time_limit``  -- integer (default ``None``); time limit (in
-          seconds) for solving an individual model
 
-    .. WARNING:
+    OUTPUT:
 
-        This requires the used solvers (by default all three) to be installed.
+        - a list of tables. each table corresponds to one ``(ciphers, model_options)``
+          tuple. Within a table, for MILP, each row corresponds to one cipher.
+          For SAT, there are also the timings for the individual models.
 
     EXAMPLES::
 
