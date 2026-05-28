@@ -312,7 +312,7 @@ class Cipher:
     # placeholder for the indices of outputs that not connected yet.
     NOT_SET = None
 
-    def __init__(self, input_length, output_length, name):
+    def __init__(self, input_length, output_length, name, key_schedule=None):
         r"""
         Initialize ``self`` with the given parameters.
 
@@ -331,6 +331,11 @@ class Cipher:
 
             - ``name`` -- string; Used to name and identify the Cipher instance
               and for naming files that are written to disk.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by
+              :meth:`set_round_keys` to derive round keys from a master key.
+              Defaults to ``None``.
 
         OUTPUT: The instantiated ``Cipher`` with the following attributes:
 
@@ -420,6 +425,8 @@ class Cipher:
         # solution files.
         self.trail_nodes = []
         
+        self.key_schedule = key_schedule
+
         self.milp = None
         self.sat = None
         self.X = None
