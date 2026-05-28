@@ -60,7 +60,9 @@
         };
 
         # Sage with civerly as an extra Python package
-        sageWithCiverly = pkgs.sage.override { extraPythonPackages = ps: [ civerly ]; };
+        sageWithCiverly = pkgs.sage.override {
+          extraPythonPackages = ps: [ civerly ps.tabulate ];
+        };
 
         # The Python environment used by sage (first buildInput of sage.with-env)
         sagePythonEnv = builtins.head sageWithCiverly.with-env.buildInputs;
