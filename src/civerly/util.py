@@ -781,10 +781,9 @@ def translate_var(cipher, node, local_var):
 
     return var
 
-@staticmethod
 def _read_mps(path):
     r"""
-    Parse a fixed-format MPS file written by
+    Parse an MPS file written by
     :meth:`MixedIntegerLinearProgram.write_mps` and return a
     :class:`sage.numerical.mip.MixedIntegerLinearProgram` containing
     the variables, constraints, and objective from the file.
@@ -793,108 +792,184 @@ def _read_mps(path):
     :class:`sage.numerical.backends.glpk_backend.GLPKBackend` does not
     have a ``read_mps`` method implemented.
 
+    An MPS file contains the following information:
+    
+    - ROWS: The constraints of the MILP. Each row equals one constraint.
+        - 'N': The objective row
+        - 'E': A row with equality '=='
+        - 'L': A row with '<='
+        - 'G': A row with '>='
+
+    - COLUMNS: Contains variable name, each row in which it appears + the coefficients
+        - example: 'X14[21]  R0001484    1   R0001474    -1'
+        
+    - RHS: Specifies the rhs value of each row. If row is not included, the rhs-value is 0.
+        - example: 'RHS1    R0002580    4   R0002581    3'
+
     INPUT:
 
         - ``path`` -- string or path-like; path to the ``.mps`` file.
 
     OUTPUT:
 
-        A :class:`~sage.numerical.mip.MixedIntegerLinearProgram` instance
+        A :class:`sage.numerical.mip.MixedIntegerLinearProgram` instance
         (minimization, GLPK solver) ready to be solved.
-    """
-    from sage.numerical.mip import MixedIntegerLinearProgram
 
+    TESTS:
+
+        sage: # optional - espresso
+        sage: from civerly.cipher_implementations.toy_ciphers.toy3 \
+        ....:   import Toy3
+        sage: from civerly.model_options import *
+        sage: cipher = Toy3()
+        sage: import tempfile
+        sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+        ....:   model_options = MODEL_OPTIONS(
+        ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+        ....:       optimization=OPTIMIZATION.MILP,
+        ....:       granularity=GRANULARITY.BITWISE,
+        ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+        ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+        ....:       logic_minimizer=ESPRESSO_CVL(),
+        ....:       path=Path(tmpdir))
+        sage: cipher.model(model_options)
+        854 variables and 2993 constraints were written to ...
+        Boolean Program (minimization, 854 variables, 2993 constraints)
+        sage: from civerly.util import _read_mps
+        sage: _read_mps(model_options.path / f"{cipher.name}.mps")
+        Boolean Program (minimization, 854 variables, 2993 constraints)
+        sage: import shutil
+        sage: shutil.rmtree(tmpdir)
+
+
+    """
+    
+    # stores current section inside MPS file.
+    # is one of 'ROWS', 'COLUMNS', 'RHS', 'BOUNDS'.
     section = None
-    obj_row = None         # name of the N-type (objective) row
-    row_order = []         # [(row_name, row_type), ...] for constraint rows
-    var_order = []         # variable names in order of first appearance
-    var_seen = set()
-    var_coeffs = {}        # var_name -> {row_name: float}
-    rhs = {}               # row_name -> float
-    bounds_data = {}       # var_name -> {'lower': float|None, 'upper': float|None}
-    var_integer = set()    # variables declared inside an INTORG…INTEND block
+    
+    # name of the objective row
+    obj_row = None
+    
+    # contains the constraint rows: [(R0001253, E), ...]
+    row_order = []
+
+    # variable names in order of first appearance
+    variables = []
+    
+    # dictionary mapping variable to row of occurence (+ coefficient)
+    # example: 'X3[12]' -> {R0002653: 1.0}
+    var_coeffs = {}
+
+    # Contains the constant part (rhs) of each row
+    # {R0001351: -10.0, ...}
+    rhs = {}
+    
+    # var_name -> {'lower': float|None, 'upper': float|None}
+    bounds_data = {}
+    
+    # variables declared inside an INTORG...INTEND block,
+    # i.e. integer variables inside this MILP.
+    # -> ['X1[2]', ..., 'X4[21]']
+    integer_vars = []
+
     in_integer_block = False
 
-    with open(path) as fh:
-        for raw in fh:
-            line = raw.rstrip('\n')
-            if not line or line[0] in ('*', '$'):
+    # parse the MPS file
+    with open(path) as f:
+        for line in f.readlines():
+            if line[0] in ('*', '$'):
                 continue  # blank line or comment
 
-            # Section headers start at column 0 (no leading whitespace)
-            if line[0] not in (' ', '\t'):
+            # Section headers start at column 0 (no leading whitespace or empty lines)
+            if line[0] not in (' ', '\t', '\n'):
                 section = line.split()[0].upper()
                 continue
 
             tokens = line.split()
-            if not tokens:
-                continue
-
+            # ------------------------------------------------
+            # collect all rows in row_order
             if section == 'ROWS':
-                rtype, rname = tokens[0].upper(), tokens[1]
+                assert len(tokens) == 2, (
+                    "MPS file is formatted wrongly in section ROWS"
+                )
+                rtype, rname = tokens
+                # there is only one 'N'-row (containing the objective)
                 if rtype == 'N':
-                    if obj_row is None:
-                        obj_row = rname
+                    obj_row = rname
                 else:
                     row_order.append((rname, rtype))
-
+            # ------------------------------------------------
             elif section == 'COLUMNS':
+                # if current line is the header of the COLUMNS table
                 if len(tokens) >= 3 and tokens[1] == "'MARKER'":
                     in_integer_block = (tokens[2] == "'INTORG'")
                     continue
+
                 vname = tokens[0]
-                if vname not in var_seen:
-                    var_order.append(vname)
-                    var_seen.add(vname)
+                if vname not in variables:
+                    variables.append(vname)
                     var_coeffs[vname] = {}
                     if in_integer_block:
-                        var_integer.add(vname)
+                        integer_vars.append(vname)
+                
+                # parse occurences into var_coeffs
                 i = 1
                 while i + 1 < len(tokens):
                     var_coeffs[vname][tokens[i]] = float(tokens[i + 1])
                     i += 2
-
+            # ------------------------------------------------
             elif section == 'RHS':
                 i = 1
                 while i + 1 < len(tokens):
                     rhs[tokens[i]] = float(tokens[i + 1])
                     i += 2
-
+            # ------------------------------------------------
             elif section == 'BOUNDS':
+                assert len(tokens) == 4, (
+                    "MPS file is formatted wrongly in section BOUNDS"
+                )
                 btype = tokens[0].upper()
                 vname = tokens[2]
                 val = float(tokens[3]) if len(tokens) > 3 else None
                 if vname not in bounds_data:
                     bounds_data[vname] = {'lower': 0.0, 'upper': None}
                 b = bounds_data[vname]
-                if btype == 'UP':
+                if btype == 'UP':   # upper
                     b['upper'] = val
-                elif btype == 'LO':
+                elif btype == 'LO': # lower
                     b['lower'] = val
-                elif btype == 'FX':
-                    b['lower'] = b['upper'] = val
-                elif btype == 'FR':
-                    b['lower'] = b['upper'] = None
+                elif btype == 'FX': # fix
+                    b['lower'] = val
+                    b['upper'] = val
+                elif btype == 'FR': # free
+                    b['lower'] = None
+                    b['upper'] = None
                 elif btype == 'MI':
                     b['lower'] = None
-                elif btype == 'BV':
+                elif btype == 'BV': # binary variable
                     b['lower'], b['upper'] = 0.0, 1.0
-                    var_integer.add(vname)
+            # ------------------------------------------------
+
 
     # --- Build the MILP from the parsed data ---
     milp = MixedIntegerLinearProgram(maximization=False, solver="GLPK")
     backend = milp.get_backend()
     var_to_col = {}
     obj_coeffs = []
-
-    for col_idx, vname in enumerate(var_order):
+    for col_idx, vname in enumerate(variables):
         b = bounds_data.get(vname, {'lower': 0.0, 'upper': None})
-        lower = b.get('lower', 0.0)
-        upper = b.get('upper', None)
-        is_int = vname in var_integer
+        lower, upper = b['lower'], b['upper']
+
+        # indicates whether current variable is an integer or binary
+        is_int = vname in integer_vars
         is_bin = is_int and lower == 0.0 and upper == 1.0
-        obj_coeff = var_coeffs[vname].get(obj_row, 0.0) if obj_row else 0.0
+        
+        # construct objective
+        # (by checking whether vname is part of the objective-row)
+        obj_coeff = var_coeffs[vname].get(obj_row, 0.0)
         obj_coeffs.append(obj_coeff)
+
         var_to_col[vname] = col_idx
         backend.add_variable(
             lower_bound=lower,
@@ -905,22 +980,27 @@ def _read_mps(path):
             name=vname,
         )
 
+    # set objective
     if obj_coeffs:
         backend.set_objective(obj_coeffs)
 
+    # add constraints back in
     for rname, rtype in row_order:
+        # construct coefficients vector
         coeffs = [
             (var_to_col[vname], var_coeffs[vname][rname])
-            for vname in var_order
+            for vname in variables
             if rname in var_coeffs[vname]
         ]
         rhs_val = rhs.get(rname, 0.0)
-        if rtype == 'L':
+        if rtype == 'L': # '<='
             lb, ub = None, rhs_val
-        elif rtype == 'G':
+        elif rtype == 'G': # '<='
             lb, ub = rhs_val, None
-        else:  # 'E'
+        else:  # 'E', '=='
             lb, ub = rhs_val, rhs_val
+
+        # add into backend
         backend.add_linear_constraint(coeffs, lb, ub, name=rname)
 
     return milp
