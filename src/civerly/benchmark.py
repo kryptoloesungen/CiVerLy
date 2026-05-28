@@ -96,11 +96,11 @@ def benchmark(CM):
             row = [cipher.name]
 
             if model_options.optimization == OPTIMIZATION.MILP:
-                v = cipher.model.number_of_variables()
-                c = cipher.model.number_of_constraints()
+                v = cipher._model.number_of_variables()
+                c = cipher._model.number_of_constraints()
             elif model_options.optimization == OPTIMIZATION.SAT:
-                v = cipher.model.nvars()
-                c = len(cipher.model.clauses())
+                v = cipher._model.nvars()
+                c = len(cipher._model.clauses())
                 row.append("") # empty weight bound
             else:
                 raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
