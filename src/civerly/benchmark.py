@@ -4,14 +4,13 @@ from civerly.solvers import SOLVING_STATUS
 from civerly.util import suppress_output
 from civerly.model_options import GRANULARITY
 from civerly.model_options import OPTIMIZATION
+from civerly.model_options import InvalidModelOptionException
 
 import shutil
 import time
 
 
-def benchmark(CM=None, remove_files=False, only_models=False,
-              solving_time_limit=None):
-    """
+def benchmark(CM):
     Generate benchmarks for the given ciphers and models.
 
     The results are printed as latex code.
@@ -45,147 +44,56 @@ def benchmark(CM=None, remove_files=False, only_models=False,
         sage: CM = [(aes, model_options)]
         sage: # benchmark(CM) # optional - scip
     """
-    raise NotImplementedError
+    tables = []
     for ciphers, model_options in CM:
-        optimization = model_options.optimization.name
-        mode = model_options.cryptanalysis.name
-        granularity = model_options.granularity.name
         if model_options.optimization == OPTIMIZATION.MILP:
-            solver = model_options.milp_solver.name
+            header = ["Name", r"\#Variables", r"\#Constraints", "$t_{M}$", "$t_{S}$", "w"]
         elif model_options.optimization == OPTIMIZATION.SAT:
-            solver = model_options.sat_solver.name
-        if model_options.linear_layer_modeling:
-            ll = model_options.linear_layer_modeling.name
+            header = ["Name", "Weight Bound", r"\#Variables", r"\#Clauses", "$t_{M}$", "$t_{S}$", "Result"]
         else:
-            ll = None
-        if model_options.sbox_modeling:
-            sbox = model_options.sbox_modeling.name
-        else:
-            sbox = None
-        mo = f"{optimization}-{mode}-{granularity}-{ll}-{sbox}-{solver}"
-        caption = f"\\texttt{{\scriptsize {mo}}}."  # noqa: W605
-        caption = caption.replace("_", "\_")  # noqa: W605
-
-        if model_options.optimization == OPTIMIZATION.MILP:
-            print("\\begin{longtable}{c | c c | c | c c c}")
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            print("\\begin{longtable}{l r | r r | r | r l c}")
-        print(f"\\caption{{{caption}}}\\\\")
-        s = "Name & "
-        if model_options.optimization == OPTIMIZATION.SAT:
-            s += "Weight Bound & "
-        s += "\\#Variables & "
-        if model_options.optimization == OPTIMIZATION.MILP:
-            s += "\\#Constraints & "
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            s += "\\#Clauses & "
-        s += "$t_{M}$ & $t_{S}$ & "
-        if model_options.optimization == OPTIMIZATION.MILP:
-            if model_options.granularity == GRANULARITY.WORDWISE:
-                s += "\\# act. S. & "
-            else:
-                s += "\\# -\\log\_2(p)  & "  # noqa: W605
-        elif model_options.optimization == OPTIMIZATION.SAT:
-            s += "Result & "
-        s += "Optimal\\\\"
-        print(s)
-        print("\\hline\\endhead")
-
+            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+        table = [header]
         for cipher in ciphers:
-            table = []
             with suppress_output():
+                cipher.analyse(model_options)
 
-                model_start = time.time()
-                model = cipher.model(model_options)
-                model_stop = time.time()
-                model_time = round(model_stop - model_start, 2)
-
-                obj = ""
-                solve_time = ""
-                if not only_models:
-                    solve_start = time.time()
-
-                    if model_options.optimization == OPTIMIZATION.MILP:
-                        name = f"{cipher.name}_{model_options.milp_solver.name}"
-                        log_file = model_options.path / f"{name}.log"
-                        sol_file_name = model_options.path / (cipher.name + ".sol")
-                        status = model_options.milp_solver.solve(model_options.path / (cipher.name + ".mps"),
-                                       sol_file_name,
-                                       time_limit=solving_time_limit,
-                                       log_file=log_file)
-                        solve_stop = time.time()
-                        solve_time = round(solve_stop - solve_start, 2)
-                        if status is None:
-                            obj = model_options.milp_solver._process_solution_file(sol_file_name)[1]
-                            solve_time = f"{solve_time}s"
-                        elif status == SOLVING_STATUS.TIMEOUT:
-                            solve_time = f"{solving_time_limit}s$^{{\\dagger}}$"
-                            bounds = model_options.milp_solver._get_objective_bounds(log_file)
-                            if bounds == [None, None]:
-                                obj = "-"
-                            else:
-                                obj = f"[{bounds[0]}, {bounds[1]}]"
-                        else:
-                            pass
-
-                    elif model_options.optimization == OPTIMIZATION.SAT:
-                        benchmarks = model_options.sat_solver.solve(
-                            model_options.path / (cipher.name + ".cnf"),
-                            model_options.path / (cipher.name + ".sat"),
-                            model_options=model_options,
-                            time_limit=solving_time_limit,
-                            benchmark=True
-                        )
-                        solve_stop = time.time()
-                        solve_time = round(solve_stop - solve_start, 2)
-                        # first row
-                        s = f"{cipher.name} & - & {model.nvars()} & "
-                        nclauses = len(model.clauses())
-                        s += f"{nclauses} & {round(model_time, 2)}s & - & & \\\\*"
-                        table.append(s)
-                        model_time_total = model_time
-                        solve_time_total = 0
-                        time_out = False
-                        for row in benchmarks:
-                            s = f" & {row["bound"]} & {row["nvars"]} & "
-                            s += f"{row["nclauses"]} & {round(row["t_model"], 2)}s & "
-                            s += f"{round(row["t_solve"], 2)}s"
-                            if row["result"] == SOLVING_STATUS.TIMEOUT:
-                                s += "$^{\\dagger}$ & - & \\\\*"
-                                time_out = True
-                            else:
-                                s += f" & {row["result"]} & \\\\*"
-                            table.append(s)
-                            model_time_total += row["t_model"]
-                            solve_time_total += row["t_solve"]
-                        # last row
-                        s = f" & & & & {round(model_time_total, 2)}s & "
-                        s += f"{round(solve_time_total, 2)}s"
-                        if time_out:
-                            row = benchmarks[-1]
-                            s += "$^{\\dagger}$ & "
-                            s += f"[{row["W_MIN"]}, {row["W_MAX"]}]"
-                            s += " & \\\\*"
-                        else:
-                            bound = model_options.sat_solver._process_solution_file(
-                                model_options.path / (cipher.name + ".sat"))[1]
-                            s += " & "
-                            s += f"{bound} & \\cmark \\\\*"
-                        table.append(s)
-                        table.append("\\hline")
+            row = [cipher.name]
 
             if model_options.optimization == OPTIMIZATION.MILP:
-                s = f"{cipher.name} & {model.number_of_variables()} & "
-                s += f"{model.number_of_constraints()} & {model_time}s & "
-                s += f"{solve_time} & {obj} &  \\\\"
-                print(s)
+                v = cipher.model.number_of_variables()
+                c = cipher.model.number_of_constraints()
+            elif model_options.optimization == OPTIMIZATION.SAT:
+                v = cipher.model.nvars()
+                c = len(cipher.model.clauses())
+                row.append("") # empty weight bound
+            else:
+                raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+
+            row.append(v)
+            row.append(c)
+            row.append(cipher.model_time)
+            row.append(cipher.solve_time)
+            if cipher.result["status"] == SOLVING_STATUS.SUCCESS:
+                row.append(cipher.result["objective_value"])
+            elif cipher.result["status"] == SOLVING_STATUS.TIMEOUT:
+                lower = cipher.result["objective_bounds"][0]
+                upper = cipher.result["objective_bounds"][1]
+                row.append(f"[{lower}, {upper}]")
+            table.append(row)
 
             if model_options.optimization == OPTIMIZATION.SAT:
-                for row in table:
-                    print(row)
+                for weight, result in cipher.result["trace"].items():
+                    row = ["", weight]
+                    row.append(result["model"].nvars())
+                    row.append(len(result["model"].clauses()))
+                    row.append(result["model_time"])
+                    row.append(result["solve_time"])
+                    if result["status"] == SOLVING_STATUS.SUCCESS:
+                        row.append("SAT" if result["satisfiability"] else "UNSAT")
+                    elif result["status"] == SOLVING_STATUS.TIMEOUT:
+                        row.append("-")
+                    table.append(row)
 
-        if remove_files:
-            shutil.rmtree(model_options.path)
+        tables.append(table)
+    return tables
 
-        print("\\end{longtable}")
-        print()
