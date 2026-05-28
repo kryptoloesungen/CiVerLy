@@ -1251,13 +1251,13 @@ class Cipher:
         """
         start_time = time.perf_counter()
         if model_options.optimization == OPTIMIZATION.MILP:
-            model = self._model_milp(model_options, _first_iter=_first_iter)
+            self.model = self._model_milp(model_options, _first_iter=_first_iter)
             self._model_time = time.perf_counter() - start_time
-            return model
+            return self.model
         elif model_options.optimization == OPTIMIZATION.SAT:
-            model = self._model_sat(model_options, _first_iter=_first_iter)
+            self.model = self._model_sat(model_options, _first_iter=_first_iter)
             self._model_time = time.perf_counter() - start_time
-            return model
+            return self.model
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
