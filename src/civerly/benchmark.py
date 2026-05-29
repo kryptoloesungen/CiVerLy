@@ -54,12 +54,12 @@ def benchmark(CM):
         sage: CM = [(aes, model_options_aes), (craft, model_options_craft)]
         sage: T = benchmark(CM)
         sage: print(tabulate(T[0], headers="firstrow"))
-        Name       \#Variables    \#Constraints    $t_{M}$    $t_{S}$    w
-        -------  -------------  ---------------  ---------  ---------  ---
-        1r-AES             256              241  ...        ...          1
-        2r-AES             548              557  ...        ...          5
-        3r-AES             840              873  ...        ...          9
-        4r-AES            1132             1189  ...        ...         25
+        Name      \#Variables    \#Constraints    $t_{M}$    $t_{S}$    w
+        ------  -------------  ---------------  ---------  ---------  ---
+        1r-AES            256              241  ...        ...          1
+        2r-AES            548              557  ...        ...          5
+        3r-AES            840              873  ...        ...          9
+        4r-AES           1132             1189  ...        ...         25
         sage: print(tabulate(T[1], headers="firstrow"))
         Name      Weight Bound      \#Variables    \#Clauses     $t_{M}$    $t_{S}$  Result
         --------  --------------  -------------  -----------  ----------  ---------  --------
