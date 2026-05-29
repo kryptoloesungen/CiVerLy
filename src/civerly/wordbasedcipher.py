@@ -84,6 +84,56 @@ class WordBasedCipher(Cipher):
 
     @classmethod
     def _init_from_dict(cls, d):
+        """
+        Used in :meth:`self.load` in order to build this object from the loaded `.json` file.
+
+        TESTS::
+
+        Loading with any appropriate subclass of the cipher class of the exported
+        cipher restores it:
+
+            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.wordbasedcipher import WordBasedCipher
+            sage: from civerly.addrx import AddRX
+            sage: cipher = SPECK_CVL(128, 128)
+            sage: tmp = tempfile.mkdtemp()
+            sage: export_file = Path(tmp) / f"{cipher.name}.json"
+            sage: cipher.export(export_file)
+            Object 'speck' has been exported to ...
+            sage: loaded1 = WordBasedCipher.load(export_file)
+            sage: sorted(cipher.__dict__) == sorted(loaded1.__dict__)
+            True
+            sage: loaded2 = AddRX.load(export_file)
+            sage: sorted(cipher.__dict__) == sorted(loaded2.__dict__)
+            True
+            sage: import shutil
+            sage: shutil.rmtree(tmp)
+
+        However, if we try to load a cipher which is not a subclass of WordBasedCipher, 
+        the method fails:
+
+            sage: from civerly.cipher_implementations.toy_ciphers.toy4 import Toy4
+            sage: from civerly.wordbasedcipher import WordBasedCipher
+            sage: cipher = Toy4()
+            sage: tmp = tempfile.mkdtemp()
+            sage: export_file = Path(tmp) / f"{cipher.name}.json"
+            sage: cipher.export(export_file)
+            Object 'Toy4' has been exported to ...
+            sage: try: 
+            ....:   loaded1 = WordBasedCipher.load(export_file)
+            ....: except TypeError as e:
+            ....:   print(e)
+            The json dictionary does not contain the attribute 'wordsize', ...
+            sage: import shutil
+            sage: shutil.rmtree(tmp)
+
+        
+        """
+        if "wordsize" not in d.keys(): 
+            raise TypeError(
+                "The json dictionary does not contain the attribute 'wordsize', "
+                "meaning that the exported cipher was not a subclass of WordBasedCipher."
+            )
         ws = d["wordsize"]
         return cls(ws, d["input_length"] // ws, d["output_length"] // ws, name=d["name"])
 

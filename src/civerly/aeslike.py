@@ -156,4 +156,12 @@ class AESlike(WordSBoxCipher):
 
     @classmethod
     def _init_from_dict(cls, d):
+        """
+        Used in :meth:`self.load` in order to build this object from the loaded `.json` file.
+        """
+        if "rows" not in d.keys() or "cols" not in d.keys():
+            raise TypeError(
+                "The json dictionary does not contain the attribute 'wordsize', "
+                "meaning that the exported cipher was not a subclass of AESlike."
+            )
         return cls(d["wordsize"], d["rows"], d["cols"], name=d["name"])

@@ -57,6 +57,37 @@ class Toy9:
             [  0 ,  1] (trying w =   0) : UNSAT
             1
 
+        Testing workflow of `Cipher.load`:
+
+            sage: # optional - scip # optional - espresso
+            sage: from civerly.cipher_implementations.toy_ciphers.toy9 \
+            ....:   import Toy9
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: cipher = Toy9()
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       milp_solver=SCIP_CVL(),
+            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       path=Path(tmpdir))
+            sage: cipher.analyse(model_options)
+            sage: export_path = model_options.path / f"{cipher.name}.json"
+            sage: cipher.export(export_path)
+            Writing problem data to ...
+            335 records were written
+            Object 'toy9' has been exported to ...
+            sage: from civerly.sboxcipher import SBoxCipher
+            sage: from civerly.wordsboxcipher import WordSBoxCipher
+            sage: loaded1 = SBoxCipher.load(export_path)
+        
+            
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path)
         """
 
         cipher = SBoxCipher(4, 4, name="toy9")
