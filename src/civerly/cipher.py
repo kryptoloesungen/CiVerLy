@@ -2100,7 +2100,7 @@ class Cipher:
 
             sage: # optional - scip, espresso
             sage: import tempfile
-            sage: from civerly.cipher import Cipher
+            sage: from civerly.wordsboxcipher import WordSBoxCipher
             sage: from civerly.model_options import *
             sage: from civerly.cipher_implementations.present import PRESENT_CVL
             sage: cipher = PRESENT_CVL(4)
@@ -2121,10 +2121,8 @@ class Cipher:
             Writing problem data to...
             31602 records were written
             Object 'PRESENT' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
-            sage: loaded.get_trail(model_options) == cipher.get_trail(model_options)
-            True
-            sage: loaded == cipher
+            sage: loaded = WordSBoxCipher.load(tmp)
+            sage: sorted(loaded.__dict__) == sorted(cipher.__dict__)
             True
             sage: import shutil
             sage: shutil.rmtree(tmp)
@@ -2239,7 +2237,7 @@ class Cipher:
                         milp_out_dict[idx] = lf
                     else:
                         node_idx = _before_brackets(var_name)
-                        # x_dicts.setdefault(node_idx, {})
+                        x_dicts.setdefault(node_idx, {})
                         x_dicts[node_idx][idx] = lf
 
                 # add attributes X, MILP_IN, MILP_OUT.
