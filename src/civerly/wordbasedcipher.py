@@ -95,6 +95,7 @@ class WordBasedCipher(Cipher):
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.wordbasedcipher import WordBasedCipher
             sage: from civerly.addrx import AddRX
+            sage: import tempfile
             sage: cipher = SPECK_CVL(128, 128)
             sage: tmp = tempfile.mkdtemp()
             sage: export_file = Path(tmp) / f"{cipher.name}.json"

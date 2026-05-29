@@ -84,8 +84,6 @@ class Toy9:
             sage: from civerly.sboxcipher import SBoxCipher
             sage: from civerly.wordsboxcipher import WordSBoxCipher
             sage: loaded1 = SBoxCipher.load(export_path)
-        
-            
             sage: import shutil
             sage: shutil.rmtree(model_options.path)
         """
