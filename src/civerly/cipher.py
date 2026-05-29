@@ -1556,6 +1556,7 @@ class Cipher:
                     model_options, self.sat
                 )
             if self._return_immediately_:
+                self._return_immediately_ = False
                 return
             if model_options.number_of_solutions > 1:
                 all_results = model_options.sat_solver.solve_multiple(
@@ -2379,7 +2380,7 @@ class Cipher:
                 STRING += f"\t\\draw (#1, #2 + {rw}) -- (#1 + {self.cols}, #2 + {rw});\n"
             STRING += "}\n"
 
-        scale = sqrt((-0.75 + self._wrd/4) * 4)
+        scale = sqrt(self._wrd)
 
         STRING += "\\begin{center}\n"
         if isinstance(self, AESlike):
