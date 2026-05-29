@@ -583,7 +583,8 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 - ``solve_time`` -- float; total time spent
                 - ``trace`` -- an additional dicitionary that holds the result
                   of each call to :meth:``decide``. The keys of ``trace``
-                  correspond to the tested weights.
+                  correspond to the tested weights. Furthermore, ``trace`` also
+                  contains ``model_time`` and the actual ``model`` for these.
         """
         assert isinstance(input_file, Path)
         assert isinstance(sum_arr_file, Path)
