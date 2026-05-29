@@ -1253,7 +1253,7 @@ class Cipher:
         if model_options.optimization == OPTIMIZATION.MILP:
             self._model = self._model_milp(model_options, _first_iter=_first_iter)
             self._model_time = time.perf_counter() - start_time
-            return self.model
+            return self._model
         elif model_options.optimization == OPTIMIZATION.SAT:
             self._model = self._model_sat(model_options, _first_iter=_first_iter)
             self._model_time = time.perf_counter() - start_time
