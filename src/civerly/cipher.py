@@ -1863,7 +1863,7 @@ class Cipher:
             "inv_dictionaries_sat": getattr(self, "inv_dictionaries_sat", None),
         }
 
-    def export(self, path):
+    def export(self, file):
         r"""
         Write ``self`` to a directory at ``path``.
 
@@ -1880,7 +1880,7 @@ class Cipher:
 
         INPUT:
 
-            - ``path`` -- string or path-like; Destination directory path.
+            - ``file`` -- string or path; Specifies file to be written to.
 
         EXAMPLES::
 
@@ -1899,13 +1899,14 @@ class Cipher:
             sage: cipher.add_output([(node0, (i, i)) for i in range(3)])
             sage: cipher.add_output([(node1, (i, i + 3)) for i in range(3)])
             sage: cipher.add_output([(node2, (i, i + 6)) for i in range(3)])
+
+        Before analysis, ``results`` is ``[]`` for both ``cipher`` and ``loaded``::
+
             sage: tmp = tempfile.mkdtemp()
-
-        Before analysis, ``results`` is ``[]`` and round-trips as such::
-
-            sage: cipher.export(tmp)
+            sage: export_file = Path(tmp) / f"{cipher.name}.json"
+            sage: cipher.export(export_file)
             Object 'test' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
+            sage: loaded = Cipher.load(export_file)
             sage: cipher == loaded and loaded.results == []
             True
 
@@ -1925,45 +1926,54 @@ class Cipher:
             sage: cipher.analyse(model_options)
             ...
             2
-            sage: cipher.export(tmp)
+            sage: cipher.export(export_file)
             Object 'test' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
-            sage: import shutil; shutil.rmtree(tmp)
+            sage: loaded = Cipher.load(export_file)
+            sage: import shutil
+            sage: shutil.rmtree(export_file.parent)
             sage: cipher == loaded and loaded.results == cipher.results
             True
 
         Again with a different cipher type::
 
             sage: import tempfile
+            sage: from pathlib import Path
             sage: from civerly.cipher import Cipher
             sage: from civerly.cipher_implementations.aes import AES_CVL
             sage: aes = AES_CVL(4)
             sage: tmp = tempfile.mkdtemp()
-            sage: aes.export(tmp)
+            sage: export_file = Path(tmp) / f"{aes.name}.json"
+            sage: aes.export(export_file)
             Object 'AES' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
-            sage: import shutil; shutil.rmtree(tmp)
+            sage: loaded = Cipher.load(export_file)
+            sage: import shutil
+            sage: shutil.rmtree(tmp)
             sage: aes == loaded
             True
 
         """
-        export_dir = Path(path)
-        if not export_dir.exists():
-            export_dir.mkdir(parents=True, exist_ok=True)
+        json_file_name = Path(file)
+        assert json_file_name.suffix == ".json", (
+            f"File suffix must be '.json', not {json_file_name.suffix}!"
+        )
+        if not json_file_name.parent.exists():
+            json_file_name.parent.mkdir(parents=True, exist_ok=True)
 
         # Write JSON bundle (everything that is plain-Python serialisable)
-        with open(export_dir / "cipher.json", "w") as f:
+        with open(json_file_name, "w") as f:
             json.dump(self._to_dict(), f, default=lambda obj: int(obj))
 
         # Write MILP model if present
         if self.milp is not None:
-            self.milp.write_mps(str(export_dir / "cipher.mps"))
+            mps_path = json_file_name.parent / f"{json_file_name.stem}.mps"
+            self.milp.write_mps(str(mps_path))
 
         # Write SAT model if present
         if self.sat is not None:
-            self.sat.write(str(export_dir / "cipher.cnf"))
+            cnf_path = json_file_name.parent / f"{json_file_name.stem}.cnf"
+            self.sat.write(str(cnf_path))
 
-        print(f"Object '{self.name}' has been exported to {export_dir}.")
+        print(f"Object '{self.name}' has been exported to {json_file_name.parent}.")
 
     @classmethod
     def _init_from_dict(cls, d):
@@ -2023,7 +2033,7 @@ class Cipher:
 
         # Restore the IN node's result (index 0)
         cipher.nodes[0].results = d["nodes"][0]["results"]
-        w = 1 if type(cipher) == Cipher else cipher.wordsize
+        w = 1 if type(cipher) in (Cipher, SBoxCipher) else cipher.wordsize
 
         for node_idx, nd in enumerate(d["nodes"][1:], start=1):
             component = node_from_dict(nd)
@@ -2084,14 +2094,14 @@ class Cipher:
         return cipher
 
     @classmethod
-    def load(cls, path):
+    def load(cls, file):
         r"""
         Load and return a :class:`Cipher` from the export directory at
-        ``path`` that was previously written by :meth:`export`.
+        ``file`` that was previously written by :meth:`export`.
 
         INPUT:
 
-            - ``path`` -- string or path-like; Path to the export directory.
+            - ``file`` -- string or path; Specifies file to be written to.
 
         OUTPUT: A reconstructed :class:`Cipher` instance.
 
@@ -2118,15 +2128,16 @@ class Cipher:
             sage: cipher.analyse(model_options)
             5312 variables and 8641 constraints were written to '...'
             12
-            sage: cipher.export(tmp)
+            sage: export_file = model_options.path / f"{cipher.name}.json"
+            sage: cipher.export(export_file)
             Writing problem data to...
             31602 records were written
             Object 'PRESENT' has been exported to ...
-            sage: loaded = WordSBoxCipher.load(tmp)
+            sage: loaded = WordSBoxCipher.load(export_file)
             sage: sorted(loaded.__dict__) == sorted(cipher.__dict__)
             True
             sage: import shutil
-            sage: shutil.rmtree(tmp)
+            sage: shutil.rmtree(model_options.path)
 
         Same with SAT:
 
@@ -2149,15 +2160,16 @@ class Cipher:
             sage: cipher.analyse(model_options)
             5312 variables and 13441 clauses were written to...
             12
-            sage: cipher.export(tmp)
+            sage: export_file = model_options.path / f"{cipher.name}.json"
+            sage: cipher.export(export_file)
             Object 'PRESENT' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
+            sage: loaded = Cipher.load(export_file)
             sage: loaded.analyse(model_options)
             Using existing SAT model, make sure it is up to date!
             ...
             12
             sage: import shutil
-            sage: shutil.rmtree(tmp)
+            sage: shutil.rmtree(model_options.path)
             
 
             sage: # optional - cadical, espresso
@@ -2179,26 +2191,26 @@ class Cipher:
             sage: cipher.analyse(model_options)
             5312 variables and 13441 clauses were written to...
             12
-            sage: cipher.export(tmp)
+            sage: export_file = model_options.path / f"{cipher.name}.json"
+            sage: cipher.export(export_file)
             Object 'PRESENT' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
+            sage: loaded = Cipher.load(export_file)
             sage: loaded.get_trail(model_options) == cipher.get_trail(model_options)
             True
             sage: loaded == cipher
             True
             sage: import shutil
-            sage: shutil.rmtree(tmp)
+            sage: shutil.rmtree(model_options.path)
 
         """
-
-        export_dir = Path(path)
-        with open(export_dir / "cipher.json") as f:
+        cipher_file = Path(file)
+        with open(cipher_file) as f:
             d = json.load(f)
 
         cipher = cls._from_dict(d)
 
         # Reconstruct MILP from MPS file when present
-        mps_path = export_dir / "cipher.mps"
+        mps_path = cipher_file.parent / f"{cipher_file.stem}.mps"
         if mps_path.exists() and d.get("has_milp"):
             cipher.milp = _read_mps(str(mps_path))
             backend = cipher.milp.get_backend()
@@ -2249,7 +2261,7 @@ class Cipher:
                 cipher.MILP_OUT = milp_out_dict
 
         # Reconstruct SAT from CNF file when present
-        cnf_path = export_dir / "cipher.cnf"
+        cnf_path = cipher_file.parent / f"{cipher_file.stem}.cnf"
         if cnf_path.exists() and d["has_sat"]:
 
             sat = DIMACS()
