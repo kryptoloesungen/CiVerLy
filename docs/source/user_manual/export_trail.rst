@@ -33,16 +33,20 @@ See the following example to understand how to export and load Cipher objects.
     sage: input_difference = cipher.results[0]['in']
     sage: output_difference = cipher.results[0]['out']
     sage: # Export the cipher together with its results
-    sage: cipher.export(model_options.path)
+    sage: export_file = model_options.path / f"{cipher.name}.json"
+    sage: cipher.export(export_file)
     Writing problem data to...
     31602 records were written
     Object 'PRESENT' has been exported to ...
     sage: # Load the cipher from scratch
-    sage: loaded = cipher.load(model_options.path)
+    sage: loaded = cipher.load(export_file)
     sage: # The results are still the same
     sage: loaded.results[0]['in'] == input_difference
     True
     sage: loaded.results[0]['out'] == output_difference
+    True
+    sage: # Overall, the ciphers are entirely the same
+    sage: sorted(loaded.__dict__) == sorted(cipher.__dict__)
     True
     sage: import shutil
     sage: shutil.rmtree(tmpdir)
