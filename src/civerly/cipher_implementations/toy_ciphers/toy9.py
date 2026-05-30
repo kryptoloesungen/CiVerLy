@@ -76,6 +76,8 @@ class Toy9:
             ....:       logic_minimizer=ESPRESSO_CVL(),
             ....:       path=Path(tmpdir))
             sage: cipher.analyse(model_options)
+            36 variables and 85 constraints were written to...
+            1.4150374993
             sage: export_path = model_options.path / f"{cipher.name}.json"
             sage: cipher.export(export_path)
             Writing problem data to ...
