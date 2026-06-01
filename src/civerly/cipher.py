@@ -47,6 +47,7 @@ from copy import deepcopy
 import subprocess
 import json
 import glob
+import time
 
 from civerly.util import translate_sat_clause
 from civerly.util import suppress_output
@@ -218,7 +219,7 @@ class Cipher:
             )
             return x
 
-        def model(self, model_options):
+        def model(self, model_options, *args, **kwargs):
             """
             Return the model for ``self``.
             """
@@ -430,6 +431,11 @@ class Cipher:
         self.sat = None
         self.X = None
 
+        # attributes to keep timing information (in seconds)
+        self._analyse_time = None
+        self._model_time = None
+        self._solve_time = None
+
     # Get-functions of various attributes:
     # --------------------------------------------------
 
@@ -607,8 +613,7 @@ class Cipher:
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0x09cc2a7e2222eeee
             True
-
-"""
+        """
         if not hasattr(self, '_rk_components'):
             raise AttributeError(
                 f"{self.name} has no _rk_components attribute. "
@@ -623,6 +628,25 @@ class Cipher:
         rks = self.key_schedule(k)
         for comp, val in zip(self._rk_components, rks):
             comp.const = val
+
+    @property
+    def analyse_time(self):
+        r"""
+        Return the time it took to analyse ``self`` (in seconds).
+
+        Analysing includes modeling and solving.
+        """
+        return self._analyse_time
+
+    @property
+    def model_time(self):
+        r"""Return the time it took to model ``self`` (in seconds)."""
+        return self._model_time
+
+    @property
+    def solve_time(self):
+        r"""Return the time it took to solve the model for ``self`` (in seconds)."""
+        return self._solve_time
 
     def add_subcipher(self, sub_cipher, edges):
         r"""
@@ -1209,7 +1233,7 @@ class Cipher:
 
         return depths
 
-    def model(self, model_options):
+    def model(self, model_options, _first_iter=True):
         """
         Generate the model for ``self`` according to the given
         ``model_options``. Calls one of the two modeling methods
@@ -1225,10 +1249,15 @@ class Cipher:
 
             - the generated model
         """
+        start_time = time.perf_counter()
         if model_options.optimization == OPTIMIZATION.MILP:
-            return self._model_milp(model_options, _first_iter=True)
+            model = self._model_milp(model_options, _first_iter=_first_iter)
+            self._model_time = time.perf_counter() - start_time
+            return model
         elif model_options.optimization == OPTIMIZATION.SAT:
-            return self._model_sat(model_options, _first_iter=True)
+            model = self._model_sat(model_options, _first_iter=_first_iter)
+            self._model_time = time.perf_counter() - start_time
+            return model
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1349,7 +1378,7 @@ class Cipher:
                     break
             else:
                 # model the components that have not been modeled before
-                comp_sat = comp._model_sat(model_options)
+                comp_sat = comp.model(model_options, _first_iter=False)
                 sats.append(comp_sat)
 
                 # if we need to return immediately,
@@ -1556,6 +1585,7 @@ class Cipher:
 
             Requires the specified solver to be installed.
         """
+        start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
         self.results = []
         self.trail_nodes = []
@@ -1572,6 +1602,7 @@ class Cipher:
                 )
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
+                start_time = time.perf_counter()
                 # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
                 # helper/dummy variables are excluded so that two solutions
                 # are considered the same when they agree on the trail.
@@ -1586,6 +1617,7 @@ class Cipher:
                     number_of_solutions=model_options.number_of_solutions,
                     trail_vars=trail_vars,
                 )
+                self._solve_time = time.perf_counter() - start_time
                 weights = []
                 for r in all_results:
                     if r["objective_value"] is None:
@@ -1595,14 +1627,18 @@ class Cipher:
                         (r["assignment"], r["objective_value"]),
                     )
                     weights.append(r["objective_value"])
+                self._analyse_time = time.perf_counter() - start_time_analyse
                 return weights
-            self.result = model_options.milp_solver.solve(input_file)
-            results_and_weight = (
-                self.result["assignment"], self.result["objective_value"]
-            )
-            TrailNode(self, model_options, results_and_weight)
-            return self.result["objective_value"]
-
+            else:
+                start_time = time.perf_counter()
+                self.result = model_options.milp_solver.solve(input_file)
+                self._solve_time = time.perf_counter() - start_time
+                results_and_weight = (
+                    self.result["assignment"], self.result["objective_value"]
+                )
+                TrailNode(self, model_options, results_and_weight)
+                self._analyse_time = time.perf_counter() - start_time_analyse
+                return self.result["objective_value"]
         elif model_options.optimization == OPTIMIZATION.SAT:
             if self.sat is None:
                 self.model(model_options)
@@ -1618,6 +1654,7 @@ class Cipher:
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:
+                start_time = time.perf_counter()
                 # Trail vars: the sum_arr variables (which encode the weight)
                 # plus the input variables. Helper/auxiliary clauses (e.g.
                 # the sum-counter aux vars) are excluded so that two
@@ -1637,6 +1674,7 @@ class Cipher:
                     trail_vars=trail_vars,
                     precision=model_options.sat_precision,
                 )
+                self._solve_time = time.perf_counter() - start_time
                 weights = []
                 for r in all_results:
                     if r["objective_value"] is None:
@@ -1646,18 +1684,26 @@ class Cipher:
                         (r["assignment"], r["objective_value"]),
                     )
                     weights.append(r["objective_value"])
+                self._analyse_time = time.perf_counter() - start_time_analyse
                 return weights
-            self.result = model_options.sat_solver.solve(
-                input_file,
-                sum_arr_file=sum_arr_file,
-                solve_range=model_options.solve_range,
-                precision=model_options.sat_precision,
-            )
-            results_and_weight = (
-                self.result["assignment"], self.result["objective_value"]
-            )
-            TrailNode(self, model_options, results_and_weight)
-            return self.result["objective_value"]
+            else:
+                # if no sat_solver has been selected, we generate all cnf-files
+                # for the given solve_range
+                start_time = time.perf_counter()
+
+                self.result = model_options.sat_solver.solve(
+                    input_file,
+                    sum_arr_file=sum_arr_file,
+                    solve_range=model_options.solve_range,
+                    precision=model_options.sat_precision,
+                )
+                self._solve_time = time.perf_counter() - start_time
+                results_and_weight = (
+                    self.result["assignment"], self.result["objective_value"]
+                )
+                TrailNode(self, model_options, results_and_weight)
+                self._analyse_time = time.perf_counter() - start_time_analyse
+                return self.result["objective_value"]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
