@@ -161,7 +161,7 @@ class AESlike(WordSBoxCipher):
         """
         if "rows" not in d.keys() or "cols" not in d.keys():
             raise TypeError(
-                "The json dictionary does not contain the attribute 'wordsize', "
+                "The json dictionary does not contain the attributes 'rows' and'cols', "
                 "meaning that the exported cipher was not a subclass of AESlike."
             )
         return cls(d["wordsize"], d["rows"], d["cols"], name=d["name"])
