@@ -2409,6 +2409,112 @@ class SBox_CVL(Component):
             # variable needs to be one
             self.milp.add_constraint(sum(PROB) >= 1)
 
+        elif model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE:
+
+            S = self.S
+            n = len(S)
+
+            n2, num_pts = 2 * n, 1 << (2 * n)
+            valid_bs, valid_pts = 0, []
+            for dx in range(1 << n):
+                for x in range(1 << n):
+                    p = (S[x] ^ S[x ^ dx]) << n | dx
+                    if not (valid_bs & (1 << p)):
+                        # 'valid_bs' is a long indicator bitstring
+                        # (of length 2^n) of possible transitions
+                        valid_bs |= (1 << p)
+                        valid_pts.append(p)
+
+            B = [0] * n2
+            for i in range(n2):
+                for p in range(num_pts):
+                    if (p >> i) & 1:
+                        B[i] |= (1 << p)
+            # 'invalid_bs' is bit-complement of 'valid_bs' 
+            invalid_bs = ((1 << num_pts) - 1) ^ valid_bs
+
+            def count_bits(x):
+                return x.bit_count() if hasattr(int, "bit_count") else bin(x).count('1')
+
+            cubes, covered_gen = {}, 0
+            for inv in range(num_pts):
+                if not (invalid_bs & (1 << inv)) or (covered_gen & (1 << inv)):
+                    continue
+
+                # 'diffs': differences between this invalid point and all valid points
+                diffs = [inv ^ vp for vp in valid_pts]
+            
+                # 'min_diffs': the minimal differences, which have
+                # no predecessor-vector in 'diffs'
+                min_diffs = []
+                for d in sorted(list(set(diffs)), key=count_bits):
+                    if not any((d & md) == md for md in min_diffs):
+                        min_diffs.append(d)
+            
+                # 'b_to_d': "If I decide to drop bit b from my rule,
+                # which valid-point safety boundaries (k) am I risking?""
+                b_to_d = [[] for _ in range(n2)]
+                for k, d in enumerate(min_diffs):
+                    for b in range(n2):
+                        if (d >> b) & 1:
+                            b_to_d[b].append(k)
+            
+                # greedy-minimization step
+                for s in range(n2): # 's': starting point for greedy
+                    m = (1 << n2) - 1
+                    # hits: how many overlapping bits cover current point?
+                    hits = [count_bits(m & d) for d in min_diffs]
+                    for j in range(n2):
+                        bit = (s + j) % n2
+
+                        # Don't care expansion:
+                        # if all points affected by 'bit' are redundantly covered, flip it
+                        if all(hits[k] > 1 for k in b_to_d[bit]):
+                            m ^= (1 << bit)
+                            for k in b_to_d[bit]: hits[k] -= 1
+
+                    # count how many points this cube removes at once ("reward")
+                    cv = inv & m # 'cv' = cube values
+                    if (m, cv) not in cubes:
+                        cbs = ((1 << num_pts) - 1)
+                        for i in range(n2):
+                            if (m >> i) & 1:
+                                cbs &= B[i] if (cv >> i) & 1 else ~B[i]
+                        cbs &= invalid_bs
+                        cubes[(m, cv)] = (cbs, count_bits(m))
+                        covered_gen |= cbs
+
+            # turn this into variables
+            VAR = [self.MILP_IN[v] for v in range(n)] \
+                + [self.MILP_OUT[v] for v in range(n)] #\
+                # + [PROB[v] for v in range(len(set_ddt))]
+
+            # flatten 'cubes' 
+            cube_list = [(m, cv, cbs, cost) for (m, cv), (cbs, cost) in cubes.items()]
+
+            # "set cover": 
+            while invalid_bs:
+                # look for the next best cube to add
+                # ------------------------------------
+                best, max_score = None, (-1, 0)
+                for m, cv, cbs, cost in cube_list:
+                    covered = count_bits(cbs & invalid_bs)
+                    if covered > 0:
+                        score = (covered, -cost)
+                        if score > max_score:
+                            max_score = score
+                            best = (m, cv, cbs, cost)
+                # ------------------------------------
+                if not best: break # if no cube found, we're done
+                m, cv, cbs, cost = best
+                
+                self.milp.add_constraint(
+                    sum(VAR[i] if not ((cv >> i) & 1) else 1 - VAR[i] for i in range(n2) if (m >> i) & 1) >= 1
+                )
+                invalid_bs &= ~cbs
+
+            return self.milp
+
         else:
             posset = []
             for i in range(1 << self.input_length):

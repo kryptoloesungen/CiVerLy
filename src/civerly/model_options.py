@@ -99,6 +99,7 @@ class SBOX_MODELING(Enum):
     - Logical conditioning (https://eprint.iacr.org/2021/213.pdf,
       section 2.3.2) with Espresso reduction
       (see https://github.com/classabbyamp/espresso-logic)
+    - AlphaEvolve: TODO
 
     .. NOTE::
 
@@ -109,6 +110,7 @@ class SBOX_MODELING(Enum):
     LOGICAL_COND = 2
     DISTORTED_BALL = 3
     LOGICAL_COND_ESPRESSO = 4  # For both MILP / SAT
+    ALPHA_EVOLVE = 5
 
 
 @dataclass(init=True, repr=False)
@@ -410,6 +412,7 @@ class MODEL_OPTIONS:
                     SBOX_MODELING.LOGICAL_COND,
                     SBOX_MODELING.LOGICAL_COND_ESPRESSO,
                     SBOX_MODELING.DISTORTED_BALL,
+                    SBOX_MODELING.ALPHA_EVOLVE,
                 ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
@@ -418,6 +421,7 @@ class MODEL_OPTIONS:
                 "SBOX_MODELING.LOGICAL_COND or "
                 "SBOX_MODELING.LOGICAL_COND_ESPRESSO or "
                 "SBOX_MODELING.DISTORTED_BALL "
+                "SBOX_MODELING.ALPHA_EVOLVE "
                 "when using bitwise MILP modeling."
             )
 
