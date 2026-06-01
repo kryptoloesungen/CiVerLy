@@ -1963,13 +1963,17 @@ class LOGIC_MINIMIZER_CVL(ABC):
         """
         Minimize the description of the possible transitions.
 
-        TODO: explain the format of the transistions
+        The `possible_transitions` parameter is a list of tuples containing the 
+        binary transition vectors of the underlying function, with the respective
+        probability encoding. As an example, the transition x -> y through an SBox
+        with probability :math:`2^{-w}` translates to the binary vector
+        :math:`(x || y || enc(w))`.
 
         INPUT:
 
             - ``pla_file`` -- pla file is written to this path
 
-            - ``possible_transitions`` -- set of all possible transitions
+            - ``possible_transitions`` -- set of all possible transitions as described above
 
         OUTPUT:
 
@@ -2075,6 +2079,42 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         .. SEEALSO::
 
             :meth:`civerly.solvers.LOGIC_MINIMIZER_CVL.invoke`
+
+        TESTS:
+
+            sage: from civerly.cipher_implementations.toy_ciphers.toy10 import Toy10
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   cipher = Toy10()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=None,
+            ....:     solve_range=(0, 9),
+            ....:     path=Path(tmpdir))
+            sage: cipher.analyse(model_options=model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer: ...
+            sage: # optional - espresso, cryptominisat
+            sage: SOLVER.ESPRESSO.invoke(
+            ....:   model_options.path / "espresso-8e23b46a.pla",
+            ....:   model_options.path / "espresso-8e23b46a_out.pla"
+            ....: )
+            sage: cipher.analyse(model_options=model_options)
+            97 variables and 655 clauses were written to ...
+            2
+        
+        Delete files:
+
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path)
+
         """
         self._check_can_invoke()
         if solution_file.exists():
