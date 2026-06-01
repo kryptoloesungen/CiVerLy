@@ -1032,15 +1032,64 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
             :meth:`civerly.solvers.MILP_SOLVER_CVL.solve_multiple`
 
-        TODO: add examples for solve_multiple here
-        """
-        raise NotImplementedError
-        def _solutionpooljson_to_solfiles(json_file, solution_file):
-            """Helper function to convert solutions from json to .sol files."""
-            with json_file.open('r') as f:
-                data = json.load(f)
+        TESTS: 
 
-            num_solutions = data['SolutionInfo']['SolCount']
+            sage: # optional - gurobi
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   aes = AES_CVL(R=10)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.GUROBI,
+            ....:       path=Path(tmpdir))
+            ....:   model = aes.model(model_options)
+            ....:   r = SOLVER.GUROBI.solve_multiple(model_options.path / "AES.mps", model, 5)
+            2884 variables and 3085 constraints were written to ...
+            sage: len(r)
+            5
+            sage: r[0] # random
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                'objective_value': 55,
+                'objective_bounds': (55, 55),
+                'assignment': ...
+            ...
+                'solve_time': 0.36570845899768756}
+            sage: r[4] # random
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                'objective_value': 55,
+                'objective_bounds': (55, 55),
+                'assignment': ...
+            ...
+                'solve_time': 0.4231403749981837}
+        
+        Make gurobi time out::
+ 
+            sage: # optional - gurobi
+            sage: aes = AES_CVL(R=40)
+            sage: model = aes.model(model_options)
+            11644 variables and 12565 constraints were written to...
+            sage: r = SOLVER.GUROBI.solve_multiple(
+            ....:     model_options.path / "AES.mps", model, 5, time_limit=2
+            ....: )
+            sage: len(r)
+            5
+            sage: r[0] # random
+            {'status': <SOLVING_STATUS.TIMEOUT: 2>,
+                'objective_value': 250,
+                'objective_bounds': (95, 250),
+                'assignment': ...
+            ...
+                'solve_time': 2.004945993423462}
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path)
+        """
+        def _solutionpooljson_to_solfiles(data, solution_file, num_solutions):
+            """Helper function to convert solutions from json to .sol files."""
 
             for sol_idx in range(num_solutions):
                 obj_val = data['SolutionInfo']['PoolNObjVal'][sol_idx]
@@ -1078,22 +1127,42 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             process = subprocess.Popen(command)
             errno = process.wait()
 
-        status = SOLVING_STATUS.SUCCESS
-        if errno != 0:
-            status = SOLVING_STATUS.ERROR
+        with json_file.open('r') as f:
+            data = json.load(f)
+
+        num_solutions = data['SolutionInfo']['SolCount']
+        runtime       = data['SolutionInfo']['Runtime']
+        st            = data['SolutionInfo']['Status']
 
         if log_file.exists():
             with log_file.open('r') as file:
                 if re.search(self.timeout_string, file.read(), re.MULTILINE):
                     status = SOLVING_STATUS.TIMEOUT
 
-        # convert to seperate .sol files
-        _solutionpooljson_to_solfiles(json_file, solution_file)
+        # convert to seperate .sol files and get relevant info
+        _solutionpooljson_to_solfiles(data, solution_file, num_solutions)
 
-        # TODO: ensure correct functionality
-        # use num_solutions from solutionpooljson_to_solfiles
-        # then parse all the .sol files in the same way as in solve
+        if errno != 0:
+            status = SOLVING_STATUS.ERROR
+        else:
+            status = {2: SOLVING_STATUS.SUCCESS, 9: SOLVING_STATUS.TIMEOUT}[st]
 
+        # PoolObjBound must be at least as good as ObjBound
+        pool_obj_bound = data['SolutionInfo']['PoolObjBound']
+        
+
+        # create results list from parsing the .sol files
+        results = []
+        for sol_idx in range(num_solutions):
+            sol_file = (solution_file.parent / f"{solution_file.stem}_{sol_idx}.sol")   
+            objective_value, assignment = self._process_solution_file(sol_file)
+            results.append({
+                "status": status,
+                "objective_value": objective_value,
+                "objective_bounds": (pool_obj_bound, objective_value),
+                "assignment": assignment,
+                "solve_time": runtime,
+            })
         return results
 
 
