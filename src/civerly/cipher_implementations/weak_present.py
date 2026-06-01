@@ -123,7 +123,27 @@ class WEAK_PRESENT_CVL:
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
 
-        
+        Test Alpha-Evolve modeling:
+
+            sage: # optional - scip
+            sage: from civerly.cipher_implementations.weak_present \
+            ....:   import WEAK_PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir: 
+            ....:   cipher = WEAK_PRESENT_CVL(R=3)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.ALPHA_EVOLVE,
+            ....:     milp_solver=SCIP_CVL(),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
+            3648 variables and 6897 constraints were written to ...
+            5.4150374993
+
         """
         if name is None:
             name = "WEAK_PRESENT"
