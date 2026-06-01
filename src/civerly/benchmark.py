@@ -56,10 +56,10 @@ def benchmark(CM):
             sage: T = benchmark(CM)
             sage: for row in T[0]: print(row)
             ['Name', '\\#Variables', '\\#Constraints', '$t_{M}$', '$t_{S}$', 'w']
-            ['1r-AES', 256, 241, ..., ..., 1]
-            ['2r-AES', 548, 557, ..., ..., 5]
-            ['3r-AES', 840, 873, ..., ..., 9]
-            ['4r-AES', 1132, 1189, ..., ..., 25]
+            ['1r-AES', 320, 305, ..., ..., 1]
+            ['2r-AES', 644, 653, ..., ..., 5]
+            ['3r-AES', 968, 1001, ..., ..., 9]
+            ['4r-AES', 1292, 1349, ..., ..., 25]
             sage: for row in T[1]: print(row)
             ['Name', 'Weight Bound', '\\#Variables', '\\#Clauses', '$t_{M}$', '$t_{S}$', 'Result']
             ['1r-CRAFT', '', 2736, 6161, ..., ..., 2]
@@ -86,10 +86,10 @@ def benchmark(CM):
             sage: print(tabulate(T[0], headers="firstrow")) # random
             Name      \#Variables    \#Constraints    $t_{M}$    $t_{S}$    w
             ------  -------------  ---------------  ---------  ---------  ---
-            1r-AES            256              241  0.0231313  0.0256079    1
-            2r-AES            548              557  0.0969026  0.0258068    5
-            3r-AES            840              873  0.291588   0.0682419    9
-            4r-AES           1132             1189  0.30492    0.18162     25
+            1r-AES            320              305  0.0231313  0.0256079    1
+            2r-AES            644              653  0.0969026  0.0258068    5
+            3r-AES            968             1001  0.291588   0.0682419    9
+            4r-AES           1292             1349  0.30492    0.18162     25
             sage: print(tabulate(T[1], headers="firstrow")) # random
             Name      Weight Bound      \#Variables    \#Clauses     $t_{M}$    $t_{S}$  Result
             --------  --------------  -------------  -----------  ----------  ---------  --------

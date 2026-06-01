@@ -379,7 +379,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
                 ....:       path=Path(tmpdir))
                 ....:   model = aes.model(model_options)
                 ....:   r = SOLVER.SCIP.solve_multiple(model_options.path / "AES.mps", model, 5)
-                2884 variables and 3085 constraints were written to ...
+                3236 variables and 3437 constraints were written to ...
                 sage: len(r)
                 5
                 sage: r[0] # random
@@ -1657,12 +1657,12 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "AES.mps",
-            ....:     model_options.path / "AES.216bd044.sol",
+            ....:     model_options.path / "AES.073904d3.sol",
             ....:     model_options.path / "AES.log")
             <SOLVING_STATUS.SUCCESS: 1>
             sage: aes.analyse(model_options)
             Using existing MILP model, make sure it is up to date!
-            2848 variables and 2977 constraints were written to ...
+            3200 variables and 3329 constraints were written to ...
             Using existing file ..., make sure it is up to date!
             55
             sage: import shutil
