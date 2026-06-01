@@ -2414,14 +2414,15 @@ class SBox_CVL(Component):
             S = self.S
             n = len(S)
 
-            n2, num_pts = 2 * n, 1 << (2 * n)
+            n2, num_pts = 2 * n + len(set_ddt), 1 << (2 * n + len(set_ddt))
             valid_bs, valid_pts = 0, []
             for dx in range(1 << n):
                 for x in range(1 << n):
-                    p = (S[x] ^ S[x ^ dx]) << n | dx
+                    dy = S[x] ^ S[x ^ dx]
+                    p = (1 << (2 * n + set_ddt.index(ddt[dx][dy]))) | dy << n | dx
                     if not (valid_bs & (1 << p)):
-                        # 'valid_bs' is a long indicator bitstring
-                        # (of length 2^n) of possible transitions
+                        # 'valid_bs' is a long indicator bitstring of possible
+                        # transitions (x || y || prob)
                         valid_bs |= (1 << p)
                         valid_pts.append(p)
 
@@ -2486,8 +2487,8 @@ class SBox_CVL(Component):
 
             # turn this into variables
             VAR = [self.MILP_IN[v] for v in range(n)] \
-                + [self.MILP_OUT[v] for v in range(n)] #\
-                # + [PROB[v] for v in range(len(set_ddt))]
+                + [self.MILP_OUT[v] for v in range(n)] \
+                + [PROB[v] for v in range(len(set_ddt))]
 
             # flatten 'cubes' 
             cube_list = [(m, cv, cbs, cost) for (m, cv), (cbs, cost) in cubes.items()]
@@ -2513,7 +2514,6 @@ class SBox_CVL(Component):
                 )
                 invalid_bs &= ~cbs
 
-            return self.milp
 
         else:
             posset = []
