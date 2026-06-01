@@ -51,7 +51,7 @@ The following example shows how to import the built‑in AES implementation, con
        optimization=OPTIMIZATION.MILP,
        granularity=GRANULARITY.WORDWISE,
        linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-       milp_solver=SCIP_CVL(),  # requires SCIP to be installed
+       milp_solver=SOLVER.SCIP,  # requires SCIP to be installed
        path=Path("./AES-Models/"),
    )
 

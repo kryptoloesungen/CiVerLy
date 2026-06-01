@@ -24,8 +24,8 @@ class Toy7:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       solve_range=(0, 8),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -36,9 +36,6 @@ class Toy7:
             Using existing file ..., make sure it is up to date!
             Using existing file ..., make sure it is up to date!
             1356 variables and 3621 clauses were written to '...'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : UNSAT
-            [  3 ,  4] (trying w =   3) : SAT
             3
             Output file in: ...
 
@@ -54,8 +51,8 @@ class Toy7:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       milp_solver=SCIP_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       solve_range=(0, 10),
             ....:       number_of_solutions=1,
             ....:       path=Path(tmpdir))

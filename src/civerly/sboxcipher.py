@@ -122,14 +122,10 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SCIP_CVL(),
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path(tmpdir))
-                sage: # optional - scip
-                sage: with suppress_output():
-                ....:   milp = cipher.analyse(model_options)
-                sage: model_options.milp_solver.process_solution_file(
-                ....:   model_options.path / (cipher.name + ".sol"),
-                ....: )[1]
+                sage: cipher.analyse(model_options) # optional - scip
+                135 variables and 154 constraints were written to ...
                 0
                 sage: R = 2
                 sage: cipher = SBoxCipher(2*n, 2*n, name=name+"Cipher")
@@ -145,17 +141,14 @@ class SBoxCipher(Cipher):
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SCIP_CVL(),
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path(tmpdir))
-                sage: # optional - scip
-                sage: with suppress_output():
-                ....:   milp = cipher.analyse(model_options)
-                sage: model_options.milp_solver.process_solution_file(
-                ....:   model_options.path / (cipher.name + ".sol"),
-                ....: )[1]
+                sage: cipher.analyse(model_options) # optional - scip
+                Using existing file ..., make sure it is up to date!
+                222 variables and 267 constraints were written to ...
                 1
                 sage: import shutil
-                sage: shutil.rmtree(tmpdir)
+                sage: shutil.rmtree(tmpdir) # optional - scip
 
         """
         if model_options.granularity == GRANULARITY.WORDWISE \
@@ -234,7 +227,7 @@ class SBoxCipher(Cipher):
                     break
             else:
                 # model the components that have not been modeled before
-                comp_milp = comp._model_milp(model_options)
+                comp_milp = comp.model(model_options, _first_iter=False)
                 milps.append(comp_milp)
 
                 # if we need to return immediately,
@@ -564,7 +557,7 @@ class SBoxCipher(Cipher):
     def _exclude_solution_milp(self, results: dict) -> None:
         r"""
         Convert a MILP solution *results* dict (as returned by
-        ``process_solution_file``) into a constraint which forbids this
+        ``_process_solution_file``) into a constraint which forbids this
         solution and add it to ``self.milp``.
 
         This ensures the exact solution cannot be found again on re-solve.
@@ -587,14 +580,12 @@ class SBoxCipher(Cipher):
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:     milp_solver=SCIP_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     number_of_solutions=3,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             5312 variables and 8641 constraints were written to ...
-            5312 variables and 8642 constraints were written to ...
-            5312 variables and 8643 constraints were written to ...
             [12, 12, 12]
             sage: t1, t2, t3 = present_cipher.get_trail(model_options)
             sage: t1 == t2 or t1 == t3 or t2 == t3

@@ -48,7 +48,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             1284 variables and 1341 constraints were written to '...'
@@ -89,7 +89,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             5312 variables and 6081 constraints were written to '...'
@@ -135,7 +135,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
@@ -154,8 +154,8 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
@@ -174,7 +174,7 @@ class PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   present_cipher.generate_report(model_options)
@@ -196,19 +196,13 @@ class PRESENT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             5312 variables and 13441 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : UNSAT
-            [ 10 , 12] (trying w =  11) : UNSAT
             12
 
             sage: from civerly.cipher_implementations.present \
@@ -223,19 +217,13 @@ class PRESENT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             5312 variables and 13441 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : UNSAT
-            [ 10 , 12] (trying w =  11) : UNSAT
             12
 
         Linear cryptanalysis::
@@ -252,19 +240,13 @@ class PRESENT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             5312 variables and 12993 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : UNSAT
             6
 
             sage: from civerly.cipher_implementations.present \
@@ -279,17 +261,11 @@ class PRESENT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             5312 variables and 12993 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : UNSAT
             6
 
             sage: from civerly.cipher_implementations.present \
@@ -304,57 +280,14 @@ class PRESENT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             ....:   trail = str(present_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
             8
-
-        Simulate external Espresso minimization::
-
-            sage: from civerly.cipher_implementations.present \
-            ....:   import PRESENT_CVL
-            sage: from civerly.model_options import *
-            sage: import os
-            sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat  # optional - espresso
-            ....:   present_cipher = PRESENT_CVL(R=5)
-            ....:   model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:     optimization=OPTIMIZATION.SAT,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=None,
-            ....:     path=Path(tmpdir))
-            ....:   present_cipher.analyse(model_options)
-            ....:   _ = os.popen("espresso -epos "
-            ....:   f"{tmpdir}/espresso-1c52f72b_in.pla > "
-            ....:   f"{tmpdir}/espresso-1c52f72b_out.pla").read()
-            ....:   present_cipher.analyse(model_options)
-            Optimization problem for Espresso has been written to...
-            Using existing file ..., make sure it is up to date!
-            6512 variables and 16017 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
-            8
-
         """
         if name is None:
             name = "PRESENT"

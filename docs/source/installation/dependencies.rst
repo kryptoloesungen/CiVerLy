@@ -32,6 +32,12 @@ That is, a licence is required to use it.
 Gurobi offers a `free academic licence <https://www.gurobi.com/academia/academic-program-and-licenses/>`_ for researchers at recognised academic institutions.
 Gurobi is non-free software and hence it is not included in the Docker images or in the AppImage.
 
+To use Gurobi with ``nix develop``, copy ``.local-shell-hook.sh.example`` in the
+repository root to ``.local-shell-hook.sh`` and fill in the paths to your Gurobi
+installation directory and licence file.
+The file is git-ignored, so your local settings are never accidentally committed.
+The dev shell sources it automatically on startup if it is present.
+
 CryptoMiniSat
 =============
 `CryptoMiniSat <https://github.com/msoos/cryptominisat>`_ is a SAT solver.

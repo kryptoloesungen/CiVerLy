@@ -45,14 +45,12 @@ class DES_F_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             582 variables and 4612 clauses were written to '...'
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : UNSAT
             2
 
             sage: from civerly.cipher_implementations.des import DES_F_CVL
@@ -66,14 +64,12 @@ class DES_F_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             582 variables and 4612 clauses were written to '...'
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : UNSAT
             2
 
         Using MILP modeling::
@@ -89,8 +85,8 @@ class DES_F_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=SCIP_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   cipher.generate_report(model_options=model_options)
@@ -220,18 +216,14 @@ class DES_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(0, 10),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             3826 variables and 18250 clauses were written to '...'
-            [  0 , 10] (trying w =   5) : SAT
-            [  0 ,  5] (trying w =   2) : UNSAT
-            [  3 ,  5] (trying w =   4) : SAT
-            [  3 ,  4] (trying w =   3) : UNSAT
             4
 
         """

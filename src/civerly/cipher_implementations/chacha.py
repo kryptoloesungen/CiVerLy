@@ -39,7 +39,7 @@ class ChachaQRF_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     solve_range=(0, 8),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -47,10 +47,6 @@ class ChachaQRF_CVL:
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             1916 variables and 4957 clauses were written to '...'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
             0
             Output file in: ...
 
@@ -64,7 +60,7 @@ class ChachaQRF_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CADICAL_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
             ....:     solve_range=(0, 8),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -72,10 +68,6 @@ class ChachaQRF_CVL:
             ....:   trail = str(cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             1916 variables and 4957 clauses were written to '...'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
             0
             Output file in: ...
 
@@ -89,17 +81,10 @@ class ChachaQRF_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             1920 variables and 5797 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
             0
 
         """
@@ -181,13 +166,11 @@ class Chacha_CVL:
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             22240 variables and 53601 clauses were written to '...'
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : UNSAT
             2
 
 

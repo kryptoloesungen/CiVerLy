@@ -10,6 +10,7 @@ the SBox with which the component is initialized).
 import os
 import json
 import zlib
+import time
 from math import log2, gcd, ceil
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -31,15 +32,12 @@ from civerly.util import list_of_predecessor_vector_indices
 from civerly.util import hw, hw_tau, suppress_output
 from civerly.util import reduction_algorithm_ST17
 from civerly.util import vec_to_int, int_to_vec
-from civerly.util import _write_espresso_input
-from civerly.util import _read_espresso_output
 from civerly.util import translate_sat_clause
 from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
 from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
-from civerly.solvers import ESPRESSO_CVL, NO_MILP_SOLVER_CVL, NO_LOGIC_MINIMIZER_CVL
 
 
 class Component(ABC):
@@ -102,6 +100,9 @@ class Component(ABC):
         self._return_immediately_ = False
         self.results = []
 
+        # attribute to keep timing information (in seconds)
+        self._model_time = None
+
     def __call__(self, x):
         r"""Evaluate this component."""
         return self.eval(x)
@@ -121,6 +122,11 @@ class Component(ABC):
         r"""The name used to describe this component."""
         return self.__name
 
+    @property
+    def model_time(self):
+        r"""Return the time it took to model ``self`` (in seconds)."""
+        return self._model_time
+
     @abstractmethod
     def eval(self, x):
         r"""Evaluate this component."""
@@ -130,16 +136,21 @@ class Component(ABC):
         r"""Describe this component."""
         return self.name
 
-    def model(self, model_options):
+    def model(self, model_options, *args, **kwargs):
         r"""Model this component.
 
         This method merely relays ``model_options`` to an appropiate
         subroutine.
         """
+        start_time = time.perf_counter()
         if model_options.optimization == OPTIMIZATION.MILP:
-            return self._model_milp(model_options)
+            model = self._model_milp(model_options)
+            self._model_time = time.perf_counter() - start_time
+            return model
         elif model_options.optimization == OPTIMIZATION.SAT:
-            return self._model_sat(model_options)
+            model = self._model_sat(model_options)
+            self._model_time = time.perf_counter() - start_time
+            return model
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -213,7 +224,7 @@ class Component(ABC):
             elif isinstance(value, (MixedIntegerLinearProgram, DIMACS)):
                 continue
             elif any([word in key for word in [
-                "wordsize", "milp", "sat", "MILP", "SAT"
+                    "wordsize", "milp", "sat", "MILP", "SAT", "_model_time"
             ]]):
                 continue
             elif isinstance(value, matrix_type):
@@ -1105,8 +1116,8 @@ class AND_CVL(Component):
             ....:         optimization=OPTIMIZATION.SAT,
             ....:         granularity=GRANULARITY.BITWISE,
             ....:         sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:         sat_solver=CRYPTOMINISAT_CVL(),
-            ....:         logic_minimizer=ESPRESSO_CVL(),
+            ....:         sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:         logic_minimizer=SOLVER.ESPRESSO,
             ....:         path=Path(tmpdir))
             ....:     with suppress_output():
             ....:       result = cipher.analyse(model_options)
@@ -1613,7 +1624,7 @@ class LinearLayer_CVL(Component):
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     path=Path(tmpdir))
             ....:   cipher = Cipher(4, 8, name="LL-doctest")
             ....:   node = cipher.add_subcipher(
@@ -1621,7 +1632,9 @@ class LinearLayer_CVL(Component):
             ....:   )
             ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
             ....:   cipher.analyse(model_options)
-            ....:   cipher.generate_report(model_options)
+            48 variables and 89 clauses were written to '...'
+            0
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cryptominisat
             ....:   arr = [
             ....:     [0, 0, 1, 1],
             ....:     [1, 0, 1, 1],
@@ -1638,30 +1651,8 @@ class LinearLayer_CVL(Component):
             ....:   node = cipher.add_subcipher(
             ....:     linearlayer, [(cipher.IN, (i, i)) for i in range(4)])
             ....:   cipher.add_output([(node, (i, i)) for i in range(8)])
-            ....:   sat_model = cipher.model(model_options)  # assigned to suppress repr
-            ....:   model_options.sat_solver.solve(
-            ....:     Path(tmpdir) / 'LL-doctest.cnf',
-            ....:     Path(tmpdir) / 'LL-doctest.sat',
-            ....:     model_options)
-            ....:   _ = cipher.get_trail(model_options)  # assigned to suppress repr
-            48 variables and 89 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 , 6] (trying w =   3) : SAT
-            [  0 , 3] (trying w =   1) : SAT
-            [  0 , 1] (trying w =   0) : SAT
-            0
-            Output file in: ...
+            ....:   cipher.analyse(model_options)
             48 variables and 110 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 , 6] (trying w =   3) : SAT
-            [  0 , 3] (trying w =   1) : SAT
-            [  0 , 1] (trying w =   0) : SAT
             0
         """
 
@@ -2149,14 +2140,11 @@ class SBox_CVL(Component):
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.BITWISE,
                 ....:     sbox_modeling=SBOX_MODELING.DISTORTED_BALL,
-                ....:     milp_solver=SCIP_CVL(),
+                ....:     milp_solver=SOLVER.SCIP,
                 ....:     path=Path(tmpdir))
-                ....:   with suppress_output():
-                ....:     milp = cipher.analyse(model_options)
-                ....:   results, objective_value = model_options.milp_solver.process_solution_file(
-                ....:     model_options.path / (cipher.name + ".sol")
-                ....:   )
+                ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)
+                ....:   results = cipher.result["assignment"]
                 ....:   in_diff  = vec_to_int(vector(
                 ....:     GF(2), 4,
                 ....:     [results['IN'][i] for i in range(4)]
@@ -2168,6 +2156,7 @@ class SBox_CVL(Component):
                 ....:   ddt = sb.difference_distribution_table()
                 ....:   print(ddt[in_diff][out_diff])
                 ....:   print(ddt[in_diff][out_diff]/16.0 == 2**(-objective_value))
+                36 variables and 66 constraints were written to ...
                 1
                 8
                 True
@@ -2196,18 +2185,11 @@ class SBox_CVL(Component):
                 ....:     optimization=OPTIMIZATION.MILP,
                 ....:     granularity=GRANULARITY.BITWISE,
                 ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:     milp_solver=SCIP_CVL(),
+                ....:     milp_solver=SOLVER.SCIP,
                 ....:     path=Path(tmpdir))
-                ....:   with suppress_output():
-                ....:     milp = cipher.model(model_options)
-                ....:   model_options.milp_solver.solve(
-                ....:     input_file_name=model_options.path / (cipher.name + ".mps"),
-                ....:     output_file_name=model_options.path / (cipher.name + ".sol"),
-                ....:   )
-                ....:   results, objective_value = model_options.milp_solver.process_solution_file(
-                ....:     model_options.path / (cipher.name + ".sol"),
-                ....:   )
+                ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)
+                ....:   results = cipher.result["assignment"]
                 ....:   in_diff  = vec_to_int(vector(
                 ....:     GF(2), 4, [results['IN'][i] for i in range(4)]
                 ....:   ))
@@ -2217,6 +2199,7 @@ class SBox_CVL(Component):
                 ....:   ddt = sb.difference_distribution_table()
                 ....:   print(ddt[in_diff][out_diff])
                 ....:   print(ddt[in_diff][out_diff]/16.0 == 2**(-objective_value))
+                36 variables and 50 constraints were written to ...
                 1
                 8
                 True
@@ -2310,73 +2293,45 @@ class SBox_CVL(Component):
                     return True
                 return False
 
-            new_mps_files = []
-            reduction_solution_files = dict()
+            reduction_solution = dict()
             for prob, impossible_points in impossible_points_for_prob.items():
                 s_file_mps = model_options.path / f"{s_file_name}.p{prob}.mps"
-                s_file_sol = model_options.path / f"{s_file_name}.p{prob}.sol"
-                reduction_solution_files[prob] = s_file_sol
+                
 
-                if os.path.exists(s_file_sol):
-                    print(
-                        f"Using existing file {s_file_sol}, "
-                        "make sure it is up to date!"
+                # Generate the reduction-MILP and write into an .mps file.
+                # We add equations to make sure that each impossible point is
+                # removed by at least one equation. Here, impossible means
+                # that the probability does not match the desired one.
+                # The solver handles the "solution already on disk" cache
+                # check internally and (for an external solver) aborts via
+                # :class:`ExternalSolveRequired` when the user must solve.
+                milp_to_minimize_milp = MixedIntegerLinearProgram(
+                    maximization=False, solver="GLPK")  # Reduction MILP
+                Z = milp_to_minimize_milp.new_variable(
+                    name="Z", binary=True)
+                for point in impossible_points:
+                    # Add a reduction inequation ensuring that each
+                    # impossible point is removed by at least one
+                    # inequation
+                    milp_to_minimize_milp.add_constraint(
+                        sum([
+                            Z[ineq_index]
+                            for ineq_index, inequation in enumerate(
+                                inequations_for_prob[prob]
+                            )
+                            if removes(inequation, point)
+                        ]) >= 1
                     )
-                else:
-                    # Generate the reduction-MILP and write into an .mps file
-                    # In essence, we add equations to make sure that each
-                    # impossible point is removed by at least one equation.
-                    # Here, impossible means that the probability does not
-                    # match the desired one.
-                    milp_to_minimize_milp = MixedIntegerLinearProgram(
-                        maximization=False, solver="GLPK")  # Reduction MILP
-                    Z = milp_to_minimize_milp.new_variable(
-                        name="Z", binary=True)
-                    for point in impossible_points:
-                        # Add a reduction inequation ensuring that each
-                        # impossible point is removed by at least one
-                        # inequation
-                        milp_to_minimize_milp.add_constraint(
-                            sum([
-                                Z[ineq_index]
-                                for ineq_index, inequation in enumerate(
-                                    inequations_for_prob[prob]
-                                )
-                                if removes(inequation, point)
-                            ]) >= 1
-                        )
 
-                    milp_to_minimize_milp.set_objective(sum(Z))
-                    with suppress_output():  # to avoid doctest failure
-                        milp_to_minimize_milp.write_mps(str(s_file_mps))
-                    if not isinstance(solver, NO_MILP_SOLVER_CVL):
-                        solver.solve(
-                            input_file_name=s_file_mps, output_file_name=s_file_sol
-                        )
-                    else:  # Remember filename so we can tell the user to solve it
-                        new_mps_files.append(s_file_mps)
-
-            if isinstance(solver, NO_MILP_SOLVER_CVL):
-                print(
-                    "SBox MILPs have been written to "
-                    f"{', '.join(new_mps_files)}. "
-                    "In order to continue the modeling, solve the generated "
-                    "MILPs by providing solution files with the names "
-                    f"{', '.join(new_mps_files).replace('.mps', '.sol')}."
-                )
-                self._return_immediately_ = True
-                return
+                milp_to_minimize_milp.set_objective(sum(Z))
+                with suppress_output():  # to avoid doctest failure
+                    milp_to_minimize_milp.write_mps(str(s_file_mps))
+                reduction_solution[prob] = solver.solve(s_file_mps)["assignment"]
 
             selected_inequations = {
-                prob: [] for prob in reduction_solution_files.keys()
+                prob: [] for prob in reduction_solution.keys()
             }
-            for prob, s_file_sol in reduction_solution_files.items():
-                assert os.path.exists(s_file_sol), (
-                    "ERROR: Solution file missing despite a "
-                    "former check or generation"
-                )
-
-                results, _ = model_options.milp_solver.process_solution_file(s_file_sol)
+            for prob, results in reduction_solution.items():
                 assert 'Z' in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "
                     f"Found {results.keys()}, expected 'Z'"
@@ -2577,35 +2532,9 @@ class SBox_CVL(Component):
                 esp_file_name = f"espresso-{zlib.crc32("".join([
                     str(int("".join(map(str, pos)), 2))
                     for pos in sorted(posset)
-                ]).encode("utf-8")):x}"  # rule for espresso file names
-                esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
-                esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
-
-                if os.path.exists(esp_file_out):
-                    print(
-                        f"Using existing file {esp_file_out}, "
-                        "make sure it is up to date!"
-                    )
-                else:
-                    _write_espresso_input(
-                        posset, esp_file_name, model_options.path
-                    )
-                    if isinstance(model_options.logic_minimizer, NO_LOGIC_MINIMIZER_CVL):
-                        print(
-                            "Optimization problem for Espresso has been "
-                            f"written to {esp_file_in}.\n"
-                            "In order to minimize the clauses, execute:\n\n"
-                            "\t> espresso -epos "
-                            f"{esp_file_in} > {esp_file_out}"
-                        )
-                        self._return_immediately_ = True
-                        return
-                    elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
-                        model_options.logic_minimizer.solve(
-                            esp_file_in, esp_file_out
-                        )
-
-                clauses = _read_espresso_output(esp_file_out)
+                ]).encode("utf-8")):x}.pla"
+                pla_file = model_options.path / esp_file_name
+                clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
                 n_in, n_out = self.input_length, self.output_length
                 VAR = [self.MILP_IN[v] for v in range(n_in)] \
@@ -2656,14 +2585,12 @@ class SBox_CVL(Component):
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
-            ....:   with suppress_output(): cipher.analyse(model_options)
-            ....:   results, objective_value = model_options.sat_solver.process_solution_file(
-            ....:     model_options.path / (cipher.name + ".sat")
-            ....:   )
+            ....:   objective_value = cipher.analyse(model_options)
             ....:   print(objective_value)
+            ....:   results = cipher.result["assignment"]
             ....:   in_diff  = vec_to_int(
             ....:     vector(GF(2), 4, [results[i+1] for i in range(4)])
             ....:   )
@@ -2672,14 +2599,12 @@ class SBox_CVL(Component):
             ....:   )
             ....:   print(sb.difference_distribution_table()[in_diff][out_diff])
             ....:   print(sb.difference_distribution_table()[in_diff][out_diff]/16.0
-            ....:         == 2**(-int(objective_value)))
+            ....:         == 2**(-objective_value))
+            36 variables and 119 clauses were written to ...
             1
             8
             True
-
-
         """
-
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             ddt = self.S.difference_distribution_table()
         elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
@@ -2722,35 +2647,9 @@ class SBox_CVL(Component):
             esp_file_name = f"espresso-{zlib.crc32("".join([
                 str(int("".join(map(str, pos)), 2))
                 for pos in sorted(posset)
-            ]).encode("utf-8")):x}"  # rule for espresso file names
-            esp_file_in = model_options.path / f"{esp_file_name}_in.pla"
-            esp_file_out = model_options.path / f"{esp_file_name}_out.pla"
-
-            if os.path.exists(esp_file_out):
-                print(
-                    f"Using existing file {esp_file_out}, "
-                    "make sure it is up to date!"
-                )
-            else:
-                _write_espresso_input(
-                    posset, esp_file_name, model_options.path
-                )
-                if isinstance(model_options.logic_minimizer, NO_LOGIC_MINIMIZER_CVL):
-                    print(
-                        "Optimization problem for Espresso has been "
-                        f"written to '{esp_file_in}'.\n"
-                        "In order to minimize the clauses, execute:\n\n"
-                        "\t$ espresso -epos "
-                        f"{esp_file_in} > {esp_file_out}"
-                    )
-                    self._return_immediately_ = True
-                    return
-                elif isinstance(model_options.logic_minimizer, ESPRESSO_CVL):
-                    model_options.logic_minimizer.solve(
-                        esp_file_in, esp_file_out
-                    )
-
-            clauses = _read_espresso_output(esp_file_out)
+            ]).encode("utf-8")):x}.pla"  # rule for espresso file names
+            pla_file = model_options.path / esp_file_name
+            clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
             for clause in clauses:
                 self.sat.add_clause(translate_sat_clause(SAT_VARS, clause))

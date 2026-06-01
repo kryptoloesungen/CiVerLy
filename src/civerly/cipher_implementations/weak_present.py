@@ -32,8 +32,8 @@ class WEAK_PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   weak_cipher.analyse(model_options)
@@ -53,8 +53,8 @@ class WEAK_PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=SCIP_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   weak_cipher.analyse(model_options)
@@ -74,8 +74,8 @@ class WEAK_PRESENT_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=SCIP_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   weak_cipher.analyse(model_options)
@@ -98,8 +98,8 @@ class WEAK_PRESENT_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=SCIP_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             sage: cipher.analyse(model_options)
             3648 variables and 6465 constraints were written to ...

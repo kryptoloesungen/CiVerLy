@@ -13,9 +13,10 @@ from civerly.solvers import MILP_SOLVER_CVL, SAT_SOLVER_CVL, LOGIC_MINIMIZER_CVL
 # Import all solvers, even though they are unused here.
 # This way, the user has access to ALL model options
 # when importing `civerly.model_options`.
-from civerly.solvers import NO_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
-from civerly.solvers import NO_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
-from civerly.solvers import NO_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
+from civerly.solvers import EXTERNAL_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
+from civerly.solvers import EXTERNAL_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
+from civerly.solvers import EXTERNAL_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
+from civerly.solvers import SOLVER
 
 
 
@@ -133,8 +134,10 @@ class MODEL_OPTIONS:
           :class:`civerly.model_options.SBOX_MODELING`
 
         - ``milp_solver`` -- see :class:`civerly.solvers.MILP_SOLVER_CVL`
-        
-        - ``sat_solver`` -- see :class:`civerly.solvers.MILP_SOLVER_CVL`
+
+        - ``sat_solver`` -- see :class:`civerly.solvers.SAT_SOLVER_CVL`
+
+        - ``logic_minimizer`` -- see :class:`civerly.solvers.LOGIC_MINIMIZER_CVL`
 
         - ``solve_range`` -- tuple; The range of weights for which CiVerLy
           should generate models and solve them
@@ -142,11 +145,11 @@ class MODEL_OPTIONS:
         - ``sat_precision`` -- int; The number of decimal places which is used
           to find the optimal SAT-bound
 
+        - ``number_of_solutions`` -- number of solutions to find
+
         - ``path`` -- Path; directory where models will be written to
 
         - ``write_to_file`` -- bool; decides if files are written or not
-
-        - ``espresso`` -- bool; decides if Espresso should be used or not
 
     Below we show how to use a valid configuration of the model options.
 
@@ -160,7 +163,7 @@ class MODEL_OPTIONS:
         ....:     granularity=GRANULARITY.BITWISE,
         ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
         ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-        ....:     milp_solver=SCIP_CVL(),
+        ....:     milp_solver=SOLVER.SCIP,
         ....:     path=Path("./CiVerLy-Models/"))
         sage: model_options
         MODEL_OPTIONS:
@@ -170,8 +173,8 @@ class MODEL_OPTIONS:
             -> linear_layer_modeling : CONVEX_HULL
             -> sbox_modeling : CONVEX_HULL
             -> milp_solver : <class 'civerly.solvers.SCIP_CVL'>
-            -> sat_solver : <class 'civerly.solvers.NO_SAT_SOLVER_CVL'>
-            -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
+            -> sat_solver : <class 'civerly.solvers.EXTERNAL_SAT_SOLVER_CVL'>
+            -> logic_minimizer : <class 'civerly.solvers.EXTERNAL_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
@@ -191,9 +194,9 @@ class MODEL_OPTIONS:
             -> granularity : BITWISE
             -> linear_layer_modeling : CONVEX_HULL
             -> sbox_modeling : CONVEX_HULL
-            -> milp_solver : <class 'civerly.solvers.NO_MILP_SOLVER_CVL'>
-            -> sat_solver : <class 'civerly.solvers.NO_SAT_SOLVER_CVL'>
-            -> logic_minimizer : <class 'civerly.solvers.NO_LOGIC_MINIMIZER_CVL'>
+            -> milp_solver : <class 'civerly.solvers.EXTERNAL_MILP_SOLVER_CVL'>
+            -> sat_solver : <class 'civerly.solvers.EXTERNAL_SAT_SOLVER_CVL'>
+            -> logic_minimizer : <class 'civerly.solvers.EXTERNAL_LOGIC_MINIMIZER_CVL'>
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
@@ -220,7 +223,7 @@ class MODEL_OPTIONS:
         for attribute, value in self.__dict__.items():
             if isinstance(value, Enum):
                 string += f"\n\t-> {attribute} : {value.__dict__['_name_']}"
-            elif isinstance(value, SOLVER_CVL):
+            elif isinstance(value, (SOLVER_CVL, LOGIC_MINIMIZER_CVL)):
                 string += f"\n\t-> {attribute} : {type(value)}"
             elif not isinstance(value, bool):  # skip write_to_file
                 string += f"\n\t-> {attribute} : {value}"
@@ -232,13 +235,13 @@ class MODEL_OPTIONS:
         """
         # set self.{milp, sat}_solver to respective NoneSolver
         if self.milp_solver is None:
-            self.milp_solver = NO_MILP_SOLVER_CVL()
+            self.milp_solver = EXTERNAL_MILP_SOLVER_CVL()
         
         if self.sat_solver is None:
-            self.sat_solver = NO_SAT_SOLVER_CVL()
+            self.sat_solver = EXTERNAL_SAT_SOLVER_CVL()
         
         if self.logic_minimizer is None:
-            self.logic_minimizer = NO_LOGIC_MINIMIZER_CVL()
+            self.logic_minimizer = EXTERNAL_LOGIC_MINIMIZER_CVL()
         
         if self.solve_range is None and self.optimization == OPTIMIZATION.SAT:
             self.solve_range = (0, 100)
@@ -261,7 +264,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./CiVerLy-Models/"))
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -269,7 +272,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./CiVerLy-Models/"))
             Traceback (most recent call last):
             ...
@@ -284,7 +287,7 @@ class MODEL_OPTIONS:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SCIP_CVL(),
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./CiVerLy-Models/"))
             Traceback (most recent call last):
             ...
@@ -475,7 +478,7 @@ class MODEL_OPTIONS:
         if not isinstance(self.logic_minimizer, LOGIC_MINIMIZER_CVL):
             raise InvalidModelOptionException(
                 self.logic_minimizer,
-                message="logic_minimizer must be either NO_LOGIC_MINIMIZER_CVL or "
+                message="logic_minimizer must be either EXTERNAL_LOGIC_MINIMIZER_CVL or "
                 "ESPRESSO_CVL."
             )
 

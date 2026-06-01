@@ -47,13 +47,13 @@ from copy import deepcopy
 import subprocess
 import json
 import glob
+import time
 
 from civerly.util import translate_sat_clause
 from civerly.util import suppress_output
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import OPTIMIZATION, GRANULARITY
 from civerly.model_options import CRYPTANALYSIS
-from civerly.solvers import NoSolverWarning
 from civerly.component import Component
 from civerly.trail import TrailNode
 
@@ -219,7 +219,7 @@ class Cipher:
             )
             return x
 
-        def model(self, model_options):
+        def model(self, model_options, *args, **kwargs):
             """
             Return the model for ``self``.
             """
@@ -312,7 +312,7 @@ class Cipher:
     # placeholder for the indices of outputs that not connected yet.
     NOT_SET = None
 
-    def __init__(self, input_length, output_length, name):
+    def __init__(self, input_length, output_length, name, key_schedule=None):
         r"""
         Initialize ``self`` with the given parameters.
 
@@ -331,6 +331,11 @@ class Cipher:
 
             - ``name`` -- string; Used to name and identify the Cipher instance
               and for naming files that are written to disk.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by
+              :meth:`set_round_keys` to derive round keys from a master key.
+              Defaults to ``None``.
 
         OUTPUT: The instantiated ``Cipher`` with the following attributes:
 
@@ -420,9 +425,16 @@ class Cipher:
         # solution files.
         self.trail_nodes = []
         
+        self.key_schedule = key_schedule
+
         self.milp = None
         self.sat = None
         self.X = None
+
+        # attributes to keep timing information (in seconds)
+        self._analyse_time = None
+        self._model_time = None
+        self._solve_time = None
 
     # Get-functions of various attributes:
     # --------------------------------------------------
@@ -574,6 +586,67 @@ class Cipher:
         """
         assert isinstance(self.__is_valid, bool)
         return self.__is_valid
+
+    def set_round_keys(self, k: int):
+        r"""
+        Derive round keys from master key ``k`` and inject them into the
+        cipher's round key components.
+
+        Requires ``self.key_schedule`` and ``self._rk_components`` to be
+        set on the cipher instance (see :class:`civerly.keyschedule.KeySchedule`).
+        After calling this method, ``self.eval(plaintext)`` returns the
+        correct ciphertext for the given key.
+
+        Modeling is unaffected - round key components retain their canonical
+        behavior regardless of the value set here.
+
+        INPUT:
+
+            - ``k`` -- integer; the master key
+
+        EXAMPLES::
+
+            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.util import int_to_vec, vec_to_int
+            sage: hurdle = HURDLE_CVL(R=1)
+            sage: hurdle.set_round_keys(0x99990099991188992277993366994455)
+            sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
+            ....:   0x09cc2a7e2222eeee
+            True
+        """
+        if not hasattr(self, '_rk_components'):
+            raise AttributeError(
+                f"{self.name} has no _rk_components attribute. "
+                f"Set self._rk_components to the list of RK_CVL components "
+                f"in the cipher's __init__ to enable set_round_keys()."
+            )
+        if self.key_schedule is None:
+            raise NotImplementedError(
+                f"{self.name} has no key schedule implemented. "
+                f"Omit set_round_keys() to use the default zero-key behavior."
+            )
+        rks = self.key_schedule(k)
+        for comp, val in zip(self._rk_components, rks):
+            comp.const = val
+
+    @property
+    def analyse_time(self):
+        r"""
+        Return the time it took to analyse ``self`` (in seconds).
+
+        Analysing includes modeling and solving.
+        """
+        return self._analyse_time
+
+    @property
+    def model_time(self):
+        r"""Return the time it took to model ``self`` (in seconds)."""
+        return self._model_time
+
+    @property
+    def solve_time(self):
+        r"""Return the time it took to solve the model for ``self`` (in seconds)."""
+        return self._solve_time
 
     def add_subcipher(self, sub_cipher, edges):
         r"""
@@ -1160,7 +1233,7 @@ class Cipher:
 
         return depths
 
-    def model(self, model_options):
+    def model(self, model_options, _first_iter=True):
         """
         Generate the model for ``self`` according to the given
         ``model_options``. Calls one of the two modeling methods
@@ -1176,10 +1249,15 @@ class Cipher:
 
             - the generated model
         """
+        start_time = time.perf_counter()
         if model_options.optimization == OPTIMIZATION.MILP:
-            return self._model_milp(model_options, _first_iter=True)
+            self._model = self._model_milp(model_options, _first_iter=_first_iter)
+            self._model_time = time.perf_counter() - start_time
+            return self._model
         elif model_options.optimization == OPTIMIZATION.SAT:
-            return self._model_sat(model_options, _first_iter=True)
+            self._model = self._model_sat(model_options, _first_iter=_first_iter)
+            self._model_time = time.perf_counter() - start_time
+            return self._model
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1300,7 +1378,7 @@ class Cipher:
                     break
             else:
                 # model the components that have not been modeled before
-                comp_sat = comp._model_sat(model_options)
+                comp_sat = comp.model(model_options, _first_iter=False)
                 sats.append(comp_sat)
 
                 # if we need to return immediately,
@@ -1507,6 +1585,7 @@ class Cipher:
 
             Requires the specified solver to be installed.
         """
+        start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
         self.results = []
         self.trail_nodes = []
@@ -1521,25 +1600,44 @@ class Cipher:
                 self._finish_milp(
                     model_options, self.milp
                 )
-            if model_options.milp_solver is None:
-                raise NoSolverWarning()
+            input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
+                # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
+                # helper/dummy variables are excluded so that two solutions
+                # are considered the same when they agree on the trail.
+                b = self.milp.get_backend()
+                trail_vars = {
+                    b.col_name(i) for i in range(b.ncols())
+                    if b.col_name(i).startswith("X")
+                }
                 all_results = model_options.milp_solver.solve_multiple(
-                    model_options=model_options,
-                    cipher=self
+                    input_file=input_file,
+                    milp=self.milp,
+                    number_of_solutions=model_options.number_of_solutions,
+                    trail_vars=trail_vars,
                 )
-                for results_and_weight in all_results:
-                    TrailNode(self, model_options, results_and_weight)
-                return [w for _, w in all_results]
+                self._solve_time = 0
+                weights = []
+                for r in all_results:
+                    self._solve_time = self._solve_time + r["solve_time"]
+                    if r["objective_value"] is None:
+                        continue
+                    TrailNode(
+                        self, model_options,
+                        (r["assignment"], r["objective_value"]),
+                    )
+                    weights.append(r["objective_value"])
+                self._analyse_time = time.perf_counter() - start_time_analyse
+                return weights
             else:
-                model_options.milp_solver.solve(
-                    input_file_name=model_options.path / (self.name + ".mps"),
-                    output_file_name=model_options.path / (self.name + ".sol")
+                self.result = model_options.milp_solver.solve(input_file)
+                self._solve_time = self.result["solve_time"]
+                results_and_weight = (
+                    self.result["assignment"], self.result["objective_value"]
                 )
-                results_and_weight = self.read_results(model_options)
                 TrailNode(self, model_options, results_and_weight)
-                return results_and_weight[1]
-
+                self._analyse_time = time.perf_counter() - start_time_analyse
+                return self.result["objective_value"]
         elif model_options.optimization == OPTIMIZATION.SAT:
             if self.sat is None:
                 self.model(model_options)
@@ -1552,29 +1650,58 @@ class Cipher:
                 )
             if self._return_immediately_:
                 return
+            input_file = model_options.path / (self.name + ".cnf")
+            sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:
-                all_results = model_options.sat_solver.solve_multiple(
-                    model_options=model_options,
-                    cipher=self
+                start_time = time.perf_counter()
+                # Trail vars: the sum_arr variables (which encode the weight)
+                # plus the input variables. Helper/auxiliary clauses (e.g.
+                # the sum-counter aux vars) are excluded so that two
+                # solutions are considered the same when they agree on the
+                # trail.
+                with open(sum_arr_file, 'r') as f:
+                    sum_arr = json.load(f)
+                trail_vars = (
+                    {int(var) for _, var in sum_arr}
+                    | set(range(1, self.input_length + 1))
                 )
-                for results_and_weight in all_results:
-                    TrailNode(self, model_options, results_and_weight)
-                return [w for _, w in all_results]
+                all_results = model_options.sat_solver.solve_multiple(
+                    input_file=input_file,
+                    sum_arr_file=sum_arr_file,
+                    solve_range=model_options.solve_range,
+                    number_of_solutions=model_options.number_of_solutions,
+                    trail_vars=trail_vars,
+                    precision=model_options.sat_precision,
+                )
+                self._solve_time = 0
+                weights = []
+                for r in all_results:
+                    self._solve_time = self._solve_time + r["solve_time"]
+                    if r["objective_value"] is None:
+                        continue
+                    TrailNode(
+                        self, model_options,
+                        (r["assignment"], r["objective_value"]),
+                    )
+                    weights.append(r["objective_value"])
+                self._analyse_time = time.perf_counter() - start_time_analyse
+                return weights
             else:
                 # if no sat_solver has been selected, we generate all cnf-files
                 # for the given solve_range
-                model_options.sat_solver.solve(
-                    model_options.path / (self.name + ".cnf"),
-                    model_options.path / (self.name + ".sat"),
-                    model_options=model_options,
-                    time_limit=None)
-
-                if model_options.sat_solver is None:
-                    raise NoSolverWarning()
-                else:
-                    results_and_weight = self.read_results(model_options)
-                    TrailNode(self, model_options, results_and_weight)
-                    return results_and_weight[1]
+                self.result = model_options.sat_solver.solve(
+                    input_file,
+                    sum_arr_file=sum_arr_file,
+                    solve_range=model_options.solve_range,
+                    precision=model_options.sat_precision,
+                )
+                self._solve_time = self.result["solve_time"]
+                results_and_weight = (
+                    self.result["assignment"], self.result["objective_value"]
+                )
+                TrailNode(self, model_options, results_and_weight)
+                self._analyse_time = time.perf_counter() - start_time_analyse
+                return self.result["objective_value"]
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1706,15 +1833,30 @@ class Cipher:
 
     def read_results(self, model_options):
         r"""
+        Re-read the most recent solution from disk and return
+        ``(assignment, objective_value)`` -- the shape :class:`TrailNode`
+        expects.
+
+        Used by :meth:`generate_report` and :meth:`get_trail` to reconstruct
+        a trail in a fresh session, without re-running :meth:`analyse`.
+
+        .. NOTE::
+
+            The SAT path is not currently functional: the new
+            :meth:`SAT_SOLVER_CVL.solve` does not persist the optimum to a
+            canonical ``.sat`` file, and the per-iteration files don't carry
+            the weight. To re-read a SAT result, call :meth:`analyse` again.
         """
+        if hasattr(self, "result"):
+            return self.result["assignment"], self.result["objective_value"]
         if model_options.optimization == OPTIMIZATION.MILP:
-            solution_file_name = model_options.path / (self.name + ".sol")
-            return model_options.milp_solver.process_solution_file(
-                solution_file_name)
+            solution_file = model_options.path / (self.name + ".sol")
+            objective_value, assignment = (
+                model_options.milp_solver._process_solution_file(solution_file)
+            )
+            return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
-            solution_file_name = model_options.path / (self.name + ".sat")
-            return model_options.sat_solver.process_solution_file(
-                solution_file_name)
+            raise NotImplementedError
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -1736,7 +1878,7 @@ class Cipher:
         ``<name>.pdf`` is produced (existing behaviour).
 
         When ``model_options.number_of_solutions > 1``, one PDF per solution
-        is produced, named ``<name>_sol0.pdf``, ``<name>_sol1.pdf``, …
+        is produced, named ``<name>_sol0.pdf``, ``<name>_sol1.pdf``, ...
         The stored :attr:`trail_nodes` (populated by the preceding
         :meth:`analyse` call) are used directly; no solution files are
         re-read.
@@ -1793,7 +1935,9 @@ class Cipher:
         """
 
         if model_options.number_of_solutions == 1:
-            results_and_weight = self.read_results(model_options)
+            results_and_weight = (
+                self.result["assignment"], self.result["objective_value"]
+            )
             root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
             return root_node
@@ -1886,6 +2030,7 @@ class Cipher:
         After analysis, ``results`` holds the trail bit-patterns and is
         preserved verbatim through the JSON file::
 
+            sage: # optional - cadical, espresso
             sage: from civerly.model_options import *
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -1893,8 +2038,8 @@ class Cipher:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=CADICAL_CVL(),
-            ....:   logic_minimizer=ESPRESSO_CVL(),
+            ....:   sat_solver=SOLVER.CADICAL,
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("DOCTEST-Export"))
             sage: cipher.analyse(model_options)
             ...
@@ -2310,7 +2455,7 @@ class Cipher:
             return self._exclude_solution_sat(results, model_options)
 
     def _exclude_solution_sat(self, results, model_options):
-        input_file_name = model_options.path / (self.name + ".cnf")
+        input_file = model_options.path / (self.name + ".cnf")
         sum_arr_file = model_options.path / (self.name + "sum.json")
 
         with open(sum_arr_file, 'r') as f:
@@ -2326,9 +2471,9 @@ class Cipher:
         )
 
         sat = DIMACS()
-        sat.read(str(input_file_name))
+        sat.read(str(input_file))
         sat.add_clause(blocking_clause)
-        sat.write(input_file_name)
+        sat.write(input_file)
 
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         r"""

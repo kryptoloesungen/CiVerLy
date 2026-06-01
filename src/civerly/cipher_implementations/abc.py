@@ -87,16 +87,12 @@ class ABC_CVL:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     solve_range=(0, 10),
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
             ....:   abc_cipher.analyse(model_options)
             12640 variables and 44257 clauses were written to '...'
-            [  0 , 10] (trying w =   5) : SAT
-            [  0 ,  5] (trying w =   2) : UNSAT
-            [  3 ,  5] (trying w =   4) : SAT
-            [  3 ,  4] (trying w =   3) : SAT
             3
 
         """

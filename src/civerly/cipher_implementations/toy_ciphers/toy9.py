@@ -23,8 +23,8 @@ class Toy9:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       milp_solver=SCIP_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             36 variables and 85 constraints were written to '...'
@@ -43,18 +43,11 @@ class Toy9:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             36 variables and 109 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
             1
 
         """
