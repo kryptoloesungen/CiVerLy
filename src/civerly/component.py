@@ -10,6 +10,7 @@ the SBox with which the component is initialized).
 import os
 import json
 import zlib
+import time
 from math import log2, gcd, ceil
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -99,6 +100,9 @@ class Component(ABC):
         self._return_immediately_ = False
         self.results = []
 
+        # attribute to keep timing information (in seconds)
+        self._model_time = None
+
     def __call__(self, x):
         r"""Evaluate this component."""
         return self.eval(x)
@@ -118,6 +122,11 @@ class Component(ABC):
         r"""The name used to describe this component."""
         return self.__name
 
+    @property
+    def model_time(self):
+        r"""Return the time it took to model ``self`` (in seconds)."""
+        return self._model_time
+
     @abstractmethod
     def eval(self, x):
         r"""Evaluate this component."""
@@ -127,16 +136,21 @@ class Component(ABC):
         r"""Describe this component."""
         return self.name
 
-    def model(self, model_options):
+    def model(self, model_options, *args, **kwargs):
         r"""Model this component.
 
         This method merely relays ``model_options`` to an appropiate
         subroutine.
         """
+        start_time = time.perf_counter()
         if model_options.optimization == OPTIMIZATION.MILP:
-            return self._model_milp(model_options)
+            model = self._model_milp(model_options)
+            self._model_time = time.perf_counter() - start_time
+            return model
         elif model_options.optimization == OPTIMIZATION.SAT:
-            return self._model_sat(model_options)
+            model = self._model_sat(model_options)
+            self._model_time = time.perf_counter() - start_time
+            return model
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
@@ -210,7 +224,7 @@ class Component(ABC):
             elif isinstance(value, (MixedIntegerLinearProgram, DIMACS)):
                 continue
             elif any([word in key for word in [
-                "wordsize", "milp", "sat", "MILP", "SAT"
+                    "wordsize", "milp", "sat", "MILP", "SAT", "_model_time"
             ]]):
                 continue
             elif isinstance(value, matrix_type):

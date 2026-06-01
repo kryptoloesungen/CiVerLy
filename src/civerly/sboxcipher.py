@@ -227,7 +227,7 @@ class SBoxCipher(Cipher):
                     break
             else:
                 # model the components that have not been modeled before
-                comp_milp = comp._model_milp(model_options)
+                comp_milp = comp.model(model_options, _first_iter=False)
                 milps.append(comp_milp)
 
                 # if we need to return immediately,
