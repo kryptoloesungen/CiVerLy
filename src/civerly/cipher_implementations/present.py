@@ -288,6 +288,28 @@ class PRESENT_CVL:
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
             8
+
+        Differential cryptanalysis using `ALPHA_EVOLVE` modeling::
+
+            sage: # optional - scip
+            sage: from civerly.cipher_implementations.present \
+            ....:   import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   present_cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.ALPHA_EVOLVE,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   present_cipher.analyse(model_options)
+            5312 variables and 8897 constraints were written to ...
+            12
+            
         """
         if name is None:
             name = "PRESENT"

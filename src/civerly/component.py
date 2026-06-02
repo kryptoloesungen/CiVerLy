@@ -2366,6 +2366,9 @@ class SBox_CVL(Component):
 
         elif model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE:
 
+            if model_options.cryptanalysis != CRYPTANALYSIS.DIFFERENTIAL:
+                raise NotImplementedError("Only differential cryptanalysis for alphaevolve possible.")
+
             S = self.S
             n = len(S)
 

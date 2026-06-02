@@ -144,6 +144,28 @@ class WEAK_PRESENT_CVL:
             3648 variables and 6897 constraints were written to ...
             5.4150374993
 
+        Differential cryptanalysis using `ALPHA_EVOLVE` modeling::
+
+            sage: # optional - scip
+            sage: from civerly.cipher_implementations.weak_present \
+            ....:   import WEAK_PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   cipher = WEAK_PRESENT_CVL(R=6)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.ALPHA_EVOLVE,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
+            6912 variables and 13473 constraints were written to ...
+            12
+            
+
         """
         if name is None:
             name = "WEAK_PRESENT"
