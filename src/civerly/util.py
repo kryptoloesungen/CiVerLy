@@ -524,8 +524,109 @@ def translate_var(cipher, node, local_var):
 
     return var
 
+def alphaevolve_minimization(S, ddt, model_options):
+    """
+    TODO
+    """
+    from civerly.model_options import InvalidModelOptionException
+    from civerly.model_options import CRYPTANALYSIS
 
+    # Contains the possible entries of ddt.
+    set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
 
+    n = len(S)
+    n2, num_pts = 2 * n + len(set_ddt), 1 << (2 * n + len(set_ddt))
+    valid_bs, valid_pts = 0, []
+
+    if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
+        for dx in range(1 << n):
+            for x in range(1 << n):
+                dy = S[x] ^ S[x ^ dx]
+                p = (1 << (2 * n + set_ddt.index(ddt[dx][dy]))) | dy << n | dx
+                if not (valid_bs & (1 << p)):
+                    # 'valid_bs' is a long indicator bitstring of possible
+                    # transitions (prob || dy || dx)
+                    valid_bs |= (1 << p)
+                    valid_pts.append(p)
+    
+    elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
+        lat = ddt # renaming for less confusion
+        for a in range(1 << n):
+            for b in range(1 << n):
+                if lat[a][b] > 0:
+                    p = (1 << (2 * n + set_ddt.index(lat[a][b]))) | b << n | a
+                    if not (valid_bs & (1 << p)):
+                        # 'valid_bs' is a long indicator bitstring of possible
+                        # transitions (prob || b || a)
+                        valid_bs |= (1 << p)
+                        valid_pts.append(p)
+    else:
+        raise InvalidModelOptionException(
+            model_options.cryptanalysis, CRYPTANALYSIS
+        )
+
+    B = [0] * n2
+    for i in range(n2):
+        for p in range(num_pts):
+            if (p >> i) & 1:
+                B[i] |= (1 << p)
+    # 'invalid_bs' is bit-complement of 'valid_bs' 
+    invalid_bs = ((1 << num_pts) - 1) ^ valid_bs
+
+    def count_bits(x):
+        return bin(x).count('1')
+
+    cubes, covered_gen = {}, 0
+    for inv in range(num_pts):
+        if not (invalid_bs & (1 << inv)) or (covered_gen & (1 << inv)):
+            continue
+
+        # 'diffs': differences between this invalid point and all valid points
+        diffs = [inv ^ vp for vp in valid_pts]
+    
+        # 'min_diffs': the minimal differences, which have
+        # no predecessor-vector in 'diffs'
+        min_diffs = []
+        for d in sorted(list(set(diffs)), key=count_bits):
+            if not any((d & md) == md for md in min_diffs):
+                min_diffs.append(d)
+    
+        # 'b_to_d': "If I decide to drop bit b from my rule,
+        # which valid-point safety boundaries (k) am I risking?""
+        b_to_d = [[] for _ in range(n2)]
+        for k, d in enumerate(min_diffs):
+            for b in range(n2):
+                if (d >> b) & 1:
+                    b_to_d[b].append(k)
+    
+        # greedy-minimization step
+        for s in range(n2): # 's': starting point for greedy
+            m = (1 << n2) - 1
+            # hits: how many overlapping bits cover current point?
+            hits = [count_bits(m & d) for d in min_diffs]
+            for j in range(n2):
+                bit = (s + j) % n2
+
+                # Don't care expansion:
+                # if all points affected by 'bit' are redundantly covered, flip it
+                if all(hits[k] > 1 for k in b_to_d[bit]):
+                    m ^= (1 << bit)
+                    for k in b_to_d[bit]: hits[k] -= 1
+
+            # count how many points this cube removes at once ("reward")
+            cv = inv & m # 'cv' = cube values
+            if (m, cv) not in cubes:
+                cbs = ((1 << num_pts) - 1)
+                for i in range(n2):
+                    if (m >> i) & 1:
+                        cbs &= B[i] if (cv >> i) & 1 else ~B[i]
+                cbs &= invalid_bs
+                cubes[(m, cv)] = (cbs, count_bits(m))
+                covered_gen |= cbs
+    # flatten 'cubes' 
+    cube_list = [(m, cv, cbs, cost) for (m, cv), (cbs, cost) in cubes.items()]
+    
+    return cube_list, invalid_bs
 
 @contextlib.contextmanager
 def suppress_output():
