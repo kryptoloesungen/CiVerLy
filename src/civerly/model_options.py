@@ -436,12 +436,14 @@ class MODEL_OPTIONS:
                     None,
                     SBOX_MODELING.LOGICAL_COND,
                     SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                    SBOX_MODELING.ALPHA_EVOLVE,
                 ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
                 message="SBox modeling must be either None, "
-                "SBOX_MODELING.LOGICAL_COND or "
-                "SBOX_MODELING.LOGICAL_COND_ESPRESSO "
+                "SBOX_MODELING.LOGICAL_COND "
+                "SBOX_MODELING.LOGICAL_COND_ESPRESSO or "
+                "SBOX_MODELING.ALPHA_EVOLVE "
                 "when using SAT modeling."
             )
 

@@ -2568,9 +2568,42 @@ class SBox_CVL(Component):
         PROB = [self.sat.var() for _ in range(len(set_ddt))]
         SAT_VARS = self.SAT_IN + self.SAT_OUT + PROB
 
+
+        if model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE:
+
+            cube_list, invalid_bs = alphaevolve_minimization(self.S, ddt, model_options)
+
+            n = len(self.S)
+            n2 = 2 * n + len(set_ddt)
+            
+            # turn this into variables
+            VAR = [self.SAT_IN[v] for v in range(n)] \
+                + [self.SAT_OUT[v] for v in range(n)] \
+                + [PROB[v] for v in range(len(set_ddt))]
+
+            # "set cover": 
+            while invalid_bs:
+                # look for the next best cube to add
+                # ------------------------------------
+                best, max_score = None, (-1, 0)
+                for m, cv, cbs, cost in cube_list:
+                    covered = bin(cbs & invalid_bs).count('1')
+                    if covered > 0:
+                        score = (covered, -cost)
+                        if score > max_score:
+                            max_score = score
+                            best = (m, cv, cbs, cost)
+                # ------------------------------------
+                if not best: break # if no cube found, we're done
+                m, cv, cbs, cost = best
+                
+                self.sat.add_clause([
+                    (-1)**((cv >> i) & 1) * VAR[i] for i in range(n2) if (m >> i) & 1
+                ])
+                invalid_bs &= ~cbs
         # espresso minimization
         # ------------------------------------------------------------
-        if model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND_ESPRESSO:
+        elif model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND_ESPRESSO:
             # Espresso minimization (logical conditioning)
             # ----------------------------------------------------------------
             esp_file_name = f"espresso-{zlib.crc32("".join([
