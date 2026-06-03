@@ -2366,23 +2366,38 @@ class SBox_CVL(Component):
 
         elif model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE:
 
-            if model_options.cryptanalysis != CRYPTANALYSIS.DIFFERENTIAL:
-                raise NotImplementedError("Only differential cryptanalysis for alphaevolve possible.")
-
             S = self.S
             n = len(S)
 
             n2, num_pts = 2 * n + len(set_ddt), 1 << (2 * n + len(set_ddt))
             valid_bs, valid_pts = 0, []
-            for dx in range(1 << n):
-                for x in range(1 << n):
-                    dy = S[x] ^ S[x ^ dx]
-                    p = (1 << (2 * n + set_ddt.index(ddt[dx][dy]))) | dy << n | dx
-                    if not (valid_bs & (1 << p)):
-                        # 'valid_bs' is a long indicator bitstring of possible
-                        # transitions (x || y || prob)
-                        valid_bs |= (1 << p)
-                        valid_pts.append(p)
+
+            if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
+                for dx in range(1 << n):
+                    for x in range(1 << n):
+                        dy = S[x] ^ S[x ^ dx]
+                        p = (1 << (2 * n + set_ddt.index(ddt[dx][dy]))) | dy << n | dx
+                        if not (valid_bs & (1 << p)):
+                            # 'valid_bs' is a long indicator bitstring of possible
+                            # transitions (prob || dy || dx)
+                            valid_bs |= (1 << p)
+                            valid_pts.append(p)
+            
+            elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
+                lat = ddt # renaming for less confusion
+                for a in range(1 << n):
+                    for b in range(1 << n):
+                        if lat[a][b] > 0:
+                            p = (1 << (2 * n + set_ddt.index(lat[a][b]))) | b << n | a
+                            if not (valid_bs & (1 << p)):
+                                # 'valid_bs' is a long indicator bitstring of possible
+                                # transitions (prob || b || a)
+                                valid_bs |= (1 << p)
+                                valid_pts.append(p)
+            else:
+                raise InvalidModelOptionException(
+                    model_options.cryptanalysis, CRYPTANALYSIS
+                )
 
             B = [0] * n2
             for i in range(n2):
@@ -2393,7 +2408,7 @@ class SBox_CVL(Component):
             invalid_bs = ((1 << num_pts) - 1) ^ valid_bs
 
             def count_bits(x):
-                return x.bit_count() if hasattr(int, "bit_count") else bin(x).count('1')
+                return bin(x).count('1')
 
             cubes, covered_gen = {}, 0
             for inv in range(num_pts):
