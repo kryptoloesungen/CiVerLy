@@ -75,6 +75,26 @@ class GIFT_CVL:
             2560 variables and 3585 constraints were written to '...'
             3.4150374993
 
+        Use AlphaEvolve SBox modeling:
+            
+            sage: from civerly.cipher_implementations.gift import GIFT_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
+            ....:   gift_cipher = GIFT_CVL(R=5)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       sbox_modeling=SBOX_MODELING.ALPHA_EVOLVE,
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       path=Path(tmpdir)
+            ....:   )
+            ....:   gift_cipher.analyse(model_options)
+            5744 variables and 8241 constraints were written to ...
+            7
+
         Model the cipher with SAT using different values for ``sat_precision``:
 
             sage: from civerly.cipher_implementations.gift import GIFT_CVL

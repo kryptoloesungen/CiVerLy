@@ -169,6 +169,27 @@ class CRAFT_CVL:
             7440 variables and 17201 clauses were written to '...'
             8
             Output file in: ...
+        
+        Model with AlphaEvolve SBox MILP modeling:
+
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: cipher = CRAFT_CVL(R=5)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       sbox_modeling=SBOX_MODELING.ALPHA_EVOLVE,
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       path=Path(tmpdir)
+            ....:   )
+            ....:   cipher.analyse(model_options)
+            12624 variables and 16321 constraints were written to ...
+            10
 
 
 
