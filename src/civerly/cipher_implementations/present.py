@@ -289,7 +289,7 @@ class PRESENT_CVL:
             6512 variables and 16017 clauses were written to '...'
             8
 
-        Differential cryptanalysis using `ALPHA_EVOLVE` modeling::
+        Differential cryptanalysis using `ALPHA_EVOLVE` MILP modeling::
 
             sage: # optional - scip
             sage: from civerly.cipher_implementations.present \
@@ -308,6 +308,27 @@ class PRESENT_CVL:
             ....:     path=Path(tmpdir))
             ....:   present_cipher.analyse(model_options)
             5312 variables and 8897 constraints were written to ...
+            12
+
+        Same, but using `ALPHA_EVOLVE` SAT modeling::
+
+            sage: # optional - cadical
+            sage: from civerly.cipher_implementations.present \
+            ....:   import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   present_cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.ALPHA_EVOLVE,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     path=Path(tmpdir))
+            ....:   present_cipher.analyse(model_options)
+            5312 variables and 13697 clauses were written to ...
             12
             
         """
