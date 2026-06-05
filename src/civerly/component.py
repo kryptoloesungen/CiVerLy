@@ -2571,7 +2571,40 @@ class SBox_CVL(Component):
 
         if model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE:
 
-            cube_list, invalid_bs = alphaevolve_minimization(self.S, ddt, model_options)
+            n = len(self.S)
+            n2 = 2 * n + len(set_ddt)
+            valid_bs, valid_pts = 0, []
+
+            if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
+                for dx in range(1 << n):
+                    for x in range(1 << n):
+                        dy = self.S[x] ^ self.S[x ^ dx]
+                        p = (1 << (2 * n + set_ddt.index(ddt[dx][dy]))) | dy << n | dx
+                        if not (valid_bs & (1 << p)):
+                            # 'valid_bs' is a long indicator bitstring of possible
+                            # transitions (prob || dy || dx)
+                            valid_bs |= (1 << p)
+                            valid_pts.append(p)
+            
+            elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
+                lat = ddt # renaming for less confusion
+                for a in range(1 << n):
+                    for b in range(1 << n):
+                        if lat[a][b] > 0:
+                            p = (1 << (2 * n + set_ddt.index(lat[a][b]))) | b << n | a
+                            if not (valid_bs & (1 << p)):
+                                # 'valid_bs' is a long indicator bitstring of possible
+                                # transitions (prob || b || a)
+                                valid_bs |= (1 << p)
+                                valid_pts.append(p)
+            else:
+                raise InvalidModelOptionException(
+                    model_options.cryptanalysis, CRYPTANALYSIS
+                )
+    
+            # 'invalid_bs' is bit-complement of 'valid_bs' 
+            invalid_bs = ((1 << (1 << n2)) - 1) ^ valid_bs
+            cube_list = alphaevolve_minimization(n2, valid_pts, valid_bs)
 
             n = len(self.S)
             n2 = 2 * n + len(set_ddt)
