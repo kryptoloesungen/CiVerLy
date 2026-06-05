@@ -524,46 +524,15 @@ def translate_var(cipher, node, local_var):
 
     return var
 
-def alphaevolve_minimization(S, ddt, model_options):
+def alphaevolve_minimization(n2, valid_pts, valid_bs):
     """
-    TODO
+    Apply the greedy minimization technique found by AlphaEvolve, 
+    in order to find a set of hypercubes that exclude invalid assignments.
     """
-    from civerly.model_options import InvalidModelOptionException
-    from civerly.model_options import CRYPTANALYSIS
 
     # Contains the possible entries of ddt.
-    set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+    num_pts = 1 << n2
 
-    n = len(S)
-    n2, num_pts = 2 * n + len(set_ddt), 1 << (2 * n + len(set_ddt))
-    valid_bs, valid_pts = 0, []
-
-    if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
-        for dx in range(1 << n):
-            for x in range(1 << n):
-                dy = S[x] ^ S[x ^ dx]
-                p = (1 << (2 * n + set_ddt.index(ddt[dx][dy]))) | dy << n | dx
-                if not (valid_bs & (1 << p)):
-                    # 'valid_bs' is a long indicator bitstring of possible
-                    # transitions (prob || dy || dx)
-                    valid_bs |= (1 << p)
-                    valid_pts.append(p)
-    
-    elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
-        lat = ddt # renaming for less confusion
-        for a in range(1 << n):
-            for b in range(1 << n):
-                if lat[a][b] > 0:
-                    p = (1 << (2 * n + set_ddt.index(lat[a][b]))) | b << n | a
-                    if not (valid_bs & (1 << p)):
-                        # 'valid_bs' is a long indicator bitstring of possible
-                        # transitions (prob || b || a)
-                        valid_bs |= (1 << p)
-                        valid_pts.append(p)
-    else:
-        raise InvalidModelOptionException(
-            model_options.cryptanalysis, CRYPTANALYSIS
-        )
 
     B = [0] * n2
     for i in range(n2):
@@ -626,7 +595,7 @@ def alphaevolve_minimization(S, ddt, model_options):
     # flatten 'cubes' 
     cube_list = [(m, cv, cbs, cost) for (m, cv), (cbs, cost) in cubes.items()]
     
-    return cube_list, invalid_bs
+    return cube_list
 
 @contextlib.contextmanager
 def suppress_output():

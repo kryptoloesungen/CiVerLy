@@ -100,7 +100,8 @@ class SBOX_MODELING(Enum):
     - Logical conditioning (https://eprint.iacr.org/2021/213.pdf,
       section 2.3.2) with Espresso reduction
       (see https://github.com/classabbyamp/espresso-logic)
-    - AlphaEvolve: TODO
+    - AlphaEvolve: Greedy minimization technique found by AlphaEvolve, 
+      in order to find a set of hypercubes that exclude invalid assignments.
 
     .. NOTE::
 
