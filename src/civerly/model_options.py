@@ -176,6 +176,7 @@ class MODEL_OPTIONS:
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
+            -> solve_time_limit : None
             -> path : CiVerLy-Models
         sage: model_options = MODEL_OPTIONS(
         ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -198,6 +199,7 @@ class MODEL_OPTIONS:
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
+            -> solve_time_limit : None
             -> path : CiVerLy-Models
     """
 
