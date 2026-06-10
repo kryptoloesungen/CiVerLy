@@ -2428,6 +2428,85 @@ class SBox_CVL(Component):
                 )
                 invalid_bs &= ~cbs
 
+        elif model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE_AES:
+            n = len(self.S)
+            size, n2 = 1 << n, 2 * n + len(set_ddt)
+            is_inv = [True] * (1 << n2)
+            for dx in range(size):
+                for x in range(size):
+                    dy = self.S[x] ^ self.S[x ^ dx]
+                    is_inv[
+                        1 << (2 * n + set_ddt.index(ddt[dx][dy])) | (dx << n) | dy
+                    ] = False
+            inv_pts = [p for p, inv in enumerate(is_inv) if inv]
+
+            VAR = [self.MILP_OUT[v] for v in range(n)] \
+                + [self.MILP_IN[v] for v in range(n)] \
+                + [PROB[v] for v in range(len(set_ddt))]
+            rem = set(inv_pts)
+            neighs = {p: sum(is_inv[p ^ (1 << b)] for b in range(n2)) for p in inv_pts}
+            while rem:
+                p = min(rem, key=neighs.get)
+                best_s, best_m, max_c = [p], (1 << n2) - 1, -1
+                for b in range(n2):
+                    s, m = [p], (1 << n2) - 1
+                    for bb in [(b + i) % n2 for i in range(n2)]:
+                        if all(is_inv[pt ^ (1 << bb)] for pt in s):
+                            s += [pt ^ (1 << bb) for pt in s]
+                            m &= ~(1 << bb)
+                    cnt = sum(1 for pt in s if pt in rem)
+                    if cnt > max_c: best_s, best_m, max_c = s, m, cnt
+                v1 = [i for i in range(n2) if (best_m >> i) & 1 and (p >> i) & 1]
+                v0 = [i for i in range(n2) if (best_m >> i) & 1 and not ((p >> i) & 1)]
+                
+                self.milp.add_constraint(
+                    sum([VAR[i] for i in v1]) - sum([VAR[i] for i in v0]) <= len(v1) - 1
+                )
+                for pt in best_s:
+                    rem.discard(pt)
+
+        elif model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE_SKINNY:
+
+            n = len(self.S)
+            VAR = [self.MILP_IN[v] for v in range(n)] \
+                + [self.MILP_OUT[v] for v in range(n)] \
+                + [PROB[v] for v in range(len(set_ddt))]
+
+            n2, num_vals = 2 * n + len(set_ddt), 1 << n
+            valid_bitset, bc = 0, getattr(int, "bit_count", lambda n: bin(n).count('1'))
+            for dx in range(num_vals):
+                for x in range(num_vals):
+                    dy = (self.S[x] ^ self.S[x ^ dx])
+                    valid_bitset |= 1 << ((1 << 2*n + set_ddt.index(ddt[dx][dy])) | dy << n | dx)
+            invalid_bitset = ((1 << (1 << n2)) - 1) ^ valid_bitset
+            while invalid_bitset:
+                best_hb, best_p, best_mask, b_score, temp_s = 0, 0, 0, (-1, -1), invalid_bitset
+                for _ in range(64):
+                    if not temp_s: break
+                    p = (temp_s & -temp_s).bit_length() - 1
+                    hb, mask = 1 << p, (1 << n2) - 1
+                    while 1:
+                        bi, bmc, bsize = -1, -1, -1
+                        for i in range(n2):
+                            if mask & (1 << i):
+                                sh = 1 << i
+                                ht = hb | (hb << sh if not (p & sh) else hb >> sh)
+                                if not (ht & valid_bitset):
+                                    c, s = bc(ht & invalid_bitset), bc(ht)
+                                    if (c, s) > (bmc, bsize): bi, bmc, bsize = i, c, s
+                        if bi < 0: break
+                        sh = 1 << bi
+                        hb |= (hb << sh if not (p & sh) else hb >> sh)
+                        mask ^= sh
+                    score = (bc(hb & invalid_bitset), bc(hb))
+                    if score > b_score: best_hb, best_p, best_mask, b_score = hb, p, mask, score
+                    temp_s &= ~hb
+                pos = [VAR[i] for i in range(n2) if (best_mask & (1 << i)) and not (best_p & (1 << i))]
+                neg = [VAR[i] for i in range(n2) if (best_mask & (1 << i)) and (best_p & (1 << i))]
+                self.milp.add_constraint(
+                    sum(pos) - sum(neg) >= 1 - len(neg)
+                )
+                invalid_bitset &= ~best_hb
 
         else:
             posset = []

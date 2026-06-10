@@ -113,6 +113,8 @@ class SBOX_MODELING(Enum):
     DISTORTED_BALL = 3
     LOGICAL_COND_ESPRESSO = 4  # For both MILP / SAT
     ALPHA_EVOLVE = 5
+    ALPHA_EVOLVE_AES = 6
+    ALPHA_EVOLVE_SKINNY = 7
 
 
 @dataclass(init=True, repr=False)
@@ -417,15 +419,19 @@ class MODEL_OPTIONS:
                     SBOX_MODELING.LOGICAL_COND_ESPRESSO,
                     SBOX_MODELING.DISTORTED_BALL,
                     SBOX_MODELING.ALPHA_EVOLVE,
+                    SBOX_MODELING.ALPHA_EVOLVE_AES,
+                    SBOX_MODELING.ALPHA_EVOLVE_SKINNY,
                 ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
                 message="SBox modeling must be either None, "
                 "SBOX_MODELING.CONVEX_HULL, "
-                "SBOX_MODELING.LOGICAL_COND or "
-                "SBOX_MODELING.LOGICAL_COND_ESPRESSO or "
-                "SBOX_MODELING.DISTORTED_BALL "
-                "SBOX_MODELING.ALPHA_EVOLVE "
+                "SBOX_MODELING.LOGICAL_COND, "
+                "SBOX_MODELING.LOGICAL_COND_ESPRESSO, "
+                "SBOX_MODELING.DISTORTED_BALL, "
+                "SBOX_MODELING.ALPHA_EVOLVE, "
+                "SBOX_MODELING.ALPHA_EVOLVE_AES, "
+                "SBOX_MODELING.ALPHA_EVOLVE_SKINNY, "
                 "when using bitwise MILP modeling."
             )
 
@@ -438,13 +444,17 @@ class MODEL_OPTIONS:
                     SBOX_MODELING.LOGICAL_COND,
                     SBOX_MODELING.LOGICAL_COND_ESPRESSO,
                     SBOX_MODELING.ALPHA_EVOLVE,
+                    SBOX_MODELING.ALPHA_EVOLVE_AES,
+                    SBOX_MODELING.ALPHA_EVOLVE_SKINNY,
                 ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
                 message="SBox modeling must be either None, "
                 "SBOX_MODELING.LOGICAL_COND "
-                "SBOX_MODELING.LOGICAL_COND_ESPRESSO or "
-                "SBOX_MODELING.ALPHA_EVOLVE "
+                "SBOX_MODELING.LOGICAL_COND_ESPRESSO, "
+                "SBOX_MODELING.ALPHA_EVOLVE, "
+                "SBOX_MODELING.ALPHA_EVOLVE_AES, "
+                "SBOX_MODELING.ALPHA_EVOLVE_SKINNY "
                 "when using SAT modeling."
             )
 
