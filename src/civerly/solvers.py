@@ -260,7 +260,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             objective_value, assignment = self._process_solution_file(solution_file)
             objective_bounds = (objective_value, objective_value)
         elif status == SOLVING_STATUS.TIMEOUT:
-            objective_value, assignment = self._process_solution_file(solution_file)
+            objective_value, assignment = None, {}
             objective_bounds = self._get_objective_bounds(log_file)
         else:
             objective_value = None
