@@ -213,6 +213,7 @@ class MODEL_OPTIONS:
     solve_range: tuple = None
     sat_precision: int = 0
     number_of_solutions: int = 1
+    solve_time_limit: int = None
     path: Path = None
     write_to_file: bool = True
 
