@@ -33,36 +33,38 @@ class SIMECK_CVL:
             sage: from civerly.cipher_implementations.simeck import SIMECK_CVL
             sage: cipher = SIMECK_CVL(R=8)
             sage: from civerly.model_options import *
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   solve_range=(16, 20),
-            ....:   path=Path("./DOCTEST-Simeck-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            3904 variables and 8129 clauses were written to 'DOCTEST-Simeck-Models/Simeck.cnf'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : UNSAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     solve_range=(16, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            3904 variables and 8129 clauses were written to ...
             18
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simeck import SIMECK_CVL
             sage: cipher = SIMECK_CVL(R=8)
             sage: from civerly.model_options import *
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   solve_range=(16, 20),
-            ....:   path=Path("./DOCTEST-Simeck-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            3904 variables and 8129 clauses were written to 'DOCTEST-Simeck-Models/Simeck.cnf'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : UNSAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     solve_range=(16, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            3904 variables and 8129 clauses were written to ...
             18
 
         Models for linear cryptanalysis::
@@ -71,40 +73,38 @@ class SIMECK_CVL:
             sage: from civerly.cipher_implementations.simeck import SIMECK_CVL
             sage: cipher = SIMECK_CVL(R=11)
             sage: from civerly.model_options import *
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   solve_range=(10, 20),
-            ....:   path=Path("./DOCTEST-Simeck-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            5296 variables and 12465 clauses were written to 'DOCTEST-Simeck-Models/Simeck.cnf'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : UNSAT
-            [ 13 , 15] (trying w =  14) : SAT
-            [ 13 , 14] (trying w =  13) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     solve_range=(10, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            5296 variables and 12465 clauses were written to ...
             13
 
             sage: # optional - cadical # optional - espresso
             sage: from civerly.cipher_implementations.simeck import SIMECK_CVL
             sage: cipher = SIMECK_CVL(R=11)
             sage: from civerly.model_options import *
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   solve_range=(10, 20),
-            ....:   path=Path("./DOCTEST-Simeck-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            5296 variables and 12465 clauses were written to 'DOCTEST-Simeck-Models/Simeck.cnf'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : UNSAT
-            [ 13 , 15] (trying w =  14) : SAT
-            [ 13 , 14] (trying w =  13) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     solve_range=(10, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            5296 variables and 12465 clauses were written to ...
             13
 
         Remove files::

@@ -20,7 +20,7 @@ class ChaskeyQRF_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
             ....:   solve_range=(0, 8),
             ....:   path=Path("./DOCTEST-ChaskeyQRF-Models/"))
             sage: # optional - cryptominisat
@@ -43,7 +43,7 @@ class ChaskeyQRF_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CADICAL,
+            ....:   sat_solver=SOLVER.CADICAL,
             ....:   solve_range=(0, 8),
             ....:   path=Path("./DOCTEST-ChaskeyQRF-Models/"))
             sage: # optional - cadical
@@ -66,7 +66,7 @@ class ChaskeyQRF_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
             ....:   path=Path("./DOCTEST-ChaskeyQRF-Models/"))
             sage: # optional - cryptominisat
             sage: cipher.analyse(model_options=model_options)
@@ -150,18 +150,11 @@ class Chaskey_CVL:
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
             ....:   path=Path("./DOCTEST-Chaskey-Models/"))
             sage: # optional - cryptominisat
             sage: chaskey_cipher.chaskey_cipher.analyse(model_options=model_options)
             4856 variables and 12217 clauses were written to 'DOCTEST-Chaskey-Models/Chaskey.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : SAT
-            [  4 ,  5] (trying w =   4) : SAT
             4
 
             sage: import shutil

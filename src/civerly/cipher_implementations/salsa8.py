@@ -15,75 +15,64 @@ class Salsa8QRF_CVL:
             '0x44444444888888880000000055555555'
 
         TESTS::
-            sage: from civerly.cipher_implementations.salsa8 import Salsa8QRF_CVL
-            sage: from civerly.model_options import *
-            sage: cipher = Salsa8QRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   solve_range=(0, 8),
-            ....:   path=Path("./DOCTEST-SalsaQRF-Models/"))
             sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
-            1916 variables and 4957 clauses were written to 'DOCTEST-SalsaQRF-Models/Salsa8-QRF.cnf'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
-            0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-SalsaQRF-Models/Salsa8-QRF.pdf
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-
             sage: from civerly.cipher_implementations.salsa8 import Salsa8QRF_CVL
             sage: from civerly.model_options import *
             sage: cipher = Salsa8QRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   solve_range=(0, 8),
-            ....:   path=Path("./DOCTEST-SalsaQRF-Models/"))
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     solve_range=(0, 8),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            1916 variables and 4957 clauses were written to ...
+            0
+            Output file in...
+
             sage: # optional - cadical
-            sage: cipher.analyse(model_options=model_options)
-            1916 variables and 4957 clauses were written to 'DOCTEST-SalsaQRF-Models/Salsa8-QRF.cnf'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
-            0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-SalsaQRF-Models/Salsa8-QRF.pdf
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-
             sage: from civerly.cipher_implementations.salsa8 import Salsa8QRF_CVL
             sage: from civerly.model_options import *
             sage: cipher = Salsa8QRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-SalsaQRF-Models/"))
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     solve_range=(0, 8),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            1916 variables and 4957 clauses were written to ...
+            0
+            Output file in...
+
             sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
-            1920 variables and 5989 clauses were written to 'DOCTEST-SalsaQRF-Models/Salsa8-QRF.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
+            sage: from civerly.cipher_implementations.salsa8 import Salsa8QRF_CVL
+            sage: from civerly.model_options import *
+            sage: cipher = Salsa8QRF_CVL()
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            1920 variables and 5989 clauses were written to ...
             0
 
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-SalsaQRF-Models", ignore_errors=True)
         """
         if name is None:
             name = "Salsa8-QRF"
@@ -144,50 +133,38 @@ class Salsa8_CVL:
             '0x41b1b31d1296df111676ee175668aea816ef51124f730621d8d14d921cbae414f95dea20d4c516f4bfe236aaf0c865e5b016204d5e17a39dbf703e2d89b4363a'
 
         TESTS::
+            sage: # optional - cryptominisat
             sage: from civerly.cipher_implementations.salsa8 import Salsa8_CVL
             sage: from civerly.model_options import *
             sage: salsa = Salsa8_CVL(2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-Salsa-Models/"))
-            sage: # optional - cryptominisat
-            sage: salsa.salsa_cipher.analyse(model_options=model_options)
-            24544 variables and 59105 clauses were written to 'DOCTEST-Salsa-Models/Salsa8.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     path=Path(tmpdir))
+            ....:   salsa.salsa_cipher.analyse(model_options=model_options)
+            24544 variables and 59105 clauses were written to ...
             0
 
+            sage: # optional - cryptominisat
             sage: from civerly.cipher_implementations.salsa8 import Salsa8_CVL
             sage: from civerly.model_options import *
             sage: salsa = Salsa8_CVL(2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-Salsa-Models/"))
-            sage: # optional - cryptominisat
-            sage: salsa.salsa_cipher.analyse(model_options=model_options)
-            24576 variables and 67361 clauses were written to 'DOCTEST-Salsa-Models/Salsa8.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     path=Path(tmpdir))
+            ....:   salsa.salsa_cipher.analyse(model_options=model_options)
+            24576 variables and 67361 clauses were written to ...
             1
 
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Salsa-Models", ignore_errors=True)
         """
         if name is None:
             name = "Salsa8"

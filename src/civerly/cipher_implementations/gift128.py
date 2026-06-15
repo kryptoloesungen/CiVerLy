@@ -108,7 +108,7 @@ class GIFT128_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.WORDWISE,
                 ....:   linear_layer_modeling = LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:   solver=SOLVER.SCIP,
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path("./DOCTEST-GIFT128-Models/")
                 ....: )
                 sage: gift128_cipher.analyse(model_options) 
@@ -127,12 +127,12 @@ class GIFT128_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   solver=SOLVER.SCIP,
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path("./DOCTEST-GIFT128-Models/")
                 ....: )
                 sage: gift128_cipher.analyse(model_options) 
                 4096 variables and 4673 constraints were written to 'DOCTEST-GIFT128-Models/GIFT128.mps'
-                3.41503749930001
+                3.4150374993
                 
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
@@ -143,7 +143,8 @@ class GIFT128_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.SCIP,
+                ....:   milp_solver=SOLVER.SCIP,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT128-Models/")
                 ....: )
                 sage: gift128_cipher.analyse(model_options) 
@@ -158,7 +159,7 @@ class GIFT128_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=SOLVER.GUROBI,
                 ....:   path=Path("./DOCTEST-GIFT128-Models/"))
                 sage: # optional - gurobi
                 sage: gift128_cipher.analyse(model_options)
@@ -175,7 +176,8 @@ class GIFT128_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=SOLVER.GUROBI,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT128-Models/"))
                 sage: # optional - gurobi
                 sage: gift128_cipher.analyse(model_options)
@@ -196,18 +198,12 @@ class GIFT128_CVL:
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   solver=SOLVER.CRYPTOMINISAT,
+                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT128-Models/")
                 ....: )
-                sage: gift128_cipher.analyse(model_options)
+                sage: gift128_cipher.analyse(model_options) # optional - cryptominisat, espresso
                 4096 variables and 10753 clauses were written to 'DOCTEST-GIFT128-Models/GIFT128.cnf'
-                [  0 ,100] (trying w =  50) : SAT
-                [  0 , 50] (trying w =  25) : SAT
-                [  0 , 25] (trying w =  12) : SAT
-                [  0 , 12] (trying w =   6) : SAT
-                [  0 ,  6] (trying w =   3) : SAT
-                [  0 ,  3] (trying w =   1) : UNSAT
-                [  2 ,  3] (trying w =   2) : UNSAT
                 3
 
                 
@@ -222,17 +218,11 @@ class GIFT128_CVL:
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.CRYPTOMINISAT,
+                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT128-Models/"))
-                sage: gift128_cipher.analyse(model_options)
+                sage: gift128_cipher.analyse(model_options) # optional - cryptominisat, espresso
                 4032 variables and 9089 clauses were written to 'DOCTEST-GIFT128-Models/GIFT128.cnf'
-                [  0 ,100] (trying w =  50) : SAT
-                [  0 , 50] (trying w =  25) : SAT
-                [  0 , 25] (trying w =  12) : SAT
-                [  0 , 12] (trying w =   6) : SAT
-                [  0 ,  6] (trying w =   3) : SAT
-                [  0 ,  3] (trying w =   1) : UNSAT
-                [  2 ,  3] (trying w =   2) : SAT
                 2
 
                 sage: import shutil

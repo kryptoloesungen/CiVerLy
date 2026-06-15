@@ -59,141 +59,132 @@ class RECTANGLE_CVL:
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.WORDWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   solver=SOLVER.SCIP,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: rectangle_cipher.analyse(model_options) # optional - scip
-            1932 variables and 2133 constraints were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options) # optional - scip
+            1932 variables and 2133 constraints were written to ...
             4
-
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-RECTANGLE-Models")
 
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.SCIP,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: rectangle_cipher.analyse(model_options) # optional - scip
-            7872 variables and 8641 constraints were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options) # optional - scip
+            7872 variables and 8641 constraints were written to ...
             10
             
+            sage: # optional - gurobi # optional - espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.GUROBI,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: # optional - gurobi # optional - espresso
-            sage: rectangle_cipher.analyse(model_options)
-            4192 variables and 4545 constraints were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:     milp_solver=SOLVER.GUROBI,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options)
+            4192 variables and 4545 constraints were written to ...
             4
 
         Model the cipher with SAT:
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: rectangle_cipher.analyse(model_options) 
-            7872 variables and 17473 clauses were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : UNSAT
-            [ 10 , 12] (trying w =  11) : SAT
-            [ 10 , 11] (trying w =  10) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options) # optional - cryptominisat, espresso
+            ....:   trail = str(rectangle_cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            7872 variables and 17473 clauses were written to ...
             10
-            sage: trail = str(rectangle_cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
 
         Linear cryptanalysis::
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: rectangle_cipher.analyse(model_options)
-            7872 variables and 17217 clauses were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : UNSAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options) # optional - cryptominisat, espresso
+            ....:   trail = str(rectangle_cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            7872 variables and 17217 clauses were written to ...
             6
-            sage: trail = str(rectangle_cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
 
+            sage: # optional - cryptominisat, espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: rectangle_cipher.analyse(model_options)
-            7872 variables and 17217 clauses were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : UNSAT
-            [  4 ,  6] (trying w =   5) : UNSAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options)
+            7872 variables and 17217 clauses were written to ...
             6
 
+            sage: # optional - cryptominisat, espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=5)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
-            ....:   solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: rectangle_cipher.analyse(model_options)
-            9712 variables and 21297 clauses were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : UNSAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options)
+            9712 variables and 21297 clauses were written to ...
             8
             sage: trail = str(rectangle_cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
@@ -203,27 +194,21 @@ class RECTANGLE_CVL:
             ....:   import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=5)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
-            ....:   path=Path("./DOCTEST-RECTANGLE-Models/"))
-            sage: rectangle_cipher.analyse(model_options)
-            9712 variables and 21617 clauses were written to 'DOCTEST-RECTANGLE-Models/RECTANGLE.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : UNSAT
-            [ 13 , 25] (trying w =  19) : SAT
-            [ 13 , 19] (trying w =  16) : SAT
-            [ 13 , 16] (trying w =  14) : SAT
-            [ 13 , 14] (trying w =  13) : UNSAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   rectangle_cipher.analyse(model_options)
+            9712 variables and 21617 clauses were written to ...
             14
 
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-RECTANGLE-Models", ignore_errors=True)
             """
 
         if name is None:
