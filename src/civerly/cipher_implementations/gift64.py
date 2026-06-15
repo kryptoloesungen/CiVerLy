@@ -102,6 +102,8 @@ class GIFT64_CVL:
                 True
 
             Model the cipher with MILP:
+                
+                sage: # optional - scip
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
