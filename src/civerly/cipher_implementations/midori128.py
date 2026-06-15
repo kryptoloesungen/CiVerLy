@@ -70,11 +70,11 @@ class MIDORI128_CVL:
 
         Model the cipher with MILP: 
 
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.midori128 import MIDORI128_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: midori128_cipher = MIDORI128_CVL(R=4)
-            sage: # optional - scip
             sage: import tempfile
             sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   model_options = MODEL_OPTIONS(

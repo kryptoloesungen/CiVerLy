@@ -99,6 +99,8 @@ class GIFT128_CVL:
 
 
             Model the cipher with MILP:
+
+                sage: # optional - scip
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
@@ -116,6 +118,7 @@ class GIFT128_CVL:
                 1732 variables and 1837 constraints were written to ...
                 4
 
+                sage: # optional - scip
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
@@ -132,7 +135,8 @@ class GIFT128_CVL:
                 ....:   gift128_cipher.analyse(model_options) 
                 4096 variables and 4673 constraints were written to ...
                 3.4150374993
-                
+
+                sage: # optional - scip                
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
@@ -214,6 +218,7 @@ class GIFT128_CVL:
 
                 
             Linear Cryptanalysis:
+
                 sage: # optional - cryptominisat # optional - espresso
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *

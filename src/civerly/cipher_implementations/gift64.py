@@ -121,6 +121,7 @@ class GIFT64_CVL:
                 482 variables and 503 constraints were written to ...
                 2
                 
+                sage: # optional - scip
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
@@ -138,6 +139,7 @@ class GIFT64_CVL:
                 2048 variables and 2337 constraints were written to ...
                 3.4150374993
                 
+                sage: # optional - scip
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
