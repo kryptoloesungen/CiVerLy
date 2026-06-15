@@ -13,75 +13,64 @@ class ChaskeyQRF_CVL:
             '0x6666666655555555eeeeeeee00000000'
 
         TESTS::
-            sage: from civerly.cipher_implementations.chaskey import ChaskeyQRF_CVL
-            sage: from civerly.model_options import *
-            sage: cipher = ChaskeyQRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   solve_range=(0, 8),
-            ....:   path=Path("./DOCTEST-ChaskeyQRF-Models/"))
             sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
-            2044 variables and 5213 clauses were written to 'DOCTEST-ChaskeyQRF-Models/ChaskeyQRF_CVL.cnf'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
-            0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-ChaskeyQRF-Models/ChaskeyQRF_CVL.pdf
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-
             sage: from civerly.cipher_implementations.chaskey import ChaskeyQRF_CVL
             sage: from civerly.model_options import *
             sage: cipher = ChaskeyQRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=SOLVER.CADICAL,
-            ....:   solve_range=(0, 8),
-            ....:   path=Path("./DOCTEST-ChaskeyQRF-Models/"))
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     solve_range=(0, 8),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            2044 variables and 5213 clauses were written to ...
+            0
+            Output file in: ...
+
             sage: # optional - cadical
-            sage: cipher.analyse(model_options=model_options)
-            2044 variables and 5213 clauses were written to 'DOCTEST-ChaskeyQRF-Models/ChaskeyQRF_CVL.cnf'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : SAT
-            [  0 ,  2] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
-            0
-            sage: cipher.generate_report(model_options)
-            Output file in: DOCTEST-ChaskeyQRF-Models/ChaskeyQRF_CVL.pdf
-            sage: trail = str(cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-
             sage: from civerly.cipher_implementations.chaskey import ChaskeyQRF_CVL
             sage: from civerly.model_options import *
             sage: cipher = ChaskeyQRF_CVL()
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-ChaskeyQRF-Models/"))
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     solve_range=(0, 8),
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            ....:   cipher.generate_report(model_options)
+            ....:   trail = str(cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            2044 variables and 5213 clauses were written to ...
+            0
+            Output file in: ...
+
             sage: # optional - cryptominisat
-            sage: cipher.analyse(model_options=model_options)
-            2048 variables and 6053 clauses were written to 'DOCTEST-ChaskeyQRF-Models/ChaskeyQRF_CVL.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : SAT
+            sage: from civerly.cipher_implementations.chaskey import ChaskeyQRF_CVL
+            sage: from civerly.model_options import *
+            sage: cipher = ChaskeyQRF_CVL()
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            2048 variables and 6053 clauses were written to ...
             0
 
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-ChaskeyQRF-Models", ignore_errors=True)
 
         """
         if name is None:
@@ -143,22 +132,22 @@ class Chaskey_CVL:
             '0xc0b67bbd97dc12bce4c26fdccf8223ec'
 
         TESTS::
+            sage: # optional - cryptominisat
             sage: from civerly.cipher_implementations.chaskey import Chaskey_CVL
             sage: from civerly.model_options import *
             sage: chaskey_cipher = Chaskey_CVL(2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   path=Path("./DOCTEST-Chaskey-Models/"))
-            sage: # optional - cryptominisat
-            sage: chaskey_cipher.chaskey_cipher.analyse(model_options=model_options)
-            4856 variables and 12217 clauses were written to 'DOCTEST-Chaskey-Models/Chaskey.cnf'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     path=Path("./DOCTEST-Chaskey-Models/"))
+            ....:   chaskey_cipher.chaskey_cipher.analyse(model_options=model_options)
+            4856 variables and 12217 clauses were written to ...
             4
 
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-Chaskey-Models", ignore_errors=True)
         """
         if name is None:
             name = "Chaskey"

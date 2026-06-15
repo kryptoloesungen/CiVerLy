@@ -165,63 +165,63 @@ class PRINCE_CVL:
             0xae25ad3ca8fa9ccf    
 
             
+            sage: # optional - cryptominisat
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.model_options import *
             sage: prince_cipher = PRINCE_CVL(R=4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-PRINCE-Models/"))
-            sage: # optional - cryptominisat
-            sage: prince_cipher.analyse(model_options)
-            4112 variables and 12081 clauses were written to 'DOCTEST-PRINCE-Models/PRINCE.cnf'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   prince_cipher.analyse(model_options)
+            4112 variables and 12081 clauses were written to ...
             14
 
-
+            sage: # optional - gurobi # optional - espresso
             sage: from civerly.cipher_implementations.prince \
             ....:   import PRINCE_CVL
             sage: from civerly.model_options import *
             sage: prince_cipher = PRINCE_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SOLVER.GUROBI,
-            ....:   path=Path("./DOCTEST-PRINCE-Models/"))
-            sage: # optional - gurobi # optional - espresso
-            sage: prince_cipher.analyse(model_options)
-            1840 variables and 1873 constraints were written to 'DOCTEST-PRINCE-Models/PRINCE.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:     milp_solver=SOLVER.GUROBI,
+            ....:     path=Path(tmpdir))
+            ....:   prince_cipher.analyse(model_options)
+            1840 variables and 1873 constraints were written to ...
             2
 
-
-
             sage: # optional - cryptominisat # optional - espresso
-            sage: from civerly.cipher_implementations.present \
-            ....:   import PRESENT_CVL
+            sage: from civerly.cipher_implementations.prince \
+            ....:   import PRINCE_CVL
             sage: from civerly.model_options import *
             sage: prince_cipher = PRINCE_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-PRINCE-Models/"))
-            sage: prince_cipher.analyse(model_options)
-            1712 variables and 4641 clauses were written to 'DOCTEST-PRINCE-Models/PRINCE.cnf'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   prince_cipher.analyse(model_options)
+            1712 variables and 4641 clauses were written to ...
             1
-
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-PRINCE-Models", ignore_errors=True)
         
         """
         
