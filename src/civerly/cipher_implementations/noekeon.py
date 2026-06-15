@@ -56,20 +56,19 @@ class NOEKEON_CVL:
             sage: cipher = NOEKEON_CVL(R=1)
             sage: from civerly.model_options import *
             sage: from pathlib import Path
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   solve_range=(16, 20),
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-Noekeon-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            8096 variables and 16897 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : SAT
-            [ 16 , 17] (trying w =  16) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     solve_range=(16, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            8096 variables and 16897 clauses were written to ...
             16
 
             sage: # optional - cadical # optional - espresso
@@ -77,20 +76,19 @@ class NOEKEON_CVL:
             sage: cipher = NOEKEON_CVL(R=1)
             sage: from civerly.model_options import *
             sage: from pathlib import Path
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CADICAL,
-            ....:   solve_range=(16, 20),
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-Noekeon-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            8096 variables and 16897 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : SAT
-            [ 16 , 17] (trying w =  16) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     solve_range=(16, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            8096 variables and 16897 clauses were written to ...
             16
             
 
@@ -101,21 +99,19 @@ class NOEKEON_CVL:
             sage: cipher = NOEKEON_CVL(R=1)
             sage: from civerly.model_options import *
             sage: from pathlib import Path
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   solve_range=(10, 20),
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-Noekeon-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            8096 variables and 17345 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : SAT
-            [ 10 , 12] (trying w =  11) : SAT
-            [ 10 , 11] (trying w =  10) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     solve_range=(10, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            8096 variables and 17345 clauses were written to ...
             10
 
             sage: # optional - cadical # optional - espresso
@@ -123,26 +119,20 @@ class NOEKEON_CVL:
             sage: cipher = NOEKEON_CVL(R=1)
             sage: from civerly.model_options import *
             sage: from pathlib import Path
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CADICAL,
-            ....:   solve_range=(10, 20),
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-Noekeon-Models/"))
-            sage: cipher.analyse(model_options=model_options)
-            8096 variables and 17345 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : SAT
-            [ 10 , 12] (trying w =  11) : SAT
-            [ 10 , 11] (trying w =  10) : SAT
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     solve_range=(10, 20),
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   cipher.analyse(model_options=model_options)
+            8096 variables and 17345 clauses were written to ...
             10
-
-        Remove files::
-            sage: import shutil
-            sage: shutil.rmtree("./DOCTEST-Noekeon-Models/", ignore_errors=True)
 
         """
         if name is None:

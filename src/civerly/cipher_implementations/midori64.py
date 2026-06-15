@@ -65,76 +65,81 @@ class MIDORI64_CVL:
         
         Model the cipher with MILP: 
 
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.midori64 import MIDORI64_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: midori64_cipher = MIDORI64_CVL(R=4)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.WORDWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   milp_solver=SOLVER.SCIP,
-            ....:   path=Path("./DOCTEST-MIDORI64-Models/"))
-            sage: midori64_cipher.analyse(model_options) #optional - scip
-            1260 variables and 1317 constraints were written to 'DOCTEST-MIDORI64-Models/MIDORI64.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   midori64_cipher.analyse(model_options)
+            ....:   midori64_cipher.generate_report(model_options)
+            1260 variables and 1317 constraints were written to ...
             16
-            sage: midori64_cipher.generate_report(model_options)
-            Output file in: DOCTEST-MIDORI64-Models/MIDORI64.pdf
+            Output file in: ...
 
-            sage: import shutil
-            sage: shutil.rmtree("DOCTEST-MIDORI64-Models") 
-
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.midori64 import MIDORI64_CVL
             sage: from civerly.model_options import *
             sage: midori64_cipher = MIDORI64_CVL(R=8)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.WORDWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   milp_solver=SOLVER.SCIP,
-            ....:   path=Path("./DOCTEST-MIDORI64-Models/"))
-            sage: midori64_cipher.analyse(model_options) #optional - scip
-            2556 variables and 2709 constraints were written to 'DOCTEST-MIDORI64-Models/MIDORI64.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   midori64_cipher.analyse(model_options)
+            ....:   midori64_cipher.generate_report(model_options)
+            2556 variables and 2709 constraints were written to ...
             32
-            sage: midori64_cipher.generate_report(model_options)
-            Output file in: DOCTEST-MIDORI64-Models/MIDORI64.pdf
+            Output file in: ...
 
-            sage: shutil.rmtree("DOCTEST-MIDORI64-Models") 
-
-            
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.midori64 import MIDORI64_CVL
             sage: from civerly.model_options import *
             sage: midori64_cipher = MIDORI64_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   milp_solver=SOLVER.SCIP,
-            ....:   path=Path("./DOCTEST-MIDORI64-Models/"))
-            sage: midori64_cipher.analyse(model_options) #optional - scip
-            2656 variables and 2881 constraints were written to 'DOCTEST-MIDORI64-Models/MIDORI64.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   midori64_cipher.analyse(model_options)
+            2656 variables and 2881 constraints were written to ...
             8
 
 
+            sage: # optional - gurobi
             sage: from civerly.cipher_implementations.midori64 import MIDORI64_CVL
             sage: from civerly.model_options import *
             sage: midori64_cipher = MIDORI64_CVL(R=2)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.MILP,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   milp_solver=SOLVER.GUROBI,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-MIDORI64-Models/"))
-            sage: # optional - gurobi
-            sage: midori64_cipher.analyse(model_options) # long
-            2656 variables and 4065 constraints were written to 'DOCTEST-MIDORI64-Models/MIDORI64.mps'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=SOLVER.GUROBI,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path("./DOCTEST-MIDORI64-Models/"))
+            ....:   midori64_cipher.analyse(model_options) # long
+            2656 variables and 4065 constraints were written to ...
             8
 
         Using SAT modeling::
@@ -143,22 +148,22 @@ class MIDORI64_CVL:
             sage: from civerly.cipher_implementations.midori64 import MIDORI64_CVL
             sage: from civerly.model_options import *
             sage: midori64_cipher = MIDORI64_CVL(R=3)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-MIDORI64-Models/"))
-            sage: midori64_cipher.analyse(model_options)
-            3856 variables and 10417 clauses were written to 'DOCTEST-MIDORI64-Models/MIDORI64.cnf'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   midori64_cipher.analyse(model_options)
+            ....:   trail = str(midori64_cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            3856 variables and 10417 clauses were written to ...
             14
-            sage: trail = str(midori64_cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-
-            sage: shutil.rmtree("DOCTEST-MIDORI64-Models") 
         
         Linear cryptanalysis::
 
@@ -166,44 +171,44 @@ class MIDORI64_CVL:
             sage: from civerly.cipher_implementations.midori64 import MIDORI64_CVL
             sage: from civerly.model_options import *
             sage: midori64_cipher = MIDORI64_CVL(R=3)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-MIDORI64-Models/"))
-            sage: midori64_cipher.analyse(model_options)
-            3856 variables and 10129 clauses were written to 'DOCTEST-MIDORI64-Models/MIDORI64.cnf'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   midori64_cipher.analyse(model_options)
+            ....:   trail = str(midori64_cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            3856 variables and 10129 clauses were written to ...
             7
-            sage: trail = str(midori64_cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-
-            sage: shutil.rmtree("DOCTEST-MIDORI64-Models") 
-
             
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.midori64 import MIDORI64_CVL
             sage: from civerly.model_options import *
             sage: midori64_cipher = MIDORI64_CVL(R=3)
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("./DOCTEST-MIDORI64-Models/"))
-            sage: midori64_cipher.analyse(model_options)
-            3984 variables and 10129 clauses were written to 'DOCTEST-MIDORI64-Models/MIDORI64.cnf'
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   midori64_cipher.analyse(model_options)
+            ....:   trail = str(midori64_cipher.get_trail(model_options))
+            ....:   assert "Unnamed Component" not in trail
+            3984 variables and 10129 clauses were written to ...
             48
-            sage: trail = str(midori64_cipher.get_trail(model_options))
-            sage: assert "Unnamed Component" not in trail
-            
-            sage: shutil.rmtree("DOCTEST-MIDORI64-Models")     
+
         """
         if name is None:
             name = "MIDORI64"

@@ -103,107 +103,113 @@ class GIFT128_CVL:
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift128_cipher = GIFT128_CVL(R=4)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.WORDWISE,
-                ....:   linear_layer_modeling = LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:   milp_solver=SOLVER.SCIP,
-                ....:   path=Path("./DOCTEST-GIFT128-Models/")
-                ....: )
-                sage: gift128_cipher.analyse(model_options) 
-                1732 variables and 1837 constraints were written to 'DOCTEST-GIFT128-Models/GIFT128.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.WORDWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+                ....:     milp_solver=SOLVER.SCIP,
+                ....:     path=Path(tmpdir))
+                ....:   gift128_cipher.analyse(model_options) 
+                1732 variables and 1837 constraints were written to ...
                 4
 
-                sage: import shutil
-                sage: shutil.rmtree("DOCTEST-GIFT128-Models")
+                sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
+                sage: from civerly.model_options import *
+                sage: from pathlib import Path
+                sage: gift128_cipher = GIFT128_CVL(R=2)
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+                ....:     milp_solver=SOLVER.SCIP,
+                ....:     path=Path(tmpdir))
+                ....:   gift128_cipher.analyse(model_options) 
+                4096 variables and 4673 constraints were written to ...
+                3.4150374993
                 
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift128_cipher = GIFT128_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SOLVER.SCIP,
-                ....:   path=Path("./DOCTEST-GIFT128-Models/")
-                ....: )
-                sage: gift128_cipher.analyse(model_options) 
-                4096 variables and 4673 constraints were written to 'DOCTEST-GIFT128-Models/GIFT128.mps'
-                3.4150374993
-                
-                sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
-                sage: from civerly.model_options import *
-                sage: from pathlib import Path
-                sage: gift128_cipher = GIFT128_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   milp_solver=SOLVER.SCIP,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT128-Models/")
-                ....: )
-                sage: gift128_cipher.analyse(model_options) 
-                4096 variables and 7297 constraints were written to 'DOCTEST-GIFT128-Models/GIFT128.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     milp_solver=SOLVER.SCIP,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift128_cipher.analyse(model_options) 
+                4096 variables and 7297 constraints were written to ...
                 3.4150374993
 
+                sage: # optional - gurobi
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: gift128_cipher = GIFT128_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SOLVER.GUROBI,
-                ....:   path=Path("./DOCTEST-GIFT128-Models/"))
-                sage: # optional - gurobi
-                sage: gift128_cipher.analyse(model_options)
-                4096 variables and 4673 constraints were written to 'DOCTEST-GIFT128-Models/GIFT128.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+                ....:     milp_solver=SOLVER.GUROBI,
+                ....:     path=Path(tmpdir))
+                ....:   gift128_cipher.analyse(model_options)
+                ....:   gift128_cipher.generate_report(model_options)
+                4096 variables and 4673 constraints were written to ...
                 3.4150374993
-                sage: gift128_cipher.generate_report(model_options)
-                Output file in: DOCTEST-GIFT128-Models/GIFT128.pdf
+                Output file in: ...
 
+                sage: # optional - gurobi
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: gift128_cipher = GIFT128_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   milp_solver=SOLVER.GUROBI,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT128-Models/"))
-                sage: # optional - gurobi
-                sage: gift128_cipher.analyse(model_options)
-                4096 variables and 7297 constraints were written to 'DOCTEST-GIFT128-Models/GIFT128.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     milp_solver=SOLVER.GUROBI,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift128_cipher.analyse(model_options)
+                ....:   gift128_cipher.generate_report(model_options)
+                4096 variables and 7297 constraints were written to ...
                 3.4150374993
-                sage: gift128_cipher.generate_report(model_options)
-                Output file in: DOCTEST-GIFT128-Models/GIFT128.pdf
+                Output file in: ...
 
             Model the cipher with SAT using different values for ``sat_precision``:
 
+                sage: # optional - cryptominisat, espresso
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift128_cipher = GIFT128_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT128-Models/")
-                ....: )
-                sage: gift128_cipher.analyse(model_options) # optional - cryptominisat, espresso
-                4096 variables and 10753 clauses were written to 'DOCTEST-GIFT128-Models/GIFT128.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift128_cipher.analyse(model_options)
+                4096 variables and 10753 clauses were written to ...
                 3
 
                 
@@ -212,21 +218,21 @@ class GIFT128_CVL:
                 sage: from civerly.cipher_implementations.gift128 import GIFT128_CVL
                 sage: from civerly.model_options import *
                 sage: gift128_cipher = GIFT128_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT128-Models/"))
-                sage: gift128_cipher.analyse(model_options) # optional - cryptominisat, espresso
-                4032 variables and 9089 clauses were written to 'DOCTEST-GIFT128-Models/GIFT128.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift128_cipher.analyse(model_options)
+                4032 variables and 9089 clauses were written to ...
                 2
 
-                sage: import shutil
-                sage: shutil.rmtree("DOCTEST-GIFT128-Models", ignore_errors=True)
             """
         if name is None:
             name = "GIFT128"

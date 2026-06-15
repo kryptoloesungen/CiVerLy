@@ -106,137 +106,138 @@ class GIFT64_CVL:
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift64_cipher = GIFT64_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.WORDWISE,
-                ....:   linear_layer_modeling = LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:   milp_solver=SOLVER.SCIP,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/")
-                ....: )
-                sage: gift64_cipher.analyse(model_options) 
-                482 variables and 503 constraints were written to
-                'DOCTEST-GIFT64-Models/GIFT64.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.WORDWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+                ....:     milp_solver=SOLVER.SCIP,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options) 
+                482 variables and 503 constraints were written to ...
                 2
                 
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift64_cipher = GIFT64_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SOLVER.SCIP,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/")
-                ....: )
-                sage: gift64_cipher.analyse(model_options) 
-                2048 variables and 2337 constraints were written to
-                'DOCTEST-GIFT64-Models/GIFT64.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+                ....:     milp_solver=SOLVER.SCIP,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options) 
+                2048 variables and 2337 constraints were written to ...
                 3.4150374993
                 
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift64_cipher = GIFT64_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   milp_solver=SOLVER.SCIP,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/")
-                ....: )
-                sage: gift64_cipher.analyse(model_options) 
-                2048 variables and 3649 constraints were written to
-                'DOCTEST-GIFT64-Models/GIFT64.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     milp_solver=SOLVER.SCIP,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options) 
+                2048 variables and 3649 constraints were written to ...
                 3.4150374993
-                     
-                sage: import shutil
-                sage: shutil.rmtree("DOCTEST-GIFT64-Models") 
 
                 
+                sage: # optional - gurobi
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: gift64_cipher = GIFT64_CVL(R=4)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   milp_solver=SOLVER.GUROBI,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/"))
-                sage: # optional - gurobi
-                sage: gift64_cipher.analyse(model_options)
-                3712 variables and 4353 constraints were written to 
-                'DOCTEST-GIFT64-Models/GIFT64.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
+                ....:     milp_solver=SOLVER.GUROBI,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                ....:   gift64_cipher.generate_report(model_options)
+                3712 variables and 4353 constraints were written to ...
                 11.4150374993
-                sage: gift64_cipher.generate_report(model_options)
-                Output file in: DOCTEST-GIFT64-Models/GIFT64.pdf
+                Output file in: ...
 
                 
+                sage: # optional - gurobi
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: gift64_cipher = GIFT64_CVL(R=4)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.MILP,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   milp_solver=SOLVER.GUROBI,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/"))
-                sage: # optional - gurobi
-                sage: gift64_cipher.analyse(model_options)
-                3712 variables and 6977 constraints were written to 
-                'DOCTEST-GIFT64-Models/GIFT64.mps'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     milp_solver=SOLVER.GUROBI,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                ....:   gift64_cipher.generate_report(model_options)
+                3712 variables and 6977 constraints were written to ...
                 11.4150374993
-                sage: gift64_cipher.generate_report(model_options)
-                Output file in: DOCTEST-GIFT64-Models/GIFT64.pdf
+                Output file in: ...
                 
                 
             Model the cipher with SAT using different values for ``sat_precision``:
    
+                sage: # optional - cryptominisat, espresso
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift64_cipher = GIFT64_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/")
-                ....: )
-                sage: gift64_cipher.analyse(model_options)
-                2048 variables and 5377 clauses were written to
-                'DOCTEST-GIFT64-Models/GIFT64.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                2048 variables and 5377 clauses were written to ...
                 3
 
+                sage: # optional - cryptominisat, espresso
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift64_cipher = GIFT64_CVL(R=2)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   solve_range=(0, 10),
-                ....:   sat_precision=1,
-                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/")
-                ....: )
-                sage: gift64_cipher.analyse(model_options)
-                2048 variables and 5377 clauses were written to
-                'DOCTEST-GIFT64-Models/GIFT64.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     solve_range=(0, 10),
+                ....:     sat_precision=1,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                2048 variables and 5377 clauses were written to ...
                 3.4
 
                 sage: # optional - cadical # optional - espresso
@@ -244,25 +245,23 @@ class GIFT64_CVL:
                 sage: from civerly.model_options import *
                 sage: from pathlib import Path
                 sage: gift64_cipher = GIFT64_CVL(R=4)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   sat_solver=SOLVER.CADICAL,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/"))
-                sage: gift64_cipher.analyse(model_options)
-                3712 variables and 10113 clauses were written to 
-                'DOCTEST-GIFT64-Models/GIFT64.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CADICAL,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                ....:   trail = str(gift64_cipher.get_trail(model_options))
+                ....:   assert "Unnamed Component" not in trail
+                3712 variables and 10113 clauses were written to ...
                 11
-                sage: trail = str(gift64_cipher.get_trail(model_options))
-                sage: assert "Unnamed Component" not in trail
 
-                sage: import shutil
-                sage: shutil.rmtree("DOCTEST-GIFT64-Models")
-            
 
             Linear cryptanalysis::
 
@@ -270,63 +269,63 @@ class GIFT64_CVL:
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: gift64_cipher = GIFT64_CVL(R=4)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/"))
-                sage: gift64_cipher.analyse(model_options)
-                3648 variables and 8449 clauses were written to
-                'DOCTEST-GIFT64-Models/GIFT64.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                ....:   trail = str(gift64_cipher.get_trail(model_options))
+                ....:   assert "Unnamed Component" not in trail
+                3648 variables and 8449 clauses were written to ...
                 5
-                sage: trail = str(gift64_cipher.get_trail(model_options))
-                sage: assert "Unnamed Component" not in trail
 
                 sage: # optional - cryptominisat # optional - espresso
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: gift64_cipher = GIFT64_CVL(R=4)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/"))
-                sage: gift64_cipher.analyse(model_options)
-                3648 variables and 8449 clauses were written to
-                'DOCTEST-GIFT64-Models/GIFT64.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                3648 variables and 8449 clauses were written to ...
                 5
 
                 sage: # optional - cryptominisat # optional - espresso
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
                 sage: from civerly.model_options import *
                 sage: gift64_cipher = GIFT64_CVL(R=5)
-                sage: model_options = MODEL_OPTIONS(
-                ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
-                ....:   optimization=OPTIMIZATION.SAT,
-                ....:   granularity=GRANULARITY.BITWISE,
-                ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
-                ....:   logic_minimizer=SOLVER.ESPRESSO,
-                ....:   path=Path("./DOCTEST-GIFT64-Models/"))
-                sage: gift64_cipher.analyse(model_options)
-                4464 variables and 10401 clauses were written to
-                'DOCTEST-GIFT64-Models/GIFT64.cnf'
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                ....:   gift64_cipher.analyse(model_options)
+                ....:   trail = str(gift64_cipher.get_trail(model_options))
+                ....:   assert "Unnamed Component" not in trail
+                4464 variables and 10401 clauses were written to ...
                 7
-                sage: trail = str(gift64_cipher.get_trail(model_options))
-                sage: assert "Unnamed Component" not in trail
 
-            Remove the files::
-                sage: import shutil
-                sage: shutil.rmtree("DOCTEST-PRESENT-Models", ignore_errors=True)
             """
 
         if name is None:
