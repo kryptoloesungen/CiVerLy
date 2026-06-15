@@ -55,6 +55,7 @@ class RECTANGLE_CVL:
             sage: vec_to_int(rectangle_cipher(int_to_vec(0xFFFFFFFFFFFFFFFF, 64))) == 0x9945AA34AE3D0112
             True
 
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -68,10 +69,11 @@ class RECTANGLE_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
-            ....:   rectangle_cipher.analyse(model_options) # optional - scip
+            ....:   rectangle_cipher.analyse(model_options)
             1932 variables and 2133 constraints were written to ...
             4
 
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -85,7 +87,7 @@ class RECTANGLE_CVL:
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
-            ....:   rectangle_cipher.analyse(model_options) # optional - scip
+            ....:   rectangle_cipher.analyse(model_options)
             7872 variables and 8641 constraints were written to ...
             10
             
@@ -108,6 +110,8 @@ class RECTANGLE_CVL:
             4
 
         Model the cipher with SAT:
+
+            sage: # optional - cryptominisat, espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
@@ -122,13 +126,15 @@ class RECTANGLE_CVL:
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
-            ....:   rectangle_cipher.analyse(model_options) # optional - cryptominisat, espresso
+            ....:   rectangle_cipher.analyse(model_options)
             ....:   trail = str(rectangle_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             7872 variables and 17473 clauses were written to ...
             10
 
         Linear cryptanalysis::
+
+            sage: # optional - cryptominisat, espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
@@ -143,7 +149,7 @@ class RECTANGLE_CVL:
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
-            ....:   rectangle_cipher.analyse(model_options) # optional - cryptominisat, espresso
+            ....:   rectangle_cipher.analyse(model_options)
             ....:   trail = str(rectangle_cipher.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
             7872 variables and 17217 clauses were written to ...
