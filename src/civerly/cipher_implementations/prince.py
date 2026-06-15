@@ -174,18 +174,12 @@ class PRINCE_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-PRINCE-Models/"))
             sage: # optional - cryptominisat
             sage: prince_cipher.analyse(model_options)
             4112 variables and 12081 clauses were written to 'DOCTEST-PRINCE-Models/PRINCE.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : UNSAT
-            [ 13 , 25] (trying w =  19) : SAT
-            [ 13 , 19] (trying w =  16) : SAT
-            [ 13 , 16] (trying w =  14) : SAT
-            [ 13 , 14] (trying w =  13) : UNSAT
             14
 
 
@@ -199,7 +193,7 @@ class PRINCE_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:   solver=SOLVER.GUROBI,
+            ....:   milp_solver=SOLVER.GUROBI,
             ....:   path=Path("./DOCTEST-PRINCE-Models/"))
             sage: # optional - gurobi # optional - espresso
             sage: prince_cipher.analyse(model_options)
@@ -219,17 +213,11 @@ class PRINCE_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-PRINCE-Models/"))
             sage: prince_cipher.analyse(model_options)
             1712 variables and 4641 clauses were written to 'DOCTEST-PRINCE-Models/PRINCE.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
             1
 
             sage: import shutil

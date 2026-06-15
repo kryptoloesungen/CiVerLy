@@ -61,8 +61,9 @@ class NOEKEON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
             ....:   solve_range=(16, 20),
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Noekeon-Models/"))
             sage: cipher.analyse(model_options=model_options)
             8096 variables and 16897 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'
@@ -81,8 +82,9 @@ class NOEKEON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
+            ....:   sat_solver=SOLVER.CADICAL,
             ....:   solve_range=(16, 20),
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Noekeon-Models/"))
             sage: cipher.analyse(model_options=model_options)
             8096 variables and 16897 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'
@@ -104,8 +106,9 @@ class NOEKEON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
             ....:   solve_range=(10, 20),
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Noekeon-Models/"))
             sage: cipher.analyse(model_options=model_options)
             8096 variables and 17345 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'
@@ -125,8 +128,9 @@ class NOEKEON_CVL:
             ....:   optimization=OPTIMIZATION.SAT,
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CADICAL,
+            ....:   sat_solver=SOLVER.CADICAL,
             ....:   solve_range=(10, 20),
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-Noekeon-Models/"))
             sage: cipher.analyse(model_options=model_options)
             8096 variables and 17345 clauses were written to 'DOCTEST-Noekeon-Models/Noekeon.cnf'

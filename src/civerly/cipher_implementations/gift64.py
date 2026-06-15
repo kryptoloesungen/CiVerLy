@@ -111,7 +111,7 @@ class GIFT64_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.WORDWISE,
                 ....:   linear_layer_modeling = LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                ....:   solver=SOLVER.SCIP,
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/")
                 ....: )
                 sage: gift64_cipher.analyse(model_options) 
@@ -128,7 +128,7 @@ class GIFT64_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   solver=SOLVER.SCIP,
+                ....:   milp_solver=SOLVER.SCIP,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/")
                 ....: )
                 sage: gift64_cipher.analyse(model_options) 
@@ -145,7 +145,8 @@ class GIFT64_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.SCIP,
+                ....:   milp_solver=SOLVER.SCIP,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/")
                 ....: )
                 sage: gift64_cipher.analyse(model_options) 
@@ -165,7 +166,7 @@ class GIFT64_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=SOLVER.GUROBI,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/"))
                 sage: # optional - gurobi
                 sage: gift64_cipher.analyse(model_options)
@@ -184,7 +185,8 @@ class GIFT64_CVL:
                 ....:   optimization=OPTIMIZATION.MILP,
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.GUROBI,
+                ....:   milp_solver=SOLVER.GUROBI,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/"))
                 sage: # optional - gurobi
                 sage: gift64_cipher.analyse(model_options)
@@ -207,19 +209,13 @@ class GIFT64_CVL:
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                ....:   solver=SOLVER.CRYPTOMINISAT,
+                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/")
                 ....: )
                 sage: gift64_cipher.analyse(model_options)
                 2048 variables and 5377 clauses were written to
                 'DOCTEST-GIFT64-Models/GIFT64.cnf'
-                [  0 ,100] (trying w =  50) : SAT
-                [  0 , 50] (trying w =  25) : SAT
-                [  0 , 25] (trying w =  12) : SAT
-                [  0 , 12] (trying w =   6) : SAT
-                [  0 ,  6] (trying w =   3) : SAT
-                [  0 ,  3] (trying w =   1) : UNSAT
-                [  2 ,  3] (trying w =   2) : UNSAT
                 3
 
                 sage: from civerly.cipher_implementations.gift64 import GIFT64_CVL
@@ -234,19 +230,13 @@ class GIFT64_CVL:
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
                 ....:   solve_range=(0, 10),
                 ....:   sat_precision=1,
-                ....:   solver=SOLVER.CRYPTOMINISAT,
+                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/")
                 ....: )
                 sage: gift64_cipher.analyse(model_options)
                 2048 variables and 5377 clauses were written to
                 'DOCTEST-GIFT64-Models/GIFT64.cnf'
-                [ 0.0 ,10.0] (trying w =  5.0) : SAT
-                [ 0.0 , 5.0] (trying w =  2.5) : UNSAT
-                [ 2.6 , 5.0] (trying w =  3.8) : SAT
-                [ 2.6 , 3.8] (trying w =  3.2) : UNSAT
-                [ 3.3 , 3.8] (trying w =  3.5) : SAT
-                [ 3.3 , 3.5] (trying w =  3.4) : SAT
-                [ 3.3 , 3.4] (trying w =  3.3) : UNSAT
                 3.4
 
                 sage: # optional - cadical # optional - espresso
@@ -260,18 +250,12 @@ class GIFT64_CVL:
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.CADICAL,
+                ....:   sat_solver=SOLVER.CADICAL,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/"))
                 sage: gift64_cipher.analyse(model_options)
                 3712 variables and 10113 clauses were written to 
                 'DOCTEST-GIFT64-Models/GIFT64.cnf'
-                [  0 ,100] (trying w =  50) : SAT
-                [  0 , 50] (trying w =  25) : SAT
-                [  0 , 25] (trying w =  12) : SAT
-                [  0 , 12] (trying w =   6) : UNSAT
-                [  7 , 12] (trying w =   9) : UNSAT
-                [ 10 , 12] (trying w =  11) : SAT
-                [ 10 , 11] (trying w =  10) : UNSAT
                 11
                 sage: trail = str(gift64_cipher.get_trail(model_options))
                 sage: assert "Unnamed Component" not in trail
@@ -292,18 +276,12 @@ class GIFT64_CVL:
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.CRYPTOMINISAT,
+                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/"))
                 sage: gift64_cipher.analyse(model_options)
                 3648 variables and 8449 clauses were written to
                 'DOCTEST-GIFT64-Models/GIFT64.cnf'
-                [  0 ,100] (trying w =  50) : SAT
-                [  0 , 50] (trying w =  25) : SAT
-                [  0 , 25] (trying w =  12) : SAT
-                [  0 , 12] (trying w =   6) : SAT
-                [  0 ,  6] (trying w =   3) : UNSAT
-                [  4 ,  6] (trying w =   5) : SAT
-                [  4 ,  5] (trying w =   4) : UNSAT
                 5
                 sage: trail = str(gift64_cipher.get_trail(model_options))
                 sage: assert "Unnamed Component" not in trail
@@ -318,18 +296,12 @@ class GIFT64_CVL:
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.CRYPTOMINISAT,
+                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/"))
                 sage: gift64_cipher.analyse(model_options)
                 3648 variables and 8449 clauses were written to
                 'DOCTEST-GIFT64-Models/GIFT64.cnf'
-                [  0 ,100] (trying w =  50) : SAT
-                [  0 , 50] (trying w =  25) : SAT
-                [  0 , 25] (trying w =  12) : SAT
-                [  0 , 12] (trying w =   6) : SAT
-                [  0 ,  6] (trying w =   3) : UNSAT
-                [  4 ,  6] (trying w =   5) : SAT
-                [  4 ,  5] (trying w =   4) : UNSAT
                 5
 
                 sage: # optional - cryptominisat # optional - espresso
@@ -342,18 +314,12 @@ class GIFT64_CVL:
                 ....:   granularity=GRANULARITY.BITWISE,
                 ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
                 ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ....:   solver=SOLVER.CRYPTOMINISAT,
+                ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:   logic_minimizer=SOLVER.ESPRESSO,
                 ....:   path=Path("./DOCTEST-GIFT64-Models/"))
                 sage: gift64_cipher.analyse(model_options)
                 4464 variables and 10401 clauses were written to
                 'DOCTEST-GIFT64-Models/GIFT64.cnf'
-                [  0 ,100] (trying w =  50) : SAT
-                [  0 , 50] (trying w =  25) : SAT
-                [  0 , 25] (trying w =  12) : SAT
-                [  0 , 12] (trying w =   6) : UNSAT
-                [  7 , 12] (trying w =   9) : SAT
-                [  7 ,  9] (trying w =   8) : SAT
-                [  7 ,  8] (trying w =   7) : SAT
                 7
                 sage: trail = str(gift64_cipher.get_trail(model_options))
                 sage: assert "Unnamed Component" not in trail

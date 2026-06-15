@@ -79,7 +79,7 @@ class MIDORI128_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./DOCTEST-MIDORI128-Models/"))
             sage: midori128_cipher.analyse(model_options) #optional - scip
             1260 variables and 1317 constraints were written to 'DOCTEST-MIDORI128-Models/MIDORI128.mps'
@@ -98,7 +98,7 @@ class MIDORI128_CVL:
             ....:   optimization=OPTIMIZATION.MILP,
             ....:   granularity=GRANULARITY.WORDWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:   solver=SOLVER.SCIP,
+            ....:   milp_solver=SOLVER.SCIP,
             ....:   path=Path("./DOCTEST-MIDORI128-Models/"))
             sage: midori128_cipher.analyse(model_options) #optional - scip
             2556 variables and 2709 constraints were written to 'DOCTEST-MIDORI128-Models/MIDORI128.mps'
@@ -120,17 +120,11 @@ class MIDORI128_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-MIDORI128-Models/"))
             sage: midori128_cipher.analyse(model_options)
             7712 variables and 47845 clauses were written to 'DOCTEST-MIDORI128-Models/MIDORI128.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : UNSAT
-            [ 13 , 25] (trying w =  19) : SAT
-            [ 13 , 19] (trying w =  16) : SAT
-            [ 13 , 16] (trying w =  14) : SAT
-            [ 13 , 14] (trying w =  13) : UNSAT
             14
             sage: trail = str(midori128_cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
@@ -149,17 +143,11 @@ class MIDORI128_CVL:
             ....:   granularity=GRANULARITY.BITWISE,
             ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   solver=SOLVER.CRYPTOMINISAT,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
             ....:   path=Path("./DOCTEST-MIDORI128-Models/"))
             sage: midori128_cipher.analyse(model_options)
             7616 variables and 70549 clauses were written to 'DOCTEST-MIDORI128-Models/MIDORI128.cnf'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : SAT
-            [  7 ,  9] (trying w =   8) : SAT
-            [  7 ,  8] (trying w =   7) : SAT
             7
             sage: trail = str(midori128_cipher.get_trail(model_options))
             sage: assert "Unnamed Component" not in trail
