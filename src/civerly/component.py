@@ -2508,6 +2508,150 @@ class SBox_CVL(Component):
                 )
                 invalid_bitset &= ~best_hb
 
+        elif model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE_PRESENT_SKINNY1:
+
+            S, num_bits, num_probs = self.S, len(self.S), len(set_ddt)
+
+            IN  = [self.MILP_IN[i] for i in range(num_bits)]
+            OUT = [self.MILP_OUT[i] for i in range(num_bits)]
+
+            # --- SCAFFOLDING START ---
+            # 1. Pre-compute the exact Differential Distribution Table (DDT)
+            ddt = [[0 for _ in range(1 << num_bits)] for _ in range(1 << num_bits)]
+            for x1 in range(1 << num_bits):
+                for x2 in range(1 << num_bits):
+                    ddt[x1 ^ x2][S[x1] ^ S[x2]] += 1
+
+            set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+
+            # 2. Collect all mathematically valid transitions (alpha, beta, prob_idx)
+            valid_transitions = []
+            for a in range(1 << num_bits):
+                for b in range(1 << num_bits):
+                    if ddt[a][b] > 0:
+                        prob_idx = set_ddt.index(ddt[a][b])
+                        valid_transitions.append((a, b, prob_idx))
+            # --- SCAFFOLDING END ---
+
+            # --- The Prime-Implicant Ghost-Hull ---
+            # We construct the MILP model by treating the DDT as a boolean function and
+            # extracting its Prime Implicants. This creates a tight polyhedral hull
+            # with zero auxiliary variables, maximizing solver performance.
+
+            vars_list = IN + OUT + [PROB[i] for i in range(num_probs)]
+            num_vars = len(vars_list)
+
+            # 1. Map valid points into the (IN, OUT, PROB) binary space
+            vps_list = []
+            vps_set = set()
+            for a, b, p_idx in valid_transitions:
+                p_vec = [0] * num_probs
+                p_vec[p_idx] = 1
+                pt = tuple([(a >> i) & 1 for i in range(num_bits)] + 
+                        [(b >> i) & 1 for i in range(num_bits)] + p_vec)
+                vps_list.append(pt)
+                vps_set.add(pt)
+
+            # 2. Identify all 'relevant' invalid points (those that satisfy sum(PROB)==1)
+            # We must exclude these to ensure tightness of the differential model.
+            uncovered = set()
+            for a in range(1 << num_bits):
+                for b in range(1 << num_bits):
+                    for p_idx in range(num_probs):
+                        p_vec = [0] * num_probs
+                        p_vec[p_idx] = 1
+                        pt = tuple([(a >> i) & 1 for i in range(num_bits)] + 
+                                [(b >> i) & 1 for i in range(num_bits)] + p_vec)
+                        if pt not in vps_set:
+                            uncovered.add(pt)
+
+            # 3. Greedy Prime Implicant Expansion: Find minimal clauses to cover invalid points.
+            self.milp.add_constraint(sum(PROB) == 1)
+            while uncovered:
+                # Start with one invalid point and expand it into a "don't care" cube
+                cube = list(next(iter(uncovered)))
+                for i in range(num_vars):
+                    original = cube[i]
+                    cube[i] = None # Attempt to generalize this bit to a 'don't care'
+
+                    # Check if this expanded cube accidentally includes any valid points
+                    fixed = [(j, cube[j]) for j in range(num_vars) if cube[j] is not None]
+                    if any(all(vp[j] == val for j, val in fixed) for vp in vps_list):
+                        cube[i] = original # If it does, we cannot generalize this bit
+
+                # 4. Translate the Prime Implicant (cube) into a linear inequality (clause)
+                # The clause is violated only by points inside the 'invalid' cube.
+                clause_vars = []
+                for i in range(num_vars):
+                    if cube[i] == 1: clause_vars.append(1 - vars_list[i])
+                    elif cube[i] == 0: clause_vars.append(vars_list[i])
+                self.milp.add_constraint(sum(clause_vars) >= 1)
+
+                # Remove all invalid points covered by this prime implicant to minimize constraints
+                fixed_indices = [(j, cube[j]) for j in range(num_vars) if cube[j] is not None]
+                uncovered = {u for u in uncovered if not all(u[j] == val for j, val in fixed_indices)}
+
+        elif model_options.sbox_modeling == SBOX_MODELING.ALPHA_EVOLVE_PRESENT_SKINNY2:
+
+            S, num_bits, num_probs = self.S, len(self.S), len(set_ddt)
+
+            IN  = [self.MILP_IN[i] for i in range(num_bits)]
+            OUT = [self.MILP_OUT[i] for i in range(num_bits)]
+
+            ALL_VARS = IN + OUT + [PROB[i] for i in range(num_probs)]
+            num_vars = len(ALL_VARS)
+
+            # 1. Compute DDT and map transitions to Probability Indicators
+            ddt = [[0 for _ in range(1 << num_bits)] for _ in range(1 << num_bits)]
+            for x1 in range(1 << num_bits):
+                ddt[x1 ^ 0][S[x1] ^ S[0]] += 0 # Just to ensure ddt is referenced
+                for x2 in range(1 << num_bits):
+                    ddt[x1 ^ x2][S[x1] ^ S[x2]] += 1
+
+            set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+            valid_map = {(a, b): set_ddt.index(ddt[a][b]) for a in range(1 << num_bits) 
+                        for b in range(1 << num_bits) if ddt[a][b] > 0}
+
+            # 2. Encode transitions into unified integer space (IN | OUT | PROB)
+            # Bit layout: [0...num_bits-1] = IN, [num_bits...2*num_bits-1] = OUT, [2*num_bits...] = PROB
+            valid_pts = [a | (b << num_bits) | (1 << (2 * num_bits + p_idx)) 
+                        for (a, b), p_idx in valid_map.items()]
+
+            # 3. Identify all invalid points where exactly one PROB indicator is set
+            uncovered = set()
+            for a in range(1 << num_bits):
+                for b in range(1 << num_bits):
+                    p_correct = valid_map.get((a, b), -1)
+                    for k in range(num_probs):
+                        if k != p_correct:
+                            uncovered.add(a | (b << num_bits) | (1 << (2 * num_bits + k)))
+
+            # 4. Greedy Polyhedral Sieve: Cover invalid space with maximal cubes
+            # We order variables to try and eliminate PROB bits first for broader coverage
+            order = list(range(2 * num_bits, num_vars)) + list(range(2 * num_bits))
+            while uncovered:
+                p_int = uncovered.pop()
+                mask = (1 << num_vars) - 1
+                for i in order:
+                    new_mask = mask ^ (1 << i)
+                    target = p_int & new_mask
+                    if all((p & new_mask) != target for p in valid_pts):
+                        mask = new_mask
+
+                target = p_int & mask
+                active = [i for i in range(num_vars) if (mask >> i) & 1]
+                self.milp.add_constraint(
+                    sum((ALL_VARS[i] if (target >> i) & 1 == 0 else (1 - ALL_VARS[i])) 
+                    for i in active) >= 1
+                )
+
+                # Remove all points covered by this new constraint
+                uncovered = {u for u in uncovered if (u & mask) != target}
+
+            # 5. Global Constraint: Exactly one probability indicator must be active
+            self.milp.add_constraint(sum(PROB) == 1)
+
+
         else:
             posset = []
             for i in range(1 << self.input_length):

@@ -115,6 +115,8 @@ class SBOX_MODELING(Enum):
     ALPHA_EVOLVE = 5
     ALPHA_EVOLVE_AES = 6
     ALPHA_EVOLVE_SKINNY = 7
+    ALPHA_EVOLVE_PRESENT_SKINNY1 = 8
+    ALPHA_EVOLVE_PRESENT_SKINNY2 = 9
 
 
 @dataclass(init=True, repr=False)
@@ -421,6 +423,8 @@ class MODEL_OPTIONS:
                     SBOX_MODELING.ALPHA_EVOLVE,
                     SBOX_MODELING.ALPHA_EVOLVE_AES,
                     SBOX_MODELING.ALPHA_EVOLVE_SKINNY,
+                    SBOX_MODELING.ALPHA_EVOLVE_PRESENT_SKINNY1,
+                    SBOX_MODELING.ALPHA_EVOLVE_PRESENT_SKINNY2,
                 ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
@@ -446,6 +450,8 @@ class MODEL_OPTIONS:
                     SBOX_MODELING.ALPHA_EVOLVE,
                     SBOX_MODELING.ALPHA_EVOLVE_AES,
                     SBOX_MODELING.ALPHA_EVOLVE_SKINNY,
+                    SBOX_MODELING.ALPHA_EVOLVE_PRESENT_SKINNY1,
+                    SBOX_MODELING.ALPHA_EVOLVE_PRESENT_SKINNY2,
                 ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
