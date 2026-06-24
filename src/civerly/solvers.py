@@ -260,7 +260,11 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             objective_value, assignment = self._process_solution_file(solution_file)
             objective_bounds = (objective_value, objective_value)
         elif status == SOLVING_STATUS.TIMEOUT:
-            objective_value, assignment = None, {}
+            if solution_file.exists():
+                objective_value, assignment = self._process_solution_file(solution_file)
+            else:
+                objective_value, assignment = None, {}
+            
             objective_bounds = self._get_objective_bounds(log_file)
         else:
             objective_value = None
@@ -1015,7 +1019,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             name = line[:line.index(" ")]
             value = __string_to_int_gurobi(line[line.index(" ")+1:])
             assignment[name] = value
-        return  objective_value, _to_dict(assignment)
+        return objective_value, _to_dict(assignment)
 
     def solve_multiple(self, input_file, milp, number_of_solutions,
                        trail_vars=None, time_limit=None):
@@ -1305,17 +1309,22 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         if any(["infeasible" in line for line in file_content[:10]]):
             raise ValueError("There is no solution found!")
+
+        if any(["no solution available" in line for line in file_content[:10]]):
+            objective_value = None
+        else:
+            objective_value = file_content[1].strip(" ")
+            objective_value = objective_value[objective_value.index(":")+1:]
+            objective_value = _float_or_int(objective_value)
+
         assignment = {}
-        objective_value = file_content[1].strip(" ")
-        objective_value = objective_value[objective_value.index(":")+1:]
-        objective_value = _float_or_int(objective_value)
         for line in file_content[2:-1]:
             line = line[:line.index("(")].replace(" ", "")
             value = int(round(float(line[line.index("]")+1:])))
             name = line[:line.index("]")+1]
             assignment[name] = value
 
-        return  objective_value, _to_dict(assignment)
+        return objective_value, _to_dict(assignment)
 
 
 class GLPK_CVL(MILP_SOLVER_CVL):
