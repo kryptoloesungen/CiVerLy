@@ -38,6 +38,8 @@ def _float_or_int(value):
         sage: _float_or_int("3.415037499300e+00")
         3.4150374993
     """
+    if value in ("not found yet", "-inf", "inf"):
+        return None
     value = float(value)
     if value.is_integer() or abs(value - int(round(value))) < 1e-8:
         value = int(round(value))
@@ -295,7 +297,8 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         with log_file.open('r') as file:
             content = file.read()
 
-        hit = re.search(self.bounds_regexp, content, re.MULTILINE)
+        # last hit
+        hit = list(re.finditer(self.bounds_regexp, content, re.MULTILINE))[-1]
         if hit:
             upper_bound = _float_or_int(hit.group(1))
             lower_bound = _float_or_int(hit.group(2))
@@ -1338,7 +1341,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         super().__init__()
         self.name = "GLPK"
         self.timeout_string = r"TIME LIMIT EXCEEDED"
-        self.bounds_regexp = r'.*mip\s*=\s*(\S+)\s*>=\s*(\S+).*'
+        self.bounds_regexp = r'.*mip\s*=\s*(\S+|not found yet)\s*>=\s*(\S+|not found yet).*'
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
         """Build the GLPK CLI command list."""
@@ -1371,11 +1374,14 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
-        if any(["INFEASIBLE" in line for line in file_content[-10:]]):
+        if any(["INTEGER EMPTY" in line for line in file_content[:10]]):
             raise ValueError("There is no solution found!")
-
-        L, R = file_content[5].index("= ")+2, file_content[5].index("(")
-        objective_value = _float_or_int(file_content[5][L:R])
+        
+        elif any(["INTEGER UNDEFINED" in line for line in file_content[:10]]):
+            objective_value = None
+        else:
+            L, R = file_content[5].index("= ")+2, file_content[5].index("(")
+            objective_value = _float_or_int(file_content[5][L:R])
 
         ind_start, ind_end = None, None
         bs, be = False, False
@@ -1404,6 +1410,8 @@ class GLPK_CVL(MILP_SOLVER_CVL):
 
         assignment = {}
         for line in file_content:
+            if "C0" in line: # skip internal helper variables
+                continue
             i = line.index("]")
             name = line[:i+1]
             value = line[i+1:i+2]
