@@ -297,8 +297,12 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         with log_file.open('r') as file:
             content = file.read()
 
-        # last hit
-        hit = list(re.finditer(self.bounds_regexp, content, re.MULTILINE))[-1]
+        hits = list(re.finditer(self.bounds_regexp, content, re.MULTILINE))
+        if hits == []: # bounds havent been found yet.
+            return (None, None)
+
+        # use last hit
+        hit = hits[-1]
         if hit:
             upper_bound = _float_or_int(hit.group(1))
             lower_bound = _float_or_int(hit.group(2))
