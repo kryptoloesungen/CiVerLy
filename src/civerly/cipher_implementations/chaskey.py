@@ -144,7 +144,7 @@ class Chaskey_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     path=Path("./DOCTEST-Chaskey-Models/"))
-            ....:   chaskey_cipher.chaskey_cipher.analyse(model_options=model_options)
+            ....:   chaskey_cipher.analyse(model_options=model_options)
             4856 variables and 12217 clauses were written to ...
             4
 
@@ -162,5 +162,8 @@ class Chaskey_CVL:
         chaskey_cipher.add_output([(state, (i,i)) for i in range(4)])
         self.chaskey_cipher = chaskey_cipher
 
-    def __call__(self, state):
-        return self.chaskey_cipher(state)
+    def __new__(cls, *args, **kwargs):
+        """Instantiate a Chaskey cipher."""
+        instance = super(Chaskey_CVL, cls).__new__(cls)
+        instance.__init__(*args, **kwargs)
+        return instance.chaskey_cipher
