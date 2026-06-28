@@ -506,22 +506,50 @@ def translate_var(cipher, node, local_var):
         sage: translate_var(craft, node, node.SAT_IN[2])
         643
 
+        sage: from civerly.cipher_implementations.present import PRESENT_CVL
+        sage: from civerly.model_options import *
+        sage: import tempfile
+        sage: cipher = PRESENT_CVL(3)
+        sage: # optional - cadical, espresso
+        sage: with tempfile.TemporaryDirectory() as tmpdir:
+        ....:   model_options = MODEL_OPTIONS(
+        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+        ....:     optimization=OPTIMIZATION.SAT,
+        ....:     granularity=GRANULARITY.BITWISE,
+        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+        ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+        ....:     sat_solver=SOLVER.CADICAL,
+        ....:     logic_minimizer=SOLVER.ESPRESSO,
+        ....:     path=Path(tmpdir))
+        ....:   cipher.analyse(model_options)
+        4112 variables and 10305 clauses were written to ...
+        8
+        sage: from civerly.util import translate_var
+        sage: vars = []
+        sage: for i in range(len(cipher.nodes)):
+        ....:   node = cipher.nodes[i]
+        ....:   for j in range(node.input_length):
+        ....:       vars.append(translate_var(cipher, node, node.SAT_IN[j]))
+        sage: # there should not be duplicate variables
+        sage: len(vars) == len(set(vars))
+        True
+
 
     """
-    index_path = _find_path(cipher, node)
+    rev_path = _find_path(cipher, node)[::-1]
     var = local_var
     # go backwards through the recursion tree
-    for depth in range(1, len(index_path)):
+    for depth in range(1, len(rev_path)):
         parent = cipher
-        for index in index_path[:len(index_path) - depth]:
-            parent = parent.nodes[index]
-        index = index_path[-depth]
+        # for ind in index_path[:len(index_path) - depth]:
+        for ind in rev_path[depth:-1]:
+            parent = parent.nodes[ind]
+        index = rev_path[depth]
         # distinguish between SAT and MILP variable
         if isinstance(local_var, (int, Integer)):
             var = parent.inv_dictionaries_sat[index][var]
         else:
             var = parent.inv_dictionaries_milp[index][var]
-
     return var
 
 
