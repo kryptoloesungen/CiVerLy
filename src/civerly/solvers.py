@@ -1024,6 +1024,8 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         assignment = {}
         for line in file_content[1:-1]:
             name = line[:line.index(" ")]
+            if "C0" in name:
+                continue
             value = __string_to_int_gurobi(line[line.index(" ")+1:])
             assignment[name] = value
         return objective_value, _to_dict(assignment)
@@ -1326,6 +1328,8 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         assignment = {}
         for line in file_content[2:-1]:
+            if "C0" in line: # skip internal helper variables
+                continue
             line = line[:line.index("(")].replace(" ", "")
             value = int(round(float(line[line.index("]")+1:])))
             name = line[:line.index("]")+1]
