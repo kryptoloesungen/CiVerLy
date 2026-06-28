@@ -1608,7 +1608,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         ]
         if time_limit is not None:
             command.insert(2, "-t")
-            command.insert(3, str(time_limit))
+            command.insert(3, str(int(time_limit)))
         return command
 
     def _process_solution_file(self, solution_file):
