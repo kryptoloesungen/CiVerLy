@@ -169,8 +169,7 @@ class SBoxCipher(Cipher):
         # flag to stop when a model needs to be solved externally
         self._return_immediately_ = False
 
-        master_milp = MILP_CVL(
-            maximization=False, solver="GLPK")
+        master_milp = MILP_CVL(maximization=False)
         self.MILP_IN = master_milp.new_variable(name="IN", binary=True)
         self.MILP_OUT = master_milp.new_variable(name="OUT", binary=True)
 
