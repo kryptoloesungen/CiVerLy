@@ -2169,7 +2169,7 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
             ....:     model_options.path / "espresso-d1bda7a.pla",
             ....:     model_options.path / "espresso-d1bda7a_out.pla")
             sage: gift_cipher.analyse(model_options)
-            2560 variables and 6401 clauses were written to '...'
+            2048 variables and 5377 clauses were written to '...'
             3.4
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
