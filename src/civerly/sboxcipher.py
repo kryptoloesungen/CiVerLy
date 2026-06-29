@@ -16,8 +16,8 @@ import io
 import json
 from contextlib import redirect_stdout
 from dataclasses import replace
-from sage.numerical.mip import MixedIntegerLinearProgram
 
+from civerly.milp import MILP_CVL
 from civerly.cipher import Cipher
 from civerly.component import SBox_CVL, LinearLayer_CVL, XOR_CVL
 from civerly.component import RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
@@ -169,7 +169,7 @@ class SBoxCipher(Cipher):
         # flag to stop when a model needs to be solved externally
         self._return_immediately_ = False
 
-        master_milp = MixedIntegerLinearProgram(
+        master_milp = MILP_CVL(
             maximization=False, solver="GLPK")
         self.MILP_IN = master_milp.new_variable(name="IN", binary=True)
         self.MILP_OUT = master_milp.new_variable(name="OUT", binary=True)
@@ -470,7 +470,7 @@ class SBoxCipher(Cipher):
 
     def _finish_milp(self, model_options, milp, _first_iter=False):
         r"""
-        Finish the given ``MixedIntegerLinearProgram``. That is, add a
+        Finish the given ``MILP_CVL``. That is, add a
         constraint that ensures that the input is active and add the objective
         function.
         If specified by ``model_options``, write the model to a file.
@@ -479,7 +479,7 @@ class SBoxCipher(Cipher):
 
             - ``model_options`` -- see
               :class:`civerly.model_options.MODEL_OPTIONS`
-            - ``milp`` -- ``MixedIntegerLinearProgram``; the milp to be
+            - ``milp`` -- ``MILP_CVL``; the milp to be
               finished
 
         OUTPUT:
