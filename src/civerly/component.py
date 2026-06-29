@@ -160,9 +160,7 @@ class Component(ABC):
         r"""Initialize empty MILP or SAT model for this component."""
         if model_options.optimization == OPTIMIZATION.MILP:
             self.sum_arr_milp = []
-            self.milp = MILP_CVL(
-                maximization=False, solver="GLPK"
-            )
+            self.milp = MILP_CVL(maximization=False)
             self.MILP_IN = self.milp.new_variable(name="IN", binary=True)
             self.MILP_OUT = self.milp.new_variable(name="OUT", binary=True)
         elif model_options.optimization == OPTIMIZATION.SAT:
@@ -2305,8 +2303,7 @@ class SBox_CVL(Component):
                 # The solver handles the "solution already on disk" cache
                 # check internally and (for an external solver) aborts via
                 # :class:`ExternalSolveRequired` when the user must solve.
-                milp_to_minimize_milp = MILP_CVL(
-                    maximization=False, solver="GLPK")  # Reduction MILP
+                milp_to_minimize_milp = MILP_CVL(maximization=False)  # Reduction MILP
                 Z = milp_to_minimize_milp.new_variable(
                     name="Z", binary=True)
                 for point in impossible_points:

@@ -227,9 +227,7 @@ def translate_sat_clause(VAR, clause):
         sage: translate_sat_clause(VAR, clause)
         (11, -22, 33, -44, -55)
         sage: from civerly.milp import MILP_CVL
-        sage: milp = MILP_CVL(
-        ....:   maximization=False, solver="GLPK"
-        ....: )
+        sage: milp = MILP_CVL(maximization=False)
         sage: VAR_milp = milp.new_variable(name="VAR", binary=True)
         sage: translate_sat_clause(VAR_milp, clause)
         (x_0, -1*x_1, x_2, -1*x_3, -1*x_4)
@@ -248,9 +246,7 @@ def translate_milp_constraint(VAR, constr):
 
         sage: from civerly.util import translate_milp_constraint
         sage: from civerly.milp import MILP_CVL
-        sage: milp = MILP_CVL(
-        ....:   maximization=False, solver="GLPK"
-        ....: )
+        sage: milp = MILP_CVL(maximization=False)
         sage: X = milp.new_variable(name="X", binary=True)
         sage: Y = milp.new_variable(name="Y", binary=True)
         sage: constr = (-1*X[0] + 2*X[1] >= X[2])
@@ -392,9 +388,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 outcome = constr.eval(impossible_point) == 0
             if outcome is False:
                 R_bar[i_im].append(ic)
-    milp_to_minimize_milp = MILP_CVL(
-        maximization=False, solver="GLPK"
-    )
+    milp_to_minimize_milp = MILP_CVL(maximization=False)
     Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
     for r_arr in R_bar:
         if len(r_arr) > 0:
