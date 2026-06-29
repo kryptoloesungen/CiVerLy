@@ -2143,12 +2143,12 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         Simulate external Espresso minimization::
 
             sage: # optional - cryptominisat  # optional - espresso
-            sage: from civerly.cipher_implementations.gift import GIFT_CVL
+            sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
             sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
+            sage: gift_cipher = GIFT64_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
