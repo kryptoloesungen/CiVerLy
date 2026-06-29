@@ -31,3 +31,23 @@ class MILP_CVL(MixedIntegerLinearProgram):
         super().__init__(*args, solver="GLPK", **kwargs)
         self.backend = self.get_backend()
 
+    def dump(self):
+        """
+        Implement JSON serialization.
+        """
+        return {
+            "maximization": self.backend.is_maximization(),
+            "variables": [
+                # TODO. Should be something like this:
+                #   var.name for var in range(self.number_of_variables())
+            ],
+            "objective": [
+                self.backend.objective_coefficient(i)
+                for i in range(self.number_of_constraints())
+            ],
+            "constraints": [
+                self.backend.row(i)
+                for i in range(self.number_of_constraints())
+            ],
+        }
+    
