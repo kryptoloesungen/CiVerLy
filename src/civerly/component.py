@@ -25,7 +25,6 @@ from sage.matrix.constructor import Matrix as matrix
 from sage.structure.element import Matrix as matrix_type
 from sage.matrix.special import identity_matrix, block_matrix
 from sage.sat.solvers.dimacs import DIMACS
-from sage.numerical.mip import MixedIntegerLinearProgram
 from sage.geometry.polyhedron.constructor import Polyhedron
 
 from civerly.util import list_of_predecessor_vector_indices
@@ -38,6 +37,7 @@ from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
 from civerly.model_options import InvalidModelOptionException
 from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
+from civerly.milp import MILP_CVL
 
 
 class Component(ABC):
@@ -160,7 +160,7 @@ class Component(ABC):
         r"""Initialize empty MILP or SAT model for this component."""
         if model_options.optimization == OPTIMIZATION.MILP:
             self.sum_arr_milp = []
-            self.milp = MixedIntegerLinearProgram(
+            self.milp = MILP_CVL(
                 maximization=False, solver="GLPK"
             )
             self.MILP_IN = self.milp.new_variable(name="IN", binary=True)
@@ -221,7 +221,7 @@ class Component(ABC):
         for key, value in self.__dict__.items():
             if isinstance(value, (bool, str)):
                 continue
-            elif isinstance(value, (MixedIntegerLinearProgram, DIMACS)):
+            elif isinstance(value, (MILP_CVL, DIMACS)):
                 continue
             elif any([word in key for word in [
                     "wordsize", "milp", "sat", "MILP", "SAT", "_model_time"
@@ -1358,7 +1358,7 @@ class LinearLayer_CVL(Component):
             - ``model_options`` -- see
               :class:`civerly.model_options.MODEL_OPTIONS`
 
-        OUTPUT: An object ``MixedIntegerLinearProgram``, describing ``self``
+        OUTPUT: An object ``MILP_CVL``, describing ``self``
         as a MILP.
 
 
@@ -1451,7 +1451,7 @@ class LinearLayer_CVL(Component):
             - ``model_options`` -- see
               :class:`civerly.model_options.MODEL_OPTIONS`
 
-        OUTPUT: An object ``MixedIntegerLinearProgram``, describing ``self``
+        OUTPUT: An object ``MILP_CVL``, describing ``self``
         as a MILP.
         """
 
@@ -2305,7 +2305,7 @@ class SBox_CVL(Component):
                 # The solver handles the "solution already on disk" cache
                 # check internally and (for an external solver) aborts via
                 # :class:`ExternalSolveRequired` when the user must solve.
-                milp_to_minimize_milp = MixedIntegerLinearProgram(
+                milp_to_minimize_milp = MILP_CVL(
                     maximization=False, solver="GLPK")  # Reduction MILP
                 Z = milp_to_minimize_milp.new_variable(
                     name="Z", binary=True)
@@ -2666,7 +2666,7 @@ class ROT_AND_CVL(Component):
     def _from_dict(cls, d):
         return cls(d["word_length"], d["r"], name=d.get("name"))
 
-    def _model_milp(self, model_options) -> MixedIntegerLinearProgram:
+    def _model_milp(self, model_options) -> MILP_CVL:
         raise InvalidModelOptionException(
             model_options.optimization,
             message="ROT_AND_CVL is not supported in MILP"

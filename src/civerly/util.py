@@ -55,8 +55,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.modules.free_module_element import vector
 from sage.modules.free_module import VectorSpace
 from sage.geometry.polyhedron.constructor import Polyhedron
-from sage.sat.solvers.dimacs import DIMACS
-from sage.numerical.mip import MixedIntegerLinearProgram
+
 
 # suppress LazyImport warnings from Polyhedron class
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -227,8 +226,8 @@ def translate_sat_clause(VAR, clause):
         sage: clause = (1, -2, 3, -4, -5)
         sage: translate_sat_clause(VAR, clause)
         (11, -22, 33, -44, -55)
-        sage: from sage.numerical.mip import MixedIntegerLinearProgram
-        sage: milp = MixedIntegerLinearProgram(
+        sage: from civerly.milp import MILP_CVL
+        sage: milp = MILP_CVL(
         ....:   maximization=False, solver="GLPK"
         ....: )
         sage: VAR_milp = milp.new_variable(name="VAR", binary=True)
@@ -248,8 +247,8 @@ def translate_milp_constraint(VAR, constr):
     TESTS::
 
         sage: from civerly.util import translate_milp_constraint
-        sage: from sage.numerical.mip import MixedIntegerLinearProgram
-        sage: milp = MixedIntegerLinearProgram(
+        sage: from civerly.milp import MILP_CVL
+        sage: milp = MILP_CVL(
         ....:   maximization=False, solver="GLPK"
         ....: )
         sage: X = milp.new_variable(name="X", binary=True)
@@ -340,6 +339,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
     from civerly.component import SBox_CVL, LinearLayer_CVL
+    from civerly.milp import MILP_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
 
@@ -392,7 +392,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 outcome = constr.eval(impossible_point) == 0
             if outcome is False:
                 R_bar[i_im].append(ic)
-    milp_to_minimize_milp = MixedIntegerLinearProgram(
+    milp_to_minimize_milp = MILP_CVL(
         maximization=False, solver="GLPK"
     )
     Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
