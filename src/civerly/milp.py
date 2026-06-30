@@ -30,6 +30,9 @@ class MILP_CVL(MixedIntegerLinearProgram):
         kwargs.pop("solver", None)
         super().__init__(*args, solver="GLPK", **kwargs)
         self.backend = self.get_backend()
+        self.MILP_IN  = self.new_variable(name="IN",  binary=True)
+        self.MILP_OUT = self.new_variable(name="OUT", binary=True)
+        self.X = None
 
     def dump(self):
         """

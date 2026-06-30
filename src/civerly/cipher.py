@@ -252,12 +252,12 @@ class Cipher:
                     self.input_length // self._cipher_wordsize
                 ):
                     self.milp.add_constraint(
-                        self.MILP_OUT[i] == self.MILP_IN[i]
+                        self.milp.MILP_OUT[i] == self.milp.MILP_IN[i]
                     )
             elif model_options.granularity == GRANULARITY.BITWISE:
                 for i in range(self.input_length):
                     self.milp.add_constraint(
-                        self.MILP_OUT[i] == self.MILP_IN[i]
+                        self.milp.MILP_OUT[i] == self.milp.MILP_IN[i]
                     )
             else:
                 raise InvalidModelOptionException(
