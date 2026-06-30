@@ -29,10 +29,28 @@ class MILP_CVL(MixedIntegerLinearProgram):
         # always default to glpk solver for sage wrapper to minimize dependencies
         kwargs.pop("solver", None)
         super().__init__(*args, solver="GLPK", **kwargs)
-        self.backend = self.get_backend()
+        self.backend  = self.get_backend()
+        self.__vars = {}
+
         self.MILP_IN  = self.new_variable(name="IN",  binary=True)
         self.MILP_OUT = self.new_variable(name="OUT", binary=True)
         self.X = None
+        
+
+    @property
+    def vars(self):
+        return self.__vars
+
+    def new_variable(self, *args, **kwargs):
+        """
+        Override :meth:``MixedIntegerLinearProgram.new_variable`` to 
+        also store this variable as an attribute of ``self``.
+        """
+        name = kwargs.get("name")
+        var = super().new_variable(*args, **kwargs)
+        self.__vars[name] = var
+        return var
+
 
     def dump(self):
         """
