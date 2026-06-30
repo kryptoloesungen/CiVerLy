@@ -59,12 +59,13 @@ class MILP_CVL(MixedIntegerLinearProgram):
         return {
             "maximization": self.backend.is_maximization(),
             "variables": [
-                # TODO. Should be something like this:
-                #   var.name for var in range(self.number_of_variables())
+                (index, k, int(str(v)[2:]))
+                for index, var in list(self.vars.items())
+                for k, v in var.items()
             ],
             "objective": [
                 self.backend.objective_coefficient(i)
-                for i in range(self.number_of_constraints())
+                for i in range(self.number_of_variables())
             ],
             "constraints": [
                 self.backend.row(i)
@@ -72,3 +73,6 @@ class MILP_CVL(MixedIntegerLinearProgram):
             ],
         }
     
+    @classmethod
+    def load(self):
+        return
