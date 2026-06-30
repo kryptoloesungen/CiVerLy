@@ -189,8 +189,6 @@ class SBoxCipher(Cipher):
                 if comp == prev:
                     # copy over attributes related to modeling
                     comp.milp         = prev.milp
-                    # comp.MILP_IN      = prev.MILP_IN
-                    # comp.MILP_OUT     = prev.MILP_OUT
                     comp.sum_arr_milp = prev.sum_arr_milp
 
                     # copy the component milp programs
@@ -238,36 +236,11 @@ class SBoxCipher(Cipher):
                 ##############################################################
                 # parse the component MILP and adopt it into the master milp #
                 ##############################################################
-
-                stdout_var = io.StringIO()
-                with redirect_stdout(stdout_var):
-                    comp_milp.show()
-                show_output = repr(stdout_var.getvalue())
-
-                ind_var = show_output.index("Variables:")
-                show_variables = show_output[ind_var + len('Variables:\\n'):]
-
-                # tokenize the show_variables string into each assignments
-                assignments = []
-                tokenize_pos1 = 0
-                tokenize_pos2 = 0
-                while tokenize_pos2 < len(show_variables):
-                    tokenize_pos2 += \
-                        show_variables[tokenize_pos1:].index(")") + 5
-                    assignments.append(
-                        show_variables[tokenize_pos1: tokenize_pos2]
-                    )
-                    tokenize_pos1 = tokenize_pos2
-
-                # store the assignments in dictionary,
-                # as otherwise we wouldn't be able to recover variable names
-                # by their indices
-                for asg in assignments:
-                    asg = asg[:asg.index("is")]
-                    ind = int(asg[asg.index('=') + 1:].strip(' ')[2:])
-                    val = asg[:asg.index("=")].strip(" ")
-                    key = f"X{i_comp}[{ind}]"
-                    self.dictionaries_milp[i_comp][key] = val
+                for name, milp_variable in comp_milp.vars.items():
+                    for index, backend_variable in milp_variable.items():
+                        key = f"X{i_comp}[{str(backend_variable)[2:]}]"
+                        val = name + f"[{index}]"
+                        self.dictionaries_milp[i_comp][key] = val
 
                 self.inv_dictionaries_milp[i_comp] = {
                     v: k for k, v in self.dictionaries_milp[i_comp].items()
@@ -279,7 +252,6 @@ class SBoxCipher(Cipher):
                     master_milp.add_constraint(
                         translate_milp_constraint(X[i_comp], con)
                     )
-
                 self.sum_arr_milp += [
                     (factor, self.inv_dictionaries_milp[i_comp][entry])
                     for factor, entry in comp.sum_arr_milp
