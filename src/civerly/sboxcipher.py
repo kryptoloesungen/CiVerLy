@@ -170,8 +170,6 @@ class SBoxCipher(Cipher):
         self._return_immediately_ = False
 
         master_milp = MILP_CVL(maximization=False)
-        self.MILP_IN = master_milp.new_variable(name="IN", binary=True)
-        self.MILP_OUT = master_milp.new_variable(name="OUT", binary=True)
 
         # X is the main MILP variable being used
         X = [
@@ -191,8 +189,8 @@ class SBoxCipher(Cipher):
                 if comp == prev:
                     # copy over attributes related to modeling
                     comp.milp         = prev.milp
-                    comp.MILP_IN      = prev.MILP_IN
-                    comp.MILP_OUT     = prev.MILP_OUT
+                    # comp.MILP_IN      = prev.MILP_IN
+                    # comp.MILP_OUT     = prev.MILP_OUT
                     comp.sum_arr_milp = prev.sum_arr_milp
 
                     # copy the component milp programs
@@ -304,7 +302,7 @@ class SBoxCipher(Cipher):
             cmi = self.inv_dictionaries_milp[
                 self.nodes.index(self.IN)][f'OUT[{x}]']
             compMILP_INx = X[_before_brackets(cmi)][_between_brackets(cmi)]
-            master_milp.add_constraint(self.MILP_IN[x] == compMILP_INx)
+            master_milp.add_constraint(master_milp.MILP_IN[x] == compMILP_INx)
 
         assert __ASSERTION_CTR == self.input_length // divide_by, (
             f"({self.name}) "
@@ -331,7 +329,7 @@ class SBoxCipher(Cipher):
                 cmi = self.inv_dictionaries_milp[
                     self.nodes.index(self.IN)][f'OUT[{x}]']
             master_milp.add_constraint(
-                X[a][out_string_index] == self.MILP_OUT[y]
+                X[a][out_string_index] == master_milp.MILP_OUT[y]
             )
 
         assert __ASSERTION_CTR == self.output_length // divide_by, (
@@ -459,10 +457,10 @@ class SBoxCipher(Cipher):
                             X[_before_brackets(tmp)][_between_brackets(tmp)] == 0
                         )
 
-        self.X = X
-
         # change back s.t. toplevel milp is written to file
         model_options, model_options_ = model_options_, model_options
+
+        master_milp.X = X
 
         return self._finish_milp(model_options, master_milp,
                                  _first_iter=_first_iter)
@@ -510,16 +508,16 @@ class SBoxCipher(Cipher):
         for factor, entry in self.sum_arr_milp:
             # negative factor since we want to MINIMIZE the MILP
             # while MAXIMIZING the propagation probability.
-            summation_result += -factor * self.X[
+            summation_result += -factor * milp.X[
                 _before_brackets(entry)][_between_brackets(entry)]
 
-        if len(self.MILP_IN.items()) == 0:
+        if len(milp.MILP_IN.items()) == 0:
             raise ValueError("Empty MILP")
 
         if _first_iter:
             # Input should be active, i.e. the input
             # differences should be non-zero
-            milp.add_constraint(sum(self.MILP_IN) >= 1)
+            milp.add_constraint(sum(milp.MILP_IN) >= 1)
 
             # bound the objective by `model_options.solve_range``
             if model_options.solve_range is not None:
@@ -604,6 +602,6 @@ class SBoxCipher(Cipher):
             for j, val in sub_dict.items():
                 assert val in (0, 1), f"{val} is not binary"
                 n_active += val
-                lhs += ((-1) ** val) * translate_var(self, self.nodes[i], self.X[i][j])
+                lhs += ((-1) ** val) * translate_var(self, self.nodes[i], self.milp.X[i][j])
 
         self.milp.add_constraint(lhs >= 1 - n_active)
