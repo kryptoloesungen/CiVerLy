@@ -17,6 +17,7 @@ class RECTANGLE_CVL:
               generated (such as the reports and cipher graphs).
 
         EXAMPLES::
+
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: rectangle_cipher = RECTANGLE_CVL(R=10)
@@ -229,11 +230,11 @@ class RECTANGLE_CVL:
             """
 
         # RECTANGLE necessites R+1 rks, which are sets by default to zeros
-        if rks is None:
+        if rks == []:
             rks = [0] * (R + 1)
         else:
             rks = list(rks)
-            assert len(rks) >= R + 1, "RECTANGLE needs R+1=26 roundkeys"
+            assert len(rks) >= R + 1, f"RECTANGLE needs R+1={R+1} roundkeys"
   
         # RECTANGLE S-box specifications
         RECTANGLE_SBOX = (
