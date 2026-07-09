@@ -1,10 +1,3 @@
-"""
-A rudimentary implementation of a weakend version of PRESENT.
-
-The S-box is swapped out such that its linearity is 12 and its differential
-uniformity is 6. The main purpose of this is to test CiVerLy on trails with
-non-integer weight.
-"""
 from civerly.wordsboxcipher import WordSBoxCipher
 from civerly.component import SBox_CVL, PermuteLayer_CVL
 from sage.crypto.sbox import SBox
@@ -13,9 +6,20 @@ from sage.crypto.sbox import SBox
 class WEAK_PRESENT_CVL:
     """Rudimentary implementation of WEAK_PRESENT."""
 
-    def __init__(self, R=31, name=None):
+    def __init__(self, R=31, name="WEAK_PRESENT"):
         r"""
-        Initizalise WEAK_PRESENT.
+        The CiVerly implementation of a weakened version of PRESENT.
+
+        The S-box is swapped out such that its linearity is 12 and its differential
+        uniformity is 6. The main purpose of this is to test CiVerLy on trails with
+        non-integer weight. It takes the following parameters:
+
+            - ``R`` -- integer; Number of rounds (default: 31)
+
+            - ``name`` -- string; The name of the cipher (default: "WEAK_PRESENT").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
+
 
         TESTS::
 
@@ -25,7 +29,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
+            sage: # optional - gurobi, espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -46,7 +51,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
+            sage: # optional - scip, espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -67,7 +73,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
+            sage: # optional - scip, espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,

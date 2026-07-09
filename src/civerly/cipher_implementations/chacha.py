@@ -8,10 +8,10 @@ from civerly.component import PermuteLayer_CVL, C_CVL
 
 
 class ChachaQRF_CVL:
-    def __init__(self, name=None):
+    def __init__(self, name="Chacha-QRF"):
         r"""
         The CiVerLy implementation of the Chacha QRF. Since there is nothing
-        to tweak, it does not take any parameters. This cipher is
+        to tweak, it does not take any parameters (except the name). This cipher is
         "plug-and-play" usable, i.e. it can be directly used when imported.
 
         EXAMPLES::
@@ -88,8 +88,6 @@ class ChachaQRF_CVL:
             0
 
         """
-        if name is None:
-            name = "Chacha-QRF"
         chacha_qr = AddRX(32, 4, 4, name=name)
 
         add = ModAdd_CVL(32, name="add")
@@ -134,12 +132,16 @@ class ChachaQRF_CVL:
 
 
 class Chacha_CVL:
-    def __init__(self, R=20, name=None):
+    def __init__(self, R=20, name="Chacha"):
         r"""
-        The CiVerLy implementation of the Chacha QRF. It takes the
+        The CiVerLy implementation of the Chacha Cipher. It takes the
         following arguments:
 
-            - ``R`` -- integer; Number of rounds.
+            - ``R`` -- integer; Number of rounds (default 20)
+
+            - ``name`` -- string; The name of the cipher (default: "Chacha").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
 
         This cipher is "plug-and-play" usable, i.e. it can be directly
         used when imported.
@@ -176,8 +178,6 @@ class Chacha_CVL:
 
 
         """
-        if name is None:
-            name = "Chacha"
         chacha_qr = ChachaQRF_CVL()
 
         # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #

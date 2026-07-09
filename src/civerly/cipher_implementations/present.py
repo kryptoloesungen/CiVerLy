@@ -4,19 +4,19 @@ from sage.crypto.sboxes import PRESENT as present_S
 
 
 class PRESENT_CVL:
-    def __init__(self, R=31, rks=[], name=None):
+    def __init__(self, R=31, rks=[], name="PRESENT"):
         r"""
         The CiVerLy implementation of PRESENT. It takes in the following
         arguments:
 
-            - ``R`` -- integer; Number of rounds.
+            - ``R`` -- integer; Number of rounds (default: 31)
 
-            - ``rks`` -- list (optional); Specifies the roundkey values of
+            - ``rks`` -- list (default: []); Specifies the roundkey values of
               PRESENT, in order to being able to properly test the
               implementation. Is required to have length :math:`R+1`, and
               defaults to ``[0, ..., 0]``.
 
-            - ``name`` -- string (optional); The name of the cipher.
+            - ``name`` -- string (default: "PRESENT"); The name of the cipher.
               Will be used to name the cipher and the corresponding files
               generated (such as the reports and cipher graphs).
 
@@ -289,8 +289,6 @@ class PRESENT_CVL:
             6512 variables and 16017 clauses were written to '...'
             8
         """
-        if name is None:
-            name = "PRESENT"
 
         if rks == []:
             rks = [0 for _ in range(R+1)]  # set roundkeys = 0 as default

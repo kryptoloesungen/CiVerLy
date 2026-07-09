@@ -11,19 +11,26 @@ F2 = GF(2)
 # each entry is a 4x4 binary submatrix
 # M' is constructed following the method depicted in the original paper
 M_ = [
-    [0x0111, 0x2220, 0x4404, 0x8088,
-     0x1011, 0x0222, 0x4440, 0x8808,
-     0x1101, 0x2022, 0x0444, 0x8880,
-     0x1110, 0x2202, 0x4044, 0x0888],
+    [
+        0x0111, 0x2220, 0x4404, 0x8088,
+        0x1011, 0x0222, 0x4440, 0x8808,
+        0x1101, 0x2022, 0x0444, 0x8880,
+        0x1110, 0x2202, 0x4044, 0x0888
+    ],
 
-    [0x1110, 0x2202, 0x4044, 0x0888,
-     0x0111, 0x2220, 0x4404, 0x8088,
-     0x1011, 0x0222, 0x4440, 0x8808,
-     0x1101, 0x2022, 0x0444, 0x8880],
+    [
+        0x1110, 0x2202, 0x4044, 0x0888,
+        0x0111, 0x2220, 0x4404, 0x8088,
+        0x1011, 0x0222, 0x4440, 0x8808,
+        0x1101, 0x2022, 0x0444, 0x8880
+    ],
 ]
 
-# This helper function performs a multiplication over GF(2) of a 16-bit vector with a 16x16 binary matrix
-# For correctness purposes, out & 0xFFFF ensures that length of the output is 16-bit, while converting to LSB-indexing to match the original paper specifications and test vectors
+# This helper function performs a multiplication over GF(2)
+# of a 16-bit vector with a 16x16 binary matrix
+# For correctness purposes, out & 0xFFFF ensures that length of
+# the output is 16-bit, while converting to LSB-indexing to match the
+# original paper specifications and test vectors
 def vec_mat_mult(vec, mat):
     out = 0
     for i in range(16):
@@ -77,9 +84,21 @@ M_layer = build_matrix(m_layer)
 Minv_ = build_matrix(m_inv_layer)
 
 class PRINCE_CVL:
-    def __init__(self, R=12, rks=None, name=None):
-        r"""       
-         EXAMPLES::
+    def __init__(self, R=12, rks=[], name="PRINCE"):
+        r"""
+        CiVerLy implementation of PRINCE (https://eprint.iacr.org/2012/529.pdf).
+        It takes the following arguments:
+
+            - ``R`` -- integer; Number of rounds (default: 12)
+
+            - ``rks`` -- list[int]; Round keys (default: []).
+
+            - ``name`` -- string; The name of the cipher (default: "PRINCE").
+              This will be used to name the cipher and the corresponding file
+              generated (such as the reports and cipher graphs).
+
+
+        EXAMPLES::
 
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
@@ -225,18 +244,13 @@ class PRINCE_CVL:
         
         """
         
-        if name is None:
-            name = "PRINCE"
-
-        if rks is None:
+        if rks == []:
             rks = [0]*12
         else:
             assert len(rks) >= R, "More round keys are needed"
             rks = list(rks[:R])
 
-        assert len(rks) == 12, "The cipher PRINCE must have R=12"
-
-        #S-layer and the inverse S-layer
+        # S-layer and the inverse S-layer
         sb = SBox_CVL(prince_S, name="SBox")
         sb_inv = SBox_CVL(prince_S.inverse(), name="SBoxInv")
 
@@ -250,12 +264,12 @@ class PRINCE_CVL:
             n = s_layer_inv.add_subcipher(sb_inv, [(s_layer_inv.IN, (j, 0))])
             s_layer_inv.add_output([(n, (0, j))])
 
-        #Linear layers: M, M' and inverse M   
+        # Linear layers: M, M' and inverse M   
         M = LinearLayer_CVL(M_layer, name="M")
         Mprime = LinearLayer_CVL(Mprime_, name="Mprime")
         Minv = LinearLayer_CVL(Minv_, name="Minv")
 
-        #The round key addition layer
+        # The round key addition layer
         xor_mask = RoundkeyXOR_CVL(64, 0x0, name="XOR")
 
         # Each forward round: S -> M -> XOR
@@ -286,31 +300,31 @@ class PRINCE_CVL:
         prince_core = WordSBoxCipher(4, 16, 16, name=name)
         st = prince_core.IN
 
-        #initial add rks[0]
+        # initial add rks[0]
         if R >= 1:
             xor_mask.const = rks[0]
-            st = prince_core.add_subcipher(xor_mask, [(st, (i,i)) for i in range(16)])
+            st = prince_core.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
 
-        #forward rounds r=1..5
+        # forward rounds r=1..5
         for r in range(1, min(R, 6)):
             fwd_round.nodes[n_xor_fwd].const = rks[r]
-            st = prince_core.add_subcipher(fwd_round, [(st, (i,i)) for i in range(16)])
+            st = prince_core.add_subcipher(fwd_round, [(st, (i, i)) for i in range(16)])
 
-        #middle round
+        # middle round
         if R >= 6:
-            st = prince_core.add_subcipher(mid_round, [(st, (i,i)) for i in range(16)])
+            st = prince_core.add_subcipher(mid_round, [(st, (i, i)) for i in range(16)])
 
-        #backward rounds r=6..10
+        # backward rounds r=6..10
         for r in range(6, min(R, 11)):
             bwd_round.nodes[n_xor_bwd].const = rks[r]
-            st = prince_core.add_subcipher(bwd_round, [(st, (i,i)) for i in range(16)])
+            st = prince_core.add_subcipher(bwd_round, [(st, (i, i)) for i in range(16)])
 
-        #final add rks[11]
+        # final add rks[11]
         if R >= 12:
             xor_mask.const = rks[11]
-            st = prince_core.add_subcipher(xor_mask, [(st, (i,i)) for i in range(16)])
+            st = prince_core.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
 
-        prince_core.add_output([(st, (i,i)) for i in range(16)])
+        prince_core.add_output([(st, (i, i)) for i in range(16)])
         self.prince_cipher = prince_core
 
     def __new__(cls, *args, **kwargs):

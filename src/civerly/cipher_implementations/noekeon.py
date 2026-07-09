@@ -1,18 +1,33 @@
 from civerly.andrx import AndRX
 from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
 
-# Round: Add round constant → θ(key, state) → π1 → γ → π2
-# θ (theta): linear diffusion + key injection (XORs + byte-rotations)
-# π1, π2: word rotations (RX part)
-# γ (gamma): the nonlinear layer (this is where AND + NOT appear)
+# Round: Add round constant -> theta(key, state) -> pi1 -> gamma -> pi2
+# theta: linear diffusion + key injection (XORs + byte-rotations)
+# pi1, pi2: word rotations (RX part)
+# gamma: the nonlinear layer (this is where AND + NOT appear)
 
-#round constant rc1
-rc1 = [0x80, 0x1B, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a]
+# round constant rc1
+rc1 = [
+    0x80, 0x1B, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a,
+    0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a
+]
 RC_FINAL = 0xd4
 
 class NOEKEON_CVL:
-    def __init__(self, key=0x0, R=16, name=None):
+    def __init__(self, R=16, k=0x0, name="Noekeon"):
         r"""
+        CiVerLy implementation of Noekeon (https://gro.noekeon.org/Noekeon-spec.pdf).
+        It takes the following arguments:
+
+            - ``R`` -- integer; Number of rounds (default: 16)
+
+            - ``k`` -- integer (128-bit); Master key (default: 0x0).  When given,
+              the round keys are derived and injected immediately.
+
+            - ``name`` -- string; The name of the cipher (default: "Noekeon").
+              This will be used to name the cipher and the corresponding file
+              generated (such as the reports and cipher graphs).
+
         EXAMPLES::
 
             sage: from civerly.cipher_implementations.noekeon import NOEKEON_CVL
@@ -135,36 +150,35 @@ class NOEKEON_CVL:
             10
 
         """
-        if name is None:
-            name = "Noekeon"
-        assert 0 <= key < (1 << 128)
+        
+        assert 0 <= k < (1 << 128)
         assert 0 <= R <= 16
 
         #computing the subkeys based on the paper's specifications
-        K0 = (key >> 96) & 0xFFFFFFFF
-        K1 = (key >> 64) & 0xFFFFFFFF
-        K2 = (key >> 32) & 0xFFFFFFFF
-        K3 = key & 0xFFFFFFFF
+        K0 = (k >> 96) & 0xFFFFFFFF
+        K1 = (k >> 64) & 0xFFFFFFFF
+        K2 = (k >> 32) & 0xFFFFFFFF
+        K3 = k & 0xFFFFFFFF
         #xor operation
         xor = XOR_CVL(32, name="xor")
         #AND operation
         and1 = AND_CVL(32, name="and")
-        #key addition
+        # key addition
         not1 = RoundkeyXOR_CVL(32, 0xFFFFFFFF, name="not")
-        #rotation operation
+        # rotation operation
         rotL8 = RotateLayer_CVL(32, 8, name="rotl8")
         rotL24 = RotateLayer_CVL(32, 24, name="rotl24")
-        #subkeys addition
+        # subkeys addition
         kx0 = RoundkeyXOR_CVL(32, K0, name="k0")
         kx1 = RoundkeyXOR_CVL(32, K1, name="k1")
         kx2 = RoundkeyXOR_CVL(32, K2, name="k2")
         kx3 = RoundkeyXOR_CVL(32, K3, name="k3")
         
-        #THETA
+        # THETA
         theta = AndRX(32, 4, 4, name="theta")
-        #temp = a0 ^ a2
+        # temp = a0 ^ a2
         t0 = theta.add_subcipher(xor, [(theta.IN, (0, 0)), (theta.IN, (2, 1))])
-        #temp ^= ROTL8(temp) ^ ROTL24(temp)
+        # temp ^= ROTL8(temp) ^ ROTL24(temp)
         t0_r8 = theta.add_subcipher(rotL8, [(t0, (0, 0))])
         t0_r24 = theta.add_subcipher(rotL24, [(t0, (0, 0))])
         t1 = theta.add_subcipher(xor, [(t0, (0, 0)), (t0_r8, (0, 1))])
@@ -257,16 +271,22 @@ class NOEKEON_CVL:
         round_cipher = AndRX(32, 4, 4, name="noekeon_round")
         rc_xor = RoundkeyXOR_CVL(32, 0x0, name="rc")  # const set per round
         node_rc = round_cipher.add_subcipher(rc_xor, [(round_cipher.IN, (0, 0))])
-        node_theta = round_cipher.add_subcipher(theta,[(node_rc, (0, 0)), (round_cipher.IN, (1, 1)), (round_cipher.IN, (2, 2)), (round_cipher.IN, (3, 3))])
-        node_pi1 = round_cipher.add_subcipher(pi1,[(node_theta, (0, 0)), (node_theta, (1, 1)), (node_theta, (2, 2)), (node_theta, (3, 3))])
-        node_gamma = round_cipher.add_subcipher(gamma,[(node_pi1, (0, 0)), (node_pi1, (1, 1)), (node_pi1, (2, 2)), (node_pi1, (3, 3))])
-        node_pi2 = round_cipher.add_subcipher(pi2,[(node_gamma, (0, 0)), (node_gamma, (1, 1)), (node_gamma, (2, 2)), (node_gamma, (3, 3))])
-        round_cipher.add_output([
-            (node_pi2, (0, 0)),
-            (node_pi2, (1, 1)),
-            (node_pi2, (2, 2)),
-            (node_pi2, (3, 3)),
-        ])
+        node_theta = round_cipher.add_subcipher(theta,
+            [
+                (node_rc, (0, 0)), (round_cipher.IN, (1, 1)),
+                (round_cipher.IN, (2, 2)), (round_cipher.IN, (3, 3))
+            ]
+        )
+        node_pi1 = round_cipher.add_subcipher(pi1,
+            [(node_theta, (i, i)) for i in range(4)]
+        )
+        node_gamma = round_cipher.add_subcipher(gamma,
+            [(node_pi1, (i, i)) for i in range(4)]
+        )
+        node_pi2 = round_cipher.add_subcipher(pi2,
+            [(node_gamma, (i, i)) for i in range(4)]
+        )
+        round_cipher.add_output([(node_pi2, (i, i)) for i in range(4)])
         self._round_template = round_cipher
         self._node_rc = node_rc
 
@@ -275,21 +295,22 @@ class NOEKEON_CVL:
         for r in range(R):
             rc_word = (int(rc1[r]) & 0xFF) 
             round_cipher.nodes[node_rc].const = rc_word
-            node = cipher.add_subcipher(round_cipher,[(node, (0, 0)), (node, (1, 1)), (node, (2, 2)), (node, (3, 3))])
+            node = cipher.add_subcipher(round_cipher,
+                [(node, (i, i)) for i in range(4)]
+            )
 
         # finalization: a0 ^= (RC_FINAL<<24), then theta(key,state)
         final_node = node
         if R == 16:
             rc_final_xor = RoundkeyXOR_CVL(32, int(RC_FINAL) & 0xFF, name="rc_final")
             node_rcf = cipher.add_subcipher(rc_final_xor, [(node, (0, 0))])
-            final_node = cipher.add_subcipher(theta,[(node_rcf, (0, 0)), (node, (1, 1)), (node, (2, 2)), (node, (3, 3))])
+            final_node = cipher.add_subcipher(theta,
+                [(node_rcf, (0, 0)), (node, (1, 1)), (node, (2, 2)), (node, (3, 3))]
+            )
 
-        cipher.add_output([
-            (final_node, (0, 0)),
-            (final_node, (1, 1)),
-            (final_node, (2, 2)),
-            (final_node, (3, 3)),
-        ])
+        cipher.add_output(
+            [(final_node, (i, i)) for i in range(4)]
+        )
         self.noekeon_cipher = cipher
 
     def __new__(cls, *args, **kwargs):

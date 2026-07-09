@@ -2,8 +2,23 @@ from civerly.andrx import AndRX
 from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
 
 class SIMECK_CVL:
-    def __init__(self, block_size=32, key_size=64, R=32, rks=[], name=None):
+    def __init__(self, block_size=32, key_size=64, R=32, rks=[], name="Simeck"):
         r"""
+        CiVerLy implementation of the Simeck cipher. It takes the following arguments:
+
+            - ``block_size`` -- integer; The block size (default: 32).
+            
+            - ``key_size`` -- integer; The key size (default: 64).
+            
+            - ``rks`` -- list[int]; Round keys (default: []).
+            
+            - ``R`` -- integer; Number of rounds (default: 32)
+
+            - ``name`` -- string; The name of the cipher (default: "Simeck").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
+
+        
         EXAMPLES::
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: from civerly.cipher_implementations.simeck import SIMECK_CVL
@@ -111,23 +126,23 @@ class SIMECK_CVL:
             sage: import shutil
             sage: shutil.rmtree("./DOCTEST-Simeck-Models/", ignore_errors=True)
         """
-        if name is None:
-            name = "Simeck"
 
-        assert (block_size, key_size) == (32, 64), "Only Simeck32/64 is supported"
+        assert (block_size, key_size) == (32, 64), (
+            "As of now, only Simeck32/64 is supported"
+        )
 
         if rks == []:
             rks = [0 for _ in range(R)]
 
         simeck_round = AndRX(16, 2, 2, name="simeck_round")
-        #rotate operations
+        # rotate operations
         rot1 = RotateLayer_CVL(16, 1, name="rotate1")
         rot5 = RotateLayer_CVL(16, 5, name="rotate5")
-        #AND operation
+        # AND operation
         and1 = AND_CVL(16, name="and")
-        #xor operation
+        # xor operation
         xor1 = XOR_CVL(16, name="xor")
-        #key addition
+        # key addition
         key_add = RoundkeyXOR_CVL(16, 0x0, name="rk")
         
         # Implementation of SIMECK round function

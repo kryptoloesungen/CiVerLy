@@ -3,8 +3,19 @@ from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
 from sage.crypto.sbox import SBox as SBox_sage
 
 class RECTANGLE_CVL:
-    def __init__(self, R=25, rks=None, name=None): 
+    def __init__(self, R=25, rks=[], name="RECTANGLE"): 
         r"""
+        CiVerly implementation of the Rectangle cipher (https://eprint.iacr.org/2014/084.pdf).
+        It takes the following parameters:
+
+            - ``R`` -- integer; Number of rounds (default: 25)
+
+            - ``rks`` -- list[int]; Round keys (default: []).
+
+            - ``name`` -- string; The name of the cipher (default: "RECTANGLE").
+              This will be used to name the cipher and the corresponding file
+              generated (such as the reports and cipher graphs).
+
         EXAMPLES::
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
@@ -216,9 +227,6 @@ class RECTANGLE_CVL:
             14
 
             """
-
-        if name is None:
-            name = "RECTANGLE"
 
         # RECTANGLE necessites R+1 rks, which are sets by default to zeros
         if rks is None:
