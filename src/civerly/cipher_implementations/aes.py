@@ -354,7 +354,7 @@ class AES_KeySchedule_CVL(KeySchedule):
 class AES_CVL:
     """Implementation of the AES in CiVerLy."""
 
-    def __init__(self, R, k=None, name=None) -> None:
+    def __init__(self, R, k=None, name="AES") -> None:
         r"""
         Implement AES-128 in CiVerLy.
 
@@ -367,10 +367,10 @@ class AES_CVL:
 
             - ``R`` -- integer; Number of rounds.
 
-            - ``k`` -- integer (128-bit); Master key (optional).  When given,
+            - ``k`` -- integer (128-bit); Master key (default: None).  When given,
               the AES-128 round keys are derived and injected immediately.
 
-            - ``name`` -- string; The name of the cipher (optional).
+            - ``name`` -- string; The name of the cipher (default: "AES").
               This will be used to name the cipher and the corresponding file
               generated (such as the reports and cipher graphs).
 
@@ -511,8 +511,6 @@ class AES_CVL:
             construction does not increase the ciphers security against
             differential cryptanalysis.
         """
-        if name is None:
-            name = "AES"
 
         # sboxlayer is an AESlike cipher, containing the sbox components
         # (SBox_CVL) 16 times in parallel.

@@ -5,6 +5,10 @@ class SalsaQRF_CVL:
     #Salsa quarter round function
     def __init__(self, name=None):
         r"""
+        The CiVerLy implementation of the Salsa QRF. Since there is nothing
+        to tweak, it does not take any parameters (except the name). This cipher is
+        "plug-and-play" usable, i.e. it can be directly used when imported.
+
         EXAMPLES::
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: from civerly.cipher_implementations.salsa import SalsaQRF_CVL
@@ -115,8 +119,16 @@ class SalsaQRF_CVL:
     
 class Salsa_CVL:
     # Salsa stream generator
-    def __init__(self, R=8, name=None):
+    def __init__(self, R=8, name="Salsa"):
         r"""
+        The CiVerLy implementation of the Salsa stream cipher. It takes the following arguments:
+
+            - ``R`` -- integer; Number of rounds (default: 8)
+
+            - ``name`` -- string; The name of the cipher (default: "Salsa").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
+
         EXAMPLES::
             sage: input1 = (0x61707865_04030201_08070605_0c0b0a09_100f0e0d_3320646e_01040103_06020905_00000007_00000000_79622d32_14131211_18171615_1c1b1a19_201f1e1d_6b206574)
             sage: from civerly.util import int_to_vec, vec_to_int
@@ -166,8 +178,6 @@ class Salsa_CVL:
             1
 
         """
-        if name is None:
-            name = "Salsa"
         
         salsa_qr = SalsaQRF_CVL()
 
