@@ -42,7 +42,7 @@ class NOEKEON_CVL:
             sage: P = 0x00000000000000000000000000000000
             sage: K = 0x00000000000000000000000000000000
             sage: C = 0xb1656851699e29fa24b70148503d2dfc
-            sage: cipher = NOEKEON_CVL(key=K)
+            sage: cipher = NOEKEON_CVL(k=K)
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
@@ -51,7 +51,7 @@ class NOEKEON_CVL:
             sage: K = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             sage: P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             sage: C = 0x2a78421b87c7d0924f26113f1d1349b2
-            sage: cipher = NOEKEON_CVL(key=K)
+            sage: cipher = NOEKEON_CVL(k=K)
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
@@ -60,7 +60,7 @@ class NOEKEON_CVL:
             sage: K = 0xb1656851699e29fa24b70148503d2dfc
             sage: P = 0x2a78421b87c7d0924f26113f1d1349b2
             sage: C = 0xe2f687e07b75660ffc372233bc47532c
-            sage: cipher = NOEKEON_CVL(key=K)
+            sage: cipher = NOEKEON_CVL(k=K)
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
