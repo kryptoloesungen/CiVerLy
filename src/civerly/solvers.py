@@ -38,7 +38,7 @@ def _float_or_int(value):
         sage: _float_or_int("3.415037499300e+00")
         3.4150374993
     """
-    if value in ("not found yet", "-inf", "inf"):
+    if value in ("not found yet", "-inf", "inf", "-"):
         return None
     value = float(value)
     if value.is_integer() or abs(value - int(round(value))) < 1e-8:
