@@ -45,6 +45,11 @@ def _float_or_int(value):
         value = int(round(value))
     else:
         value = round(value, 10)
+    
+    # handle SCIP edge case 
+    if value >= 1.0e+20:
+        return None
+
     return value
 
 
