@@ -143,7 +143,9 @@ class MODEL_OPTIONS:
         - ``sat_precision`` -- int; The number of decimal places which is used
           to find the optimal SAT-bound
 
-        - ``number_of_solutions`` -- number of solutions to find
+        - ``number_of_solutions`` int; -- number of solutions to find
+
+        - ``solve_time_limit`` -- int; time limit for solving process (in seconds).
 
         - ``path`` -- Path; directory where models will be written to
 
