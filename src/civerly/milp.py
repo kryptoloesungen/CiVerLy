@@ -35,9 +35,9 @@ class MILP_CVL(MixedIntegerLinearProgram):
         - New attributes, to make them easier to access:
             - ``vars`` -- dict[str -> MIPVariable]; Stores all MIPVariables created by :meth:``self.new_variable``.
 
-            - ``MILP_IN``, ``MILP_OUT`` -- MIPVariable; The input and output variables.
+            - ``VAR_IN``, ``VAR_OUT`` -- MIPVariable; The input and output variables.
 
-            - ``X`` -- MIPVariable; The standard variable to be used for modeling.
+            - ``VAR_MODEL`` -- list[MIPVariable]; The standard variable to be used for modeling.
         """
         # always default to glpk solver for sage wrapper to minimize dependencies
         kwargs.pop("solver", None)
@@ -45,9 +45,9 @@ class MILP_CVL(MixedIntegerLinearProgram):
         self.backend  = self.get_backend()
         self.__vars = {}
 
-        self.MILP_IN  = self.new_variable(name="IN",  binary=True)
-        self.MILP_OUT = self.new_variable(name="OUT", binary=True)
-        self.X = None
+        self.VAR_IN  = self.new_variable(name="IN",  binary=True)
+        self.VAR_OUT = self.new_variable(name="OUT", binary=True)
+        self.VAR_MODEL = None
 
     def __eq__(self, other):
         """

@@ -161,8 +161,6 @@ class Component(ABC):
         if model_options.optimization == OPTIMIZATION.MILP:
             self.sum_arr_milp = []
             self.milp = MILP_CVL(maximization=False)
-            # self.milp.MILP_IN = self.milp.new_variable(name="IN", binary=True)
-            # self.milp.MILP_OUT = self.milp.new_variable(name="OUT", binary=True)
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.sum_arr_sat = []
             if model_options.granularity == GRANULARITY.WORDWISE:
@@ -326,7 +324,7 @@ class I_CVL(Component):
             )
 
         for i in range(self.input_length // divide_by):
-            self.milp.add_constraint(self.milp.MILP_OUT[i] == self.milp.MILP_IN[i])
+            self.milp.add_constraint(self.milp.VAR_OUT[i] == self.milp.VAR_IN[i])
         return self.milp
 
     def _model_sat(self, model_options):
@@ -414,7 +412,7 @@ class C_CVL(Component):
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             for i in range(self.output_length // divide_by):
-                self.milp.add_constraint(self.milp.MILP_OUT[i] == 0)
+                self.milp.add_constraint(self.milp.VAR_OUT[i] == 0)
             return self.milp
         elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
             # For linear modeling, C_CVL is "don't care"
@@ -583,7 +581,7 @@ class ConstXOR_CVL(Component):
             divide_by = 1
 
         for i in range(self.input_length // divide_by):
-            self.milp.add_constraint(self.milp.MILP_OUT[i] == self.milp.MILP_IN[i])
+            self.milp.add_constraint(self.milp.VAR_OUT[i] == self.milp.VAR_IN[i])
         return self.milp
 
     def _model_sat(self, model_options):
@@ -751,16 +749,16 @@ class XOR_CVL(Component):
             if model_options.granularity == GRANULARITY.BITWISE:
                 for i in range(self.word_length):
                     self.milp.add_constraint(
-                        -self.milp.MILP_IN[i] + self.milp.MILP_IN[i+self.word_length] + self.milp.MILP_OUT[i] >=  0
+                        -self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length] + self.milp.VAR_OUT[i] >=  0
                     )
                     self.milp.add_constraint(
-                         self.milp.MILP_IN[i] - self.milp.MILP_IN[i+self.word_length] + self.milp.MILP_OUT[i] >=  0
+                         self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length] + self.milp.VAR_OUT[i] >=  0
                         )
                     self.milp.add_constraint(
-                         self.milp.MILP_IN[i] + self.milp.MILP_IN[i+self.word_length] - self.milp.MILP_OUT[i] >=  0
+                         self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length] - self.milp.VAR_OUT[i] >=  0
                         )
                     self.milp.add_constraint(
-                        -self.milp.MILP_IN[i] - self.milp.MILP_IN[i+self.word_length] - self.milp.MILP_OUT[i] >= -2
+                        -self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length] - self.milp.VAR_OUT[i] >= -2
                     )
                 return self.milp
             if model_options.granularity == GRANULARITY.WORDWISE:
@@ -768,13 +766,13 @@ class XOR_CVL(Component):
                 # and should NOT be confused with self.word_length
                 for i in range(self.word_length // self.wordsize):
                     self.milp.add_constraint(
-                        -self.milp.MILP_IN[i] + self.milp.MILP_IN[i+self.word_length//self.wordsize] + self.milp.MILP_OUT[i] >= 0
+                        -self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length//self.wordsize] + self.milp.VAR_OUT[i] >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.MILP_IN[i] - self.milp.MILP_IN[i+self.word_length//self.wordsize] + self.milp.MILP_OUT[i] >= 0
+                         self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length//self.wordsize] + self.milp.VAR_OUT[i] >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.MILP_IN[i] + self.milp.MILP_IN[i+self.word_length//self.wordsize] - self.milp.MILP_OUT[i] >= 0
+                         self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length//self.wordsize] - self.milp.VAR_OUT[i] >= 0
                     )
                     # Skip fourth constraint as we are working with activity patterns instead of values
                 return self.milp
@@ -797,11 +795,11 @@ class XOR_CVL(Component):
             for i in range(self.word_length // divide_by):
                 # Masks for both inputs should be identical
                 self.milp.add_constraint(
-                    self.milp.MILP_IN[i] == self.milp.MILP_IN[i + self.word_length//divide_by]
+                    self.milp.VAR_IN[i] == self.milp.VAR_IN[i + self.word_length//divide_by]
                 )
                 # Output masks should also be the same
                 self.milp.add_constraint(
-                    self.milp.MILP_IN[i] == self.milp.MILP_OUT[i]
+                    self.milp.VAR_IN[i] == self.milp.VAR_OUT[i]
                 )
             return self.milp
         raise InvalidModelOptionException(
@@ -1382,14 +1380,14 @@ class LinearLayer_CVL(Component):
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             binmatrix = self.binary_matrix
-            MILP_IN = self.milp.MILP_IN
-            MILP_OUT = self.milp.MILP_OUT
+            VAR_IN = self.milp.VAR_IN
+            VAR_OUT = self.milp.VAR_OUT
         elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
             # in linear cryptanalysis, transpose the matrix
             # and switch roles of input and output ( = "invert matrix")
             binmatrix = self.binary_matrix.transpose()
-            MILP_IN = self.milp.MILP_OUT
-            MILP_OUT = self.milp.MILP_IN
+            VAR_IN = self.milp.VAR_OUT
+            VAR_OUT = self.milp.VAR_IN
         else:
             raise InvalidModelOptionException(
                 model_options.cryptanalysis, CRYPTANALYSIS
@@ -1404,7 +1402,7 @@ class LinearLayer_CVL(Component):
         # and set them to zero
         for i in range(binmatrix.ncols()):
             if all([i not in xorsum for xorsum in array_of_xorsums]):
-                self.milp.add_constraint(MILP_IN[i] == 0)
+                self.milp.add_constraint(VAR_IN[i] == 0)
 
         if model_options.linear_layer_modeling == \
                 LINEAR_LAYER_MODELING.MORE_DUMMIES:
@@ -1412,7 +1410,7 @@ class LinearLayer_CVL(Component):
             dummy_offset = 0
             for i, tup in enumerate(array_of_xorsums):
                 ell = ceil(log2(len(tup) + 1))
-                int_sum = sum([MILP_IN[t] for t in tup]) + MILP_OUT[i]
+                int_sum = sum([VAR_IN[t] for t in tup]) + VAR_OUT[i]
                 binary_rep = sum([
                     (1 << (i + 1)) * MILP_DUMMY[dummy_offset + i]
                     for i in range(ell)
@@ -1437,9 +1435,9 @@ class LinearLayer_CVL(Component):
                     # sub_constr : substituted constraints (with
                     # the appropiate variables)
                     sub_constr = constr[0] + sum(
-                        constr[ind + 1] * MILP_IN[tup[ind]]
+                        constr[ind + 1] * VAR_IN[tup[ind]]
                         for ind in range(len(constr) - 2)
-                    ) + constr[-1] * MILP_OUT[i]
+                    ) + constr[-1] * VAR_OUT[i]
                     if constr.is_inequality():
                         self.milp.add_constraint(sub_constr >= 0)
                     elif constr.is_equation():
@@ -1582,22 +1580,22 @@ class LinearLayer_CVL(Component):
             words_in = self.input_length // self.wordsize
             words_out = self.output_length // self.wordsize
             self.milp.add_constraint(
-                sum([self.milp.MILP_IN[j] for j in range(words_in)])
-                + sum([self.milp.MILP_OUT[j] for j in range(words_out)])
+                sum([self.milp.VAR_IN[j] for j in range(words_in)])
+                + sum([self.milp.VAR_OUT[j] for j in range(words_out)])
                 >= bn * ACTIVE[0]
             )
 
             # If one of the columns words is active, MixColumns will be active
             for j in range(words_in):
-                self.milp.add_constraint(ACTIVE[0] >= self.milp.MILP_IN[j])
+                self.milp.add_constraint(ACTIVE[0] >= self.milp.VAR_IN[j])
             for j in range(words_out):
-                self.milp.add_constraint(ACTIVE[0] >= self.milp.MILP_OUT[j])
+                self.milp.add_constraint(ACTIVE[0] >= self.milp.VAR_OUT[j])
 
             self.milp.add_constraint(
-                ACTIVE[0] <= sum(self.milp.MILP_IN[j] for j in range(words_in))
+                ACTIVE[0] <= sum(self.milp.VAR_IN[j] for j in range(words_in))
             )
             self.milp.add_constraint(
-                ACTIVE[0] <= sum(self.milp.MILP_OUT[j] for j in range(words_out))
+                ACTIVE[0] <= sum(self.milp.VAR_OUT[j] for j in range(words_out))
             )
 
         else:
@@ -1860,7 +1858,7 @@ class PermuteLayer_CVL(LinearLayer_CVL):
             if self.word_coarseness == self.wordsize:
                 for i in range(self.input_length // self.wordsize):
                     self.milp.add_constraint(
-                        self.milp.MILP_OUT[self.perm[i]] == self.milp.MILP_IN[i]
+                        self.milp.VAR_OUT[self.perm[i]] == self.milp.VAR_IN[i]
                     )
                 return self.milp
             else:
@@ -1869,8 +1867,8 @@ class PermuteLayer_CVL(LinearLayer_CVL):
             for i in range(self.input_length // self.word_coarseness):
                 for j in range(self.word_coarseness):
                     self.milp.add_constraint(
-                        self.milp.MILP_OUT[self.word_coarseness * self.perm[i] + j]
-                        == self.milp.MILP_IN[self.word_coarseness * i + j]
+                        self.milp.VAR_OUT[self.word_coarseness * self.perm[i] + j]
+                        == self.milp.VAR_IN[self.word_coarseness * i + j]
                     )
             return self.milp
         else:
@@ -2087,7 +2085,7 @@ class SBox_CVL(Component):
         if model_options.granularity == GRANULARITY.WORDWISE:
             # wordsize is set externally in wordbasedcipher.add_subcipher
             for i in range(self.input_length // self.wordsize):
-                self.milp.add_constraint(self.milp.MILP_OUT[i] == self.milp.MILP_IN[i])
+                self.milp.add_constraint(self.milp.VAR_OUT[i] == self.milp.VAR_IN[i])
                 self.sum_arr_milp += [(-1, f"IN[{i}]")]
             return self.milp
         elif model_options.granularity == GRANULARITY.BITWISE:
@@ -2355,9 +2353,9 @@ class SBox_CVL(Component):
                 for inequation in sel_ineq:
                     lhs = 0
                     for i in range(self.input_length):
-                        lhs += self.milp.MILP_IN[i] * inequation[i]
+                        lhs += self.milp.VAR_IN[i] * inequation[i]
                     for i in range(self.output_length):
-                        lhs += self.milp.MILP_OUT[i] * inequation[self.input_length + i]
+                        lhs += self.milp.VAR_OUT[i] * inequation[self.input_length + i]
                     non_zero_coefficients = sum([i != 0 for i in inequation])
                     # To incorporate the probability we subtract
                     # non_zero_coefficients*128 from the right-hand side and
@@ -2414,8 +2412,8 @@ class SBox_CVL(Component):
                     clauses.append(tup)
 
                 n_in, n_out = self.input_length, self.output_length
-                VAR = [self.milp.MILP_IN[v] for v in range(n_in)] \
-                    + [self.milp.MILP_OUT[v] for v in range(n_out)] \
+                VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
+                    + [self.milp.VAR_OUT[v] for v in range(n_out)] \
                     + [PROB[v] for v in range(len(set_ddt))]
 
                 # translate SAT clauses into MILP constraints
@@ -2441,8 +2439,8 @@ class SBox_CVL(Component):
                 clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
                 n_in, n_out = self.input_length, self.output_length
-                VAR = [self.milp.MILP_IN[v] for v in range(n_in)] \
-                    + [self.milp.MILP_OUT[v] for v in range(n_out)] \
+                VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
+                    + [self.milp.VAR_OUT[v] for v in range(n_out)] \
                     + [PROB[v] for v in range(len(set_ddt))]
 
                 # translate SAT clauses into MILP constraints

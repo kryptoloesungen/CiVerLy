@@ -422,10 +422,10 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
             if isinstance(comp, SBox_CVL):
                 if i < comp.input_length:
                     # input bits
-                    tmp_arr.append(ai * comp.milp.MILP_IN[i])
+                    tmp_arr.append(ai * comp.milp.VAR_IN[i])
                 elif i < comp.input_length + comp.output_length:
                     # output bits
-                    tmp_arr.append(ai * comp.milp.MILP_OUT[i - comp.input_length])
+                    tmp_arr.append(ai * comp.milp.VAR_OUT[i - comp.input_length])
                 else:
                     # probability encoding bits
                     tmp_arr.append(
@@ -437,9 +437,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 # wordsize is set externally in
                 # wordbasedcipher.add_subcipher
                 if i < comp.binary_matrix.ncols() // comp.wordsize:
-                    tmp_arr.append(ai * comp.milp.MILP_IN[i])
+                    tmp_arr.append(ai * comp.milp.VAR_IN[i])
                 else:
-                    tmp_arr.append(ai * comp.milp.MILP_OUT[
+                    tmp_arr.append(ai * comp.milp.VAR_OUT[
                         i - (comp.input_length // comp.wordsize)
                     ])
 

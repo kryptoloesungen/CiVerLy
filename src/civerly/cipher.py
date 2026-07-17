@@ -252,12 +252,12 @@ class Cipher:
                     self.input_length // self._cipher_wordsize
                 ):
                     self.milp.add_constraint(
-                        self.milp.MILP_OUT[i] == self.milp.MILP_IN[i]
+                        self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
                     )
             elif model_options.granularity == GRANULARITY.BITWISE:
                 for i in range(self.input_length):
                     self.milp.add_constraint(
-                        self.milp.MILP_OUT[i] == self.milp.MILP_IN[i]
+                        self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
                     )
             else:
                 raise InvalidModelOptionException(
@@ -429,7 +429,6 @@ class Cipher:
 
         self.milp = None
         self.sat = None
-        self.X = None
 
         # attributes to keep timing information (in seconds)
         self._analyse_time = None
