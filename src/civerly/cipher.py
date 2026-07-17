@@ -1612,11 +1612,11 @@ class Cipher:
         Exceeding the time limit yields a timeout-status::
 
             sage: # optional - glpk, espresso
-            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: with tempfile.TemporaryDirectory() as tmpdir:
-            ....:   present = PRESENT_CVL(R=40)
+            ....:   cipher = SKINNY_CVL(R=9)
             ....:   model_options = MODEL_OPTIONS(
             ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:       optimization=OPTIMIZATION.MILP,
@@ -1627,10 +1627,10 @@ class Cipher:
             ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       solve_time_limit=2,
             ....:       path=Path(tmpdir))
-            ....:   present.analyse(model_options)
+            ....:   cipher.analyse(model_options)
             48512 variables and 82369 constraints were written to ...
             sage: from civerly.solvers import *
-            sage: present.result['status'] == SOLVING_STATUS.TIMEOUT
+            sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
             True
         
         """
