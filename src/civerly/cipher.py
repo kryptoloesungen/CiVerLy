@@ -1628,7 +1628,7 @@ class Cipher:
             ....:       solve_time_limit=2,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
-            48512 variables and 82369 constraints were written to ...
+            27168 variables and 30849 constraints were written to ...
             sage: from civerly.solvers import *
             sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
             True
