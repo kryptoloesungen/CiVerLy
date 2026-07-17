@@ -644,7 +644,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 "trace": trace,
             }
 
-        def _decide_at(w):
+        def _decide_at(w) -> dict:
             sat = DIMACS()
             sat.read(str(input_file))
             start_time_model = time.perf_counter()
@@ -655,7 +655,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             if deadline is not None:
                 remaining = deadline - time.perf_counter()
                 if remaining <= 0:
-                    return SOLVING_STATUS.TIMEOUT
+                    return {
+                        "status": SOLVING_STATUS.TIMEOUT,
+                        "satisfiability": None,
+                        "assignment": None,
+                        "solve_time": time_limit,
+                        "model": constrained, 
+                        "model_time": model_time
+                    }
             else:
                 remaining = None
             trace[w] = self.decide(tmp_cnf, time_limit=remaining)
