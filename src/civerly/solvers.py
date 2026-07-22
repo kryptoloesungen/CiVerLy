@@ -335,7 +335,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         to ``milp`` excluding the previous assignment and flushes ``milp``
         back to ``input_file`` before the next solve.
 
-        ``milp`` is required because Sage's ``MixedIntegerLinearProgram``
+        ``milp`` is required because ``MILP_CVL``
         cannot reconstruct itself from an MPS file -- the in-memory model
         must be threaded through from where it was built.
 
@@ -344,7 +344,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         INPUT:
 
             - ``input_file`` -- path to the MPS file; rewritten between iterations
-            - ``milp`` -- in-memory :class:`MixedIntegerLinearProgram` whose
+            - ``milp`` -- in-memory :class:`MILP_CVL` whose
               state matches ``input_file``
             - ``number_of_solutions`` -- maximum number of solutions to find
             - ``trail_vars`` -- optional iterable of MPS variable names that
@@ -628,7 +628,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 "trace": trace,
             }
 
-        def _decide_at(w):
+        def _decide_at(w) -> dict:
             sat = DIMACS()
             sat.read(str(input_file))
             start_time_model = time.perf_counter()
@@ -639,7 +639,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             if deadline is not None:
                 remaining = deadline - time.perf_counter()
                 if remaining <= 0:
-                    return SOLVING_STATUS.TIMEOUT
+                    return {
+                        "status": SOLVING_STATUS.TIMEOUT,
+                        "satisfiability": None,
+                        "assignment": None,
+                        "solve_time": time_limit,
+                        "model": constrained, 
+                        "model_time": model_time
+                    }
             else:
                 remaining = None
             trace[w] = self.decide(tmp_cnf, time_limit=remaining)

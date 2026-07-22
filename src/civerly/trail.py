@@ -103,7 +103,7 @@ class TrailNode:
         if model_options.optimization == OPTIMIZATION.MILP:
             for var_name, var_dict in results.items():
                 if var_name in ("IN", "OUT"):
-                    # if var_name is MILP_IN or MILP_OUT, we skip it
+                    # if var_name is VAR_IN or VAR_OUT, we skip it
                     continue
                 comp_num = int(var_name[1:])
                 for s_ind, solution_bit_value in var_dict.items():
