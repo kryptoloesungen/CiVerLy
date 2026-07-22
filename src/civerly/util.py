@@ -534,6 +534,38 @@ def translate_var(cipher, node, local_var):
         sage: len(vars) == len(set(vars))
         True
 
+        sage: from civerly.cipher_implementations.present import PRESENT_CVL
+        sage: from civerly.model_options import *
+        sage: from civerly.util import translate_var
+        sage: import tempfile
+        sage: cipher = PRESENT_CVL(3)
+        sage: DIFF = 0xdeadbeef
+        sage: # optional - scip, espresso
+        sage: with tempfile.TemporaryDirectory() as tmpdir:
+        ....:   model_options = MODEL_OPTIONS(
+        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+        ....:     optimization=OPTIMIZATION.MILP,
+        ....:     granularity=GRANULARITY.BITWISE,
+        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+        ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+        ....:     milp_solver=SOLVER.SCIP,
+        ....:     logic_minimizer=SOLVER.ESPRESSO,
+        ....:     path=Path(tmpdir))
+        ....:   cipher.analyse(model_options)
+        ....:   for i in range(64):
+        ....:       cipher.milp.add_constraint(
+        ....:           translate_var(cipher, cipher.nodes[1].OUT, cipher.nodes[1].OUT.MILP_IN[i]) == \
+        ....:           (DIFF >> (63 - i)) & 1
+        ....:       )
+        ....:   cipher.analyse(model_options)
+        ....:   cipher.get_trail(model_options)
+        4112 variables and 6593 constraints were written to ...
+        8
+        Using existing MILP model, make sure it is up to date!
+        4112 variables and 6657 constraints were written to ...
+        33
+        -> PRESENT : ... -> 00000000deadbeef
+            -> ...
 
     """
     rev_path = _find_path(cipher, node)[::-1]
@@ -541,7 +573,6 @@ def translate_var(cipher, node, local_var):
     # go backwards through the recursion tree
     for depth in range(1, len(rev_path)):
         parent = cipher
-        # for ind in index_path[:len(index_path) - depth]:
         for ind in rev_path[depth:-1]:
             parent = parent.nodes[ind]
         index = rev_path[depth]
@@ -549,7 +580,10 @@ def translate_var(cipher, node, local_var):
         if isinstance(local_var, (int, Integer)):
             var = parent.inv_dictionaries_sat[index][var]
         else:
-            var = parent.inv_dictionaries_milp[index][var]
+            # inv_dictionaries_milp keys are strings like "IN[2]"
+            # MILP variable from the parent's stored X list.
+            val = parent.inv_dictionaries_milp[index][str(var)]
+            var = parent.X[_before_brackets(val)][_between_brackets(val)]
     return var
 
 
