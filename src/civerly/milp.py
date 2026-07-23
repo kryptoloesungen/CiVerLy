@@ -115,7 +115,14 @@ class MILP_CVL(MixedIntegerLinearProgram):
     def new_variable(self, *args, **kwargs):
         """
         Override :meth:``MixedIntegerLinearProgram.new_variable`` to 
-        also store this variable inside ``self.vars``.
+        also store this variable inside ``self.vars``, and store the 
+        MIPVariable type as its attribute, so that we can recover it
+        when reconstructing it inside `from_dict`.
+        
+        There are four variable types:
+        real (default), binary, integer, nonnegative.
+        Setting them appropriately is crucial, as it would otherwise
+        change the underlying MILP and its solution space completely.
         """
         name = kwargs.get("name", None)
         var_types = [
@@ -224,7 +231,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         """
         return {
             "maximization": self.backend.is_maximization(),
-            "variables": [ # has the form [('x', 0, 0), ('x', 1, 1), ...]
+            "variables": [ # has the form [('x', 0, 0, <var_type>), ('x', 1, 1, <var_type>), ...]
                 (name, int(index), int(str(backend_index)[2:]), var.type)
                 for name, var in list(self.vars.items())
                 for index, backend_index in var.items()
