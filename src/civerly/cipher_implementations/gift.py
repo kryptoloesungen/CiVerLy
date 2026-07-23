@@ -5,9 +5,10 @@ We only implement the S-box and the linear layer. This is already enough to
 analyze GIFT with CiVerLy.
 """
 
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL
 from sage.crypto.sboxes import GIFT as gift_S
+
+from civerly.component import PermuteLayer_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class GIFT_CVL:

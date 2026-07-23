@@ -1,6 +1,11 @@
 from civerly.addrx import AddRX
-from civerly.component import ModAdd_CVL, XOR_CVL, RotateLayer_CVL, ConstXOR_CVL
-from civerly.component import RoundkeyXOR_CVL
+from civerly.component import (
+    XOR_CVL,
+    ConstXOR_CVL,
+    ModAdd_CVL,
+    RotateLayer_CVL,
+    RoundkeyXOR_CVL,
+)
 from civerly.keyschedule import KeySchedule
 
 # Dictionary to determine the number of rounds, based on the cipher parameters.
@@ -202,8 +207,8 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
         OUTPUT: List of ``R`` integers, one per round.
         """
-        from civerly.util import int_to_vec, vec_to_int
         from civerly.cipher import Cipher
+        from civerly.util import int_to_vec, vec_to_int
 
         bits = Cipher.eval(self, int_to_vec(k, self.input_length))
         n = self._n

@@ -184,22 +184,22 @@ To conclude our example, we remove the generated files::
     sage: shutil.rmtree("DOCTEST-AES-Models", ignore_errors=True)
 """
 
+from sage.crypto.sboxes import AES as AES_S
+from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import block_matrix, identity_matrix
+from sage.rings.finite_rings.finite_field_constructor import GF
+
 from civerly.aeslike import AESlike
 from civerly.component import (
-    SBox_CVL,
-    PermuteLayer_CVL,
-    LinearLayer_CVL,
-    RoundkeyXOR_CVL,
-    ConstXOR_CVL,
     XOR_CVL,
+    ConstXOR_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
 )
-from civerly.sboxcipher import SBoxCipher
 from civerly.keyschedule import KeySchedule
-
-from sage.matrix.constructor import Matrix as matrix
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.matrix.special import identity_matrix, block_matrix
-from sage.crypto.sboxes import AES as AES_S
+from civerly.sboxcipher import SBoxCipher
 
 
 class AES_KeySchedule_CVL(KeySchedule):
@@ -288,8 +288,8 @@ class AES_KeySchedule_CVL(KeySchedule):
 
         OUTPUT: List of R+1 integers.
         """
-        from civerly.util import int_to_vec, vec_to_int
         from civerly.cipher import Cipher
+        from civerly.util import int_to_vec, vec_to_int
 
         n = self.input_length
         bits = Cipher.eval(self, int_to_vec(k, n))

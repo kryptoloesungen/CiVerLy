@@ -1,11 +1,11 @@
+import json
+
 from sage.modules.free_module_element import vector
 from sage.rings.finite_rings.finite_field_constructor import GF
-from civerly.util import vec_to_int
 
-import json
 from civerly.component import Component
-from civerly.model_options import OPTIMIZATION, GRANULARITY
-from civerly.util import _between_brackets
+from civerly.model_options import GRANULARITY, OPTIMIZATION
+from civerly.util import _between_brackets, vec_to_int
 
 
 class TrailNode:

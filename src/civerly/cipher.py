@@ -34,28 +34,29 @@ EXAMPLES::
     '0x11119999'
 """
 
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.modules.vector_mod2_dense import Vector_mod2_dense
-from sage.matrix.constructor import Matrix as matrix
-from sage.modules.free_module_element import vector
-from sage.sat.solvers.dimacs import DIMACS
-
+import glob
+import json
+import subprocess
+import time
 from collections.abc import Iterable
+from copy import deepcopy
 from dataclasses import replace
 from math import ceil, sqrt
-from copy import deepcopy
-import subprocess
-import json
-import glob
-import time
 
-from civerly.util import translate_sat_clause
-from civerly.util import suppress_output
-from civerly.model_options import InvalidModelOptionException
-from civerly.model_options import OPTIMIZATION, GRANULARITY
-from civerly.model_options import CRYPTANALYSIS
+from sage.modules.free_module_element import vector
+from sage.modules.vector_mod2_dense import Vector_mod2_dense
+from sage.rings.finite_rings.finite_field_constructor import GF
+from sage.sat.solvers.dimacs import DIMACS
+
 from civerly.component import Component
+from civerly.model_options import (
+    CRYPTANALYSIS,
+    GRANULARITY,
+    OPTIMIZATION,
+    InvalidModelOptionException,
+)
 from civerly.trail import TrailNode
+from civerly.util import suppress_output, translate_sat_clause
 
 
 class CipherNotValidException(Exception):
@@ -1450,10 +1451,10 @@ class Cipher:
                     master_sat.add_clause((in_node, -out_node))
 
             elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
-                from civerly.component import LinearLayer_CVL
-                from civerly.model_options import MODEL_OPTIONS
-                from civerly.model_options import LINEAR_LAYER_MODELING
                 from sage.matrix.constructor import Matrix as matrix
+
+                from civerly.component import LinearLayer_CVL
+                from civerly.model_options import LINEAR_LAYER_MODELING, MODEL_OPTIONS
 
                 # Linear model of n-branching == Differential model of n-XOR
                 mat = matrix([1] * len(out_nodes))
@@ -2050,27 +2051,27 @@ class Cipher:
         Restore nodes, edges, outputs and results onto an empty cipher shell
         using data from a dictionary produced by :meth:`_to_dict`.
         """
+        from civerly.addrx import AddRX
+        from civerly.aeslike import AESlike
+        from civerly.andrx import AndRX
         from civerly.component import (
-            I_CVL,
-            C_CVL,
-            RK_CVL,
-            ConstXOR_CVL,
-            RoundkeyXOR_CVL,
-            XOR_CVL,
-            ModAdd_CVL,
             AND_CVL,
+            C_CVL,
+            I_CVL,
+            RK_CVL,
+            ROT_AND_CVL,
+            XOR_CVL,
+            ConstXOR_CVL,
             LinearLayer_CVL,
+            ModAdd_CVL,
             PermuteLayer_CVL,
             RotateLayer_CVL,
+            RoundkeyXOR_CVL,
             SBox_CVL,
-            ROT_AND_CVL,
         )
         from civerly.sboxcipher import SBoxCipher
         from civerly.wordbasedcipher import WordBasedCipher
         from civerly.wordsboxcipher import WordSBoxCipher
-        from civerly.aeslike import AESlike
-        from civerly.addrx import AddRX
-        from civerly.andrx import AndRX
 
         _TYPE_MAP = {
             "Cipher": Cipher,

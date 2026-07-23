@@ -8,37 +8,46 @@ corresponding evaluation (e.g. calling ``SBox_CVL`` performs a table lookup of
 the SBox with which the component is initialized).
 """
 
-import os
 import json
-import zlib
+import os
 import time
-from math import log2, gcd, ceil
+import zlib
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from math import ceil, gcd, log2
 
+from sage.combinat.permutation import Permutation
 from sage.crypto.sbox import SBox
+from sage.geometry.polyhedron.constructor import Polyhedron
+from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import block_matrix, identity_matrix
 from sage.modules.free_module_element import vector
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
-from sage.rings.integer_ring import ZZ
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.combinat.permutation import Permutation
-from sage.matrix.constructor import Matrix as matrix
-from sage.structure.element import Matrix as matrix_type
-from sage.matrix.special import identity_matrix, block_matrix
-from sage.sat.solvers.dimacs import DIMACS
 from sage.numerical.mip import MixedIntegerLinearProgram
-from sage.geometry.polyhedron.constructor import Polyhedron
+from sage.rings.finite_rings.finite_field_constructor import GF
+from sage.rings.integer_ring import ZZ
+from sage.sat.solvers.dimacs import DIMACS
+from sage.structure.element import Matrix as matrix_type
 
-from civerly.util import list_of_predecessor_vector_indices
-from civerly.util import hw, hw_tau, suppress_output
-from civerly.util import reduction_algorithm_ST17
-from civerly.util import vec_to_int, int_to_vec
-from civerly.util import translate_sat_clause
-from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
-from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
-from civerly.model_options import InvalidModelOptionException
-from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
+from civerly.model_options import (
+    CRYPTANALYSIS,
+    GRANULARITY,
+    LINEAR_LAYER_MODELING,
+    OPTIMIZATION,
+    SBOX_MODELING,
+    InvalidModelOptionException,
+)
+from civerly.util import (
+    hw,
+    hw_tau,
+    int_to_vec,
+    list_of_predecessor_vector_indices,
+    reduction_algorithm_ST17,
+    suppress_output,
+    translate_sat_clause,
+    vec_to_int,
+)
 
 
 class Component(ABC):

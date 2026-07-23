@@ -1,12 +1,18 @@
-from civerly.aeslike import AESlike
-from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
-from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
-from civerly.component import LinearLayer_CVL, I_CVL
-from civerly.util import int_to_vec, vec_to_int
 from sage.crypto.sbox import SBox
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.matrix.special import zero_matrix, identity_matrix, block_matrix
 from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
+from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.aeslike import AESlike
+from civerly.component import (
+    I_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
+from civerly.util import int_to_vec, vec_to_int
+from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
 
 
 class SKINNY_CVL:

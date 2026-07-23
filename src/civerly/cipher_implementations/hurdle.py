@@ -1,7 +1,7 @@
 from sage.crypto.sbox import SBox
+
+from civerly.component import RK_CVL, XOR_CVL, ModAdd_CVL, PermuteLayer_CVL, SBox_CVL
 from civerly.wordbasedcipher import WordBasedCipher
-from civerly.component import ModAdd_CVL, RK_CVL, XOR_CVL, SBox_CVL
-from civerly.component import PermuteLayer_CVL
 
 
 def hurdle_key_schedule(masterkey):

@@ -1,6 +1,5 @@
 from civerly.cipher import Cipher
-from civerly.component import PermuteLayer_CVL
-from civerly.component import ModAdd_CVL, C_CVL
+from civerly.component import C_CVL, ModAdd_CVL, PermuteLayer_CVL
 
 
 # cipher used to cover that the report generation of C_CVL works correctly

@@ -1,9 +1,9 @@
+from sage.crypto.sboxes import PRESENT
 from sage.matrix.constructor import Matrix as matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.crypto.sboxes import PRESENT
+
+from civerly.component import I_CVL, LinearLayer_CVL, PermuteLayer_CVL, SBox_CVL
 from civerly.sboxcipher import SBoxCipher
-from civerly.component import LinearLayer_CVL, PermuteLayer_CVL, I_CVL
-from civerly.component import SBox_CVL
 
 
 # sbox cipher with missing structure of each layer

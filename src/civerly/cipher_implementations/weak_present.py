@@ -6,9 +6,10 @@ uniformity is 6. The main purpose of this is to test CiVerLy on trails with
 non-integer weight.
 """
 
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL
 from sage.crypto.sbox import SBox
+
+from civerly.component import PermuteLayer_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class WEAK_PRESENT_CVL:

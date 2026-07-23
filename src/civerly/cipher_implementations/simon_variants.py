@@ -1,6 +1,11 @@
 from civerly.andrx import AndRX
-from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
-from civerly.component import ROT_AND_CVL
+from civerly.component import (
+    AND_CVL,
+    ROT_AND_CVL,
+    XOR_CVL,
+    RotateLayer_CVL,
+    RoundkeyXOR_CVL,
+)
 
 
 class SIMON_Variants_CVL:

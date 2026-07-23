@@ -35,8 +35,8 @@ EXAMPLES::
     ....:   aeslikecipher.add_output([(node, (0, i))])
 """
 
-from civerly.wordsboxcipher import WordSBoxCipher
 from civerly.component import LinearLayer_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class AESlike(WordSBoxCipher):

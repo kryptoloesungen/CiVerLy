@@ -1,7 +1,13 @@
 from sage.crypto.sbox import SBox
+
+from civerly.component import (
+    XOR_CVL,
+    PermuteLayer_CVL,
+    RotateLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
 from civerly.sboxcipher import SBoxCipher
-from civerly.component import PermuteLayer_CVL, SBox_CVL, RotateLayer_CVL
-from civerly.component import RoundkeyXOR_CVL, XOR_CVL
 
 
 class ABC_CVL:

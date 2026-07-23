@@ -1,6 +1,7 @@
-from civerly.sboxcipher import SBoxCipher
-from civerly.component import SBox_CVL
 from sage.crypto.sboxes import GIFT as gift_S
+
+from civerly.component import SBox_CVL
+from civerly.sboxcipher import SBoxCipher
 
 
 # cipher using sboxes with transition of non-integer weight

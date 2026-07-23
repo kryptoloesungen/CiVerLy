@@ -16,16 +16,33 @@ import io
 import json
 from contextlib import redirect_stdout
 from dataclasses import replace
+
 from sage.numerical.mip import MixedIntegerLinearProgram
 
 from civerly.cipher import Cipher
-from civerly.component import SBox_CVL, LinearLayer_CVL, XOR_CVL
-from civerly.component import RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
-from civerly.util import _before_brackets, _between_brackets, suppress_output
-from civerly.util import translate_milp_constraint
-from civerly.util import translate_var
-from civerly.model_options import OPTIMIZATION, GRANULARITY, CRYPTANALYSIS
-from civerly.model_options import InvalidModelOptionException
+from civerly.component import (
+    C_CVL,
+    I_CVL,
+    RK_CVL,
+    XOR_CVL,
+    ConstXOR_CVL,
+    LinearLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
+from civerly.model_options import (
+    CRYPTANALYSIS,
+    GRANULARITY,
+    OPTIMIZATION,
+    InvalidModelOptionException,
+)
+from civerly.util import (
+    _before_brackets,
+    _between_brackets,
+    suppress_output,
+    translate_milp_constraint,
+    translate_var,
+)
 
 
 class SBoxCipher(Cipher):
@@ -386,10 +403,13 @@ class SBoxCipher(Cipher):
                     master_milp.add_constraint(in_node == out_node)
             elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
                 if len(out_nodes) > 2:
-                    from civerly.component import LinearLayer_CVL
-                    from civerly.model_options import MODEL_OPTIONS
-                    from civerly.model_options import LINEAR_LAYER_MODELING
                     from sage.matrix.constructor import Matrix as matrix
+
+                    from civerly.component import LinearLayer_CVL
+                    from civerly.model_options import (
+                        LINEAR_LAYER_MODELING,
+                        MODEL_OPTIONS,
+                    )
 
                     # Linear model of n-branching == Differential model
                     # of n-XOR

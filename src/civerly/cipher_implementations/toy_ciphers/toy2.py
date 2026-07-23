@@ -1,7 +1,8 @@
 from sage.matrix.constructor import Matrix as matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
-from civerly.sboxcipher import SBoxCipher
+
 from civerly.component import LinearLayer_CVL, PermuteLayer_CVL
+from civerly.sboxcipher import SBoxCipher
 
 
 # linear cipher using rounds with intentionally missing

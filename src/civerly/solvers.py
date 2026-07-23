@@ -2,22 +2,20 @@ r"""
 Utils for interacting with MILP and SAT solvers.
 """
 
-import re
-import json
 import hashlib
-import subprocess
+import json
 import os
-import warnings
+import re
+import subprocess
 import time
-import tempfile
-from pathlib import Path
+import warnings
+from abc import ABC, abstractmethod
 from enum import Enum
+from pathlib import Path
 
 from sage.sat.solvers.dimacs import DIMACS
 
 from civerly.util import suppress_output
-
-from abc import ABC, abstractmethod
 
 
 def _float_or_int(value):

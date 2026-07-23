@@ -1,6 +1,7 @@
 from sage.crypto.sbox import SBox
-from civerly.sboxcipher import SBoxCipher
+
 from civerly.component import SBox_CVL
+from civerly.sboxcipher import SBoxCipher
 
 
 # cipher using different sbox sizes in one layer

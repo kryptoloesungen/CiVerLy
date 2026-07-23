@@ -1,9 +1,9 @@
+from sage.crypto.sbox import SBox
 from sage.matrix.constructor import Matrix as matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.crypto.sbox import SBox
+
+from civerly.component import LinearLayer_CVL, SBox_CVL
 from civerly.sboxcipher import SBoxCipher
-from civerly.component import LinearLayer_CVL
-from civerly.component import SBox_CVL
 
 
 # cipher testing whether linear modeling is the same for the following

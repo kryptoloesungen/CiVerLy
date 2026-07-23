@@ -1,7 +1,8 @@
 from sage.matrix.constructor import Matrix as matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.component import XOR_CVL, LinearLayer_CVL, PermuteLayer_CVL
 from civerly.sboxcipher import SBoxCipher
-from civerly.component import LinearLayer_CVL, PermuteLayer_CVL, XOR_CVL
 
 
 # linear cipher with XOR_CVL component

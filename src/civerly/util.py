@@ -40,23 +40,19 @@ TESTS:
 
 """
 
-import warnings
-
 import contextlib
-import random
-import shutil
-import zlib
-import sys
 import os
+import sys
+import warnings
+import zlib
 
-from sage.rings.integer_ring import ZZ
-from sage.rings.integer import Integer
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.modules.free_module_element import vector
-from sage.modules.free_module import VectorSpace
 from sage.geometry.polyhedron.constructor import Polyhedron
-from sage.sat.solvers.dimacs import DIMACS
+from sage.modules.free_module import VectorSpace
+from sage.modules.free_module_element import vector
 from sage.numerical.mip import MixedIntegerLinearProgram
+from sage.rings.finite_rings.finite_field_constructor import GF
+from sage.rings.integer import Integer
+from sage.rings.integer_ring import ZZ
 
 # suppress LazyImport warnings from Polyhedron class
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -336,7 +332,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     which models the problem of choosing a minimal subset of
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
-    from civerly.component import SBox_CVL, LinearLayer_CVL
+    from civerly.component import LinearLayer_CVL, SBox_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
 

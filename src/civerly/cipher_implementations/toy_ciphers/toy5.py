@@ -1,6 +1,6 @@
-from civerly.sboxcipher import SBoxCipher
 from civerly.cipher_implementations.toy_ciphers.toy3 import Toy3
 from civerly.cipher_implementations.toy_ciphers.toy4 import Toy4
+from civerly.sboxcipher import SBoxCipher
 
 
 # cipher using cascade of toy3 and toy4

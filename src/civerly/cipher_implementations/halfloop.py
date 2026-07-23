@@ -2,15 +2,21 @@ r"""
 Implementation of HALFLOOP-24.
 """
 
-from civerly.aeslike import AESlike
-from civerly.sboxcipher import SBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL, LinearLayer_CVL
-from civerly.component import C_CVL, XOR_CVL, ConstXOR_CVL
-
+from sage.crypto.sboxes import AES as AES_S
+from sage.matrix.special import block_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.matrix.special import block_matrix
-from sage.crypto.sboxes import AES as AES_S
+
+from civerly.aeslike import AESlike
+from civerly.component import (
+    C_CVL,
+    XOR_CVL,
+    ConstXOR_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    SBox_CVL,
+)
+from civerly.sboxcipher import SBoxCipher
 
 
 class HALFLOOP_CVL:

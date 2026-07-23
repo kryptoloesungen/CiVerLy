@@ -1,6 +1,11 @@
 from civerly.addrx import AddRX
-from civerly.component import RotateLayer_CVL, ModAdd_CVL, XOR_CVL
-from civerly.component import PermuteLayer_CVL, C_CVL
+from civerly.component import (
+    C_CVL,
+    XOR_CVL,
+    ModAdd_CVL,
+    PermuteLayer_CVL,
+    RotateLayer_CVL,
+)
 
 # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~- #
 #   Building Chacha QRF in CiVerLy

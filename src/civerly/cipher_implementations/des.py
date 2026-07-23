@@ -1,18 +1,49 @@
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.matrix.constructor import Matrix as matrix
 from sage.crypto.sbox import SBox as SBox_sage
-from sage.crypto.sboxes import DES_S1_1, DES_S1_2, DES_S1_3, DES_S1_4
-from sage.crypto.sboxes import DES_S2_1, DES_S2_2, DES_S2_3, DES_S2_4
-from sage.crypto.sboxes import DES_S3_1, DES_S3_2, DES_S3_3, DES_S3_4
-from sage.crypto.sboxes import DES_S4_1, DES_S4_2, DES_S4_3, DES_S4_4
-from sage.crypto.sboxes import DES_S5_1, DES_S5_2, DES_S5_3, DES_S5_4
-from sage.crypto.sboxes import DES_S6_1, DES_S6_2, DES_S6_3, DES_S6_4
-from sage.crypto.sboxes import DES_S7_1, DES_S7_2, DES_S7_3, DES_S7_4
-from sage.crypto.sboxes import DES_S8_1, DES_S8_2, DES_S8_3, DES_S8_4
+from sage.crypto.sboxes import (
+    DES_S1_1,
+    DES_S1_2,
+    DES_S1_3,
+    DES_S1_4,
+    DES_S2_1,
+    DES_S2_2,
+    DES_S2_3,
+    DES_S2_4,
+    DES_S3_1,
+    DES_S3_2,
+    DES_S3_3,
+    DES_S3_4,
+    DES_S4_1,
+    DES_S4_2,
+    DES_S4_3,
+    DES_S4_4,
+    DES_S5_1,
+    DES_S5_2,
+    DES_S5_3,
+    DES_S5_4,
+    DES_S6_1,
+    DES_S6_2,
+    DES_S6_3,
+    DES_S6_4,
+    DES_S7_1,
+    DES_S7_2,
+    DES_S7_3,
+    DES_S7_4,
+    DES_S8_1,
+    DES_S8_2,
+    DES_S8_3,
+    DES_S8_4,
+)
+from sage.matrix.constructor import Matrix as matrix
+from sage.rings.finite_rings.finite_field_constructor import GF
 
+from civerly.component import (
+    XOR_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
 from civerly.sboxcipher import SBoxCipher
-from civerly.component import LinearLayer_CVL, PermuteLayer_CVL, XOR_CVL
-from civerly.component import SBox_CVL, RoundkeyXOR_CVL
 
 
 class DES_F_CVL:

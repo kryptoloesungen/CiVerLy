@@ -1,11 +1,11 @@
-from civerly.sboxcipher import SBoxCipher
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, RoundkeyXOR_CVL, LinearLayer_CVL
 from sage.crypto.sboxes import Ascon as ascon_S
-
-from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.matrix.special import circulant
 from sage.modules.free_module_element import vector
+from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.component import LinearLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
+from civerly.sboxcipher import SBoxCipher
+from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class ASCON_CVL:

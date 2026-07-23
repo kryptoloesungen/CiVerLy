@@ -1,9 +1,8 @@
 r"""Benchmark CiVerLy."""
 
+from civerly.model_options import OPTIMIZATION, InvalidModelOptionException
 from civerly.solvers import SOLVING_STATUS
 from civerly.util import suppress_output
-from civerly.model_options import OPTIMIZATION
-from civerly.model_options import InvalidModelOptionException
 
 
 def benchmark(CM):
