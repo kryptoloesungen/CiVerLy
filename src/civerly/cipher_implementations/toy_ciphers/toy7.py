@@ -24,8 +24,8 @@ class Toy7:
             ....:       optimization=OPTIMIZATION.SAT,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       sat_solver=CRYPTOMINISAT_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       solve_range=(0, 8),
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
@@ -36,13 +36,10 @@ class Toy7:
             Using existing file ..., make sure it is up to date!
             Using existing file ..., make sure it is up to date!
             1356 variables and 3621 clauses were written to '...'
-            [  0 ,  8] (trying w =   4) : SAT
-            [  0 ,  4] (trying w =   2) : UNSAT
-            [  3 ,  4] (trying w =   3) : SAT
             3
             Output file in: ...
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
             ....:   import Toy7
             sage: from civerly.model_options import *
@@ -54,8 +51,8 @@ class Toy7:
             ....:       optimization=OPTIMIZATION.MILP,
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       milp_solver=GUROBI_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       solve_range=(0, 10),
             ....:       number_of_solutions=1,
             ....:       path=Path(tmpdir))
@@ -66,16 +63,16 @@ class Toy7:
             1356 variables and 2507 constraints were written to '...'
             3
         
-        Try to find multiple solutions with gurobi:
+        Try to find multiple solutions with SCIP:
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: del cipher
             sage: cipher = Toy7()
             sage: model_options.number_of_solutions = 5
             sage: cipher.analyse(model_options=model_options)
             ...
             [3, 3, 3, 3, 3]
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: del cipher
             sage: cipher = Toy7()
             sage: model_options.number_of_solutions = 30
@@ -87,7 +84,7 @@ class Toy7:
 
         Delete files:
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: import shutil 
             sage: shutil.rmtree(tmpdir)
             

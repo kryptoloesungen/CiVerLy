@@ -84,14 +84,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             4160 variables and 8641 clauses were written to '...'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : UNSAT
             18
 
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -104,14 +102,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             3912 variables and 9041 clauses were written to '...'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : UNSAT
             18
 
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -124,14 +120,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             4160 variables and 8641 clauses were written to '...'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : UNSAT
             18
 
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -144,14 +138,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(16, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             3912 variables and 9041 clauses were written to '...'
-            [ 16 , 20] (trying w =  18) : SAT
-            [ 16 , 18] (trying w =  17) : UNSAT
             18
 
         Models for linear cryptanalysis. The results are from Table 1 in
@@ -168,15 +160,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             5648 variables and 13169 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : UNSAT
-            [ 13 , 15] (trying w =  14) : UNSAT
             15
 
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -189,15 +178,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             6000 variables and 12817 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : UNSAT
-            [ 13 , 15] (trying w =  14) : UNSAT
             15
 
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -210,15 +196,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             5648 variables and 13169 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : UNSAT
-            [ 13 , 15] (trying w =  14) : UNSAT
             15
 
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -231,15 +214,12 @@ class SIMON_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
             6000 variables and 12817 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : UNSAT
-            [ 13 , 15] (trying w =  14) : UNSAT
             15
 
         """

@@ -13,7 +13,7 @@ class Toy11:
 
         TESTS::
 
-            sage: # optional - gurobi # optional - espresso
+            sage: # optional - scip # optional - espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy11 \
             ....:   import Toy11
             sage: from civerly.model_options import *
@@ -27,8 +27,8 @@ class Toy11:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:       milp_solver=GUROBI_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             101 variables and 388 constraints were written to '...'
@@ -48,18 +48,11 @@ class Toy11:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:       sat_solver=CADICAL_CVL(),
-            ....:       logic_minimizer=ESPRESSO_CVL(),
+            ....:       sat_solver=SOLVER.CADICAL,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
             ....:       path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
             89 variables and 436 clauses were written to '...'
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : SAT
-            [  0 ,  6] (trying w =   3) : SAT
-            [  0 ,  3] (trying w =   1) : SAT
-            [  0 ,  1] (trying w =   0) : UNSAT
             1
 
         """

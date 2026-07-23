@@ -22,10 +22,10 @@ See the following example to understand how to export and load Cipher objects.
     ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
     ....:     granularity=GRANULARITY.BITWISE,
     ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-    ....:     milp_solver=SCIP_CVL(),
+    ....:     milp_solver=SOLVER.SCIP,
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-    ....:     logic_minimizer=ESPRESSO_CVL(),
-    ....:     path=Path(tmpdir),
+    ....:     logic_minimizer=SOLVER.ESPRESSO,
+    ....:     path=Path("export-example")
     ....: )
     sage: cipher.analyse(model_options)
     5312 variables and 8641 constraints were written to ...

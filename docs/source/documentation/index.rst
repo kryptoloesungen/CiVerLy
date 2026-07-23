@@ -12,6 +12,7 @@ This sites are automatically generated from the docstrings in the Python files.
    model_options
    component
    cipher
+   keyschedule
    sboxcipher
    wordbasedcipher
    wordsboxcipher

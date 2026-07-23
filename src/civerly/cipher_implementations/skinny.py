@@ -279,7 +279,7 @@ class SKINNY_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             22752 variables and 23505 constraints were written to '...'
@@ -295,7 +295,7 @@ class SKINNY_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             7136 variables and 7361 constraints were written to '...'
@@ -312,7 +312,7 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=SCIP_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             9312 variables and 9585 constraints were written to '...'
@@ -328,7 +328,7 @@ class SKINNY_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             22752 variables and 23505 constraints were written to '...'
@@ -344,7 +344,7 @@ class SKINNY_CVL:
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             7136 variables and 7361 constraints were written to '...'
@@ -361,7 +361,7 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             9312 variables and 9585 constraints were written to '...'
@@ -380,16 +380,12 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19553 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : SAT
-            [ 10 , 12] (trying w =  11) : SAT
-            [ 10 , 11] (trying w =  10) : SAT
             10
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -403,16 +399,12 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19553 clauses were written to '...'
-            [ 10 , 20] (trying w =  15) : SAT
-            [ 10 , 15] (trying w =  12) : SAT
-            [ 10 , 12] (trying w =  11) : SAT
-            [ 10 , 11] (trying w =  10) : SAT
             10
 
         Modeling linear cryptanalysis::
@@ -421,13 +413,13 @@ class SKINNY_CVL:
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: skinny = SKINNY_CVL(64, 64, R=10, name="wordwise-SKINNY-10")
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
             ....:     optimization=OPTIMIZATION.MILP,
             ....:     granularity=GRANULARITY.WORDWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-            ....:     milp_solver=GUROBI_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             7136 variables and 7521 constraints were written to '...'
@@ -444,8 +436,8 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=GUROBI_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.GUROBI,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             9264 variables and 10161 constraints were written to '...'
@@ -462,8 +454,8 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     milp_solver=SCIP_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             9264 variables and 10161 constraints were written to '...'
@@ -480,15 +472,12 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CRYPTOMINISAT_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19313 clauses were written to '...'
-            [  4 , 10] (trying w =   7) : SAT
-            [  4 ,  7] (trying w =   5) : SAT
-            [  4 ,  5] (trying w =   4) : UNSAT
             5
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -502,15 +491,12 @@ class SKINNY_CVL:
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=CADICAL_CVL(),
-            ....:     logic_minimizer=ESPRESSO_CVL(),
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
             8976 variables and 19313 clauses were written to '...'
-            [  4 , 10] (trying w =   7) : SAT
-            [  4 ,  7] (trying w =   5) : SAT
-            [  4 ,  5] (trying w =   4) : UNSAT
             5
 
         """

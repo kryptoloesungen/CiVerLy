@@ -268,18 +268,12 @@ class HURDLE_CVL:
             ....:       granularity=GRANULARITY.BITWISE,
             ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
             ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:       logic_minimizer=ESPRESSO_CVL(),
-            ....:       sat_solver=CADICAL_CVL(),
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
+            ....:       sat_solver=SOLVER.CADICAL,
             ....:       path=Path(tmpdir)
             ....:   )
             ....:   cipher.analyse(model_options)
             7168 variables and 88545 clauses were written to ...
-            [  0 ,100] (trying w =  50) : SAT
-            [  0 , 50] (trying w =  25) : SAT
-            [  0 , 25] (trying w =  12) : SAT
-            [  0 , 12] (trying w =   6) : UNSAT
-            [  7 , 12] (trying w =   9) : UNSAT
-            [ 10 , 12] (trying w =  11) : UNSAT
             12
 
         """
@@ -287,15 +281,12 @@ class HURDLE_CVL:
         if name is None:
             name = "HURDLE-II"
 
-        if k is None:
-            k = 0x0  # default key is zero
-        round_keys = hurdle_key_schedule(k)
-
         cipher = WordBasedCipher(4, 16, 16, name=name)
+
         round_node = cipher.IN
         for r in range(R):
 
-            hurdle_f = HURDLE_F_CVL(rk=round_keys[r])
+            hurdle_f = HURDLE_F_CVL(rk=0)
 
             # build feistel round
             hurdle_round = WordBasedCipher(4, 16, 16, name="round")
@@ -319,7 +310,14 @@ class HURDLE_CVL:
         # final swap (as in MidnightBlue's implementation)
         cipher.add_output([(round_node, (i, (i + 8) % 16)) for i in range(16)])
 
+        # collect RK references after deepcopying is complete
+        cipher._rk_components = [cipher.nodes[r+1].nodes[1].nodes[1] for r in range(R)]
+        cipher.key_schedule = hurdle_key_schedule
+
         self.cipher = cipher
+
+        if k is not None:
+            cipher.set_round_keys(k)
 
     def __new__(cls, *args, **kwargs):
         instance = super(HURDLE_CVL, cls).__new__(cls)

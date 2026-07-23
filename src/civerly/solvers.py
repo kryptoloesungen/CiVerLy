@@ -4,584 +4,998 @@ Utils for interacting with MILP and SAT solvers.
 
 import re
 import json
+import hashlib
 import subprocess
 import os
 import warnings
 import time
-import shutil
+import tempfile
 from pathlib import Path
 from enum import Enum
 
 from sage.sat.solvers.dimacs import DIMACS
-from civerly.util import _generate_constraints_sum_leq_int_LS24
-from civerly.util import suppress_output, _float_or_int
-from civerly.util import _to_dict
+
+from civerly.util import suppress_output
+
+from abc import ABC, abstractmethod
 
 
-class SOLVER_CVL:
+def _float_or_int(value):
     """
-    The solver to be (automatically) used by CiVerLy. Of course, CiVerLy does
-    not implement any solver but simply calls the corresponding solver.
+    Cast ``value`` to float or int if possible.
 
-    Supported MILP solvers:
+    EXAMPLES::
 
-    - SCIP: Open Source and reasonable performance.
-    - GLPK: Open Source but only weak performance.
-    - Gurobi: Commercial solver (license needed). Best performance.
+        sage: from civerly.solvers import _float_or_int
+        sage: _float_or_int(42.0)
+        42
+        sage: _float_or_int(42.5)
+        42.5
+        sage: _float_or_int("42.000")
+        42
+        sage: _float_or_int("42.001")
+        42.001
+        sage: _float_or_int("3.415037499300e+00")
+        3.4150374993
+    """
+    value = float(value)
+    if value.is_integer() or abs(value - int(round(value))) < 1e-8:
+        value = int(round(value))
+    else:
+        value = round(value, 10)
+    return value
 
-    Supported SAT solvers:
 
-    - CryptoMiniSat: Open Source solver.
-    - CaDiCal: Open Source solver.
+def _to_dict(flat_results):
+    r"""
+    Convert a flat results dict to a nested one, grouping by variable
+    name and using the bracket index as an integer key.
 
-    .. NOTE::
+    EXAMPLES::
 
-        If you are going to solve all models by yourself (e.g. on a different
-        machine), you can set this to ``None``.
+        sage: from civerly.solvers import _to_dict
+        sage: _to_dict({'Z[0]': 1, 'Z[1]': 2})
+        {'Z': {0: 1, 1: 2}}
+    """
+    nested = {}
+    for variable, value in flat_results.items():
+        var_name, rest = variable.split("[", 1)
+        var_index = int(rest.rstrip("]"))
+        nested.setdefault(var_name, {})[var_index] = value
+    return nested
 
-    .. WARNING::
+def _content_hash(path, length=8):
+    r"""
+    Return the first ``length`` hex digits of the SHA-256 of the file at
+    ``path``. Used to make solution-file names depend on model content so
+    that a stale solution file from a previous model is not picked up by
+    the cache.
+    """
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:length]
 
-        Pick a solver only if it is installed on the same machine you are
-        running CiVerLy on.
+
+class SOLVING_STATUS(Enum):
+    """Indicate if solving was successful or what went wrong."""
+
+    SUCCESS = 1
+    TIMEOUT = 2
+    ERROR = 3
+
+
+class ExternalSolveRequired(Exception):
+    """
+    Raised when an external solver is invoked but the solution file is not
+    yet present. Provide a solution at the path shown in the message and
+    re-run.
     """
 
+
+class SOLVER_CVL(ABC):
+    """
+    Abstract base class for implementing an interface to a solver.
+    """
     def __init__(self):
+        """
+        Initialize the solver interface.
+
+        Subclasses must set ``self.name``. They may also adjust
+        ``self.errno_map`` and ``self.store_stdout`` to configure how the
+        shared :meth:`invoke` template interprets the solver's behavior.
+        """
         self.name = "GenericSolver"
-        self.status = SOLVING_STATUS.SUCCESS  # default value
+        # exit-code -> SOLVING_STATUS. Unknown codes default to ERROR.
+        self.errno_map = {0: SOLVING_STATUS.SUCCESS}
+        # If True, ``invoke`` redirects subprocess stdout/stderr into ``log_file``.
+        # Solvers that write their own log via CLI flags leave this False.
+        self.store_stdout = False
 
-        # overwritten for solvers not supporting log files
-        self.redirect_stdout = None
+    def _check_can_invoke(self, input_file, solution_file, log_file):
+        """
+        Verify the inputs and check if a solver has been disabled.
 
-    def solve(self, input_file_name, output_file_name,
-              log_file_name=None, time_limit=None):
-        """
-        Solve the given optimization problem. For MILP and minimizing, this
-        simply calls :meth:`invoke`, while for SAT the binary search method
-        (formerly `optimize_sat`) is called.
-        """
-        return self.invoke(
-            input_file_name, output_file_name,
-            log_file_name=log_file_name, time_limit=time_limit
-        )
+        You can disable a solver by setting the environment variable
+        ``CIVERLY_DISABLE_<NAME>``. We use this to simulate that a solver
+        is not installed albeit it is. This is used for testing only.
 
-    def invoke(self, input_file_name, output_file_name,
-              log_file_name=None, time_limit=None):
+        This is called by :meth:`invoke` and is also exposed for subclasses
+        that override :meth:`invoke` entirely and still need the standard
+        precondition checks.
         """
-        Solve the given MILP or SAT instance externally.
+        assert isinstance(input_file, Path)
+        assert isinstance(solution_file, Path)
+        assert isinstance(log_file, Path)
+
+        ENV_DISABLE_PREFIX = "CIVERLY_DISABLE_"
+        if ENV_DISABLE_PREFIX+self.name.upper() in os.environ:
+            raise ValueError(
+                f"{self.name} was disabled by setting environment variable "
+                f"{ENV_DISABLE_PREFIX+self.name.upper()}"
+            )
+
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
+        """
+        Invoke the solver's CLI to solve the model in the given file.
+
+        This template handles the env-disable check, command execution
+        (optionally capturing stdout/stderr into ``log_file``), and exit-code
+        interpretation. Subclasses provide the command list via
+        :meth:`_build_command`, and may adjust ``self.errno_map`` or
+        ``self.store_stdout`` to tailor the behavior.
 
         INPUT:
 
-            - ``input_file_name``-- path to the file containing the MILP or SAT
+            - ``input_file``-- path to the file containing the model
 
-            - ``output_file_name``-- path of the file the solution is written to
+            - ``solution_file``-- path of the file in which the solver writes the solution
 
-            - ``log_file_name``-- path to the solver's log file. Default based on
-            ``output_file_name`` and ``solver``.
+            - ``log_file``-- path to the solver's log file
 
-            - ``time_limit``-- integer (default ``None``); time limit in seconds
+            - ``time_limit``-- float (default ``None``); time limit in seconds
 
         OUTPUT:
 
             - Status, see :class:`civerly.solvers.SOLVING_STATUS`. Further, upon
-            successful execution either a ``.sol`` or a ``.sat`` file is created,
-            depending on ``solver``. The file will contain the solution, if one
-            is found.
-
-        .. NOTE::
-
-            This method is implemented for convenience in case a solver is
-            installed on the same machine as CiVerLy.
+              successful execution a solution is stored in ``solution_file``.
         """
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
-
-        # default log file
-        if log_file_name is None:
-            parent_dir = output_file_name.parent
-            name = f"{output_file_name.stem}_{self.name}"
-            suffix = ".log"
-            log_file_name = parent_dir / (name + suffix)
+        self._check_can_invoke(input_file, solution_file, log_file)
+        command = self._build_command(input_file, solution_file, log_file, time_limit)
+        if self.store_stdout:
+            with log_file.open('a') as redirect, suppress_output():
+                errno = subprocess.Popen(
+                    command, stdout=redirect, stderr=redirect
+                ).wait()
         else:
-            assert isinstance(log_file_name, Path)
+            with suppress_output():
+                errno = subprocess.Popen(command).wait()
+        return self.errno_map.get(errno, SOLVING_STATUS.ERROR)
 
-        # you can disable a solver by setting an environment variable
-        # with this we simulate that a solver is not installed albeit it is
-        # i.e. this is used for testing only
-        ENV_DISABLE_PREFIX = "CIVERLY_DISABLE_"
-        if ENV_DISABLE_PREFIX+self.name in os.environ:
-            raise ValueError(
-                f"{self.name} was disabled by setting environment variable "
-                f"{ENV_DISABLE_PREFIX+self.name}"
-            )
-
-    def process_solution_file(self, solution_file_name):
-        pass
-
-
-class MILP_SOLVER_CVL(SOLVER_CVL):
-    def __init__(self):
-        super().__init__()
-        
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        r"""
-        Find up to *n* solutions using a by-hand blocking approach.
-
-        After each solve the solution is excluded (via ``cipher.exclude_solution``),
-        the MILP model is regenerated (via ``cipher.model``), and the solver is invoked again.
-
-        Returns a list of ``(results_dict, objective_value)`` pairs ordered
-        from best to worst objective weight.
+    @abstractmethod
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
         """
-        input_file_name  = model_options.path / (cipher.name + ".mps")
-        output_file_name = model_options.path / (cipher.name + ".sol")
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
-
-        n = model_options.number_of_solutions
-
-        all_results = []
-        solution_index = 0
-
-        while solution_index < n:
-            if solution_index == 0:
-                sol_file = output_file_name
-            else:
-                sol_file = (
-                    output_file_name.parent
-                    / f"{output_file_name.stem}_{solution_index}{output_file_name.suffix}"
-                )
-            self.invoke(input_file_name, sol_file, time_limit=time_limit)
-            r, w = self.process_solution_file(sol_file)
-
-            all_results.append((r, w))
-            solution_index += 1
-
-            if solution_index < n and cipher is not None:
-                cipher.exclude_solution(model_options, r)
-                cipher._finish_milp(model_options, cipher.milp)
-
-        return all_results
-
-
-class SAT_SOLVER_CVL(SOLVER_CVL):
-    def __init__(self):
-        super().__init__()
-
-    def solve(self, input_file_name, output_file_name, model_options=None,
-              time_limit=None, benchmark=False):
-        """
-        Repeatedly solve SAT to determine the lowest possible weight.
-
-        Given a SAT with its corresponding ``sum_arr``, this method applies a
-        binary search to determine the lowest weight ``w`` for which this SAT is
-        solvable and solves it.
+        Build the solver-specific CLI command list.
 
         INPUT:
 
-            - ``input_file_name``-- path to the file containing the SAT
-
-            - ``output_file_name``-- path to the file the solution is written to
-
-            - ``model_options`` -- see
-            :class:`civerly.model_options.MODEL_OPTIONS`.
-            Used to retrieve the ``solver``, ``solve_range`` and
-            ``sat_precision``.
-
-            - ``time_limit``-- integer (default ``None``); time limit in seconds
-
-            - ``benchmark``-- (default ``False``); when set to ``True`` return
-            details about internal timing. This is used by
-            :meth:`civerly.benchmark.benchmark`.
+            - ``input_file`` -- path to the file containing the model
+            - ``solution_file`` -- path of the file in which the solver writes the solution
+            - ``log_file`` -- path to the solver's log file
+            - ``time_limit`` -- float or ``None``; time limit in seconds
 
         OUTPUT:
 
-            - None, but upon successful execution a ``.sol`` file is created,
-            containing the solution (if found).
-
-        .. NOTE::
-
-            This method is implemented for convenience in case a solver is
-            installed on the same machine as CiVerLy.
+            - list of strings; the command to be passed to ``subprocess.Popen``
         """
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
-
-        if time_limit is not None:
-            end_time = int(time.time()+time_limit)
-
-        # shorten variable name
-        if model_options is not None:
-            pr = model_options.sat_precision
-        else:
-            pr = 0
-
-        benchmarks = []
-
-        def __get_sum_arr():
-            r"""
-            Implicit helper function to read and extract the sum_arr from the
-            corresponding json file.
-            """
-            sum_arr_file = input_file_name.parent / f"{input_file_name.stem}sum.json"
-            with open(sum_arr_file, 'r') as f:
-                file_content = json.load(f)
-
-                # Scale all weights by 10**sat_precision
-                # (and normalize again later)
-                sum_arr = [
-                    (weight, var)
-                    for weight, var in file_content
-                ]
-            return sum_arr
-
-        if model_options is not None:
-            # scale W_MIN, W_MAX too
-            W_MIN = int(model_options.solve_range[0] * 10**pr)
-            W_MAX = int(model_options.solve_range[1] * 10**pr)
-        else:
-            W_MIN, W_MAX = 0, 100
-
-        ALL_SAT, ALL_UNSAT = True, True
-        # ---------------------------------------------------------------
-        while W_MAX > W_MIN or ALL_UNSAT or ALL_SAT:
-            w = (W_MAX + W_MIN) // 2
-
-            # will be appended to benchmarks
-            row = {"bound": w}
-            row["W_MIN"] = W_MIN
-            row["W_MAX"] = W_MAX
-
-            sat = DIMACS()
-            sat.read(str(input_file_name))
-
-            print(
-                f"[{float(W_MIN/10**pr):{3+pr}.{pr}f} ,"
-                f"{float(W_MAX/10**pr):{3+pr}.{pr}f}] "
-                f"(trying w = {float(w/10**pr):{3+pr}.{pr}f}) :",  # noqa
-                end=" ",
-                flush=True
-            )
-            start = time.time()
-            sat_constraining_prob = _generate_constraints_sum_leq_int_LS24(
-                sat,
-                __get_sum_arr(),
-                int(w)  # cast to int as it is a float with .0 anyway
-            )
-            stop = time.time()
-            row["nvars"] = sat_constraining_prob.nvars()
-            row["nclauses"] = len(sat_constraining_prob.clauses())
-            row["t_model"] = stop - start
-
-            # temporary files with encoded weight w
-            name = f"{input_file_name.stem}_obj{w}"
-            tmp_cnf_file_name = input_file_name.parent / f"{name}.cnf"
-            tmp_sat_file_name = input_file_name.parent / f"{name}.sat"
-            sat_constraining_prob.write(tmp_cnf_file_name)
-            if time_limit is not None:
-                tmp_time_limit = end_time - int(time.time())
-                if tmp_time_limit < 0:
-                    return SOLVING_STATUS.TIMEOUT, (W_MIN/10**pr, W_MAX/10**pr)
-            else:
-                tmp_time_limit = None
-
-            start = time.time()
-            status = self.invoke(
-                tmp_cnf_file_name,
-                tmp_sat_file_name,
-                time_limit=tmp_time_limit
-            )
-            stop = time.time()
-            row["t_solve"] = stop - start
-
-            if status is not None:
-                if benchmark:
-                    row["result"] = status
-                    benchmarks.append(row)
-                    return benchmarks
-                else:
-                    e = f"{tmp_sat_file_name} could not be solved."
-                    raise AssertionError(e)
-
-            with open(tmp_sat_file_name, 'r') as f:
-                result = f.readlines()[0].strip("\n")
-
-            if result in ["UNSAT", "s UNSATISFIABLE"]:
-                row["result"] = "UNSAT"
-                benchmarks.append(row)
-                ALL_SAT = False
-                W_MIN, res = (w + 1), "UNSAT"
-                if W_MIN > W_MAX:
-                    # happens if all models are UNSAT
-                    print(res)
-                    W_MIN = W_MAX
-                    break
-            elif result in ["SAT", "s SATISFIABLE"]:
-                row["result"] = "SAT"
-                benchmarks.append(row)
-                ALL_UNSAT = False
-                W_MAX, res = w, "SAT"
-                if W_MAX == W_MIN:
-                    # happens if all models are SAT
-                    print(res)
-                    break
-            else:
-                e = f"{tmp_sat_file_name} does not have the expected format."
-                e += f" Expected: SAT/UNSAT, got: {result}."
-                raise AssertionError(e)
-
-            print(res)
-
-        # ---------------------------------------------------------------
-
-        # put solution in correct file
-        name = f"{input_file_name.stem}_obj{W_MIN}"
-        tmp_cnf_file_name = input_file_name.parent / f"{name}.cnf"
-        tmp_sat_file_name = input_file_name.parent / f"{name}.sat"
-        shutil.copyfile(tmp_cnf_file_name, input_file_name)
-        shutil.copyfile(tmp_sat_file_name, output_file_name)
-
-        # write optimization value into the sat file
-        with open(output_file_name, 'a') as f:
-            f.write(str(float(W_MIN/10**pr))+"\n")
-
-        if benchmark:
-            return benchmarks
-
-        if pr == 0:
-            return int(W_MIN)
-        return float(W_MIN/10**pr)
-
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        r"""
-        Find up to *n* solutions ordered by weight (best first).
-
-        **Strategy (by-hand blocking with weight escalation)**
-
-        1. Call :meth:`solve` to find the minimum weight *W* and the first
-           solution (binary search).  Before this call the base CNF is saved;
-           after the call *input_file_name* holds the CNF with the weight
-           constraint ``<= W``.
-
-        2. For each subsequent solution:
-
-           a. Build a *blocking clause* from the variables in ``sum_arr`` and
-              the ``SAT_IN`` variables (indices ``1 … cipher.input_length``).
-              For each variable *v* in this set, the clause literal is
-              ``¬v`` if *v* was **1** in the previous solution, or ``v``
-              otherwise.  This ensures the next solution must differ in at
-              least one of these bits.
-
-           b. Append the clause to *input_file_name* (accumulating across
-              iterations) and invoke the solver.
-
-           c. If the result is UNSAT, all solutions at the current weight are
-              exhausted.  The weight bound is incremented by one, the CNF is
-              rebuilt from the saved base file with the new ``<= W+1``
-              constraint, and solving continues.  This repeats until SAT is
-              found or the upper bound (``model_options.solve_range[1]``) is
-              reached.
-
-        Returns a list of ``(results_dict, objective_value)`` pairs ordered
-        best to worst objective weight.
-        """
-        input_file_name  = model_options.path / (cipher.name + ".cnf")
-        output_file_name = model_options.path / (cipher.name + ".sat")
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
-
-        n = model_options.number_of_solutions
-
-        pr = model_options.sat_precision if model_options is not None else 0
-        W_MAX_INT = (
-            int(model_options.solve_range[1] * 10**pr)
-            if model_options is not None else 100
-        )
-
-        # Save the base CNF before solve() overwrites input_file_name.
-        base_cnf_file = (
-            input_file_name.parent / f"{input_file_name.stem}_base.cnf"
-        )
-        shutil.copyfile(input_file_name, base_cnf_file)
-
-        # --- Step 1: find minimum weight and first solution -----------------
-        weight = self.solve(
-            input_file_name, output_file_name,
-            model_options=model_options, time_limit=time_limit
-        )
-        current_weight_int = int(round(weight * 10**pr))
-        first_result, _ = self.process_solution_file(output_file_name)
-        all_results = [(first_result, weight)]
-
-        if n <= 1:
-            return all_results
-
-        # sum_arr is needed for weight-escalation (rebuilding CNF at a new bound).
-        sum_arr_file = (
-            input_file_name.parent / f"{input_file_name.stem}sum.json"
-        )
-        with open(sum_arr_file, 'r') as _f:
-            sum_arr = json.load(_f)
-
-        # --- Step 2: enumerate additional solutions -------------------------
-        solution_index = 1
-        while solution_index < n:
-            prev_result = all_results[-1][0]
-
-            cipher.exclude_solution(model_options, prev_result)
-
-            tmp_sat_file = (
-                input_file_name.parent
-                / f"{input_file_name.stem}_sol{solution_index}.sat"
-            )
-
-            status = self.invoke(input_file_name, tmp_sat_file,
-                                 time_limit=time_limit)
-            if status is not None:
-                break  # solver error or timeout
-
-            with open(tmp_sat_file, 'r') as _f:
-                result_line = _f.readlines()[0].strip()
-
-            if result_line in ("UNSAT", "s UNSATISFIABLE"):
-                # All solutions at current_weight_int are exhausted.
-                # Rebuild from the base CNF at increasing weights until SAT.
-                advanced = False
-                while current_weight_int < W_MAX_INT:
-                    current_weight_int += 1
-                    base_sat = DIMACS()
-                    base_sat.read(str(base_cnf_file))
-                    new_cnf = _generate_constraints_sum_leq_int_LS24(
-                        base_sat, sum_arr, current_weight_int
-                    )
-                    new_cnf.write(input_file_name)
-
-                    status = self.invoke(input_file_name, tmp_sat_file,
-                                         time_limit=time_limit)
-                    if status is not None:
-                        break  # solver error or timeout
-
-                    with open(tmp_sat_file, 'r') as _f:
-                        result_line = _f.readlines()[0].strip()
-
-                    if result_line not in ("UNSAT", "s UNSATISFIABLE"):
-                        advanced = True
-                        break
-
-                if not advanced or status is not None:
-                    break  # no more solutions in range
-
-            # Process the SAT result (whether at the original weight or a new one).
-            current_weight = (
-                current_weight_int if pr == 0
-                else float(current_weight_int / 10**pr)
-            )
-            with open(tmp_sat_file, 'a') as _f:
-                _f.write(str(float(current_weight)) + "\n")
-
-            result, w = self.process_solution_file(tmp_sat_file)
-            all_results.append((result, w))
-            solution_index += 1
-
-        return all_results
+        pass
 
 
-class LOGIC_MINIMIZER_CVL(SOLVER_CVL):
-    """
-    The logic minimizer to be (automatically) called by CiVerLy, to minimize
-    boolean formulas and therefore to simplify MILP or SAT models.
-    Of course, CiVerLy does not implement any logic minimizer but simply
-    calls the corresponding logic minimizer externally.
+class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
+    """Abstract base class for implementing an interface to a MILP solver."""
 
-    Supported minimizers:
-
-        - Espresso: Used throughout the literature for this purpose.
-          Freely available on https://github.com/classabbyamp/espresso-logic
-
-    """
     def __init__(self):
+        """Initizialize the MILP solver interface."""
         super().__init__()
+        # Subclasses set this to a regex matched against ``log_file`` to detect
+        # a reported timeout. Leave ``None`` to skip the log-based check.
+        self.timeout_string = None
 
-
-class GUROBI_CVL(MILP_SOLVER_CVL):
-    def __init__(self):
-        super().__init__()
-        self.name = "Gurobi"
-        self.timeout_string = r"Time limit reached"
-
-    def invoke(self, input_file_name, output_file_name,
-              log_file_name=None, time_limit=None):
-        r"""Invoke Gurobi solver via shell."""
-        super().invoke(
-            input_file_name, output_file_name, log_file_name, time_limit
-        )
-        command = [
-            "gurobi_cl", f"ResultFile={output_file_name}",
-            str(input_file_name)
-        ]
-        if time_limit is not None:
-            command.insert(2, f"TimeLimit={time_limit}")
-            
-        if log_file_name is not None:
-            command.insert(2, f"LogFile={log_file_name}")
-
-        with suppress_output():
-            process = subprocess.Popen(command)
-            errno = process.wait()
-
-        if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
-
-        if time_limit is not None:
-            # check if the solver reported a time out by checking the log file
-            # for an according string
-            with open(log_file_name, 'r') as file:
-                content = file.read()
-            if re.search(self.timeout_string, content, re.MULTILINE):
-                self.status = SOLVING_STATUS.TIMEOUT
-
-        if self.status != SOLVING_STATUS.SUCCESS:
-            raise SolverException(self.status)
-        return
-
-    def get_objective_bounds(self, log_file_name):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
-        Extract the bounds on the objective value from the log of an MILP solver.
+        Invoke the MILP solver, wrapping the shared template with a
+        log-file-based timeout check.
 
-        This function shall be used when the MILP solver exceeds the given timeout.
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        status = super().invoke(input_file, solution_file, log_file, time_limit)
+        return self._check_timeout(log_file, time_limit, status)
+
+    def solve(self, input_file, time_limit=None):
+        """
+        Solve the model in the given file.
 
         INPUT:
 
-            - ``log_file_name``-- name of the log file
+            - ``input_file`` -- path to the file containing the model
+
+            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
+
+        OUTPUT:
+
+            - ``result`` -- a dictionary with at least the following entries:
+
+                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
+                - ``objective_value`` -- float; the objective value of the identified solution
+                - ``objective_bounds`` -- tuple of floats; lower and upper bound for the optimal objective value (interesting when ``time_limit`` is reached)
+                - ``assignment`` -- dictionary; the assignment of the variables in the solution
+                - ``solve_time`` -- float; time (in seconds) it took to find this solution
+
+        .. Warning::
+
+            If ``time_limit`` is reached, the solution might be non-optimal.
         """
-        assert isinstance(log_file_name, Path)
+        h = _content_hash(input_file)
+        solution_file = input_file.parent / f"{input_file.stem}.{h}.sol"
+        log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
 
-        regexp = r'Best objective (\S+), best bound (\S+), gap'
+        if solution_file.exists():
+            print(
+                f"Using existing file {solution_file}, "
+                "make sure it is up to date!"
+            )
+            objective_value, assignment = self._process_solution_file(solution_file)
+            return {
+                "status": SOLVING_STATUS.SUCCESS,
+                "objective_value": objective_value,
+                "objective_bounds": (objective_value, objective_value),
+                "assignment": assignment,
+                "solve_time": 0.0,
+            }
 
-        with open(log_file_name, 'r') as file:
+        start_time = time.perf_counter()
+        status = self.invoke(input_file, solution_file, log_file, time_limit=time_limit)
+        solve_time = time.perf_counter() - start_time
+
+        if status == SOLVING_STATUS.SUCCESS:
+            objective_value, assignment = self._process_solution_file(solution_file)
+            objective_bounds = (objective_value, objective_value)
+        elif status == SOLVING_STATUS.TIMEOUT:
+            objective_value, assignment = self._process_solution_file(solution_file)
+            objective_bounds = self._get_objective_bounds(log_file)
+        else:
+            objective_value = None
+            assignment = {}
+            objective_bounds = (None, None)
+
+        result = {"status": status, "objective_value": objective_value, "objective_bounds": objective_bounds, "assignment": assignment, "solve_time": solve_time}
+        return result
+
+    def _get_objective_bounds(self, log_file):
+        """
+        Extract the bounds on the objective value from the log of an MILP solver.
+
+        This function is used when the MILP solver exceeds the given timeout.
+        It searches ``log_file`` for ``self.bounds_regexp`` and expects two
+        groups: group 1 is the upper bound, group 2 is the lower bound.
+
+        INPUT:
+
+            - ``log_file``-- name of the log file
+
+        OUTPUT:
+
+            - tuple of floats; lower and upper bound for the optimal objective value
+        """
+        assert isinstance(log_file, Path)
+
+        with log_file.open('r') as file:
             content = file.read()
 
-        hit = re.search(regexp, content, re.MULTILINE)
+        hit = re.search(self.bounds_regexp, content, re.MULTILINE)
         if hit:
             upper_bound = _float_or_int(hit.group(1))
             lower_bound = _float_or_int(hit.group(2))
             return lower_bound, upper_bound
 
-        warnings.warn(f"No objective bounds found in {log_file_name}")
+        warnings.warn(f"No objective bounds found in {log_file}")
         return None, None
 
-    def process_solution_file(self, solution_file_name):
+    def _check_timeout(self, log_file, time_limit, status):
         """
-        Parse a solution generated by Gurobi.
+        Check the log file for a timeout report and update ``status`` accordingly.
+
+        Returns ``status`` unchanged if ``time_limit`` is ``None`` or if the
+        subclass did not configure ``self.timeout_string``. Otherwise
+        ``log_file`` is searched for ``self.timeout_string`` and
+        ``SOLVING_STATUS.TIMEOUT`` is returned on a hit.
 
         INPUT:
 
-            - ``solution_file_name``-- name of the file containing a solution
+            - ``log_file`` -- path to the log file
+            - ``time_limit`` -- float or ``None``; the time limit passed to the solver
+            - ``status`` -- the current :class:`SOLVING_STATUS`
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
+
+            - the (possibly updated) :class:`SOLVING_STATUS`
         """
-        assert isinstance(solution_file_name, Path)
+        if time_limit is None or self.timeout_string is None:
+            return status
+        with log_file.open('r') as file:
+            content = file.read()
+        if re.search(self.timeout_string, content, re.MULTILINE):
+            return SOLVING_STATUS.TIMEOUT
+        return status
 
-        with open(solution_file_name, "r") as f:
+    def solve_multiple(self, input_file, milp, number_of_solutions,
+                       trail_vars=None, time_limit=None):
+        r"""
+        Find up to ``number_of_solutions`` distinct solutions by repeated
+        solving with blocking constraints. Each iteration adds a constraint
+        to ``milp`` excluding the previous assignment and flushes ``milp``
+        back to ``input_file`` before the next solve.
+
+        ``milp`` is required because ``MILP_CVL``
+        cannot reconstruct itself from an MPS file -- the in-memory model
+        must be threaded through from where it was built.
+
+        Stops early if a solve fails or no feasible solution is found.
+
+        INPUT:
+
+            - ``input_file`` -- path to the MPS file; rewritten between iterations
+            - ``milp`` -- in-memory :class:`MILP_CVL` whose
+              state matches ``input_file``
+            - ``number_of_solutions`` -- maximum number of solutions to find
+            - ``trail_vars`` -- optional iterable of MPS variable names that
+              define "the trail". When provided, exclusion constraints only
+              involve these variables; assignments that differ only on
+              helper variables are treated as the same solution. When
+              ``None``, every variable in the assignment is used.
+            - ``time_limit`` -- float or ``None``; per-iteration time limit
+
+        OUTPUT:
+
+            - list of result dicts in the same shape as :meth:`solve` returns,
+              ordered best (lowest objective) first
+
+
+        EXAMPLES:
+
+            Solve a model for the AES::
+
+                sage: # optional - scip
+                sage: from civerly.cipher_implementations.aes import AES_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip
+                ....:   aes = AES_CVL(R=10)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:       optimization=OPTIMIZATION.MILP,
+                ....:       granularity=GRANULARITY.WORDWISE,
+                ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+                ....:       milp_solver=SOLVER.SCIP,
+                ....:       path=Path(tmpdir))
+                ....:   model = aes.model(model_options)
+                ....:   r = SOLVER.SCIP.solve_multiple(model_options.path / "AES.mps", model, 5)
+                3236 variables and 3437 constraints were written to ...
+                sage: len(r)
+                5
+                sage: r[0] # random
+                {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                 'objective_value': 55,
+                 'objective_bounds': (55, 55),
+                 'assignment': ...
+                ...
+                 'solve_time': 0.29395343200303614}
+                sage: r[4] # random
+                {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                 'objective_value': 55,
+                 'objective_bounds': (55, 55),
+                 'assignment': ...
+                ...
+                 'solve_time': 0.4183877219911665}
+        """
+        results = []
+        for i in range(number_of_solutions):
+            r = self.solve(input_file, time_limit=time_limit)
+            results.append(r)
+            done = (r["status"] != SOLVING_STATUS.SUCCESS
+                    or r["objective_value"] is None)
+            if done or i == number_of_solutions - 1:
+                break
+            self._exclude_assignment(milp, r["assignment"], trail_vars=trail_vars)
+            with suppress_output():
+                milp.write_mps(str(input_file))
+        return results
+
+    def _exclude_assignment(self, milp, assignment, trail_vars=None):
+        r"""
+        Add a constraint to ``milp`` that excludes ``assignment``. The caller
+        is responsible for flushing ``milp`` to disk before the next solve.
+
+        The constraint forces at least one variable to differ from its
+        assigned value:
+
+        .. math::
+            \sum_{x_i = 0} x_i + \sum_{x_i = 1} (1 - x_i) \geq 1
+
+        If ``trail_vars`` is provided, only variables whose MPS name is in
+        ``trail_vars`` participate in the constraint; helpers are ignored.
+        Otherwise every variable in ``assignment`` is constrained.
+        """
+        # Flatten the nested ``{name: {idx: val}}`` shape (from
+        # ``_process_solution_file``) back to the flat MPS variable names.
+        flat = {}
+        for name, sub in assignment.items():
+            if isinstance(sub, dict):
+                for idx, val in sub.items():
+                    flat[f"{name}[{idx}]"] = val
+            else:
+                flat[name] = sub
+
+        if trail_vars is not None:
+            trail_vars = set(trail_vars)
+            flat = {name: val for name, val in flat.items() if name in trail_vars}
+
+        b = milp.get_backend()
+        coefs = []
+        n_ones = 0
+        for i in range(b.ncols()):
+            name = b.col_name(i)
+            if name not in flat:
+                continue
+            val = flat[name]
+            n_ones += val
+            coefs.append((i, 1.0 if val == 0 else -1.0))
+        # sum_{x_i=0} x_i - sum_{x_i=1} x_i >= 1 - n_ones
+        b.add_linear_constraint(coefs, 1 - n_ones, None)
+
+    @abstractmethod
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the objective value and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
+        """
+        pass
+
+
+class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
+    """Abstract base class for implementing an interface to a SAT solver."""
+
+    def __init__(self):
+        """Initizialize the SAT solver interface."""
+        super().__init__()
+        # 10 = SAT, 20 = UNSAT are standard DIMACS exit codes.
+        self.errno_map = {
+            0: SOLVING_STATUS.SUCCESS,
+            10: SOLVING_STATUS.SUCCESS,
+            20: SOLVING_STATUS.SUCCESS,
+        }
+        # SAT solvers print results to stdout; capture into the log file.
+        self.store_stdout = True
+
+    def decide(self, input_file, time_limit=None):
+        """
+        Decide whether the CNF in ``input_file`` is satisfiable, and if so,
+        return one satisfying assignment.
+
+        This is the SAT solver's native one-shot operation. Use :meth:`solve`
+        instead to find the minimum-weight satisfying assignment via binary
+        search.
+
+        INPUT:
+
+            - ``input_file`` -- path to the file containing the CNF
+
+            - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
+
+        OUTPUT:
+
+            - ``result`` -- a dictionary with the following entries:
+
+                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
+                - ``satisfiability`` -- bool or ``None``
+                - ``assignment`` -- dictionary; the assignment of the variables in the solution
+                - ``solve_time`` -- float; time (in seconds) it took to find this solution
+        """
+        h = _content_hash(input_file)
+        solution_file = input_file.parent / f"{input_file.stem}.{h}.sat"
+        log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
+
+        if solution_file.exists():
+            print(
+                f"Using existing file {solution_file}, "
+                "make sure it is up to date!"
+            )
+            satisfiability, assignment = self._process_solution_file(solution_file)
+            return {
+                "status": SOLVING_STATUS.SUCCESS,
+                "satisfiability": satisfiability,
+                "assignment": assignment,
+                "solve_time": 0.0,
+            }
+
+        start_time = time.perf_counter()
+        status = self.invoke(input_file, solution_file, log_file, time_limit=time_limit)
+        solve_time = time.perf_counter() - start_time
+
+        if status == SOLVING_STATUS.SUCCESS:
+            satisfiability, assignment = self._process_solution_file(solution_file)
+        else:
+            satisfiability = None
+            assignment = {}
+
+        result = {"status": status, "satisfiability": satisfiability, "assignment": assignment, "solve_time": solve_time}
+        return result
+
+    def solve(self, input_file, sum_arr_file, solve_range, precision=0, time_limit=None):
+        r"""
+        Find the lowest weight ``w`` in ``solve_range`` for which the CNF in
+        ``input_file``, augmented with ``sum(weight_i * var_i) <= w`` using
+        the sum array stored in ``sum_arr_file``, remains satisfiable.
+
+        Internally, this performs a binary search over the range, calling
+        :meth:`decide` on each constrained CNF.
+
+        INPUT:
+
+            - ``input_file`` -- path to the base CNF
+
+            - ``sum_arr_file`` -- path to the JSON file containing the sum
+              array, i.e. a list of ``(weight, var)`` pairs
+
+            - ``solve_range`` -- ``(lower, upper)`` pair of floats bounding
+              the search
+
+            - ``precision`` -- integer (default ``0``); the weights are
+              scaled by ``10**precision`` before searching, so this is the
+              number of decimal digits considered
+
+            - ``time_limit`` -- float or ``None`` (default ``None``); total
+              time limit in seconds across all iterations
+
+        OUTPUT:
+
+            - ``result`` -- a dictionary with the same shape as
+              :meth:`civerly.solvers.MILP_SOLVER_CVL.solve`:
+
+                - ``status`` -- see :class:`civerly.solvers.SOLVING_STATUS`
+                - ``objective_value`` -- the minimum weight (the objective),
+                  or ``None`` if no satisfying assignment was found in the
+                  range or on early termination
+                - ``objective_bounds`` -- ``(lower, upper)`` proven bounds on
+                  the optimum. ``(opt, opt)`` on a tight solve, the still-open
+                  interval on timeout, ``(None, None)`` on error or when no
+                  feasible solution exists.
+                - ``assignment`` -- dictionary; the assignment of the
+                  variables at the minimum weight, empty if unsatisfiable
+                - ``solve_time`` -- float; total time spent
+                - ``trace`` -- an additional dicitionary that holds the result
+                  of each call to :meth:``decide``. The keys of ``trace``
+                  correspond to the tested weights. Furthermore, ``trace`` also
+                  contains ``model_time`` and the actual ``model`` for these.
+        """
+        assert isinstance(input_file, Path)
+        assert isinstance(sum_arr_file, Path)
+
+        start_time = time.perf_counter()
+        deadline = start_time + time_limit if time_limit is not None else None
+        trace = {}
+
+        with sum_arr_file.open('r') as f:
+            sum_arr = json.load(f)
+
+        scale = 10 ** precision
+        W_MIN = int(solve_range[0] * scale)
+        W_MAX = int(solve_range[1] * scale)
+        if W_MIN > W_MAX:
+            raise ValueError(f"Invalid solve_range: {solve_range}")
+
+        def _format_weight(w):
+            return w / scale if precision else int(w)
+
+        def _early_return(status):
+            if status == SOLVING_STATUS.TIMEOUT:
+                bounds = (_format_weight(W_MIN), _format_weight(W_MAX))
+                if last_sat is not None:
+                    return {
+                        "status": status,
+                        "objective_value": _format_weight(W_MAX),
+                        "objective_bounds": bounds,
+                        "assignment": last_sat["assignment"],
+                        "solve_time": time.perf_counter() - start_time,
+                        "trace": trace,
+                    }
+            else:
+                bounds = (None, None)
+            return {
+                "status": status,
+                "objective_value": None,
+                "objective_bounds": bounds,
+                "assignment": {},
+                "solve_time": time.perf_counter() - start_time,
+                "trace": trace,
+            }
+
+        def _decide_at(w) -> dict:
+            sat = DIMACS()
+            sat.read(str(input_file))
+            start_time_model = time.perf_counter()
+            constrained = self._generate_constraints_sum_leq_int_LS24(sat, sum_arr, int(w))
+            model_time = time.perf_counter() - start_time_model
+            tmp_cnf = input_file.parent / f"{input_file.stem}_obj{w}.cnf"
+            constrained.write(tmp_cnf)
+            if deadline is not None:
+                remaining = deadline - time.perf_counter()
+                if remaining <= 0:
+                    return {
+                        "status": SOLVING_STATUS.TIMEOUT,
+                        "satisfiability": None,
+                        "assignment": None,
+                        "solve_time": time_limit,
+                        "model": constrained, 
+                        "model_time": model_time
+                    }
+            else:
+                remaining = None
+            trace[w] = self.decide(tmp_cnf, time_limit=remaining)
+            trace[w]["model"] = constrained
+            trace[w]["model_time"] = model_time
+            return trace[w]
+
+        last_sat = None
+        while W_MIN < W_MAX:
+            w = (W_MIN + W_MAX) // 2
+            r = _decide_at(w)
+
+            if r["status"] == SOLVING_STATUS.TIMEOUT:
+                return _early_return(SOLVING_STATUS.TIMEOUT)
+            elif r["status"] != SOLVING_STATUS.SUCCESS:
+                return _early_return(r["status"])
+
+            if r["satisfiability"]:
+                last_sat = r
+                W_MAX = w
+            else:
+                W_MIN = w + 1
+
+        # Loop exited with W_MIN == W_MAX. If we never proved this value SAT,
+        # test it once more to distinguish "optimum found" from "all UNSAT".
+        if last_sat is None:
+            r = _decide_at(W_MIN)
+
+            if r["status"] == SOLVING_STATUS.TIMEOUT:
+                return _early_return(SOLVING_STATUS.TIMEOUT)
+            elif r["status"] != SOLVING_STATUS.SUCCESS:
+                return _early_return(r["status"])
+
+            if r["satisfiability"]:
+                last_sat = r
+            else:
+                # No feasible solution exists in the searched range.
+                return _early_return(SOLVING_STATUS.SUCCESS)
+
+        opt = _format_weight(W_MIN)
+        return {
+            "status": SOLVING_STATUS.SUCCESS,
+            "objective_value": opt,
+            "objective_bounds": (opt, opt),
+            "assignment": last_sat["assignment"],
+            "solve_time": time.perf_counter() - start_time,
+            "trace": trace,
+        }
+
+    def solve_multiple(self, input_file, sum_arr_file, solve_range,
+                       number_of_solutions, trail_vars=None,
+                       precision=0, time_limit=None):
+        r"""
+        Find up to ``number_of_solutions`` distinct minimum-weight satisfying
+        assignments by repeated solving with blocking clauses. Each iteration
+        adds a clause excluding the previous assignment and writes the
+        augmented CNF to a new file.
+
+        Stops early if a solve fails or no satisfying assignment is found in
+        the current range.
+
+        INPUT:
+
+            - ``input_file`` -- path to the base CNF
+            - ``sum_arr_file`` -- path to the JSON file containing the sum
+              array; see :meth:`solve`
+            - ``solve_range`` -- ``(lower, upper)`` pair bounding the search
+            - ``number_of_solutions`` -- maximum number of solutions to find
+            - ``trail_vars`` -- optional iterable of CNF variable indices
+              (ints) that define "the trail". When provided, the blocking
+              clause is built only over these variables; assignments that
+              differ only on helper variables are treated as the same
+              solution. When ``None``, every variable in the assignment is
+              used.
+            - ``precision`` -- integer (default ``0``); see :meth:`solve`
+            - ``time_limit`` -- float or ``None``; per-iteration time limit
+
+        OUTPUT:
+
+            - list of result dicts in the same shape as :meth:`solve` returns,
+              ordered best (lowest weight) first
+
+        EXAMPLES:
+
+            Solve a model for SKINNY::
+
+                sage: # optional - cryptominisat  # optional - espresso
+                sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   skinny = SKINNY_CVL(64, 64, R=3)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     solve_range=(0, 100),
+                ....:     path=Path(tmpdir))
+                ....:   model = skinny.model(model_options)
+                ....:   r = SOLVER.CRYPTOMINISAT.solve_multiple(
+                ....:         model_options.path / "SKINNY.cnf",
+                ....:         model_options.path / "SKINNYsum.json",
+                ....:         model_options.solve_range, 5)
+                8976 variables and 19313 clauses were written to ...
+                sage: len(r)
+                5
+                sage: r[0] # random
+                {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                 'objective_value': 5,
+                 'objective_bounds': (5, 5),
+                 'assignment': ...
+                ...
+                 'solve_time': 1.262912990001496,
+                 'trace': ...
+                ...
+                }
+        """
+        results = []
+        cur = input_file
+        for i in range(number_of_solutions):
+            r = self.solve(cur, sum_arr_file, solve_range,
+                           precision=precision, time_limit=time_limit)
+            results.append(r)
+            done = (r["status"] != SOLVING_STATUS.SUCCESS
+                    or r["objective_value"] is None)
+            if done or i == number_of_solutions - 1:
+                break
+            cur = self._exclude_assignment(
+                cur, r["assignment"], trail_vars=trail_vars
+            )
+        return results
+
+    def _exclude_assignment(self, input_file, assignment, trail_vars=None):
+        r"""
+        Write a copy of the CNF in ``input_file`` with one extra blocking
+        clause that excludes ``assignment``. Returns the path of the new file.
+
+        The blocking clause is the disjunction of the negated literals of the
+        previous satisfying assignment. If ``trail_vars`` is provided, only
+        variables whose CNF index is in ``trail_vars`` participate in the
+        clause; helpers are ignored.
+        """
+        sat = DIMACS()
+        sat.read(str(input_file))
+        if trail_vars is not None:
+            trail_vars = set(trail_vars)
+            literals = [
+                (-v if val == 1 else v)
+                for v, val in assignment.items()
+                if v in trail_vars
+            ]
+        else:
+            literals = [
+                (-v if val == 1 else v)
+                for v, val in assignment.items()
+            ]
+        sat.add_clause(tuple(literals))
+        new_file = input_file.parent / f"{input_file.stem}_excl{input_file.suffix}"
+        sat.write(new_file)
+        return new_file
+
+    def _parse_assignment_line(self, line):
+        """
+        Parse a DIMACS-style assignment line into a ``{var: 0/1}`` dictionary.
+
+        The line is expected to be a space-separated list of signed integers
+        terminated by a ``0`` sentinel (the standard SAT solver output format).
+        Positive integers map to ``1``, negatives to ``0``.
+
+        INPUT:
+
+            - ``line`` -- string; the assignment line (sentinel ``0`` included)
+
+        OUTPUT:
+
+            - dictionary mapping each variable index to ``0`` or ``1``
+        """
+        def __get_val(var):
+            if int(var) < 0:
+                return 0
+            elif int(var) > 0:
+                return 1
+            else:
+                raise AssertionError("Encountered 0 while parsing .sat")
+
+        tokens = line.split(" ")[:-1]
+        return {abs(int(var)): __get_val(var) for var in tokens}
+
+    @abstractmethod
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the satisfiability and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``satisfiability`` -- bool
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
+        """
+        pass
+
+    def _generate_constraints_sum_leq_int_LS24(self, sat, sum_arr, num):
+        r"""
+        Add constraints for :math:`sum(arr) \leq num` to the model.
+
+        INPUT:
+
+            - ``sat``-- sat model as ``DIMACS`` instance
+
+            - ``sum_arr_file`` -- path to the JSON file containing the sum
+              array, i.e. a list of ``(weight, var)`` pairs
+
+            - ``num``-- bound to insert
+
+        OUTPUT:
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
+
+        .. NOTE::
+
+            The constraints are given in
+            https://link.springer.com/chapter/10.1007/978-3-031-54776-8_14,
+            section 3.4. However, there is a typo in this paper, as the sum
+            that we want to bound should go from :math:`0 \leq i \leq l-1`
+            instead of :math:`l`. Therefore, the last constraint must be
+            :math:`\bar{u_{l-1}} \lor \bar{a_{l-2, w-1}}` instead of
+            :math:`\bar{u_{l}} \lor \bar{a_{l-1, w-1}}`.
+
+        TESTS::
+
+            sage: # optional - cryptominisat
+            sage: from sage.sat.solvers.dimacs import DIMACS
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: from pathlib import Path
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: path = Path(tmpdir)
+            sage: for NUM_CLAUSES in range(1, 20):
+            ....:   sat = DIMACS()
+            ....:   for i in range(1, NUM_CLAUSES + 1): sat.add_clause((i,))
+            ....:   for bound in range(NUM_CLAUSES + 4):
+            ....:       new_sat = SOLVER.CRYPTOMINISAT._generate_constraints_sum_leq_int_LS24(
+            ....:           sat, [(1, cl) for cl in range(1, NUM_CLAUSES+1)], bound
+            ....:       )
+            ....:       _ = new_sat.write(path / 'constraints.cnf')
+            ....:       _ = SOLVER.CRYPTOMINISAT.invoke(
+            ....:           path / 'constraints.cnf',
+            ....:           path / 'constraints.sat',
+            ....:           path / 'constraints.log',
+            ....:       )
+            ....:       with open(path /'constraints.sat') as f:
+            ....:           status = f.readlines()[0].strip('\n')
+            ....:           f.close()
+            ....:       if status == 'SAT':
+            ....:           if bound != NUM_CLAUSES:
+            ....:               raise AssertionError(
+            ....:                   "The constraints don't assert correct bound!")
+            ....:           else: break
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
+        """
+        new_sat = DIMACS()
+        for _ in range(sat.nvars()):
+            new_sat.var()  # set counter to ``sat.nvars()``
+        assert sat.nvars() == new_sat.nvars()
+
+        for clause in sat.clauses():  # copy clauses
+            new_sat.add_clause(clause[0])
+
+        # instead of e.g. [(3, 124), (2, 158)], we have [124, 124, 124, 158, 158]
+        u = []
+        for arr_with_mults in [factor*[entry] for factor, entry in sum_arr]:
+            u += arr_with_mults
+
+        L = len(u)
+
+        # special, trivial case for sum_arr with less elements than bound
+        if L <= num:
+            return new_sat
+
+        # special, trivial case for w = 0
+        if num == 0:
+            for i in range(L):
+                new_sat.add_clause((-u[i], ))
+            return new_sat
+
+        # auxilary vars a_{i,j}
+        a = [[new_sat.var() for _ in range(num)] for _ in range(L)]
+
+        new_sat.add_clause((-u[0], a[0][0]))
+        for j in range(1, num):
+            new_sat.add_clause((-a[0][j], ))
+        for i in range(1, L-1):
+            new_sat.add_clause((-u[i], a[i][0]))
+            new_sat.add_clause((-a[i-1][0], a[i][0]))
+            for j in range(1, num):
+                new_sat.add_clause((-u[i], -a[i-1][j-1], a[i][j]))
+                new_sat.add_clause((-a[i-1][j], a[i][j]))
+            new_sat.add_clause((-u[i], -a[i-1][num-1]))
+        new_sat.add_clause((-u[L-1], -a[L-2][num-1]))
+
+        return new_sat
+
+
+class GUROBI_CVL(MILP_SOLVER_CVL):
+    """
+    Interface to the Gurobi MILP solver, see https://www.gurobi.com/.
+
+    See :class:`civerly.solvers.SCIP_CVL` for examples.
+    """
+    def __init__(self):
+        """Initizialize the Gurobi interface."""
+        super().__init__()
+        self.name = "Gurobi"
+        self.timeout_string = r"Time limit reached"
+        self.bounds_regexp = r'Best objective (\S+), best bound (\S+), gap'
+
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the Gurobi CLI command list."""
+        command = ["gurobi_cl", f"ResultFile={solution_file}", f"LogFile={log_file}", str(input_file)]
+        if time_limit is not None:
+            command.insert(2, f"TimeLimit={time_limit}")
+        return command
+
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the objective value and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
+        """
+        assert isinstance(solution_file, Path)
+
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         def __string_to_int_gurobi(str):
@@ -603,82 +1017,120 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
 
         objective_value = file_content[0][file_content[0].index('=')+2:]
         objective_value = _float_or_int(objective_value)
-        results = {}
+        assignment = {}
         for line in file_content[1:-1]:
             name = line[:line.index(" ")]
             value = __string_to_int_gurobi(line[line.index(" ")+1:])
-            results[name] = value
-        return _to_dict(results), objective_value
+            assignment[name] = value
+        return  objective_value, _to_dict(assignment)
 
-
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
+    def solve_multiple(self, input_file, milp, number_of_solutions,
+                       trail_vars=None, time_limit=None):
         r"""
-        Find up to *n* optimal solutions using Gurobi's solution pool.
-
-        A single Gurobi invocation with ``PoolSearchMode=2`` and ``PoolGap=0``
-        finds the optimum and then systematically enumerates additional
-        solutions of equal quality, writing each to a numbered ``.sol`` file.
+        Find the ``number_of_solutions`` best solutions to the model using
+        Gurobi's solution pool. ``milp`` and ``trail_vars`` are accepted to
+        match the base signature but are unused: the pool produces all
+        solutions in a single invocation, and Gurobi's CLI does not expose a
+        "distinct only over these variables" knob -- the pool's distinctness
+        criterion is over full assignments (helpers included).
 
         Gurobi pool parameters used:
 
-        - ``PoolSolutions=n``  – keep at most *n* solutions.
-        - ``PoolSearchMode=2`` – systematically enumerate pool solutions.
-        - ``PoolGap=0``        – only accept solutions matching the optimum.
-        - ``SolFiles=<prefix>``– write pool solutions as
-          ``<prefix>0.sol``, ``<prefix>1.sol``, …
+        - ``PoolSolutions=n``: keep at most *n* solutions.
+        - ``PoolSearchMode=2``: systematically enumerate pool solutions.
+        - ``PoolGap=0``: only accept solutions matching the optimum.
+        - ``SolFiles=<prefix>``: write pool solutions as ``<prefix>0.sol``, ``<prefix>1.sol``, ...
 
-        Returns a list of ``(results_dict, objective_value)`` pairs
-        (at most *n* entries).
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.MILP_SOLVER_CVL.solve_multiple`
+
+        TESTS: 
+
+            sage: # optional - gurobi
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   aes = AES_CVL(R=10)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.GUROBI,
+            ....:       path=Path(tmpdir))
+            ....:   model = aes.model(model_options)
+            ....:   r = SOLVER.GUROBI.solve_multiple(model_options.path / "AES.mps", model, 5)
+            2884 variables and 3085 constraints were written to ...
+            sage: len(r)
+            5
+            sage: r[0] # random
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                'objective_value': 55,
+                'objective_bounds': (55, 55),
+                'assignment': ...
+            ...
+                'solve_time': 0.36570845899768756}
+            sage: r[4] # random
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+                'objective_value': 55,
+                'objective_bounds': (55, 55),
+                'assignment': ...
+            ...
+                'solve_time': 0.4231403749981837}
+        
+        Make gurobi time out::
+ 
+            sage: # optional - gurobi
+            sage: aes = AES_CVL(R=40)
+            sage: model = aes.model(model_options)
+            11644 variables and 12565 constraints were written to...
+            sage: r = SOLVER.GUROBI.solve_multiple(
+            ....:     model_options.path / "AES.mps", model, 5, time_limit=2
+            ....: )
+            sage: len(r)
+            5
+            sage: r[0] # random
+            {'status': <SOLVING_STATUS.TIMEOUT: 2>,
+                'objective_value': 250,
+                'objective_bounds': (95, 250),
+                'assignment': ...
+            ...
+                'solve_time': 2.004945993423462}
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path)
         """
-
-        def solutionpooljson_to_solfiles(json_file_name, output_file_name):
-            """
-            The optimal solutions in the Gurobi solution pool can only be retrieved
-            in form of a JSON file. In order to make the program flow coherent
-            to the other solvers, write each solution into a new .sol file.
-            """
-            with open(json_file_name, 'r') as f:
-                data = json.load(f)
-
-            num_solutions = data['SolutionInfo']['SolCount']
+        def _solutionpooljson_to_solfiles(data, solution_file, num_solutions):
+            """Helper function to convert solutions from json to .sol files."""
 
             for sol_idx in range(num_solutions):
                 obj_val = data['SolutionInfo']['PoolNObjVal'][sol_idx]
-                
-                sol_file = (
-                    output_file_name.parent
-                    / f"{output_file_name.stem}_{sol_idx}.sol"
-                )
 
-                with open(sol_file, 'w') as f:
+                sol_file = (solution_file.parent / f"{solution_file.stem}_{sol_idx}.sol")
+
+                with sol_file.open('w') as f:
                     f.write(f"# Objective value = {obj_val}\n")
-                    
+
                     for var in data['Vars']:
                         var_name = var['VarName']
                         var_value = var['PoolNX'][sol_idx]
                         f.write(f"{var_name} {var_value}\n")
             return
 
+        assert isinstance(input_file, Path)
+        solution_file = input_file.parent / f"{input_file.stem}_{self.name}.sol"
+        log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
+        json_file = input_file.parent / f"{input_file.stem}_pool.json"
 
-        input_file_name  = model_options.path / (cipher.name + ".mps")
-        output_file_name = model_options.path / (cipher.name + ".sol")
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
-
-        n = model_options.number_of_solutions
-
-        parent = output_file_name.parent
-        stem = output_file_name.stem
-        log_file_name = parent / f"{stem}_{self.name}.log"
-        json_file_name = parent / f"{stem}_pool.json"
         command = [
             "gurobi_cl",
             "PoolSearchMode=2",
-            f"LogFile={log_file_name}",
-            f"PoolSolutions={n}",
+            f"LogFile={log_file}",
+            f"PoolSolutions={number_of_solutions}",
             "JSONSolDetail=1",
-            f"ResultFile={json_file_name}",
-            str(input_file_name)
+            f"ResultFile={json_file}",
+            str(input_file)
         ]
 
         if time_limit is not None:
@@ -688,143 +1140,179 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             process = subprocess.Popen(command)
             errno = process.wait()
 
-        if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
+        with json_file.open('r') as f:
+            data = json.load(f)
 
-        if log_file_name.exists():
-            with open(log_file_name, 'r') as file:
+        num_solutions = data['SolutionInfo']['SolCount']
+        runtime       = data['SolutionInfo']['Runtime']
+        st            = data['SolutionInfo']['Status']
+
+        if log_file.exists():
+            with log_file.open('r') as file:
                 if re.search(self.timeout_string, file.read(), re.MULTILINE):
-                    self.status = SOLVING_STATUS.TIMEOUT
+                    status = SOLVING_STATUS.TIMEOUT
 
-        if self.status != SOLVING_STATUS.SUCCESS:
-            raise SolverException(self.status)
+        # convert to seperate .sol files and get relevant info
+        _solutionpooljson_to_solfiles(data, solution_file, num_solutions)
+
+        if errno != 0:
+            status = SOLVING_STATUS.ERROR
+        else:
+            status = {2: SOLVING_STATUS.SUCCESS, 9: SOLVING_STATUS.TIMEOUT}[st]
+
+        # PoolObjBound must be at least as good as ObjBound
+        pool_obj_bound = data['SolutionInfo']['PoolObjBound']
         
-        # convert to seperate .sol files
-        solutionpooljson_to_solfiles(
-            json_file_name=json_file_name, output_file_name=output_file_name
-        )
 
+        # create results list from parsing the .sol files
         results = []
-        for i in range(n):
-            sol_file = (
-                output_file_name.parent
-                / f"{output_file_name.stem}_{i}.sol"
-            )
-            if not sol_file.exists():
-                print(f"{sol_file} doesnt exist")
-                continue
-            try:
-                results.append(self.process_solution_file(sol_file))
-            except (AssertionError, ValueError):
-                print(f"process solution file failed for {sol_file}")
-                continue
-
-        # Gurobi always writes the best solution to ResultFile; use as fallback
-        if not results and output_file_name.exists():
-            results.append(self.process_solution_file(output_file_name))
-
+        for sol_idx in range(num_solutions):
+            sol_file = (solution_file.parent / f"{solution_file.stem}_{sol_idx}.sol")   
+            objective_value, assignment = self._process_solution_file(sol_file)
+            results.append({
+                "status": status,
+                "objective_value": objective_value,
+                "objective_bounds": (pool_obj_bound, objective_value),
+                "assignment": assignment,
+                "solve_time": runtime,
+            })
         return results
 
 
 class SCIP_CVL(MILP_SOLVER_CVL):
+    """
+    Interface to the SCIP solver, see https://scipopt.org/.
+
+    EXAMPLES:
+
+        Solve a model for the AES::
+
+            sage: # optional - scip
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip # random
+            ....:   aes = AES_CVL(R=10)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.SCIP,
+            ....:       path=Path(tmpdir))
+            ....:   aes.model(model_options)
+            ....:   SOLVER.SCIP.solve(model_options.path / "AES.mps")
+            2884 variables and 3085 constraints were written to ...
+            Boolean Program (minimization, 2884 variables, 3085 constraints)
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+             'objective_value': 55,
+             'objective_bounds': (55, 55),
+             'assignment': {'OUT': {13: 0,
+            ...
+               2: 0},
+              'X0': {1: 0,
+            ...
+               30: 0},
+            ...
+              'X12': {1: 0,
+            ...
+               31: 0,
+               30: 0},
+              'IN': {0: 0,
+            ...
+               15: 0}},
+             'solve_time': 0.2824276300088968}
+
+        Solve a model for CRAFT with a time limit (the identified solution is non-optimal)::
+
+            sage: from civerly.cipher_implementations.craft import CRAFT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: craft = CRAFT_CVL(15)
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip # random
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     path=Path(tmpdir))
+            ....:   craft.model(model_options)
+            ....:   SOLVER.SCIP.solve(model_options.path / "CRAFT.mps", time_limit=5)
+            8736 variables and 9021 constraints were written to ...
+            Boolean Program (minimization, 8736 variables, 9021 constraints)
+            {'status': <SOLVING_STATUS.TIMEOUT: 2>,
+             'objective_value': 73,
+             'objective_bounds': (34.3498121721, 73),
+             'assignment': {'OUT': {2: 0,
+            ...
+            'solve_time': 5.063110857998254}
+     """
     def __init__(self):
+        """Initizialize the SCIP interface."""
         super().__init__()
         self.name = "SCIP"
         self.timeout_string = r"time limit reached"
+        self.bounds_regexp = r'Primal Bound\s*:\s*(\S+).*\nDual Bound\s*:\s*(\S+).*'
 
-    def invoke(self, input_file_name, output_file_name,
-              log_file_name=None, time_limit=None):
-        r"""Invoke SCIP solver via shell."""
-        super().invoke(
-            input_file_name, output_file_name, log_file_name, time_limit
-        )
-        if time_limit is not None:
-            with open('scip_settings.set', 'w') as f:
-                f.write(f"write/printzeros = TRUE\nlimits/time = {time_limit}")
-        else:
-            with open('scip_settings.set', 'w') as f:
+
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
+        """
+        Invoke the SCIP solver via its CLI.
+
+        SCIP needs a settings file alongside the command-line invocation; this
+        method writes it before delegating to the shared MILP template and
+        removes it afterwards.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        try:
+            with Path('scip_settings.set').open('w') as f:
                 f.write('write/printzeros = TRUE')
-        command = [
+                if time_limit is not None:
+                    f.write(f"\nlimits/time = {time_limit}")
+            return super().invoke(input_file, solution_file, log_file, time_limit)
+        finally:
+            Path("scip_settings.set").unlink(missing_ok=True)
+
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the SCIP CLI command list."""
+        return [
             "scip", "-c",
             (
-                f"read {input_file_name} "
+                f"read {input_file} "
                 "optimize write solution "
-                f"{output_file_name} "
+                f"{solution_file} "
                 "quit"
             ),
             "-s", "scip_settings.set",
+            "-l", str(log_file),
         ]
-        # only add -l flag when log_file_name is set
-        if log_file_name is not None:
-            command += ["-l", str(log_file_name)]
 
-        with suppress_output():
-            process = subprocess.Popen(command)
-            errno = process.wait()
-
-        if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
-
-        if time_limit is not None:
-            # check if the solver reported a time out by checking the log file
-            # for an according string
-            with open(log_file_name, 'r') as file:
-                content = file.read()
-            if re.search(self.timeout_string, content, re.MULTILINE):
-                self.status = SOLVING_STATUS.TIMEOUT
-
-        # clean up
-        Path("scip_settings.set").unlink(missing_ok=True)
-
-        return
-
-    def get_objective_bounds(self, log_file_name):
-        """
-        Extract the bounds on the objective value from
-        the log file of a MILP solver.
-
-        This function shall be used when the MILP solver
-        exceeds the given timeout.
-
-        INPUT:
-
-            - ``log_file_name``-- name of the log file
-
-        """
-        assert isinstance(log_file_name, Path)
-        regexp = r'Primal Bound\s*:\s*(\S+).*\nDual Bound\s*:\s*(\S+).*'
-
-        with open(log_file_name, 'r') as file:
-            content = file.read()
-
-        hit = re.search(regexp, content, re.MULTILINE)
-        if hit:
-            upper_bound = _float_or_int(hit.group(1))
-            lower_bound = _float_or_int(hit.group(2))
-            return lower_bound, upper_bound
-
-        warnings.warn(f"No objective bounds found in {log_file_name}")
-        return None, None
-
-    def process_solution_file(self, solution_file_name):
+    def _process_solution_file(self, solution_file):
         """
         Parse a solution generated by SCIP.
 
         INPUT:
 
-            - ``solution_file_name``-- name of the file containing a solution
+            - ``solution_file``-- name of the file containing a solution
 
+        OUTPUT:
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
         """
-        assert isinstance(solution_file_name, Path)
+        assert isinstance(solution_file, Path)
 
-        with open(solution_file_name, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         if any(["infeasible" in line for line in file_content[:10]]):
             raise ValueError("There is no solution found!")
-        results = {}
+        assignment = {}
         objective_value = file_content[1].strip(" ")
         objective_value = objective_value[objective_value.index(":")+1:]
         objective_value = _float_or_int(objective_value)
@@ -832,91 +1320,53 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             line = line[:line.index("(")].replace(" ", "")
             value = int(round(float(line[line.index("]")+1:])))
             name = line[:line.index("]")+1]
-            results[name] = value
+            assignment[name] = value
 
-        return _to_dict(results), objective_value
+        return  objective_value, _to_dict(assignment)
 
 
 class GLPK_CVL(MILP_SOLVER_CVL):
+    """
+    Interface to the GLPK solver, see https://www.gnu.org/software/glpk/.
+
+    See :class:`civerly.solvers.SCIP_CVL` for examples.
+    """
     def __init__(self):
+        """Initizialize the GLPK interface."""
         super().__init__()
         self.name = "GLPK"
         self.timeout_string = r"TIME LIMIT EXCEEDED"
+        self.bounds_regexp = r'.*mip\s*=\s*(\S+)\s*>=\s*(\S+).*'
 
-    def invoke(self, input_file_name, output_file_name,
-              log_file_name=None, time_limit=None):
-        r"""Invoke GLPK solver via shell."""
-        super().invoke(
-            input_file_name, output_file_name, log_file_name, time_limit
-        )
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the GLPK CLI command list."""
         command = [
-            "glpsol", str(input_file_name),
-            "-o", str(output_file_name)
+            "glpsol", str(input_file),
+            "-o", str(solution_file),
+            "--log", str(log_file),
         ]
-        # only add --log flag when log_file_name is set
-        if log_file_name is not None:
-            command += ["--log", str(log_file_name)]
-
         if time_limit is not None:
             command.insert(2, "--tmlim")
             command.insert(3, str(time_limit))
+        return command
 
-        with suppress_output():
-            process = subprocess.Popen(command)
-            errno = process.wait()
-
-        if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
-
-        if time_limit is not None:
-            # check if the solver reported a time out by checking the log file
-            # for an according string
-            with open(log_file_name, 'r') as file:
-                content = file.read()
-            if re.search(self.timeout_string, content, re.MULTILINE):
-                self.status = SOLVING_STATUS.TIMEOUT
-
-        return
-
-    def get_objective_bounds(self, log_file_name):
-        """
-        Extract the bounds on the objective value from the log of an MILP solver.
-
-        This function shall be used when the MILP solver exceeds the given timeout.
-
-        INPUT:
-
-            - ``log_file_name``-- name of the log file
-
-        """
-        assert isinstance(log_file_name, Path)
-        regexp = r'.*mip\s*=\s*(\S+)\s*>=\s*(\S+).*'
-
-        with open(log_file_name, 'r') as file:
-            content = file.read()
-
-        hit = re.search(regexp, content, re.MULTILINE)
-        if hit:
-            upper_bound = _float_or_int(hit.group(1))
-            lower_bound = _float_or_int(hit.group(2))
-            return lower_bound, upper_bound
-
-        warnings.warn(f"No objective bounds found in {log_file_name}")
-        return None, None
-
-    def process_solution_file(self, solution_file_name):
+    def _process_solution_file(self, solution_file):
         """
         Parse a solution generated by GLPK.
 
         INPUT:
 
-            - ``solution_file_name``-- name of the file containing a solution
+            - ``solution_file``-- name of the file containing a solution
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
+
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
         """
-        assert isinstance(solution_file_name, Path)
+        assert isinstance(solution_file, Path)
 
-        with open(solution_file_name, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         if any(["INFEASIBLE" in line for line in file_content[-10:]]):
@@ -950,402 +1400,835 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         ]
         file_content = [line.replace(" ", "") for line in file_content]
 
-        results = {}
+        assignment = {}
         for line in file_content:
             i = line.index("]")
             name = line[:i+1]
             value = line[i+1:i+2]
-            results[name] = value
-        return _to_dict(results), objective_value
+            assignment[name] = value
+        return objective_value, _to_dict(assignment)
 
 
 class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
+    """
+    Interface to the CryptoMinisat SAT solver, see https://github.com/msoos/cryptominisat.
+
+    EXAMPLES:
+
+        Solve a model for PRESENT::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir: # random
+            ....:   present_cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   _ = present_cipher.model(model_options)
+            ....:   SOLVER.CRYPTOMINISAT.solve(
+            ....:     model_options.path / "PRESENT.cnf",
+            ....:     model_options.path / "PRESENTsum.json",
+            ....:     model_options.solve_range,
+            ....:     model_options.sat_precision)
+            5312 variables and 12993 clauses were written to ...
+            {'status': <SOLVING_STATUS.SUCCESS: 1>,
+             'objective_value': 6,
+             'objective_bounds': (6, 6),
+             'assignment': {1: 0,
+              2: 0,
+              3: 0,
+            ...
+              6464: 0},
+            'solve_time': 1.5007964510004967,
+            'trace': {
+             50: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.30154894801671617},
+             25: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.28024723200360313},
+             12: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.1579511149902828},
+             6: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': True,
+              'assignment': ...
+              'solve_time': 0.12510626600123942},
+             3: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': False,
+              'assignment': {},
+              'solve_time': 0.16972918799729086},
+             5: {'status': <SOLVING_STATUS.SUCCESS: 1>,
+              'satisfiability': False,
+              'assignment': {},
+              'solve_time': 0.26149826901382767}}}
+
+        Again, but this time more rounds and with a timeout (which finds a non-optimal solution)::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir: # random
+            ....:   present_cipher = PRESENT_CVL(R=13)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   _ = present_cipher.model(model_options)
+            ....:   SOLVER.CRYPTOMINISAT.solve(
+            ....:     model_options.path / "PRESENT.cnf",
+            ....:     model_options.path / "PRESENTsum.json",
+            ....:     model_options.solve_range,
+            ....:     model_options.sat_precision,
+            ....:     time_limit=5)
+            16112 variables and 40209 clauses were written to ...
+            {'status': <SOLVING_STATUS.TIMEOUT: 2>,
+             'objective_value': 25,
+             'objective_bounds': (13, 25),
+             'assignment': ...
+            ...
+            'solve_time': 5.105086910014506,
+            'trace': ...
+            ...
+    """
     def __init__(self):
+        """Initizialize the CryptoMinisat interface."""
         super().__init__()
         self.name = "CryptoMiniSat"
+        # 15 is CryptoMiniSat's exit code for "interrupted (time limit)".
+        self.errno_map[15] = SOLVING_STATUS.TIMEOUT
 
-    def invoke(self, input_file_name, output_file_name,
-              log_file_name=None, time_limit=None):
-        r"""Invoke CryptoMiniSat solver via shell."""
-        super().invoke(
-            input_file_name, output_file_name, log_file_name, time_limit
-        )
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the CryptoMinisat CLI command list."""
         command = [
             "cryptominisat5",
             "--presimp", "1",
-            "--dumpresult", output_file_name,
-            input_file_name
+            "--dumpresult", str(solution_file),
+            str(input_file),
         ]
         if time_limit is not None:
             command.insert(1, "--maxtime")
             command.insert(2, str(time_limit))
+        return command
 
-        if log_file_name is not None:
-            self.redirect_stdout = open(log_file_name, 'a')
-
-        with suppress_output():
-            process = subprocess.Popen(
-                command, stdout=self.redirect_stdout,
-                stderr=self.redirect_stdout
-            )
-            errno = process.wait()
-
-        if log_file_name is not None:
-            self.redirect_stdout.close()
-
-        if errno != 0:
-            # 10: SAT, 20: UNSAT
-            if errno in [10, 20]:
-                pass
-            elif errno == 15:
-                self.status = SOLVING_STATUS.TIMEOUT
-            else:
-                self.status = SOLVING_STATUS.ERROR
-
-        return
-
-    def process_solution_file(self, solution_file_name):
+    def _process_solution_file(self, solution_file):
         """
-        Parse '.sat' files and recover the variable assignments as well as the
-        objective value.
+        Parse a solution generated by CryptoMinisat.
 
         INPUT:
 
-            - ``solution_file_name``-- name of the file containing a solution
+            - ``solution_file``-- path to the file containing the solution
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
 
-        .. NOTE::
+            - ``satisfiability`` -- bool
 
-            CiVerLy augments the standard file format convention for SAT output
-            files. Typically the first line holds the string 'SAT' or 'UNSAT',
-            while the variable assignments are given in the second line, in form of
-            the **sign** of the corresponding integer. Additionally, CiVerLy
-            writes the objective value into the second line, as an integer, which
-            is non-standard.
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
-        assert isinstance(solution_file_name, Path)
+        assert isinstance(solution_file, Path)
 
-        with open(solution_file_name, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         if "UNSAT" in file_content[0]:
-            raise AssertionError("The model is UNSAT")
+            return False, {}
 
-        def __get_val(var):
-            if int(var) < 0:
-                return 0
-            elif int(var) > 0:
-                return 1
-            else:
-                raise AssertionError("Encountered 0 while parsing .sat")
-
-        results = file_content[1].split(" ")[:-1]
-        results = {abs(int(var)): __get_val(var) for var in results}
-        objective_value = _float_or_int(file_content[2])
-
-        return results, objective_value
+        return True, self._parse_assignment_line(file_content[1])
 
 
 class CADICAL_CVL(SAT_SOLVER_CVL):
-    def __init__(self):
-        super().__init__()
-        self.name = "CaDiCal"
+    """
+    Interface to the CaDiCaL SAT solver, see https://github.com/arminbiere/cadical.
 
-    def invoke(self, input_file_name, output_file_name,
-              log_file_name=None, time_limit=None):
-        r"""Invoke CaDiCal solver via shell."""
-        super().invoke(
-            input_file_name, output_file_name, log_file_name, time_limit
-        )
+    See :class:`civerly.solvers.CRYPTOMINISAT_CVL` for examples.
+    """
+    def __init__(self):
+        """Initizialize the CaDiCaL interface."""
+        super().__init__()
+        self.name = "CaDiCaL"
+
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
+        """
+        Invoke the CaDiCaL solver, wrapping the shared template with a
+        post-check on the solution file: CaDiCaL signals a timeout by writing
+        ``c UNKNOWN`` rather than via an exit code.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL.invoke`
+        """
+        status = super().invoke(input_file, solution_file, log_file, time_limit)
+        if status == SOLVING_STATUS.SUCCESS:
+            with solution_file.open('r') as file:
+                if file.readline().strip("\n") == "c UNKNOWN":
+                    status = SOLVING_STATUS.TIMEOUT
+        return status
+
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Build the CaDiCaL CLI command list."""
         command = [
             "cadical",
-            str(input_file_name),
-            "-P1", # preprocess for 1 round
+            str(input_file),
+            "-P1",  # preprocess for 1 round
             "--sat",
-            "-w", str(output_file_name)
+            "-w", str(solution_file),
         ]
         if time_limit is not None:
             command.insert(2, "-t")
             command.insert(3, str(time_limit))
+        return command
 
-        if log_file_name is not None:
-            self.redirect_stdout = open(log_file_name, 'a')
-
-        with suppress_output():
-            process = subprocess.Popen(
-                command, stdout=self.redirect_stdout,
-                stderr=self.redirect_stdout
-            )
-            errno = process.wait()
-
-        if log_file_name is not None:
-            self.redirect_stdout.close()
-
-        if errno != 0:
-            # 10: SAT, 20: UNSAT
-            if errno in [10, 20]:
-                pass
-            else:
-                self.status = SOLVING_STATUS.ERROR
-
-        # if there was no error but there is no solution, we conclude that
-        # there was a time out
-        if self.status == SOLVING_STATUS.SUCCESS:
-            with open(output_file_name, 'r') as file:
-                line = file.readline().strip("\n")
-            if line == "c UNKNOWN":
-                self.status = SOLVING_STATUS.TIMEOUT
-
-        return
-
-    def process_solution_file(self, solution_file_name):
+    def _process_solution_file(self, solution_file):
         """
         Parse a solution generated by CaDiCal.
 
         INPUT:
 
-            - ``solution_file_name``-- name of the file containing a solution
+            - ``solution_file``-- name of the file containing a solution
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
+
+            - ``satisfiability`` -- bool
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
         """
-        assert isinstance(solution_file_name, Path)
+        assert isinstance(solution_file, Path)
 
-        with open(solution_file_name, "r") as f:
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         if "UNSATISFIABLE" in file_content[0]:
-            raise AssertionError("The model is UNSAT")
+            return False, {}
 
+        # strip leading "v "/"s " prefixes, then join all value lines into one
         file_content = [
             line[2:] if len(line) > 0 and line[0] in ["v", "s"] else line
             for line in file_content
         ]
         joined = ' '.join(file_content[1:-2])
-        file_content = [file_content[0], joined, file_content[-2]]
 
-        def __get_val(var):
-            if int(var) < 0:
-                return 0
-            elif int(var) > 0:
-                return 1
-            else:
-                raise AssertionError("Encountered 0 while parsing .sat")
-
-        results = file_content[1].split(" ")[:-1]
-        results = {abs(int(var)): __get_val(var) for var in results}
-        objective_value = _float_or_int(file_content[2])
-
-        return results, objective_value
+        return True, self._parse_assignment_line(joined)
 
 
-class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
+class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
+    """
+    Interface for external MILP solver.
+
+    EXAMPLES:
+
+        Simulate external MILP solver::
+
+            sage: # optional - scip
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: aes = AES_CVL(R=10)
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.WORDWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+            ....:     milp_solver=None,
+            ....:     path=Path(tmpdir))
+            sage: aes.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalMILPSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.SCIP.invoke(
+            ....:     model_options.path / "MixColumn51845.mps",
+            ....:     model_options.path / "MixColumn51845.0ea31e4f.sol",
+            ....:     model_options.path / "MixColumn51845.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: aes.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalMILPSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.SCIP.invoke(
+            ....:     model_options.path / "AES.mps",
+            ....:     model_options.path / "AES.073904d3.sol",
+            ....:     model_options.path / "AES.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: aes.analyse(model_options)
+            Using existing MILP model, make sure it is up to date!
+            3200 variables and 3329 constraints were written to ...
+            Using existing file ..., make sure it is up to date!
+            55
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
+    """
     def __init__(self):
+        """Initizialize the interface."""
         super().__init__()
-        self.name = "Espresso"
+        self.name = "ExternalMILPSolver"
 
-    def invoke(self, input_file_name, output_file_name,
-               log_file_name=None, time_limit=None):
-        r"""Invoke Espresso logic minimizer via shell."""
-        super().invoke(
-            input_file_name, output_file_name,
-            log_file_name=None, time_limit=None
-        )
-        command = [
-            "espresso",
-            "-epos",
-            str(input_file_name)
-        ]
-
-        self.redirect_stdout = open(output_file_name, 'a')
-
-        # with suppress_output():
-        if True:
-            process = subprocess.Popen(
-                command, stdout=self.redirect_stdout,
-                stderr=self.redirect_stdout
-            )
-            errno = process.wait()
-
-        self.redirect_stdout.close()
-
-        # failure: errno 1
-        if errno != 0:
-            self.status = SOLVING_STATUS.ERROR
-
-        return
-
-
-class NO_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
-    def solve(self, input_file_name, output_file_name, time_limit=None):
-        raise NoSolverWarning()
-
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        raise NoSolverWarning()
-
-    def process_solution_file(self, solution_file_name):
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
         """
-        Internal helper method to process the solution file.
+        Signal that the user must solve the MILP externally.
+
+        If ``solution_file`` already exists (e.g. the user provided it before
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        exception is raised carrying the input and expected output paths.
 
         INPUT:
 
-            - ``solution_file_name``-- name of the file containing a solution
-            - ``solver`` -- the used solver, see
-            :class:`civerly.model_options.SOLVER`
+            - ``input_file``-- path to the file containing the model
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+            - ``solution_file``-- path where the user must place the solution
+
+            - ``log_file``-- path to the solver's log file
+
+            - ``time_limit``-- float (default ``None``); ignored
+
+        OUTPUT:
+
+            - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
         """
-        assert isinstance(solution_file_name, Path)
+        self._check_can_invoke(input_file, solution_file, log_file)
+        if solution_file.exists():
+            return self._check_timeout(log_file, None, SOLVING_STATUS.SUCCESS)
+        raise ExternalSolveRequired(
+            f"{self.name}: solve {input_file} externally and place the "
+            f"result at {solution_file}, then re-run."
+        )
 
-        with open(solution_file_name, "r") as f:
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the objective value and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``objective_value`` -- float; the objective value of the solution
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution
+        """
+        assert isinstance(solution_file, Path)
+
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         # try to guess the solver
         if "# Objective value" in file_content[0]:
-            return GUROBI_CVL().process_solution_file(solution_file_name)
+            return GUROBI_CVL()._process_solution_file(solution_file)
         elif "Problem:" in file_content[0] and "Rows:" in file_content[1]:
-            return GLPK_CVL().process_solution_file(solution_file_name)
+            return GLPK_CVL()._process_solution_file(solution_file)
         elif "solution status" in file_content[0]:
-            return SCIP_CVL().process_solution_file(solution_file_name)
+            return SCIP_CVL()._process_solution_file(solution_file)
         else:
             raise ValueError("Unknown solution format")
 
-
-class NO_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
-    def solve(self, input_file_name, output_file_name, model_options,
-              time_limit=None):
+    def _get_objective_bounds(self, log_file):
         """
-        If no solver is selected, generate all cnf's in solve_range
-        and let user solve them externally.
-        """
-        assert isinstance(input_file_name, Path)
-        assert isinstance(output_file_name, Path)
+        Extract the bounds on the objective value from the log.
 
-        # shorten variable name
-        pr = model_options.sat_precision
-
-        def __get_sum_arr():
-            r"""
-            Implicit helper function to read and extract the sum_arr from the
-            corresponding json file.
-            """
-            sum_arr_file = input_file_name.parent / f"{input_file_name.stem}sum.json"
-            with open(sum_arr_file, 'r') as f:
-                file_content = json.load(f)
-
-                # Scale all weights by 10**sat_precision
-                # (and normalize again later)
-                sum_arr = [
-                    (weight, var)
-                    for weight, var in file_content
-                ]
-            return sum_arr
-
-        # scale W_MIN, W_MAX too
-        W_MIN = int(model_options.solve_range[0] * 10**pr)
-        W_MAX = int(model_options.solve_range[1] * 10**pr)
-
-        for w in range(W_MIN, W_MAX):
-            sat = DIMACS()
-            sat.read(str(input_file_name))
-
-            sat_constraining_prob = _generate_constraints_sum_leq_int_LS24(
-                sat,
-                __get_sum_arr(),
-                w
-            )
-
-            # temporary files with encoded weight w
-            name = f"{input_file_name.stem}_obj{w/10**pr}"
-            tmp_cnf_file_name = input_file_name.parent / f"{name}.cnf"
-            sat_constraining_prob.write(tmp_cnf_file_name)
-        return
-
-    def process_solution_file(self, solution_file_name):
-        """
-        Internal helper method to process the solution file.
+        This function is used when the MILP solver exceeds the given timeout.
 
         INPUT:
 
-            - ``solution_file_name``-- name of the file containing a solution
-            - ``solver`` -- the used solver, see
-            :class:`civerly.model_options.SOLVER`
+            - ``log_file``-- name of the log file
 
-        OUTPUT: The processed ``results`` and ``objective_value``.
+        OUTPUT:
+
+            - tuple of floats; lower and upper bound for the optimal objective value
         """
-        assert isinstance(solution_file_name, Path)
+        regexps =  [
+            SOLVER.SCIP.bounds_regexp,
+            SOLVER.GUROBI.bounds_regexp,
+            SOLVER.GLPK.bounds_regexp,
+            ]
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=r"No objective bounds found in .*")
+            for regexp in regexps:
+                self.bounds_regexp = regexp
+                lower, upper = super()._get_objective_bounds(log_file)
+                if (lower, upper) != (None, None):
+                    return lower, upper
+        warnings.warn(f"No objective bounds found in {log_file}")
+        return None, None
 
-        with open(solution_file_name, "r") as f:
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Unused: :meth:`invoke` and never runs a subprocess."""
+        raise NotImplementedError(
+            "The external MILP solver is not invoked by CiVerLy."
+        )
+
+    def _check_timeout(self, log_file, time_limit, status):
+        """
+        Check the log file for a timeout report and update ``status`` accordingly.
+
+        ``log_file`` is searched for all known ``timeout_string`` and ``SOLVING_STATUS.TIMEOUT`` is returned on a hit.
+
+        INPUT:
+
+            - ``log_file`` -- path to the log file
+            - ``time_limit``; ignored
+            - ``status`` -- the current :class:`SOLVING_STATUS`
+
+        OUTPUT:
+
+            - the (possibly updated) :class:`SOLVING_STATUS`
+        """
+        timeout_strings = [
+            SOLVER.SCIP.timeout_string,
+            SOLVER.GUROBI.timeout_string,
+            SOLVER.GLPK.timeout_string,
+        ]
+        for timeout_string in timeout_strings:
+            self.timeout_string = timeout_string
+            status = super()._check_timeout(log_file, 0, status)
+        return status
+
+
+class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
+    """
+    Interface for external SAT solver.
+
+    EXAMPLES:
+
+        Solve a model for PRESENT::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.util import suppress_output
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: present_cipher = PRESENT_CVL(R=4)
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   sat_solver=None,
+            ....:   logic_minimizer=SOLVER.ESPRESSO,
+            ....:   path=Path(tmpdir))
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj50.cnf",
+            ....:   model_options.path / "PRESENT_obj50.a98e6805.sat",
+            ....:   model_options.path / "PRESENT_obj50.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj25.cnf",
+            ....:   model_options.path / "PRESENT_obj25.dd3d0526.sat",
+            ....:   model_options.path / "PRESENT_obj25.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj12.cnf",
+            ....:   model_options.path / "PRESENT_obj12.e13dbb97.sat",
+            ....:   model_options.path / "PRESENT_obj12.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj6.cnf",
+            ....:   model_options.path / "PRESENT_obj6.9be36b0e.sat",
+            ....:   model_options.path / "PRESENT_obj6.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj3.cnf",
+            ....:   model_options.path / "PRESENT_obj3.964d2184.sat",
+            ....:   model_options.path / "PRESENT_obj3.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: with suppress_output(): present_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            solve ... externally and place the result at ..., then re-run.
+            sage: SOLVER.CRYPTOMINISAT.invoke(
+            ....:   model_options.path / "PRESENT_obj5.cnf",
+            ....:   model_options.path / "PRESENT_obj5.2c115958.sat",
+            ....:   model_options.path / "PRESENT_obj5.log")
+            <SOLVING_STATUS.SUCCESS: 1>
+            sage: present_cipher.analyse(model_options)
+            Using existing SAT model, make sure it is up to date!
+            5312 variables and 12993 clauses were written to ...
+            Using existing file ...PRESENT_obj50.a98e6805.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj25.dd3d0526.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj12.e13dbb97.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj6.9be36b0e.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj3.964d2184.sat, make sure it is up to date!
+            Using existing file ...PRESENT_obj5.2c115958.sat, make sure it is up to date!
+            6
+    """
+    def __init__(self):
+        """Initizialize the interface."""
+        super().__init__()
+        self.name = "ExternalSATSolver"
+
+    def invoke(self, input_file, solution_file, log_file, time_limit=None):
+        """
+        Signal that the user must solve the SAT externally.
+
+        If ``solution_file`` already exists (e.g. the user provided it before
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        exception is raised carrying the input and expected output paths.
+
+        INPUT:
+
+            - ``input_file``-- path to the file containing the model
+
+            - ``solution_file``-- path where the user must place the solution
+
+            - ``log_file``-- path to the solver's log file
+
+            - ``time_limit``-- float (default ``None``); ignored
+
+        OUTPUT:
+
+            - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
+        """
+        self._check_can_invoke(input_file, solution_file, log_file)
+        if solution_file.exists():
+            return SOLVING_STATUS.SUCCESS
+        raise ExternalSolveRequired(
+            f"{self.name}: solve {input_file} externally and place the "
+            f"result at {solution_file}, then re-run."
+        )
+
+    def _process_solution_file(self, solution_file):
+        """
+        Extract the satisfiability and the variable assignment of the solution.
+
+        INPUT:
+
+            - ``solution_file``-- path to the file containing the solution
+
+        OUTPUT:
+
+            - ``satisfiability`` -- bool
+
+            - ``assignment`` -- dictionary; the assignment of the variables in the solution. Empty if the problem is unsatisfiable
+        """
+        assert isinstance(solution_file, Path)
+
+        with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
         # try to guess the solver
         if "SATISFIABLE" in file_content[0]:  # also catches UNSATISFIABLE
-            return CADICAL_CVL().process_solution_file(solution_file_name)
+            return CADICAL_CVL()._process_solution_file(solution_file)
         elif "SAT" in file_content[0]:  # also catches UNSAT
-            return CRYPTOMINISAT_CVL().process_solution_file(solution_file_name)
+            return CRYPTOMINISAT_CVL()._process_solution_file(solution_file)
         else:
             raise ValueError("Unknown solution format")
 
-    def solve_multiple(self, model_options, cipher=None, time_limit=None):
-        raise NoSolverWarning()
-
-
-class NO_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
-    def __init__(self):
-        super().__init__()
-
-    def solve(self, input_file_name, output_file_name):
-        raise NoSolverWarning()
-
-
-class SOLVING_STATUS(Enum):
-    """Indicate if solving was successful or what went wrong."""
-
-    SUCCESS = 1
-    TIMEOUT = 2
-    ERROR = 3
-
-
-class NoSolverWarning(Warning):
-    r"""
-    Warning which will be thrown whenever :meth:`analyse` is called with
-    `model_options.solver = None`.
-
-    EXAMPLES::
-
-        sage: from civerly.model_options import *
-        sage: from civerly.util import suppress_output
-        sage: from civerly.cipher_implementations.aes import AES_CVL
-        sage: import tempfile
-        sage: aes = AES_CVL(6)
-        sage: with tempfile.TemporaryDirectory() as tmpdir:
-        ....:   model_options = MODEL_OPTIONS(
-        ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-        ....:     optimization=OPTIMIZATION.MILP,
-        ....:     granularity=GRANULARITY.WORDWISE,
-        ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
-        ....:     milp_solver=None,
-        ....:     sat_solver=None,
-        ....:     path=Path(tmpdir))
-        ....:   with suppress_output():
-        ....:     aes.analyse(model_options)
-        Traceback (most recent call last):
-        ...
-        NoSolverWarning: No solver has been selected.
-        CiVerLy will return without solving.
-
-
-    """
-    def __init__(self):
-        super().__init__(
-            "No solver has been selected. "
-            "CiVerLy will return without solving."
+    def _build_command(self, input_file, solution_file, log_file, time_limit):
+        """Unused: :meth:`invoke` and never runs a subprocess."""
+        raise NotImplementedError(
+            "The external SAT solver is not invoked by CiVerLy."
         )
 
 
-class SolverException(Exception):
-    def __init__(self, e):
-        if e == SOLVING_STATUS.TIMEOUT:
-            super().__init__("Solver / Minimizer timed out.")
-        elif e == SOLVING_STATUS.ERROR:
-            super().__init__("Solver / Minimizer raised an external error.")
+class LOGIC_MINIMIZER_CVL(ABC):
+    """
+    Abstract base class for implementing an interface to a logic minimizer.
+    """
+    def __init__(self):
+        """Initizialize the minimizer interface."""
+        super().__init__()
+
+    def solve(self, pla_file, possible_transitions):
+        """
+        Minimize the description of the possible transitions.
+
+        The `possible_transitions` parameter is a list of tuples containing the 
+        binary transition vectors of the underlying function, with the respective
+        probability encoding. As an example, the transition x -> y through an SBox
+        with probability :math:`2^{-w}` translates to the binary vector
+        :math:`(x || y || enc(w))`.
+
+        INPUT:
+
+            - ``pla_file`` -- pla file is written to this path
+
+            - ``possible_transitions`` -- set of all possible transitions as described above
+
+        OUTPUT:
+
+            - ``clauses`` -- minimized description of all possible transitions
+        """
+        assert isinstance(pla_file, Path)
+        solution_file = pla_file.with_name(pla_file.stem + "_out.pla")
+        self._write_pla(pla_file, possible_transitions)
+        self.invoke(pla_file, solution_file)
+        return self._read_pla(solution_file)
+
+    @abstractmethod
+    def invoke(self, input_file, solution_file):
+        """
+        Invoke the minimizer via its CLI.
+
+        INPUT:
+
+            - ``input_file``-- path to the file containing the model
+
+            - ``solution_file``-- path of the file in which the solver writes the solution
+        """
+        pass
+
+    def _check_can_invoke(self):
+        """
+        Check if a solver has been disabled.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.SOLVER_CVL._check_can_invoke`
+        """
+        SOLVER.SCIP._check_can_invoke(Path(), Path(), Path())
+
+    def _write_pla(self, pla_file, possible_transitions):
+        """
+        Write the possible transitions to a ``.pla`` file.
+
+        INPUT:
+
+            - ``pla_file``-- path to the pla_file
+
+            - ``possible_transitions`` -- set of all possible transitions
+        """
+        # create espresso input
+        content = [f'.i {len(possible_transitions[0])}', '.o 1']
+        for possible_transition in possible_transitions:
+            content.append(
+                ''.join([str(t) for t in possible_transition]) + ' 1'
+            )
+        content.append('.e')
+        content = '\n'.join(content) + '\n'
+
+        # write to file
+        with pla_file.open("w") as f:
+            f.write(content)
+
+    def _read_pla(self, pla_file):
+        """
+        Read the possible transitions from a ``.pla`` file.
+
+        INPUT:
+
+            - ``pla_file``-- path to the pla_file
+
+        OUTPUT:
+
+            - ``clauses`` -- clauses described by the file
+        """
+
+        with pla_file.open("r") as f:
+            content = f.read().splitlines()
+        clause_length = int(content[0].split(" ")[1])
+
+        clauses = []
+        for line in content:
+            if line[0] not in ['0', '1', '-']:
+                continue  # skip the header lines
+            if line[-1] == '1':  # only take the CNF-clauses
+                # i+1 to avoid sign errors
+                # NOTE: in post-processing, we must subtract -1 again
+                clause = tuple(
+                    (-1)**int(line[i]) * (i + 1)
+                    for i in range(clause_length)
+                    if line[i] != '-'
+                )
+                clauses.append(clause)
+        return clauses
+
+class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
+    """
+    Interface to the Espresso minimizer, see e.g. https://github.com/hadipourh/espresso.
+    """
+    def __init__(self):
+        """Initizialize the Espresso interface."""
+        super().__init__()
+        self.name = "Espresso"
+
+    def invoke(self, input_file, solution_file):
+        """
+        Invoke the Espresso minimizer via its CLI.
+
+        .. SEEALSO::
+
+            :meth:`civerly.solvers.LOGIC_MINIMIZER_CVL.invoke`
+
+        TESTS:
+
+            sage: from civerly.cipher_implementations.toy_ciphers.toy10 import Toy10
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   cipher = Toy10()
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=None,
+            ....:     solve_range=(0, 9),
+            ....:     path=Path(tmpdir))
+            sage: cipher.analyse(model_options=model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer: ...
+            sage: # optional - espresso, cryptominisat
+            sage: SOLVER.ESPRESSO.invoke(
+            ....:   model_options.path / "espresso-8e23b46a.pla",
+            ....:   model_options.path / "espresso-8e23b46a_out.pla"
+            ....: )
+            sage: cipher.analyse(model_options=model_options)
+            97 variables and 655 clauses were written to ...
+            2
+        
+        Delete files:
+
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path)
+
+        """
+        self._check_can_invoke()
+        if solution_file.exists():
+            print(
+                f"Using existing file {solution_file}, "
+                "make sure it is up to date!"
+            )
+        else:
+            command = ["espresso", "-epos", str(input_file)]
+            with solution_file.open('a') as redirect:
+                subprocess.Popen(command, stdout=redirect, stderr=redirect).wait()
+
+
+class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
+    """
+    Interface for external logic minimizer.
+
+    EXAMPLES:
+
+        Simulate external Espresso minimization::
+
+            sage: # optional - cryptominisat  # optional - espresso
+            sage: from civerly.cipher_implementations.gift import GIFT_CVL
+            sage: from civerly.model_options import *
+            sage: from pathlib import Path
+            sage: import tempfile
+            sage: tmpdir = tempfile.mkdtemp()
+            sage: gift_cipher = GIFT_CVL(R=2)
+            sage: model_options = MODEL_OPTIONS(
+            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:   optimization=OPTIMIZATION.SAT,
+            ....:   granularity=GRANULARITY.BITWISE,
+            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:   solve_range=(0, 10),
+            ....:   sat_precision=1,
+            ....:   sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:   logic_minimizer=None,
+            ....:   path=Path(tmpdir))
+            sage: gift_cipher.analyse(model_options)
+            Traceback (most recent call last):
+            ...
+            civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer:
+            minimize ... externally and place the result at ..., then re-run.
+            sage: SOLVER.ESPRESSO.invoke(
+            ....:     model_options.path / "espresso-d1bda7a.pla",
+            ....:     model_options.path / "espresso-d1bda7a_out.pla")
+            sage: gift_cipher.analyse(model_options)
+            2560 variables and 6401 clauses were written to '...'
+            3.4
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
+    """
+    def __init__(self):
+        """Initizialize the interface."""
+        super().__init__()
+        self.name = "ExternalLogicMinimizer"
+
+    def invoke(self, input_file, solution_file):
+        """
+        Signal that the user must minimize the input externally.
+
+        If ``solution_file`` already exists (e.g. the user provided it before
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        exception is raised carrying the input and expected output paths.
+
+        INPUT:
+
+            - ``input_file``-- path to the file containing the model
+
+            - ``solution_file``-- path where the user must place the output
+
+            - ``log_file``-- path to the solver's log file
+
+            - ``time_limit``-- float (default ``None``); ignored
+
+        OUTPUT:
+
+            - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
+        """
+        if not solution_file.exists():
+            raise ExternalSolveRequired(
+                f"{self.name}: minimize {input_file} externally and place the "
+                f"result at {solution_file}, then re-run."
+            )
+
+
+class SOLVER:
+    """
+    Registry of pre-instantiated solver objects, ready to use in
+    :class:`civerly.model_options.MODEL_OPTIONS`.
+
+    Each attribute is a single shared instance; instantiate the corresponding
+    class directly (e.g. ``SCIP_CVL()``) if you need a separate one.
+    """
+    SCIP = SCIP_CVL()
+    GLPK = GLPK_CVL()
+    GUROBI = GUROBI_CVL()
+    CRYPTOMINISAT = CRYPTOMINISAT_CVL()
+    CADICAL = CADICAL_CVL()
+    ESPRESSO = ESPRESSO_CVL()
+    EXTERNAL_MILP_SOLVER = EXTERNAL_MILP_SOLVER_CVL()
+    EXTERNAL_SAT_SOLVER = EXTERNAL_SAT_SOLVER_CVL()
+    EXTERNAL_LOGIC_MINIMIZER = EXTERNAL_LOGIC_MINIMIZER_CVL()
