@@ -1532,7 +1532,7 @@ class Cipher:
             print(
                 f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
                 "were written to "
-                f"'{str(model_options.path / (self.name + '.cnf'))}'"
+                f"'{model_options.path / (self.name + '.cnf')!s}'"
             )
 
         self.sat = sat
@@ -2226,7 +2226,7 @@ class Cipher:
             process = subprocess.Popen(
                 [
                     "pdflatex",
-                    f"-output-directory={str(model_options.path)}",
+                    f"-output-directory={model_options.path!s}",
                     "-synctex=1",
                     "-interaction=nonstopmode",
                     "-file-line-error",
@@ -2272,7 +2272,7 @@ class Cipher:
         bits_in = [row[:] for row in trail_node.bits_in]
         bits_out = [row[:] for row in trail_node.bits_out]
 
-        STRING = f"\\newpage\n"
+        STRING = "\\newpage\n"
         STRING += f"\\section{{{self.name.replace('_', '\\_')}}}\n"
 
         w = trail_node.weight

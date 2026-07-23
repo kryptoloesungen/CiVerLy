@@ -567,7 +567,7 @@ class SBoxCipher(Cipher):
             print(
                 f"{milp.number_of_variables()} variables and "
                 f"{milp.number_of_constraints()} constraints were written to "
-                f"'{str(model_options.path / (self.name + '.mps'))}'"
+                f"'{model_options.path / (self.name + '.mps')!s}'"
             )
             with suppress_output():
                 milp.write_mps(str(model_options.path / (self.name + ".mps")))
