@@ -2371,7 +2371,7 @@ class SBox_CVL(Component):
             s_file_ineq = model_options.path / (s_file_name + ".ineq.json")
             # Load inequations if we computed them already
             if os.path.exists(s_file_ineq):
-                with open(s_file_ineq, "r") as ineq_file:
+                with open(s_file_ineq) as ineq_file:
                     inequations_for_prob = json.load(ineq_file)
             else:  # Create inequations for s-box transitions
                 # Originally, this method does not take the probability

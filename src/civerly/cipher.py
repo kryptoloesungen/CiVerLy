@@ -1629,7 +1629,7 @@ class Cipher:
                 # the sum-counter aux vars) are excluded so that two
                 # solutions are considered the same when they agree on the
                 # trail.
-                with open(sum_arr_file, "r") as f:
+                with open(sum_arr_file) as f:
                     sum_arr = json.load(f)
                 trail_vars = {int(var) for _, var in sum_arr} | set(
                     range(1, self.input_length + 1)
@@ -2557,7 +2557,7 @@ class Cipher:
         input_file = model_options.path / (self.name + ".cnf")
         sum_arr_file = model_options.path / (self.name + "sum.json")
 
-        with open(sum_arr_file, "r") as f:
+        with open(sum_arr_file) as f:
             sum_arr = json.load(f)
 
         sum_vars = {int(var) for _, var in sum_arr}
