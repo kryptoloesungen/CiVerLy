@@ -132,7 +132,7 @@ class Toy1:
             [1, 0, 0, 1, 0, 1, 1, 1],
             [1, 1, 1, 1, 0, 1, 1, 1],
             [0, 0, 0, 0, 1, 0, 1, 0],
-            [1, 1, 0, 1, 1, 1, 0, 0]
+            [1, 1, 0, 1, 1, 1, 0, 0],
         ]
         mat = matrix(GF(2), 4, 8, arr)
         L1 = LinearLayer_CVL(mat, name="L(8->4)")
@@ -144,28 +144,25 @@ class Toy1:
             [1, 1, 0, 0],
             [0, 0, 0, 0],
             [0, 1, 0, 0],
-            [1, 0, 1, 1]
+            [1, 0, 1, 1],
         ]
         mat = matrix(GF(2), 8, 4, arr)
         L2 = LinearLayer_CVL(mat, name="L(4->8)")
 
         node1 = cipher.add_subcipher(P, [(cipher.IN, (i, i)) for i in range(16)])
-        node2 = cipher.add_subcipher(P, [(cipher.IN, (i+16, i)) for i in range(16)])
+        node2 = cipher.add_subcipher(P, [(cipher.IN, (i + 16, i)) for i in range(16)])
 
         node_new = [None for _ in range(4)]
         for j in range(4):
             node_new[j] = cipher.add_subcipher(
                 L1,
-                [
-                    (node1, (i + 4*j, i)) for i in range(4)
-                ] + [
-                    (node2, (i + 4*j, i + 4)) for i in range(4)
-                ]
+                [(node1, (i + 4 * j, i)) for i in range(4)]
+                + [(node2, (i + 4 * j, i + 4)) for i in range(4)],
             )
             node_new[j] = cipher.add_subcipher(
                 L2, [(node_new[j], (i, i)) for i in range(4)]
             )
-            cipher.add_output([(node_new[j], (i, i + 8*j)) for i in range(8)])
+            cipher.add_output([(node_new[j], (i, i + 8 * j)) for i in range(8)])
 
         cipher.add_output([(cipher.IN, (i, i)) for i in range(32, 37)])
 

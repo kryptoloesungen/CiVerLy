@@ -38,22 +38,49 @@ class Toy8:
         modadd = ModAdd_CVL(32, name="ModAdd")
 
         p = [
-            31, 30, 28, 29, 27, 24, 25, 26, 23, 22, 21,
-            20, 11, 12, 13, 14, 15, 16, 17, 18, 19, 10,
-            5,  3,  4,  1,  0,  2,  6,  8,  9,  7
+            31,
+            30,
+            28,
+            29,
+            27,
+            24,
+            25,
+            26,
+            23,
+            22,
+            21,
+            20,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            10,
+            5,
+            3,
+            4,
+            1,
+            0,
+            2,
+            6,
+            8,
+            9,
+            7,
         ]
 
         perm = PermuteLayer_CVL(p, name="permute")
-        const = C_CVL(32, 0xdeadbeef, name="Const")
+        const = C_CVL(32, 0xDEADBEEF, name="Const")
 
-        node = cipher.add_subcipher(
-            perm, [(cipher.IN, (i, i)) for i in range(32)]
-        )
+        node = cipher.add_subcipher(perm, [(cipher.IN, (i, i)) for i in range(32)])
         node_c = cipher.add_subcipher(const, [])
         node = cipher.add_subcipher(
             modadd,
-            [(node, (i, i)) for i in range(32)] +
-            [(node_c, (i, i + 32)) for i in range(32)]
+            [(node, (i, i)) for i in range(32)]
+            + [(node_c, (i, i + 32)) for i in range(32)],
         )
 
         cipher.add_output([(node, (i, i)) for i in range(32)])

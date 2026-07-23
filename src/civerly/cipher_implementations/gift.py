@@ -4,6 +4,7 @@ Rudimentary implementation of the GIFT block cipher.
 We only implement the S-box and the linear layer. This is already enough to
 analyze GIFT with CiVerLy.
 """
+
 from civerly.wordsboxcipher import WordSBoxCipher
 from civerly.component import SBox_CVL, PermuteLayer_CVL
 from sage.crypto.sboxes import GIFT as gift_S
@@ -53,10 +54,10 @@ class GIFT_CVL:
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir)
             ....:   )
-            ....:   gift_cipher.analyse(model_options) 
+            ....:   gift_cipher.analyse(model_options)
             2560 variables and 4161 constraints were written to '...'
             3.4150374993
-            
+
             sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -71,7 +72,7 @@ class GIFT_CVL:
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir)
             ....:   )
-            ....:   gift_cipher.analyse(model_options) 
+            ....:   gift_cipher.analyse(model_options)
             2560 variables and 3585 constraints were written to '...'
             3.4150374993
 
@@ -134,12 +135,72 @@ class GIFT_CVL:
         # GIFT permutation layer
         permutation = PermuteLayer_CVL(
             [
-                0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
-                4, 21, 38, 55, 52, 5, 22, 39, 36, 53, 6, 23, 20, 37, 54, 7,
-                8, 25, 42, 59, 56, 9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
-                12, 29, 46, 63, 60, 13, 30, 47, 44, 61, 14, 31, 28, 45, 62, 15,
+                0,
+                17,
+                34,
+                51,
+                48,
+                1,
+                18,
+                35,
+                32,
+                49,
+                2,
+                19,
+                16,
+                33,
+                50,
+                3,
+                4,
+                21,
+                38,
+                55,
+                52,
+                5,
+                22,
+                39,
+                36,
+                53,
+                6,
+                23,
+                20,
+                37,
+                54,
+                7,
+                8,
+                25,
+                42,
+                59,
+                56,
+                9,
+                26,
+                43,
+                40,
+                57,
+                10,
+                27,
+                24,
+                41,
+                58,
+                11,
+                12,
+                29,
+                46,
+                63,
+                60,
+                13,
+                30,
+                47,
+                44,
+                61,
+                14,
+                31,
+                28,
+                45,
+                62,
+                15,
             ],
-            name="Permutation"
+            name="Permutation",
         )
 
         # Implementation of the GIFT round.

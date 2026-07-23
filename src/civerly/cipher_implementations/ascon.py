@@ -61,9 +61,18 @@ class ASCON_CVL:
             name = "ascon"
 
         constants = [
-            0xf0, 0xe1, 0xd2, 0xc3,
-            0xb4, 0xa5, 0x96, 0x87,
-            0x78, 0x69, 0x5a, 0x4b
+            0xF0,
+            0xE1,
+            0xD2,
+            0xC3,
+            0xB4,
+            0xA5,
+            0x96,
+            0x87,
+            0x78,
+            0x69,
+            0x5A,
+            0x4B,
         ]
 
         s = SBox_CVL(ascon_S, name="SBox")
@@ -115,16 +124,15 @@ class ASCON_CVL:
         # Implementation of ASCON-round
         ascon_round = SBoxCipher(320, 320, name="ascon_round")
         node = ascon_round.add_subcipher(
-            const_add,
-            [(ascon_round.IN, (i, i)) for i in range(320)]
+            const_add, [(ascon_round.IN, (i, i)) for i in range(320)]
         )
         node = ascon_round.add_subcipher(
             sbox_layer,
-            [(node, (64*i + j, 5*j + i)) for j in range(64) for i in range(5)]
+            [(node, (64 * i + j, 5 * j + i)) for j in range(64) for i in range(5)],
         )
         node = ascon_round.add_subcipher(
             linear_layer,
-            [(node, (5*j + i, 64*i + j)) for j in range(64) for i in range(5)]
+            [(node, (5 * j + i, 64 * i + j)) for j in range(64) for i in range(5)],
         )
 
         ascon_round.add_output([(node, (i, i)) for i in range(320)])
@@ -139,9 +147,7 @@ class ASCON_CVL:
             node_round_start = ascon_cipher.add_subcipher(
                 ascon_round, [(node_round_start, (i, i)) for i in range(320)]
             )
-        ascon_cipher.add_output(
-            [(node_round_start, (i, i)) for i in range(320)]
-        )
+        ascon_cipher.add_output([(node_round_start, (i, i)) for i in range(320)])
         # ------------------------------------------------ #
 
         self.ascon_cipher = ascon_cipher

@@ -98,14 +98,54 @@ class DES_F_CVL:
         f = SBoxCipher(32, 32, name="f")
 
         e_table = [
-            32,  1,  2,  3,  4,  5,
-            4,  5,  6,  7,  8,  9,
-            8,  9, 10, 11, 12, 13,
-            12, 13, 14, 15, 16, 17,
-            16, 17, 18, 19, 20, 21,
-            20, 21, 22, 23, 24, 25,
-            24, 25, 26, 27, 28, 29,
-            28, 29, 30, 31, 32,  1
+            32,
+            1,
+            2,
+            3,
+            4,
+            5,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            28,
+            29,
+            30,
+            31,
+            32,
+            1,
         ]
         arr = [[0 for _ in range(32)] for _ in range(len(e_table))]
         for i in range(len(e_table)):
@@ -121,7 +161,7 @@ class DES_F_CVL:
             [DES_S5_1, DES_S5_2, DES_S5_3, DES_S5_4],
             [DES_S6_1, DES_S6_2, DES_S6_3, DES_S6_4],
             [DES_S7_1, DES_S7_2, DES_S7_3, DES_S7_4],
-            [DES_S8_1, DES_S8_2, DES_S8_3, DES_S8_4]
+            [DES_S8_1, DES_S8_2, DES_S8_3, DES_S8_4],
         ]
 
         S_new = []
@@ -129,42 +169,57 @@ class DES_F_CVL:
         for n, sb in enumerate(S_arr):
             S_new.append([])
             for i in range(64):
-                S_new[n].append(
-                    sb[(((i >> 5) & 1) << 1) | (i & 1)][(i >> 1) & 0xf]
-                )
+                S_new[n].append(sb[(((i >> 5) & 1) << 1) | (i & 1)][(i >> 1) & 0xF])
 
         # SBox_CVL is CiVerLy component, SBox_sage is SageMath-SBox object
         S = [SBox_CVL(SBox_sage(s), name=f"S{i}") for i, s in enumerate(S_new)]
         P_perm = [
-            16,  7, 20, 21,
-            29, 12, 28, 17,
-            1, 15, 23, 26,
-            5, 18, 31, 10,
-            2,  8, 24, 14,
-            32, 27,  3,  9,
-            19, 13, 30,  6,
-            22, 11,  4, 25
+            16,
+            7,
+            20,
+            21,
+            29,
+            12,
+            28,
+            17,
+            1,
+            15,
+            23,
+            26,
+            5,
+            18,
+            31,
+            10,
+            2,
+            8,
+            24,
+            14,
+            32,
+            27,
+            3,
+            9,
+            19,
+            13,
+            30,
+            6,
+            22,
+            11,
+            4,
+            25,
         ]
-        permute = PermuteLayer_CVL([p-1 for p in P_perm], name="P").inv()
+        permute = PermuteLayer_CVL([p - 1 for p in P_perm], name="P").inv()
         key_add = RoundkeyXOR_CVL(48, 0x0, name="key_add")
 
         # ---------------------------- F ------------------------------------ #
-        e_node = f.add_subcipher(
-            E, [(f.IN, (i, i)) for i in range(32)]
-        )
-        rk_node = f.add_subcipher(
-            key_add, [(e_node, (i, i)) for i in range(48)]
-        )
-        s_nodes = [f.add_subcipher(
-            S[s], [(rk_node, (i + 6*s, i)) for i in range(6)])
+        e_node = f.add_subcipher(E, [(f.IN, (i, i)) for i in range(32)])
+        rk_node = f.add_subcipher(key_add, [(e_node, (i, i)) for i in range(48)])
+        s_nodes = [
+            f.add_subcipher(S[s], [(rk_node, (i + 6 * s, i)) for i in range(6)])
             for s in range(8)
         ]
         p_node = f.add_subcipher(
-            permute, [
-                (nod, (i, i + 4*n))
-                for i in range(4)
-                for n, nod in enumerate(s_nodes)
-            ]
+            permute,
+            [(nod, (i, i + 4 * n)) for i in range(4) for n, nod in enumerate(s_nodes)],
         )
         f.add_output([(p_node, (i, i)) for i in range(32)])
         # ------------------------------------------------------------------- #
@@ -238,14 +293,70 @@ class DES_CVL:
         round_function = SBoxCipher(64, 64, name="Round")
 
         ip_arr = [
-            57, 49, 41, 33, 25, 17, 9,  1,
-            59, 51, 43, 35, 27, 19, 11, 3,
-            61, 53, 45, 37, 29, 21, 13, 5,
-            63, 55, 47, 39, 31, 23, 15, 7,
-            56, 48, 40, 32, 24, 16, 8,  0,
-            58, 50, 42, 34, 26, 18, 10, 2,
-            60, 52, 44, 36, 28, 20, 12, 4,
-            62, 54, 46, 38, 30, 22, 14, 6
+            57,
+            49,
+            41,
+            33,
+            25,
+            17,
+            9,
+            1,
+            59,
+            51,
+            43,
+            35,
+            27,
+            19,
+            11,
+            3,
+            61,
+            53,
+            45,
+            37,
+            29,
+            21,
+            13,
+            5,
+            63,
+            55,
+            47,
+            39,
+            31,
+            23,
+            15,
+            7,
+            56,
+            48,
+            40,
+            32,
+            24,
+            16,
+            8,
+            0,
+            58,
+            50,
+            42,
+            34,
+            26,
+            18,
+            10,
+            2,
+            60,
+            52,
+            44,
+            36,
+            28,
+            20,
+            12,
+            4,
+            62,
+            54,
+            46,
+            38,
+            30,
+            22,
+            14,
+            6,
         ]
         ip = PermuteLayer_CVL(ip_arr, name="IP").inv()
 
@@ -257,19 +368,12 @@ class DES_CVL:
         )
         xor_node = round_function.add_subcipher(
             xor,
-            [
-                (f_node, (i, i)) for i in range(32)
-            ] + [
-                (round_function.IN, (i, i + 32)) for i in range(32)
-            ]
+            [(f_node, (i, i)) for i in range(32)]
+            + [(round_function.IN, (i, i + 32)) for i in range(32)],
         )
 
-        round_function.add_output(
-            [(round_function.IN, (i + 32, i)) for i in range(32)]
-        )
-        round_function.add_output(
-            [(xor_node, (i, i + 32)) for i in range(32)]
-        )
+        round_function.add_output([(round_function.IN, (i + 32, i)) for i in range(32)])
+        round_function.add_output([(xor_node, (i, i + 32)) for i in range(32)])
         # ------------------------------------------------------------------- #
 
         # ----------------------------- DES --------------------------------- #

@@ -118,40 +118,92 @@ class Toy10:
             mat = matrix(GF(2), arr)
             ll = LinearLayer_CVL(mat, name="L")
 
-            node = round.add_subcipher(
-                ll, [(round.IN, (i, i)) for i in range(6)]
-            )
-            round.add_output(
-                [(node, (i, i)) for i in range(6)]
-            )
+            node = round.add_subcipher(ll, [(round.IN, (i, i)) for i in range(6)])
+            round.add_output([(node, (i, i)) for i in range(6)])
         else:  # split up the linear layer and see if its the same
             for j in range(6):
                 mat = matrix(GF(2), arr[j])
                 ll = LinearLayer_CVL(mat, name=f"L{j}")
                 assert ll.input_length == 6 and ll.output_length == 1
 
-                node = round.add_subcipher(
-                    ll, [(round.IN, (i, i)) for i in range(6)]
-                )
+                node = round.add_subcipher(ll, [(round.IN, (i, i)) for i in range(6)])
                 round.add_output([(node, (0, j))])
 
-        node1 = cipher.add_subcipher(
-            round, [(cipher.IN, (i, i)) for i in range(6)]
-        )
+        node1 = cipher.add_subcipher(round, [(cipher.IN, (i, i)) for i in range(6)])
 
-        S = SBox((
-            14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
-            0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8,
-            4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0,
-            15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13
-        ))
+        S = SBox(
+            (
+                14,
+                4,
+                13,
+                1,
+                2,
+                15,
+                11,
+                8,
+                3,
+                10,
+                6,
+                12,
+                5,
+                9,
+                0,
+                7,
+                0,
+                15,
+                7,
+                4,
+                14,
+                2,
+                13,
+                1,
+                10,
+                6,
+                12,
+                11,
+                9,
+                5,
+                3,
+                8,
+                4,
+                1,
+                14,
+                8,
+                13,
+                6,
+                2,
+                11,
+                15,
+                12,
+                9,
+                7,
+                3,
+                10,
+                5,
+                0,
+                15,
+                12,
+                8,
+                2,
+                4,
+                9,
+                1,
+                7,
+                5,
+                11,
+                3,
+                14,
+                10,
+                0,
+                6,
+                13,
+            )
+        )
 
         node2 = cipher.add_subcipher(
             SBox_CVL(S, name="S"), [(node1, (i, i)) for i in range(6)]
         )
-        cipher.add_output(
-            [(node2, (i, i)) for i in range(4)]
-        )
+        cipher.add_output([(node2, (i, i)) for i in range(4)])
 
         self.cipher = cipher
 

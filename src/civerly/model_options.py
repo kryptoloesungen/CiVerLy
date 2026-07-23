@@ -1,6 +1,7 @@
 r"""
 Collection of all the available options for modeling.
 """
+
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -19,11 +20,11 @@ from civerly.solvers import EXTERNAL_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
 from civerly.solvers import SOLVER
 
 
-
 class CRYPTANALYSIS(Enum):
     """
     CiVerLy can do differential or linear cryptanalysis.
     """
+
     DIFFERENTIAL = 1
     LINEAR = 2
 
@@ -35,6 +36,7 @@ class OPTIMIZATION(Enum):
     subclasses, while SAT models can be generated for objects of any ``Cipher``
     subclass.
     """
+
     MILP = 1
     SAT = 2
 
@@ -45,6 +47,7 @@ class GRANULARITY(Enum):
     While wordwise models, which require a ``WordSBoxCipher`` or an ``AESlike``
     cipher, are faster to solve, they are less accurate.
     """
+
     WORDWISE = 1
     BITWISE = 2
 
@@ -73,6 +76,7 @@ class LINEAR_LAYER_MODELING(Enum):
         If your implementation does not contain any ``LinearLayer_CVL``
         component, you can set this to ``None``.
     """
+
     # options for MILP wordwise
     BRANCH_NUMBER = 1
     GENERALIZED_WORDWISE = 2
@@ -106,6 +110,7 @@ class SBOX_MODELING(Enum):
         If your implementation does not contain any ``SBox_CVL`` component, you
         can set this to ``None``.
     """
+
     CONVEX_HULL = 1
     LOGICAL_COND = 2
     DISTORTED_BALL = 3
@@ -234,13 +239,13 @@ class MODEL_OPTIONS:
         # set self.{milp, sat}_solver to respective NoneSolver
         if self.milp_solver is None:
             self.milp_solver = EXTERNAL_MILP_SOLVER_CVL()
-        
+
         if self.sat_solver is None:
             self.sat_solver = EXTERNAL_SAT_SOLVER_CVL()
-        
+
         if self.logic_minimizer is None:
             self.logic_minimizer = EXTERNAL_LOGIC_MINIMIZER_CVL()
-        
+
         if self.solve_range is None and self.optimization == OPTIMIZATION.SAT:
             self.solve_range = (0, 100)
         if self.path is None:
@@ -293,26 +298,27 @@ class MODEL_OPTIONS:
             attribute for <enum 'CRYPTANALYSIS'>! Only DIFFERENTIAL,
             LINEAR allowed.
         """
-        if not isinstance(self.number_of_solutions, (int, Integer)) \
-                or self.number_of_solutions < 1:
+        if (
+            not isinstance(self.number_of_solutions, (int, Integer))
+            or self.number_of_solutions < 1
+        ):
             raise InvalidModelOptionException(
                 self.number_of_solutions,
                 message=(
                     "number_of_solutions must be a positive integer, "
                     f"got {self.number_of_solutions!r}."
-                )
+                ),
             )
 
         if self.solve_range is not None:
-            if self.solve_range[0] < 0 or \
-                    self.solve_range[0] > self.solve_range[1]:
+            if self.solve_range[0] < 0 or self.solve_range[0] > self.solve_range[1]:
                 raise InvalidModelOptionException(
                     self.solve_range,
-                    message=f"solve_range = {self.solve_range} is not valid!"
+                    message=f"solve_range = {self.solve_range} is not valid!",
                 )
         if self.sat_precision >= 5:
             raise InvalidModelOptionException(
-                f"{self.sat_precision = } is too large. " # noqa
+                f"{self.sat_precision = } is too large. "  # noqa
                 "Note that the solving complexity grows exponentially "
                 "for increased precision parameters."
             )
@@ -320,70 +326,74 @@ class MODEL_OPTIONS:
         # optimization != None
         if self.optimization is None:
             raise InvalidModelOptionException(
-                self.optimization,
-                message="optimization mode mustn't be None."
+                self.optimization, message="optimization mode mustn't be None."
             )
 
         # cryptanalysis != None
         if self.cryptanalysis is None:
             raise InvalidModelOptionException(
-                self.cryptanalysis,
-                message="cryptanalysis mode mustn't be None."
+                self.cryptanalysis, message="cryptanalysis mode mustn't be None."
             )
 
         # optimization.sat ==> granularity.bitwise
-        if self.granularity == GRANULARITY.WORDWISE \
-                and self.optimization == OPTIMIZATION.SAT:
+        if (
+            self.granularity == GRANULARITY.WORDWISE
+            and self.optimization == OPTIMIZATION.SAT
+        ):
             raise InvalidModelOptionException(
-                self.granularity,
-                message="Wordwise modeling isn't supported for SAT."
+                self.granularity, message="Wordwise modeling isn't supported for SAT."
             )
 
         # optimization.milp & granularity.wordwise
         # ==>
         # linear_layer_modeling.{None, branch_number, generalized_wordwise}
-        if self.optimization == OPTIMIZATION.MILP \
-                and self.granularity == GRANULARITY.WORDWISE \
-                and self.linear_layer_modeling not in (
-                    None,
-                    LINEAR_LAYER_MODELING.BRANCH_NUMBER,
-                    LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE
-                ):
+        if (
+            self.optimization == OPTIMIZATION.MILP
+            and self.granularity == GRANULARITY.WORDWISE
+            and self.linear_layer_modeling
+            not in (
+                None,
+                LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+                LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
+            )
+        ):
             raise InvalidModelOptionException(
                 self.linear_layer_modeling,
                 message="Linear layer modeling must be either None, "
                 "LINEAR_LAYER_MODELING.BRANCH_NUMBER or "
                 "LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE "
-                "when using wordwise modeling."
+                "when using wordwise modeling.",
             )
 
         # optimization.milp & granularity.bitwise
         # ==>
         # linear_layer_modeling.{None, convex_hull, more_dummies}
-        if self.optimization == OPTIMIZATION.MILP \
-                and self.granularity == GRANULARITY.BITWISE \
-                and self.linear_layer_modeling not in (
-                    None,
-                    LINEAR_LAYER_MODELING.CONVEX_HULL,
-                    LINEAR_LAYER_MODELING.MORE_DUMMIES
-                ):
+        if (
+            self.optimization == OPTIMIZATION.MILP
+            and self.granularity == GRANULARITY.BITWISE
+            and self.linear_layer_modeling
+            not in (
+                None,
+                LINEAR_LAYER_MODELING.CONVEX_HULL,
+                LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            )
+        ):
             raise InvalidModelOptionException(
                 self.linear_layer_modeling,
                 message="Linear layer modeling must be either None, "
                 "LINEAR_LAYER_MODELING.CONVEX_HULL or "
                 "LINEAR_LAYER_MODELING.MORE_DUMMIES "
-                "when using bitwise MILP modeling."
+                "when using bitwise MILP modeling.",
             )
 
         # optimization.sat
         # ==>
         # linear_layer_modeling.{None, exclude-odd, more-dummies}
-        if self.optimization == OPTIMIZATION.SAT \
-                and self.linear_layer_modeling not in (
-                    None,
-                    LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                    LINEAR_LAYER_MODELING.MORE_DUMMIES
-                ):
+        if self.optimization == OPTIMIZATION.SAT and self.linear_layer_modeling not in (
+            None,
+            LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            LINEAR_LAYER_MODELING.MORE_DUMMIES,
+        ):
             raise InvalidModelOptionException(
                 message="Linear layer modeling must be None, "
                 "LINEAR_LAYER_MODELING.SPARSE or "
@@ -392,28 +402,32 @@ class MODEL_OPTIONS:
             )
 
         # optimization.milp & granularity.wordwise ==> sbox_modeling.None
-        if self.optimization == OPTIMIZATION.MILP \
-                and self.granularity == GRANULARITY.WORDWISE \
-                and self.sbox_modeling is not None:
+        if (
+            self.optimization == OPTIMIZATION.MILP
+            and self.granularity == GRANULARITY.WORDWISE
+            and self.sbox_modeling is not None
+        ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
-                message="SBox modeling must be None "
-                "when using wordwise modeling."
+                message="SBox modeling must be None when using wordwise modeling.",
             )
 
         # optimization.milp & granularity.bitwise
         # ==>
         # sbox_modeling.{None, convex_hull, logical_cond,
         # logical_cond_espresso, distorted_ball}
-        if self.optimization == OPTIMIZATION.MILP \
-                and self.granularity == GRANULARITY.BITWISE \
-                and self.sbox_modeling not in (
-                    None,
-                    SBOX_MODELING.CONVEX_HULL,
-                    SBOX_MODELING.LOGICAL_COND,
-                    SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                    SBOX_MODELING.DISTORTED_BALL,
-                ):
+        if (
+            self.optimization == OPTIMIZATION.MILP
+            and self.granularity == GRANULARITY.BITWISE
+            and self.sbox_modeling
+            not in (
+                None,
+                SBOX_MODELING.CONVEX_HULL,
+                SBOX_MODELING.LOGICAL_COND,
+                SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                SBOX_MODELING.DISTORTED_BALL,
+            )
+        ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
                 message="SBox modeling must be either None, "
@@ -421,24 +435,23 @@ class MODEL_OPTIONS:
                 "SBOX_MODELING.LOGICAL_COND or "
                 "SBOX_MODELING.LOGICAL_COND_ESPRESSO or "
                 "SBOX_MODELING.DISTORTED_BALL "
-                "when using bitwise MILP modeling."
+                "when using bitwise MILP modeling.",
             )
 
         # optimization.sat
         # ==>
         # sbox_modeling.{None, logical_cond, logical_cond_espresso}
-        if self.optimization == OPTIMIZATION.SAT \
-                and self.sbox_modeling not in (
-                    None,
-                    SBOX_MODELING.LOGICAL_COND,
-                    SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-                ):
+        if self.optimization == OPTIMIZATION.SAT and self.sbox_modeling not in (
+            None,
+            SBOX_MODELING.LOGICAL_COND,
+            SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+        ):
             raise InvalidModelOptionException(
                 self.sbox_modeling,
                 message="SBox modeling must be either None, "
                 "SBOX_MODELING.LOGICAL_COND or "
                 "SBOX_MODELING.LOGICAL_COND_ESPRESSO "
-                "when using SAT modeling."
+                "when using SAT modeling.",
             )
 
         # milp_solver.{None, gurobi, scip, glpk}
@@ -449,7 +462,7 @@ class MODEL_OPTIONS:
                 "Gurobi, "
                 "Scip or "
                 "Glpk "
-                "when using MILP modeling."
+                "when using MILP modeling.",
             )
 
         # sat_solver.{None, cadical, cryptominisat}
@@ -459,23 +472,21 @@ class MODEL_OPTIONS:
                 message="Solver must be either None, "
                 "CryptoMiniSat or "
                 "CaDiCal "
-                "when using SAT modeling."
+                "when using SAT modeling.",
             )
 
         # optimization.milp ==> sat_precision.None
-        if self.optimization == OPTIMIZATION.MILP \
-                and self.sat_precision != 0:
+        if self.optimization == OPTIMIZATION.MILP and self.sat_precision != 0:
             raise InvalidModelOptionException(
                 self.sat_precision,
-                message="Sat precision is unnecessary for "
-                "MILP optimization."
+                message="Sat precision is unnecessary for MILP optimization.",
             )
 
         if not isinstance(self.logic_minimizer, LOGIC_MINIMIZER_CVL):
             raise InvalidModelOptionException(
                 self.logic_minimizer,
                 message="logic_minimizer must be either EXTERNAL_LOGIC_MINIMIZER_CVL or "
-                "ESPRESSO_CVL."
+                "ESPRESSO_CVL.",
             )
 
         error = False
@@ -492,8 +503,7 @@ class MODEL_OPTIONS:
             attr = self.granularity
             correct_enum = GRANULARITY
         elif not isinstance(
-            self.linear_layer_modeling,
-            (LINEAR_LAYER_MODELING, type(None))
+            self.linear_layer_modeling, (LINEAR_LAYER_MODELING, type(None))
         ):
             error = True
             attr = self.linear_layer_modeling
@@ -507,7 +517,8 @@ class MODEL_OPTIONS:
             raise InvalidModelOptionException(
                 attr,
                 message=f"{attr} is an invalid attribute for {correct_enum}! "
-                f"Only {', '.join(correct_enum.__members__.keys())} allowed.")
+                f"Only {', '.join(correct_enum.__members__.keys())} allowed.",
+            )
 
         return
 
@@ -518,8 +529,8 @@ class InvalidModelOptionException(Exception):
     by the user.
 
     """
-    def __init__(self, model_option, model_option_type=None, message=None):
 
+    def __init__(self, model_option, model_option_type=None, message=None):
         self.model_option = model_option
         self.message = message
 

@@ -113,9 +113,24 @@ def benchmark(CM):
     tables = []
     for ciphers, model_options in CM:
         if model_options.optimization == OPTIMIZATION.MILP:
-            header = ["Name", r"\#Variables", r"\#Constraints", "$t_{M}$", "$t_{S}$", "w"]
+            header = [
+                "Name",
+                r"\#Variables",
+                r"\#Constraints",
+                "$t_{M}$",
+                "$t_{S}$",
+                "w",
+            ]
         elif model_options.optimization == OPTIMIZATION.SAT:
-            header = ["Name", "Weight Bound", r"\#Variables", r"\#Clauses", "$t_{M}$", "$t_{S}$", "Result"]
+            header = [
+                "Name",
+                "Weight Bound",
+                r"\#Variables",
+                r"\#Clauses",
+                "$t_{M}$",
+                "$t_{S}$",
+                "Result",
+            ]
         else:
             raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
         table = [header]
@@ -131,9 +146,11 @@ def benchmark(CM):
             elif model_options.optimization == OPTIMIZATION.SAT:
                 v = cipher._model.nvars()
                 c = len(cipher._model.clauses())
-                row.append("") # empty weight bound
+                row.append("")  # empty weight bound
             else:
-                raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+                raise InvalidModelOptionException(
+                    model_options.optimization, OPTIMIZATION
+                )
 
             row.append(v)
             row.append(c)
@@ -162,4 +179,3 @@ def benchmark(CM):
 
         tables.append(table)
     return tables
-

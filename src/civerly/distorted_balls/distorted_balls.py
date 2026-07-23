@@ -60,13 +60,13 @@ def get_inequations(ddt, fixed_probability=None) -> list:
     lib = ctypes.CDLL(lib_path)
 
     lib.compute_inequations.argtypes = [
-        ctypes.c_int, ctypes.POINTER(ctypes.c_uint32), ctypes.c_int
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_uint32),
+        ctypes.c_int,
     ]
 
     # The equations are returned in a two-dimensional array
-    lib.compute_inequations.restype = ctypes.POINTER(
-        ctypes.POINTER(ctypes.c_int8)
-    )
+    lib.compute_inequations.restype = ctypes.POINTER(ctypes.POINTER(ctypes.c_int8))
 
     n_input = ddt.nrows()
     n_output = ddt.ncols()
@@ -91,24 +91,22 @@ def get_inequations(ddt, fixed_probability=None) -> list:
     output = lib.compute_inequations(
         total_size,
         (ctypes.c_uint32 * len(possible_points))(*possible_points),
-        len(possible_points)
+        len(possible_points),
     )  # Call library to compute the inequations
-    assert output, (
-        f"ERROR: Got no output from {lib_path}->compute_inequations()"
-    )
+    assert output, f"ERROR: Got no output from {lib_path}->compute_inequations()"
     # 'output' is a pointer to an array of pointers, which we will convert to
     # a two-dimensional list 'inequations'
     inequations = []
     cnt = 0
     while True:
-        inequation = list(output[cnt][:total_size + 1])
+        inequation = list(output[cnt][: total_size + 1])
         # If all entries are zero, we are at the end of the outer array
         if not any(inequation):
             break
         inequations.append(
             inequation[:input_size][::-1]
-            + inequation[input_size:input_size+output_size][::-1]
-            + inequation[input_size+output_size:]
+            + inequation[input_size : input_size + output_size][::-1]
+            + inequation[input_size + output_size :]
         )  # Change bit order to comply with s-box evaluation
         cnt += 1
 
@@ -134,9 +132,11 @@ def verify_inequations(inequations, ddt, fixed_probability=None):
     output_size = ddt.ncols().bit_length() - 1
 
     if fixed_probability is None:
+
         def _is_possible_ddt(prob):
             return prob != 0
     else:
+
         def _is_possible_ddt(prob):
             return prob == fixed_probability
 
@@ -151,15 +151,15 @@ def verify_inequations(inequations, ddt, fixed_probability=None):
                 res += ((input_difference >> i) & 1) * ineq[input_size - i - 1]
             for i in range(output_size):
                 # the 0-th bit is the msb
-                res += ((output_difference >> i) & 1) * \
-                    ineq[input_size + output_size - i - 1]
+                res += ((output_difference >> i) & 1) * ineq[
+                    input_size + output_size - i - 1
+                ]
             if res < ineq[input_size + output_size]:
                 return False
         return True
 
     for in_diff, row in enumerate(ddt):
         for out_diff, prob in enumerate(row):
-            if _is_possible_ddt(prob) != \
-                    _is_possible_inequations(in_diff, out_diff):
+            if _is_possible_ddt(prob) != _is_possible_inequations(in_diff, out_diff):
                 return False
     return True

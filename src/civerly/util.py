@@ -145,7 +145,7 @@ def hw(num):
 
     """
     if type(num) in (int, ZZ, Integer):
-        return bin(num).count('1')
+        return bin(num).count("1")
     else:
         raise ValueError(f"Wrong input type {type(num)}, must be int-like")
 
@@ -236,7 +236,7 @@ def translate_sat_clause(VAR, clause):
         (x_0, -1*x_1, x_2, -1*x_3, -1*x_4)
 
     """
-    return tuple((-1)**((i < 0) & 1) * VAR[abs(i)-1] for i in clause)
+    return tuple((-1) ** ((i < 0) & 1) * VAR[abs(i) - 1] for i in clause)
 
 
 def translate_milp_constraint(VAR, constr):
@@ -268,10 +268,7 @@ def translate_milp_constraint(VAR, constr):
 
     """
     # the current linear term in the MILP
-    summ = sum(
-        constr[1][1][j] * VAR[constr[1][0][j]]
-        for j in range(len(constr[1][0]))
-    )
+    summ = sum(constr[1][1][j] * VAR[constr[1][0][j]] for j in range(len(constr[1][0])))
     if constr[0] is None:
         new_constr = summ <= constr[2]
     elif constr[2] is None:
@@ -302,8 +299,8 @@ def _between_brackets(st):
         ValueError: invalid literal for int() with base 10: 'TEST'
 
     """
-    assert all(bracket in st for bracket in ('[', ']'))
-    return int(st[st.index('[') + 1: st.index(']')], 10)
+    assert all(bracket in st for bracket in ("[", "]"))
+    return int(st[st.index("[") + 1 : st.index("]")], 10)
 
 
 def _before_brackets(st):
@@ -328,8 +325,8 @@ def _before_brackets(st):
         ValueError: invalid literal for int() with base 10: 'EST98'
 
     """
-    assert '[' in st
-    return int(st[1: st.index('[')], 10)
+    assert "[" in st
+    return int(st[1 : st.index("[")], 10)
 
 
 def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
@@ -361,17 +358,17 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     # set name of the temporary file in which the reduction milp is stored
     # ------------------------------------------------------------------------
     if isinstance(comp, LinearLayer_CVL):
-        file_name = comp.name + str(
-            sum([ZZ(i) for i in comp.binary_matrix[0]])
-        ) + str(
-            sum([ZZ(j) for i in comp.binary_matrix for j in i])
-        ) + str(
-            sum([ZZ(i) for i in comp.binary_matrix[-1]])
+        file_name = (
+            comp.name
+            + str(sum([ZZ(i) for i in comp.binary_matrix[0]]))
+            + str(sum([ZZ(j) for i in comp.binary_matrix for j in i]))
+            + str(sum([ZZ(i) for i in comp.binary_matrix[-1]]))
         )
     elif isinstance(comp, SBox_CVL):
-        file_name = f"{zlib.crc32(
-            "".join([f'{s_entry:x}' for s_entry in comp.S]).encode("utf-8")
-        ):x}"
+        file_name = f"{
+            zlib.crc32(
+                ''.join([f'{s_entry:x}' for s_entry in comp.S]).encode('utf-8')
+            ):x}"
     else:
         raise ValueError(
             "reduction_algorithm_ST17 can only be applied to "
@@ -392,15 +389,11 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 outcome = constr.eval(impossible_point) == 0
             if outcome is False:
                 R_bar[i_im].append(ic)
-    milp_to_minimize_milp = MixedIntegerLinearProgram(
-        maximization=False, solver="GLPK"
-    )
+    milp_to_minimize_milp = MixedIntegerLinearProgram(maximization=False, solver="GLPK")
     Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
     for r_arr in R_bar:
         if len(r_arr) > 0:
-            milp_to_minimize_milp.add_constraint(
-                sum([Z[r] for r in r_arr]) >= 1
-            )
+            milp_to_minimize_milp.add_constraint(sum([Z[r] for r in r_arr]) >= 1)
     milp_to_minimize_milp.set_objective(sum(Z))
     # suppress_output in order to not make doctests fail
     with suppress_output():
@@ -413,7 +406,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     # STEP 3:
     # use the found solution to generate a minimial MILP that models the
     # component
-    for Z_index, use in results['Z'].items():
+    for Z_index, use in results["Z"].items():
         if use != 0:
             final_choices.append(Z_index)
 
@@ -445,9 +438,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 if i < comp.binary_matrix.ncols() // comp.wordsize:
                     tmp_arr.append(ai * comp.MILP_IN[i])
                 else:
-                    tmp_arr.append(ai * comp.MILP_OUT[
-                        i - (comp.input_length // comp.wordsize)
-                    ])
+                    tmp_arr.append(
+                        ai * comp.MILP_OUT[i - (comp.input_length // comp.wordsize)]
+                    )
 
         if ineq.is_inequality():
             comp.milp.add_constraint(sum(tmp_arr) + ineq.b() >= 0)
@@ -467,23 +460,25 @@ def _find_path(cipher, node, path=()):
         sage: node = ascon.nodes[3].nodes[2].nodes[1]
         sage: _find_path(ascon, node)
         (3, 2, 1)
-        
+
     """
     from civerly.cipher import Cipher
+
     if id(cipher) == id(node):
         return path
     if not isinstance(cipher, Cipher):
         return None
     for i in range(len(cipher.nodes)):
-        sub_path = _find_path(cipher.nodes[i], node, path + (i, ))
+        sub_path = _find_path(cipher.nodes[i], node, path + (i,))
         if sub_path is not None:
             return sub_path
+
 
 def translate_var(cipher, node, local_var):
     """
 
     TESTS::
-        
+
         sage: from civerly.cipher_implementations.craft import CRAFT_CVL
         sage: from civerly.model_options import *
         sage: import tempfile
@@ -513,7 +508,7 @@ def translate_var(cipher, node, local_var):
     # go backwards through the recursion tree
     for depth in range(1, len(index_path)):
         parent = cipher
-        for index in index_path[:len(index_path) - depth]:
+        for index in index_path[: len(index_path) - depth]:
             parent = parent.nodes[index]
         index = index_path[-depth]
         # distinguish between SAT and MILP variable
@@ -523,8 +518,6 @@ def translate_var(cipher, node, local_var):
             var = parent.inv_dictionaries_milp[index][var]
 
     return var
-
-
 
 
 @contextlib.contextmanager
@@ -549,7 +542,7 @@ def suppress_output():
     original_stdout_fd = sys.stdout.fileno()
     original_stderr_fd = sys.stderr.fileno()
 
-    with open(os.devnull, 'w') as devnull:
+    with open(os.devnull, "w") as devnull:
         new_stdout = os.dup(original_stdout_fd)
         new_stderr = os.dup(original_stderr_fd)
         try:

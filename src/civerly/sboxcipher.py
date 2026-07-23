@@ -29,7 +29,6 @@ from civerly.model_options import InvalidModelOptionException
 
 
 class SBoxCipher(Cipher):
-
     def __init__(self, input_length, output_length, name):
         r"""
         .. SEEALSO::
@@ -43,10 +42,20 @@ class SBoxCipher(Cipher):
         Check whether ``sub_cipher`` is allowed in ``SBoxCipher`` before
         calling :meth:`civerly.cipher.Cipher.add_subcipher`.
         """
-        if isinstance(sub_cipher, (
-            SBoxCipher, SBox_CVL, LinearLayer_CVL,
-            XOR_CVL, RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
-        )):
+        if isinstance(
+            sub_cipher,
+            (
+                SBoxCipher,
+                SBox_CVL,
+                LinearLayer_CVL,
+                XOR_CVL,
+                RK_CVL,
+                C_CVL,
+                I_CVL,
+                RoundkeyXOR_CVL,
+                ConstXOR_CVL,
+            ),
+        ):
             return super().add_subcipher(sub_cipher, edges)
         else:
             raise TypeError(
@@ -151,11 +160,13 @@ class SBoxCipher(Cipher):
                 sage: shutil.rmtree(tmpdir) # optional - scip
 
         """
-        if model_options.granularity == GRANULARITY.WORDWISE \
-                and type(self) is SBoxCipher:
+        if (
+            model_options.granularity == GRANULARITY.WORDWISE
+            and type(self) is SBoxCipher
+        ):
             raise InvalidModelOptionException(
                 model_options.granularity,
-                message="Wordwise modeling is not supported for the SBoxCipher class!"
+                message="Wordwise modeling is not supported for the SBoxCipher class!",
             )
 
         # create the directory models are written to
@@ -169,8 +180,7 @@ class SBoxCipher(Cipher):
         # flag to stop when a model needs to be solved externally
         self._return_immediately_ = False
 
-        master_milp = MixedIntegerLinearProgram(
-            maximization=False, solver="GLPK")
+        master_milp = MixedIntegerLinearProgram(maximization=False, solver="GLPK")
         self.MILP_IN = master_milp.new_variable(name="IN", binary=True)
         self.MILP_OUT = master_milp.new_variable(name="OUT", binary=True)
 
@@ -191,18 +201,18 @@ class SBoxCipher(Cipher):
             for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
                     # copy over attributes related to modeling
-                    comp.milp         = prev.milp
-                    comp.MILP_IN      = prev.MILP_IN
-                    comp.MILP_OUT     = prev.MILP_OUT
+                    comp.milp = prev.milp
+                    comp.MILP_IN = prev.MILP_IN
+                    comp.MILP_OUT = prev.MILP_OUT
                     comp.sum_arr_milp = prev.sum_arr_milp
 
                     # copy the component milp programs
                     milps.append(comp.milp)
 
                     for key, val in self.dictionaries_milp[i_prev].items():
-                        assert key[:key.index('X') + 1] == "X"
+                        assert key[: key.index("X") + 1] == "X"
                         self.dictionaries_milp[i_comp][
-                            f"X{i_comp}{key[key.index('['):]}"
+                            f"X{i_comp}{key[key.index('[') :]}"
                         ] = val
 
                     # copy the dictionaries
@@ -211,8 +221,7 @@ class SBoxCipher(Cipher):
                     }
 
                     # recursively copy component dictionaries
-                    comp._copy_over_dictionaries_recursively(
-                        prev, model_options)
+                    comp._copy_over_dictionaries_recursively(prev, model_options)
 
                     # copy the objective variables
                     self.sum_arr_milp += [
@@ -248,27 +257,24 @@ class SBoxCipher(Cipher):
                 show_output = repr(stdout_var.getvalue())
 
                 ind_var = show_output.index("Variables:")
-                show_variables = show_output[ind_var + len('Variables:\\n'):]
+                show_variables = show_output[ind_var + len("Variables:\\n") :]
 
                 # tokenize the show_variables string into each assignments
                 assignments = []
                 tokenize_pos1 = 0
                 tokenize_pos2 = 0
                 while tokenize_pos2 < len(show_variables):
-                    tokenize_pos2 += \
-                        show_variables[tokenize_pos1:].index(")") + 5
-                    assignments.append(
-                        show_variables[tokenize_pos1: tokenize_pos2]
-                    )
+                    tokenize_pos2 += show_variables[tokenize_pos1:].index(")") + 5
+                    assignments.append(show_variables[tokenize_pos1:tokenize_pos2])
                     tokenize_pos1 = tokenize_pos2
 
                 # store the assignments in dictionary,
                 # as otherwise we wouldn't be able to recover variable names
                 # by their indices
                 for asg in assignments:
-                    asg = asg[:asg.index("is")]
-                    ind = int(asg[asg.index('=') + 1:].strip(' ')[2:])
-                    val = asg[:asg.index("=")].strip(" ")
+                    asg = asg[: asg.index("is")]
+                    ind = int(asg[asg.index("=") + 1 :].strip(" ")[2:])
+                    val = asg[: asg.index("=")].strip(" ")
                     key = f"X{i_comp}[{ind}]"
                     self.dictionaries_milp[i_comp][key] = val
 
@@ -302,26 +308,24 @@ class SBoxCipher(Cipher):
         for x in range(self.input_length // divide_by):
             __ASSERTION_CTR += 1
             # helper variable to make the code shorter
-            cmi = self.inv_dictionaries_milp[
-                self.nodes.index(self.IN)][f'OUT[{x}]']
+            cmi = self.inv_dictionaries_milp[self.nodes.index(self.IN)][f"OUT[{x}]"]
             compMILP_INx = X[_before_brackets(cmi)][_between_brackets(cmi)]
             master_milp.add_constraint(self.MILP_IN[x] == compMILP_INx)
 
         assert __ASSERTION_CTR == self.input_length // divide_by, (
-            f"({self.name}) "
-            f"{__ASSERTION_CTR} != {self.input_length // divide_by}"
+            f"({self.name}) {__ASSERTION_CTR} != {self.input_length // divide_by}"
         )
 
         # (wordwise) edges connected to output
         output_arr = [
-            (y//divide_by, (a, x//divide_by))
+            (y // divide_by, (a, x // divide_by))
             for (y, (a, x)) in enumerate(self.outputs)
         ]
 
         __ASSERTION_CTR = 0
         for y, (a, x) in set(output_arr):  # if comp is connected to output
             __ASSERTION_CTR += 1
-            out_string = self.inv_dictionaries_milp[a][f'OUT[{x}]']
+            out_string = self.inv_dictionaries_milp[a][f"OUT[{x}]"]
             out_string_index = _between_brackets(out_string)
 
             # if input is directly connected to output. Without this, there
@@ -329,15 +333,11 @@ class SBoxCipher(Cipher):
             # would be ignored when modeled. In this case, connect in- and
             # output directly.
             if a == self.nodes.index(self.IN):
-                cmi = self.inv_dictionaries_milp[
-                    self.nodes.index(self.IN)][f'OUT[{x}]']
-            master_milp.add_constraint(
-                X[a][out_string_index] == self.MILP_OUT[y]
-            )
+                cmi = self.inv_dictionaries_milp[self.nodes.index(self.IN)][f"OUT[{x}]"]
+            master_milp.add_constraint(X[a][out_string_index] == self.MILP_OUT[y])
 
         assert __ASSERTION_CTR == self.output_length // divide_by, (
-            f"({self.name}) "
-            f"{__ASSERTION_CTR} != {self.output_length // divide_by}"
+            f"({self.name}) {__ASSERTION_CTR} != {self.output_length // divide_by}"
         )
         # ------------------------------------------------------------------ #
         # NOTE:
@@ -349,31 +349,33 @@ class SBoxCipher(Cipher):
         # value[out_node0, out_node1, ...]
         branches = dict()
 
-        edge_arr = set([
-            ((aa, bb), (xx//divide_by, yy//divide_by))
-            for ((aa, bb), (xx, yy)) in self.edges
-        ])
+        edge_arr = set(
+            [
+                ((aa, bb), (xx // divide_by, yy // divide_by))
+                for ((aa, bb), (xx, yy)) in self.edges
+            ]
+        )
 
         # take the (wordwise) edges in the graph to combine the MILPs
         for (a, b), (x, y) in edge_arr:
             # helper vars to shorten the code a bit
-            inv_dict_a_outx = self.inv_dictionaries_milp[a][f'OUT[{x}]']
+            inv_dict_a_outx = self.inv_dictionaries_milp[a][f"OUT[{x}]"]
             aOUTx = X[_before_brackets(inv_dict_a_outx)][
-                _between_brackets(inv_dict_a_outx)]
+                _between_brackets(inv_dict_a_outx)
+            ]
 
             # helper vars to shorten the code a bit
-            inv_dict_b_iny = self.inv_dictionaries_milp[b][f'IN[{y}]']
+            inv_dict_b_iny = self.inv_dictionaries_milp[b][f"IN[{y}]"]
             bINy = X[_before_brackets(inv_dict_b_iny)][
-                _between_brackets(inv_dict_b_iny)]
+                _between_brackets(inv_dict_b_iny)
+            ]
 
             if aOUTx not in branches:
                 branches[aOUTx] = []
             branches[aOUTx].append(bINy)
         # ------------------------------------------------------------------ #
         for in_node, out_nodes in branches.items():
-            assert len(out_nodes) != 0, (
-                f"Component {in_node} needs to have an output!"
-            )
+            assert len(out_nodes) != 0, f"Component {in_node} needs to have an output!"
 
             if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
                 # All output branches receive the difference of
@@ -391,15 +393,17 @@ class SBoxCipher(Cipher):
 
                     # Linear model of n-branching == Differential model
                     # of n-XOR
-                    mat = matrix([1]*len(out_nodes))
+                    mat = matrix([1] * len(out_nodes))
 
                     branching = LinearLayer_CVL(mat)
-                    branching_milp = branching._model_milp(MODEL_OPTIONS(
-                        cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                        optimization=OPTIMIZATION.MILP,
-                        granularity=GRANULARITY.BITWISE,
-                        linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL
-                    ))
+                    branching_milp = branching._model_milp(
+                        MODEL_OPTIONS(
+                            cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                            optimization=OPTIMIZATION.MILP,
+                            granularity=GRANULARITY.BITWISE,
+                            linear_layer_modeling=LINEAR_LAYER_MODELING.CONVEX_HULL,
+                        )
+                    )
                     branching_nodes = out_nodes + [in_node]
                     # copy over the constraints generated by ``LinearLayer_CVL``
                     for constr in branching_milp.constraints():
@@ -439,9 +443,8 @@ class SBoxCipher(Cipher):
                     master_milp.add_constraint(out_nodes[0] == in_node)
             else:
                 raise InvalidModelOptionException(
-                    model_options.cryptanalysis,
-                    CRYPTANALYSIS
-                    )
+                    model_options.cryptanalysis, CRYPTANALYSIS
+                )
         # ------------------------------------------------------------------- #
 
         # set all "dangling" nodes to zero (especially important
@@ -450,12 +453,13 @@ class SBoxCipher(Cipher):
         for a in range(len(self.nodes)):
             for x in range(self.nodes[a].output_length):
                 if (a, x) not in ax_arr + self.outputs:
-                    if isinstance(
-                        self.nodes[a], SBoxCipher._Cipher__Special_Node
-                    ) and not self.nodes[a].in_node:
+                    if (
+                        isinstance(self.nodes[a], SBoxCipher._Cipher__Special_Node)
+                        and not self.nodes[a].in_node
+                    ):
                         pass  # skip OUT-nodes
                     else:
-                        tmp = self.inv_dictionaries_milp[a][f'OUT[{x}]']
+                        tmp = self.inv_dictionaries_milp[a][f"OUT[{x}]"]
                         master_milp.add_constraint(
                             X[_before_brackets(tmp)][_between_brackets(tmp)] == 0
                         )
@@ -465,8 +469,7 @@ class SBoxCipher(Cipher):
         # change back s.t. toplevel milp is written to file
         model_options, model_options_ = model_options_, model_options
 
-        return self._finish_milp(model_options, master_milp,
-                                 _first_iter=_first_iter)
+        return self._finish_milp(model_options, master_milp, _first_iter=_first_iter)
 
     def _finish_milp(self, model_options, milp, _first_iter=False):
         r"""
@@ -497,10 +500,7 @@ class SBoxCipher(Cipher):
             to be able to generate the report correctly.
         """
         if model_options.optimization != OPTIMIZATION.MILP:
-            raise InvalidModelOptionException(
-                model_options.optimization,
-                OPTIMIZATION
-                )
+            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
 
         summation_result = 0  # Construct the objective
         # sum_arr contains:
@@ -511,8 +511,9 @@ class SBoxCipher(Cipher):
         for factor, entry in self.sum_arr_milp:
             # negative factor since we want to MINIMIZE the MILP
             # while MAXIMIZING the propagation probability.
-            summation_result += -factor * self.X[
-                _before_brackets(entry)][_between_brackets(entry)]
+            summation_result += (
+                -factor * self.X[_before_brackets(entry)][_between_brackets(entry)]
+            )
 
         if len(self.MILP_IN.items()) == 0:
             raise ValueError("Empty MILP")
@@ -534,11 +535,11 @@ class SBoxCipher(Cipher):
             milp.set_objective(summation_result)
 
         # Save the dictionary files as json
-        with open(model_options.path / (self.name + "_d.json"), 'w') as f:
+        with open(model_options.path / (self.name + "_d.json"), "w") as f:
             json.dump(self.dictionaries_milp, f)
             f.close()
 
-        with open(model_options.path / (self.name + "_id.json"), 'w') as f:
+        with open(model_options.path / (self.name + "_id.json"), "w") as f:
             json.dump(self.inv_dictionaries_milp, f)
             f.close()
 
@@ -599,7 +600,7 @@ class SBoxCipher(Cipher):
         for var_name, sub_dict in results.items():
             if var_name in ("IN", "OUT"):
                 continue
-            if var_name[0] == 'X':
+            if var_name[0] == "X":
                 # 'X3' -> 3
                 i = int(var_name[1:])
             for j, val in sub_dict.items():
