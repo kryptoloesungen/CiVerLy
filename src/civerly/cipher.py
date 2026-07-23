@@ -1604,7 +1604,7 @@ class Cipher:
                 # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
                 # helper/dummy variables are excluded so that two solutions
                 # are considered the same when they agree on the trail.
-                b = self.milp.get_backend()
+                b = self.milp.backend
                 trail_vars = {
                     b.col_name(i) for i in range(b.ncols())
                     if b.col_name(i).startswith("X")

@@ -166,6 +166,8 @@ class MILP_CVL(MixedIntegerLinearProgram):
             - ``backend_index`` -- int; The index of the corresponding backend variable. 
               In the backend, the variables are of the form ``x_1234``, ``backend_index``
               stores the integer 1234.
+            - ``var_type`` -- int; an integer indicating whether the MIPVariable is real (0),
+              binary (1), integer (2), nonnegative (3).
 
         - objective -- list of floats, indexed by the variables list; contains the coefficients 
           for the objective function. If we would have ``x[0] - 2*x[1] + x[3]``, the 'objective'
@@ -227,7 +229,6 @@ class MILP_CVL(MixedIntegerLinearProgram):
              [(6, 7), (-1.0, 1.0), [0.0, 0.0]],
              [(8, 9), (-1.0, 1.0), [0.0, 0.0]],
              ...
-
         """
         return {
             "maximization": self.backend.is_maximization(),
@@ -296,7 +297,6 @@ class MILP_CVL(MixedIntegerLinearProgram):
             True
             sage: import shutil
             sage: shutil.rmtree(model_options.path, ignore_errors=True)
-            
         """
         with open(filename) as f:
             data = json.load(f)
@@ -338,7 +338,6 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: milp = MILP_CVL.from_dict(data)
             sage: milp == cipher.milp
             True
-
         """
         milp = cls(maximization=data["maximization"])
         milp.VAR_MODEL = []
