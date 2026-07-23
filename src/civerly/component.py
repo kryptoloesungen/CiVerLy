@@ -2397,7 +2397,7 @@ class SBox_CVL(Component):
             }
             for a in range(1 << self.input_length):
                 for b in range(1 << self.output_length):
-                    for prob in impossible_points_for_prob.keys():
+                    for prob in impossible_points_for_prob:
                         if ddt[a][b] != int(prob):
                             impossible_points_for_prob[prob].append((a, b))
 
@@ -2466,7 +2466,7 @@ class SBox_CVL(Component):
                     milp_to_minimize_milp.write_mps(str(s_file_mps))
                 reduction_solution[prob] = solver.solve(s_file_mps)["assignment"]
 
-            selected_inequations = {prob: [] for prob in reduction_solution.keys()}
+            selected_inequations = {prob: [] for prob in reduction_solution}
             for prob, results in reduction_solution.items():
                 assert "Z" in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "

@@ -1084,7 +1084,7 @@ class Cipher:
 
         maximal_count = max([depths.count(i) for i in depths])
 
-        ctr = {dd: 0 for dd in set(depths)}
+        ctr = dict.fromkeys(set(depths), 0)
         # Draw each node
         for i in range(len(self.nodes)):
             if i == 0:
