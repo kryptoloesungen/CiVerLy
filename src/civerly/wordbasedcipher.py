@@ -130,7 +130,7 @@ class WordBasedCipher(Cipher):
             if sub_cipher.wordsize != self.wordsize:
                 raise AssertionError(
                     f"Wordsize mismatch: {sub_cipher.wordsize = } != {self.wordsize = }"
-                )  # noqa
+                )
             return super().add_subcipher(
                 sub_cipher=sub_cipher,
                 edges=[

@@ -685,9 +685,7 @@ class Cipher:
         """
         # If self.OUT is in self.nodes and we "invalidate" the cipher again
         if len(edges) != sub_cipher.input_length:
-            raise IndexError(
-                f"{len(edges) = } != {sub_cipher.input_length = }"  # noqa
-            )
+            raise IndexError(f"{len(edges) = } != {sub_cipher.input_length = }")
 
         if sub_cipher != self.OUT:
             if self.is_valid:

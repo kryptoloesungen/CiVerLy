@@ -264,9 +264,7 @@ class SKINNY_CVL:
             return [tk1_schedule, tk2_schedule]
         if z == 3:
             return [tk1_schedule, tk2_schedule, tk3_schedule]
-        raise ValueError(
-            f"{z = } is an invalid parameter for create_tk_schedules."  # noqa
-        )
+        raise ValueError(f"{z = } is an invalid parameter for create_tk_schedules.")
 
     def __init__(self, n=64, t=64, R=None, key=None, name=None):
         r"""
