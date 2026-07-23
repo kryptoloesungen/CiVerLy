@@ -117,8 +117,20 @@ class MILP_CVL(MixedIntegerLinearProgram):
         Override :meth:``MixedIntegerLinearProgram.new_variable`` to 
         also store this variable inside ``self.vars``.
         """
-        name = kwargs.get("name")
+        name = kwargs.get("name", None)
+        var_types = [
+            kwargs.get("real", None),
+            kwargs.get("binary", None),
+            kwargs.get("integer", None),
+            kwargs.get("nonnegative", None),
+        ]
+        if any(var_types): 
+            var_type = var_types.index(True)
+        else:
+            var_type = 0 # 'real' is the default
+
         var = super().new_variable(*args, **kwargs)
+        var.type = var_type
         self.__vars[name] = var
         return var
 
@@ -182,23 +194,23 @@ class MILP_CVL(MixedIntegerLinearProgram):
             ....:   present_cipher.model(model_options)
             5312 variables and 8641 constraints were written to ...
             sage: present_cipher.milp.to_dict()['variables']
-            [('IN', 0, 5184),
-             ('IN', 1, 5185),
-             ('IN', 2, 5186),
-             ('IN', 3, 5187),
-             ('IN', 4, 5188),
-             ('IN', 5, 5189),
-             ('IN', 6, 5190),
-             ('IN', 7, 5191),
-             ('IN', 8, 5192),
+            [('IN', 0, 5184, 1),
+             ('IN', 1, 5185, 1),
+             ('IN', 2, 5186, 1),
+             ('IN', 3, 5187, 1),
+             ('IN', 4, 5188, 1),
+             ('IN', 5, 5189, 1),
+             ('IN', 6, 5190, 1),
+             ('IN', 7, 5191, 1),
+             ('IN', 8, 5192, 1),
              ...
-             ('X6', 120, 5177),
-             ('X6', 123, 5178),
-             ('X6', 122, 5179),
-             ('X6', 125, 5180),
-             ('X6', 124, 5181),
-             ('X6', 127, 5182),
-             ('X6', 126, 5183)]
+             ('X6', 120, 5177, 1),
+             ('X6', 123, 5178, 1),
+             ('X6', 122, 5179, 1),
+             ('X6', 125, 5180, 1),
+             ('X6', 124, 5181, 1),
+             ('X6', 127, 5182, 1),
+             ('X6', 126, 5183, 1)]
             sage: present_cipher.milp.to_dict()['objective']
             [0.0, 0.0, 0.0, 0.0, 0.0,...
             sage: present_cipher.milp.to_dict()['constraints']
@@ -213,7 +225,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         return {
             "maximization": self.backend.is_maximization(),
             "variables": [ # has the form [('x', 0, 0), ('x', 1, 1), ...]
-                (name, int(index), int(str(backend_index)[2:]))
+                (name, int(index), int(str(backend_index)[2:]), var.type)
                 for name, var in list(self.vars.items())
                 for index, backend_index in var.items()
             ],
@@ -282,18 +294,27 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
         """
         milp = cls(maximization=data["maximization"])
+        milp.VAR_MODEL = []
 
-        # Map variable ids back to sage variables.
-        groups = {}
+        # map variable ids back to sage variables
+        mip_vars = {}
         id_to_var = {}
 
         # sort for var_id (the backend index), so that milp.new_variable
         # implicitly reconstructs them
-        for group, key, var_id in sorted(data["variables"], key=lambda x: x[2]):
-            if group not in groups:
-                groups[group] = milp.new_variable(name=group)
+        for var_name, key, var_id, var_type in sorted(data["variables"], key=lambda x: x[2]):
+            if var_name not in mip_vars:
+                type_attr = ["real", "binary", "integer", "nonnegative"][var_type]
+                kwargs = {"name": var_name, type_attr: True}
+                mip_vars[var_name] = milp.new_variable(**kwargs)
+                if var_name == "IN":
+                    milp.VAR_IN = mip_vars[var_name]
+                elif var_name == "OUT":
+                    milp.VAR_OUT = mip_vars[var_name]
+                else:
+                    milp.VAR_MODEL.append(mip_vars[var_name])
 
-            sage_var = groups[group][key]
+            sage_var = mip_vars[var_name][key]
             id_to_var[var_id] = sage_var
 
         # rebuild objective
@@ -303,7 +324,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
         milp.set_objective(obj)
 
-        # Reconstruct the constraints.
+        # reconstruct the constraints
         for indices, coefficients, (lower, upper) in data["constraints"]:
 
             expr = sum(
