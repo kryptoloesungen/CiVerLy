@@ -265,8 +265,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         is deterministic):
 
             sage: from civerly.milp import MILP_CVL
-            sage: from civerly.cipher_implementations.gift \
-            ....:   import GIFT_CVL
+            sage: from civerly.cipher_implementations.gift import GIFT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: gift = GIFT_CVL(R=3)
@@ -295,6 +294,8 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: result = scip.solve(model_options.path / "milp.mps")
             sage: result['assignment'] == gift.result['assignment']
             True
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path, ignore_errors=True)
             
         """
         with open(filename) as f:
