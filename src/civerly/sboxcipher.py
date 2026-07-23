@@ -329,7 +329,7 @@ class SBoxCipher(Cipher):
             compMILP_INx = X[_before_brackets(cmi)][_between_brackets(cmi)]
             master_milp.add_constraint(self.MILP_IN[x] == compMILP_INx)
 
-        assert __ASSERTION_CTR == self.input_length // divide_by, (
+        assert self.input_length // divide_by == __ASSERTION_CTR, (
             f"({self.name}) {__ASSERTION_CTR} != {self.input_length // divide_by}"
         )
 
@@ -353,7 +353,7 @@ class SBoxCipher(Cipher):
                 cmi = self.inv_dictionaries_milp[self.nodes.index(self.IN)][f"OUT[{x}]"]
             master_milp.add_constraint(X[a][out_string_index] == self.MILP_OUT[y])
 
-        assert __ASSERTION_CTR == self.output_length // divide_by, (
+        assert self.output_length // divide_by == __ASSERTION_CTR, (
             f"({self.name}) {__ASSERTION_CTR} != {self.output_length // divide_by}"
         )
         # ------------------------------------------------------------------ #

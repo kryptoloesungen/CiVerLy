@@ -941,7 +941,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         L = len(u)
 
         # special, trivial case for sum_arr with less elements than bound
-        if L <= num:
+        if num >= L:
             return new_sat
 
         # special, trivial case for w = 0
