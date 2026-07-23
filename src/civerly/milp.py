@@ -257,6 +257,45 @@ class MILP_CVL(MixedIntegerLinearProgram):
     def load(cls, filename):
         """
         Load the MILP_CVL object from a json file, using :meth:``from_dict``.
+
+        TESTS::
+
+        Dumping the MILP from a previous analysis, loading it and solving it
+        shall result in the exact same solution (when solving process
+        is deterministic):
+
+            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.cipher_implementations.gift \
+            ....:   import GIFT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: gift = GIFT_CVL(R=3)
+            sage: # optional - scip, espresso
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   gift.analyse(model_options)
+            3648 variables and 6081 constraints were written to...
+            7
+            sage: gift.milp.dump(model_options.path / "milp.json")
+            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.solvers import SCIP_CVL
+            sage: milp = MILP_CVL.load(model_options.path / "milp.json")
+            sage: milp.write_mps(str(model_options.path / "milp.mps"))
+            Writing problem data to ...
+            21658 records were written
+            sage: # optional - scip
+            sage: scip = SCIP_CVL()
+            sage: result = scip.solve(model_options.path / "milp.mps")
+            sage: result['assignment'] == gift.result['assignment']
+            True
+            
         """
         with open(filename) as f:
             data = json.load(f)
