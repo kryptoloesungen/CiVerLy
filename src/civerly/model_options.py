@@ -8,16 +8,25 @@ from pathlib import Path
 
 from sage.rings.integer import Integer
 
-from civerly.solvers import SOLVER_CVL, LOGIC_MINIMIZER_CVL
-from civerly.solvers import MILP_SOLVER_CVL, SAT_SOLVER_CVL, LOGIC_MINIMIZER_CVL
-
 # Import all solvers, even though they are unused here.
 # This way, the user has access to ALL model options
 # when importing `civerly.model_options`.
-from civerly.solvers import EXTERNAL_MILP_SOLVER_CVL, GUROBI_CVL, SCIP_CVL, GLPK_CVL
-from civerly.solvers import EXTERNAL_SAT_SOLVER_CVL, CRYPTOMINISAT_CVL, CADICAL_CVL
-from civerly.solvers import EXTERNAL_LOGIC_MINIMIZER_CVL, ESPRESSO_CVL
-from civerly.solvers import SOLVER
+from civerly.solvers import (  # noqa: F401
+    CADICAL_CVL,
+    CRYPTOMINISAT_CVL,
+    ESPRESSO_CVL,
+    EXTERNAL_LOGIC_MINIMIZER_CVL,
+    EXTERNAL_MILP_SOLVER_CVL,
+    EXTERNAL_SAT_SOLVER_CVL,
+    GLPK_CVL,
+    GUROBI_CVL,
+    LOGIC_MINIMIZER_CVL,
+    MILP_SOLVER_CVL,
+    SAT_SOLVER_CVL,
+    SCIP_CVL,
+    SOLVER,
+    SOLVER_CVL,
+)
 
 
 class CRYPTANALYSIS(Enum):
@@ -318,7 +327,7 @@ class MODEL_OPTIONS:
                 )
         if self.sat_precision >= 5:
             raise InvalidModelOptionException(
-                f"{self.sat_precision = } is too large. "  # noqa
+                f"{self.sat_precision = } is too large. "
                 "Note that the solving complexity grows exponentially "
                 "for increased precision parameters."
             )
