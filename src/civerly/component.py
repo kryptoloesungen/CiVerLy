@@ -223,22 +223,22 @@ class Component(ABC):
         r"""Compute the hash of this component."""
         liste = []
         for key, value in self.__dict__.items():
-            if isinstance(value, (bool, str)):
-                continue
-            elif isinstance(value, (MixedIntegerLinearProgram, DIMACS)):
-                continue
-            elif any(
-                [
-                    word in key
-                    for word in [
-                        "wordsize",
-                        "milp",
-                        "sat",
-                        "MILP",
-                        "SAT",
-                        "_model_time",
+            if (
+                isinstance(value, (bool, str))
+                or isinstance(value, (MixedIntegerLinearProgram, DIMACS))
+                or any(
+                    [
+                        word in key
+                        for word in [
+                            "wordsize",
+                            "milp",
+                            "sat",
+                            "MILP",
+                            "SAT",
+                            "_model_time",
+                        ]
                     ]
-                ]
+                )
             ):
                 continue
             elif isinstance(value, matrix_type):
