@@ -428,14 +428,14 @@ class Cipher:
         self.key_schedule = key_schedule
 
         self.milp = None
-        self.sat = None
+        self.sat  = None
 
         # attributes to keep timing information (in seconds)
         self._analyse_time = None
-        self._model_time = None
-        self._solve_time = None
+        self._model_time   = None
+        self._solve_time   = None
 
-        self.grid_in = None
+        self.grid_in  = None
         self.grid_out = None
 
     # Get-functions of various attributes:

@@ -187,26 +187,15 @@ class SBoxCipher(Cipher):
             # check if component was modeled before
             for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
-                    ############################################################
-                    # TODO do this recursively!
+                    # copy the component entirely (and its attributes!)
                     self.nodes[i_comp] = self.nodes[i_prev]
-                    comp = prev # 
-                    # copy over attributes related to modeling
-                    ############################################################
-                    # comp.milp         = prev.milp
-                    # comp.sum_arr_milp = prev.sum_arr_milp
+                    comp = prev
 
                     # copy the component milp programs
                     milps.append(comp.milp)
 
-                    # for key, val in self.dictionaries_milp[i_prev].items():
-                    #     assert key[:key.index('X') + 1] == "X"
-                    #     self.dictionaries_milp[i_comp][
-                    #         f"X{i_comp}{key[key.index('['):]}"
-                    #     ] = val
-
                     for local_var_prev in self.dictionaries_milp[i_prev].values():
-                        VAR_MODEL[i_comp][local_var_prev]
+                        VAR_MODEL[i_comp][local_var_prev] # create MIPVariable
                         key = VAR_MODEL[i_comp].get_index(local_var_prev)
                         self.dictionaries_milp[i_comp][key] = local_var_prev
 
@@ -281,15 +270,10 @@ class SBoxCipher(Cipher):
         __ASSERTION_CTR = 0
         for x in range(self.input_length // divide_by):
             __ASSERTION_CTR += 1
-            # helper variable to make the code shorter
 
             loc_ind  = self.IN.milp.vars['OUT'].get_index(x)
             glob_ind = self.inv_dictionaries_milp[self.nodes.index(self.IN)][loc_ind]
             compMILP_INx = master_milp.get_var(glob_ind)
-
-            # cmi = self.inv_dictionaries_milp[
-            #     self.nodes.index(self.IN)][f'OUT[{x}]']
-            # compMILP_INx = VAR_MODEL[_before_brackets(cmi)][_between_brackets(cmi)]
             master_milp.add_constraint(master_milp.VAR_IN[x] == compMILP_INx)
 
         assert __ASSERTION_CTR == self.input_length // divide_by, (
@@ -325,11 +309,7 @@ class SBoxCipher(Cipher):
             f"({self.name}) "
             f"{__ASSERTION_CTR} != {self.output_length // divide_by}"
         )
-        # ------------------------------------------------------------------ #
-        # NOTE:
-        # k gives the internal label from inside the component. Therefore,
-        # checking whether "OUT"/"IN" is in k or whether comp == self.IN/ is
-        # in out are two entirely different things!!
+
         # -------------- Find comp.IN/OUT and connect these ---------------- #
         # dictionary of branches with key in_node and
         # value[out_node0, out_node1, ...]
@@ -342,18 +322,10 @@ class SBoxCipher(Cipher):
 
         # take the (wordwise) edges in the graph to combine the MILPs
         for (a, b), (x, y) in edge_arr:
-            # helper vars to shorten the code a bit
-            # inv_dict_a_outx = self.inv_dictionaries_milp[a][f'OUT[{x}]']
-            # aOUTx = VAR_MODEL[_before_brackets(inv_dict_a_outx)][
-            #     _between_brackets(inv_dict_a_outx)]
             loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
             glob_ind = self.inv_dictionaries_milp[a][loc_ind]
             aOUTx = master_milp.get_var(glob_ind)
 
-            # helper vars to shorten the code a bit
-            # inv_dict_b_iny = self.inv_dictionaries_milp[b][f'IN[{y}]']
-            # bINy = VAR_MODEL[_before_brackets(inv_dict_b_iny)][
-            #     _between_brackets(inv_dict_b_iny)]
             loc_ind  = self.nodes[b].milp.vars['IN'].get_index(y)
             glob_ind = self.inv_dictionaries_milp[b][loc_ind]
             bINy = master_milp.get_var(glob_ind)
@@ -447,10 +419,6 @@ class SBoxCipher(Cipher):
                     ) and not self.nodes[a].in_node:
                         pass  # skip OUT-nodes
                     else:
-                        # tmp = self.inv_dictionaries_milp[a][f'OUT[{x}]']
-                        # master_milp.add_constraint(
-                        #     VAR_MODEL[_before_brackets(tmp)][_between_brackets(tmp)] == 0
-                        # )
                         loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
                         glob_ind = self.inv_dictionaries_milp[a][loc_ind]
                         master_milp.add_constraint(master_milp.get_var(glob_ind) == 0)
@@ -501,13 +469,12 @@ class SBoxCipher(Cipher):
         # sum_arr contains:
         # - the variables that correspond to an SBox being active
         #   or not (wordwise)
-        # - the variables as before and the corresponding propagation
+        # - the variables and the corresponding propagation
         #   probability (bitwise)
         for factor, entry in self.sum_arr_milp:
             # negative factor since we want to MINIMIZE the MILP
             # while MAXIMIZING the propagation probability.
-            
-            # summation_result += -factor * milp.VAR_MODEL[_before_brackets(entry)][_between_brackets(entry)]
+
             summation_result += -factor * milp.get_var(entry)
 
         if len(milp.VAR_IN.items()) == 0:
