@@ -112,6 +112,14 @@ class MILP_CVL(MixedIntegerLinearProgram):
         """
         return self.__vars
 
+    def get_var(self, index):
+        for var in self.vars.values():
+            for i, b_var in var.items():
+                if var.get_index(i) == index:
+                    return b_var
+        raise AssertionError("var not found")
+
+
     def new_variable(self, *args, **kwargs):
         """
         Override :meth:``MixedIntegerLinearProgram.new_variable`` to 
@@ -137,7 +145,10 @@ class MILP_CVL(MixedIntegerLinearProgram):
             var_type = 0 # 'real' is the default
 
         var = super().new_variable(*args, **kwargs)
+        # add new attributes + methods
         var.type = var_type
+        var.get_index = lambda i: list(var[i].dict().keys())[0]
+
         self.__vars[name] = var
         return var
 
