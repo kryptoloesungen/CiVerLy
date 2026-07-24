@@ -189,10 +189,12 @@ class SBoxCipher(Cipher):
                 if comp == prev:
                     ############################################################
                     # TODO do this recursively!
+                    self.nodes[i_comp] = self.nodes[i_prev]
+                    comp = prev # 
                     # copy over attributes related to modeling
                     ############################################################
-                    comp.milp         = prev.milp
-                    comp.sum_arr_milp = prev.sum_arr_milp
+                    # comp.milp         = prev.milp
+                    # comp.sum_arr_milp = prev.sum_arr_milp
 
                     # copy the component milp programs
                     milps.append(comp.milp)

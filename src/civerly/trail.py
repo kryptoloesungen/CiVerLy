@@ -115,7 +115,7 @@ class TrailNode:
                         cipher_instance.milp.vars[var_name].get_index(s_ind)
                     ]
                     comp = cipher_instance.nodes[comp_num]
-                    print(comp.name)
+                    # print(comp.name)
                     local_var = comp.milp.get_var(local_ind)
 
                     # bool1 = local_var in comp.milp.VAR_IN.values()
