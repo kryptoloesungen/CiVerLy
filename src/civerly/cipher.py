@@ -1527,6 +1527,7 @@ class Cipher:
         assert isinstance(_first_iter, bool)
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
+        """
         file_name = (model_options.path / self.name.replace(' ', '_'))
         with open(f"{file_name}sum.json", 'w') as f:
             json.dump(self.sum_arr_sat, f)
@@ -1540,6 +1541,7 @@ class Cipher:
         with open(model_options.path / (self.name + "_id.json"), 'w') as f:
             json.dump(self.inv_dictionaries_sat, f)
             f.close()
+        """
 
         if _first_iter:
             # At least one variable that does not belong to PROB needs to be
