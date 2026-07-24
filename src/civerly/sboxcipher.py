@@ -508,7 +508,7 @@ class SBoxCipher(Cipher):
             # while MAXIMIZING the propagation probability.
             
             # summation_result += -factor * milp.VAR_MODEL[_before_brackets(entry)][_between_brackets(entry)]
-            summation_result += -factor * entry 
+            summation_result += -factor * milp.get_var(entry)
 
         if len(milp.VAR_IN.items()) == 0:
             raise ValueError("Empty MILP")
