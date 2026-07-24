@@ -175,6 +175,12 @@ the corresponding activity pattern, we can generate a PDF report::
     ....:     granularity=GRANULARITY.WORDWISE,
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
     ....:     path=Path("./DOCTEST-AES-Models/"))
+    sage: aes.model(model_options) # optional - scip
+    Using existing file DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol,
+    make sure it is up to date!
+    3200 variables and 3329 constraints were written to
+    'DOCTEST-AES-Models/AES.mps'
+    Boolean Program (minimization, 3200 variables, 3329 constraints)
     sage: aes.generate_report(model_options) # optional - scip
     Output file in: DOCTEST-AES-Models/AES.pdf
 
