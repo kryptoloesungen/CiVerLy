@@ -516,7 +516,7 @@ class SBoxCipher(Cipher):
         if _first_iter:
             # Input should be active, i.e. the input
             # differences should be non-zero
-            milp.add_constraint(sum(milp.VAR_IN) >= 1)
+            milp.add_constraint(milp.sum(milp.vars['IN']) >= 1)
 
             # bound the objective by `model_options.solve_range``
             if model_options.solve_range is not None:

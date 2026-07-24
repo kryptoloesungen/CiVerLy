@@ -435,6 +435,9 @@ class Cipher:
         self._model_time = None
         self._solve_time = None
 
+        self.grid_in = None
+        self.grid_out = None
+
     # Get-functions of various attributes:
     # --------------------------------------------------
 
@@ -1527,7 +1530,7 @@ class Cipher:
         assert isinstance(_first_iter, bool)
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
-        """
+
         file_name = (model_options.path / self.name.replace(' ', '_'))
         with open(f"{file_name}sum.json", 'w') as f:
             json.dump(self.sum_arr_sat, f)
@@ -1541,7 +1544,7 @@ class Cipher:
         with open(model_options.path / (self.name + "_id.json"), 'w') as f:
             json.dump(self.inv_dictionaries_sat, f)
             f.close()
-        """
+
 
         if _first_iter:
             # At least one variable that does not belong to PROB needs to be
@@ -1727,6 +1730,12 @@ class Cipher:
              - ``input_side`` -- bool; indicates whether grid shows the input
                (``True``) or output side (``False``)
         """
+        # don't recompute every time
+        if input_side and self.grid_in:
+            return self.grid_in
+        elif self.grid_out:
+            return self.grid_out
+        
         depths = self._dfs_traversal()
 
         # initialize grid
@@ -1807,10 +1816,14 @@ class Cipher:
                 grid_out[depths[node]][grid_index] = (node, y // divide_by)
             offset_out[depth] += self.nodes[node].output_length
 
+        # store so we don't recompute from scratch it every time
+        self.grid_in  = grid_in
+        self.grid_out = grid_out
+
         if input_side:
-            return grid_in
+            return self.grid_in
         else:
-            return grid_out
+            return self.grid_out
 
     def _from_grid(self, node_num, current_index, model_options, input_side=True):
         r"""

@@ -237,9 +237,8 @@ class TrailNode:
                     # print(comp.name, comp.milp.vars.keys())
                     #### TODO improve this
                     for name, _var in comp.milp.vars.items():
-                        for ind, loc_var in _var.items():
+                        for ind in _var.keys():
                             if local_index == _var.get_index(ind): # loc_var:
-                                # print(local_var, loc_var)
                                 tr_ind = ind
                                 tr_name = name
                                 # print("->", comp.name, name, ind)
