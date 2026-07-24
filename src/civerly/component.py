@@ -2086,7 +2086,8 @@ class SBox_CVL(Component):
             # wordsize is set externally in wordbasedcipher.add_subcipher
             for i in range(self.input_length // self.wordsize):
                 self.milp.add_constraint(self.milp.VAR_OUT[i] == self.milp.VAR_IN[i])
-                self.sum_arr_milp += [(-1, f"IN[{i}]")]
+                # self.sum_arr_milp += [(-1, f"IN[{i}]")]
+                self.sum_arr_milp += [(-1, self.milp.vars['IN'].get_index(i))]
             return self.milp
         elif model_options.granularity == GRANULARITY.BITWISE:
             return self._milp_bitwise(model_options)
@@ -2457,7 +2458,8 @@ class SBox_CVL(Component):
 
         # Extend sum_arr_milp with the correct weights
         self.sum_arr_milp += [
-            (log2(set_ddt[i] / ddt[0][0]), f"PROB[{i}]")
+            # (log2(set_ddt[i] / ddt[0][0]), f"PROB[{i}]")
+            (log2(set_ddt[i] / ddt[0][0]), PROB.get_index(i))
             for i in range(len(set_ddt))
         ]
         return self.milp

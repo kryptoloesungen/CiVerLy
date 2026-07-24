@@ -72,8 +72,9 @@ class TrailNode:
         if hasattr(self.cipher_instance, attr):
             dictionaries = getattr(self.cipher_instance, attr)
         else:
-            with open(model_options.path / (self.name + "_d.json")) as f:
-                dictionaries = json.load(f)
+            raise AssertionError("no json supported")
+            # with open(model_options.path / (self.name + "_d.json")) as f:
+            #     dictionaries = json.load(f)
 
         if model_options.optimization == OPTIMIZATION.SAT:
             def check_condition(comp_num, s):
@@ -107,22 +108,40 @@ class TrailNode:
                     continue
                 comp_num = int(var_name[1:])
                 for s_ind, solution_bit_value in var_dict.items():
-                    translated_component = dictionaries[comp_num][
-                        f"{var_name}[{s_ind}]"
+                    # translated_component = dictionaries[comp_num][
+                    #     f"{var_name}[{s_ind}]"
+                    # ]
+                    local_ind = dictionaries[comp_num][
+                        cipher_instance.milp.vars[var_name].get_index(s_ind)
                     ]
-                    # Draw the input nodes of each component
-                    bool1 = "IN" in translated_component
-                    # We also draw the output of the last component.
-                    bool2 = "OUT" in translated_component
+                    comp = cipher_instance.nodes[comp_num]
+                    print(comp.name)
+                    local_var = comp.milp.get_var(local_ind)
 
-                    if bool1 and comp_num != 0:  # dont draw self.IN.in
-                        current_index = _between_brackets(translated_component)
+                    # bool1 = local_var in comp.milp.VAR_IN.values()
+                    # bool2 = local_var in comp.milp.VAR_OUT.values()
+
+                    id_in  = [cur_idx for cur_idx, lv in comp.milp.VAR_IN.items()  if lv == local_var]
+                    id_out = [cur_idx for cur_idx, lv in comp.milp.VAR_OUT.items() if lv == local_var]
+
+                    bool1 = len(id_in)  == 1
+                    bool2 = len(id_out) == 1
+
+                    # Draw the input nodes of each component
+                    # bool1 = "IN" in translated_component
+                    # We also draw the output of the last component.
+                    # bool2 = "OUT" in translated_component
+
+                    if bool1 and comp_num > 0:  # dont draw self.IN.in
+                        # current_index = _between_brackets(translated_component)
+                        current_index = id_in[0]
                         bit_ind = self.cipher_instance._from_grid(
                             comp_num, current_index, model_options, input_side=True
                         )
                         bits_in[depths[comp_num]][bit_ind] = solution_bit_value
                     elif bool2:
-                        current_index = _between_brackets(translated_component)
+                        # current_index = _between_brackets(translated_component)
+                        current_index = id_out[0]
                         bit_ind = self.cipher_instance._from_grid(
                             comp_num, current_index, model_options, input_side=False
                         )
@@ -205,26 +224,62 @@ class TrailNode:
                 # from the parent's nested results entry for this comp_num
                 sub_results = {}
                 var_name = f"X{comp_num}"
-                for s_ind, solution_bit_value in \
-                        results.get(var_name, {}).items():
-                    translated = dictionaries[comp_num][
-                        f"{var_name}[{s_ind}]"
+                for s_ind, solution_bit_value in results.get(var_name, {}).items():
+                    # translated = dictionaries[comp_num][
+                    #     f"{var_name}[{s_ind}]"
+                    # ]
+                    local_index = dictionaries[comp_num][
+                        cipher_instance.milp.vars[var_name].get_index(s_ind)
                     ]
-                    tr_name, tr_rest = translated.split('[', 1)
-                    tr_ind = int(tr_rest.rstrip(']'))
-                    sub_results.setdefault(tr_name, {})[tr_ind] = \
-                        solution_bit_value
+                    local_var = comp.milp.get_var(local_index)
+                    # print(local_var, end=" ")
+
+                    # print(comp.name, comp.milp.vars.keys())
+                    #### TODO improve this
+                    for name, _var in comp.milp.vars.items():
+                        for ind, loc_var in _var.items():
+                            if local_index == _var.get_index(ind): # loc_var:
+                                # print(local_var, loc_var)
+                                tr_ind = ind
+                                tr_name = name
+                                # print("->", comp.name, name, ind)
+                                break_out = True
+                            if break_out: break
+                        if break_out: break
+                    break_out = False
+                    ######################
+                    # sub_results.setdefault(tr_name, {})[tr_ind] = solution_bit_value
+                    if tr_name not in sub_results.keys():
+                        sub_results[tr_name] = {}
+                    sub_results[tr_name][tr_ind] = solution_bit_value
+                # print(comp.name, sub_results)
+
                 # Compute the weight of this subcipher's trail from the
                 # parent's objective contributions for comp_num.
-                prefix = f"X{comp_num}["
                 if hasattr(self.cipher_instance, 'sum_arr_milp'):
-                    sub_weight = sum(
-                        -factor * int(results.get(f"X{comp_num}", {}).get(
-                            int(v[len(prefix):-1]), 0
-                        ))
-                        for factor, v in self.cipher_instance.sum_arr_milp
-                        if v.startswith(prefix)
-                    )
+                    # sub_weight = sum(
+                    #     -factor * int(results.get(f"X{comp_num}", {}).get(
+                    #         int(v[len(f"X{comp_num}["):-1]), 0
+                    #     ))
+                    #     for factor, v in self.cipher_instance.sum_arr_milp
+                    #     if v.startswith(f"X{comp_num}[")
+                    # )
+
+                    sub_weight = 0
+                    for factor, v in self.cipher_instance.sum_arr_milp:
+                        for var_name, var in self.cipher_instance.milp.vars.items():
+                            for index in var.keys():
+                                if var.get_index(index) == v:
+                                    # print(cipher_instance.name, results.keys())
+                                    sub_weight += -factor * results[var_name][index]
+
+                    # sub_weight = sum(
+                    #     -factor * int(results.get(f"X{comp_num}", {}).get(
+                    #         int(v[len(f"X{comp_num}["):-1]), 0
+                    #     ))
+                    #     for factor, v in self.cipher_instance.sum_arr_milp
+                    #     if v.startswith(f"X{comp_num}[")
+                    # )
                 else:
                     sub_weight = 0
             else:  # SAT
