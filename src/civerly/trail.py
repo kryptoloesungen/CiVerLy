@@ -248,7 +248,7 @@ class TrailNode:
                         for var_name, var in self.cipher_instance.milp.vars.items():
                             for index in var.keys():
                                 if var.get_index(index) == v:
-                                    sub_weight += -factor * results[var_name][index]
+                                    sub_weight += -factor * int(results[var_name][index])
                 else:
                     sub_weight = 0
             else:  # SAT
