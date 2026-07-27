@@ -1663,7 +1663,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "AES.mps",
-            ....:     model_options.path / "AES.073904d3.sol",
+            ....:     model_options.path / "AES.6017446a.sol",
             ....:     model_options.path / "AES.log")
             <SOLVING_STATUS.SUCCESS: 1>
             sage: aes.analyse(model_options)
