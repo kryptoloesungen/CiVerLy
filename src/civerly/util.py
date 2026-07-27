@@ -277,56 +277,6 @@ def translate_milp_constraint(VAR, constr):
         new_constr = constr[0] <= summ <= constr[2]
     return new_constr
 
-
-def _between_brackets(st):
-    r"""
-    From the given string ``st``, return the integer which is inbetween the
-    first pair of squared brackets in this string. This assumes that `st`
-    contains such brackets in the first place.
-
-    TESTS::
-
-        sage: from civerly.util import _between_brackets
-        sage: _between_brackets("TEST[5812]")
-        5812
-        sage: _between_brackets("TEST[912]TEST[120]")
-        912
-        sage: _between_brackets("[TEST]")
-        Traceback (most recent call last):
-        ...
-        ValueError: invalid literal for int() with base 10: 'TEST'
-
-    """
-    assert all(bracket in st for bracket in ('[', ']'))
-    return int(st[st.index('[') + 1: st.index(']')], 10)
-
-
-def _before_brackets(st):
-    r"""
-    From the given string ``st``, return the integer displayed between the
-    second char and the first squared open bracket.
-    As an example, from "X15[42]", return 15 as int.
-
-    NOTE: We assume ``st`` to have this form, and that the variable name is
-    one letter (just "X")!
-
-    TESTS::
-
-        sage: from civerly.util import _before_brackets
-        sage: _before_brackets("X921[1284]")
-        921
-        sage: _before_brackets("T1785[.-")
-        1785
-        sage: _before_brackets("TEST98[10]")
-        Traceback (most recent call last):
-        ...
-        ValueError: invalid literal for int() with base 10: 'EST98'
-
-    """
-    assert '[' in st
-    return int(st[1: st.index('[')], 10)
-
-
 def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     r"""
     Implements Yosuke Todos and Yu Sasakis Reduction Algorithm

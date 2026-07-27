@@ -12,16 +12,14 @@ supported for ciphers containing different non-linear components than
 ``SBox_CVL``, such as ``AddRX, AndRX``.
 """
 
-import io
 import json
-from contextlib import redirect_stdout
 from dataclasses import replace
 
 from civerly.milp import MILP_CVL
 from civerly.cipher import Cipher
 from civerly.component import SBox_CVL, LinearLayer_CVL, XOR_CVL
 from civerly.component import RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
-from civerly.util import _before_brackets, _between_brackets, suppress_output
+from civerly.util import suppress_output
 from civerly.util import translate_milp_constraint
 from civerly.util import translate_var
 from civerly.model_options import OPTIMIZATION, GRANULARITY, CRYPTANALYSIS
