@@ -242,7 +242,7 @@ class SIMON_CVL:
             ....:     path=Path(tmpdir))
             ....:   cipher.model(model_options=model_options)
             5312 variables and 8641 constraints were written to ...
-            Boolean Program (minimization, 5312 variables, 8641 constraints)
+            DIMACS Solver: ''
             sage: MASK_IN  = 0x0001_0000
             sage: MASK_OUT = 0x0000_0080
             sage: for i in range(32):
