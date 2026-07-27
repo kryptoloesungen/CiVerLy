@@ -425,15 +425,14 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         ``trail_vars`` participate in the constraint; helpers are ignored.
         Otherwise every variable in ``assignment`` is constrained.
         """
-        # Flatten the nested ``{name: {idx: val}}`` shape (from
-        # ``_process_solution_file``) back to the flat MPS variable names.
-        flat = {}
-        for name, sub in assignment.items():
-            if isinstance(sub, dict):
-                for idx, val in sub.items():
-                    flat[f"{name}[{idx}]"] = val
-            else:
-                flat[name] = sub
+        # Flatten the nested ``{name: {idx: val}}`` shape (as produced by
+        # ``_to_dict`` in every ``_process_solution_file`` implementation)
+        # back to the flat MPS variable names.
+        flat = {
+            f"{name}[{idx}]": val
+            for name, sub in assignment.items()
+            for idx, val in sub.items()
+        }
 
         if trail_vars is not None:
             trail_vars = set(trail_vars)
