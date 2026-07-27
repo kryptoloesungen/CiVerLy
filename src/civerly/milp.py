@@ -224,13 +224,6 @@ class MILP_CVL(MixedIntegerLinearProgram):
              ('IN', 7, 5191, 1),
              ('IN', 8, 5192, 1),
              ...
-             ('X6', 120, 5177, 1),
-             ('X6', 123, 5178, 1),
-             ('X6', 122, 5179, 1),
-             ('X6', 125, 5180, 1),
-             ('X6', 124, 5181, 1),
-             ('X6', 127, 5182, 1),
-             ('X6', 126, 5183, 1)]
             sage: present_cipher.milp.to_dict()['objective']
             [0.0, 0.0, 0.0, 0.0, 0.0,...
             sage: present_cipher.milp.to_dict()['constraints']
