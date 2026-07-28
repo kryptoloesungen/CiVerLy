@@ -45,6 +45,7 @@ import os
 import sys
 import warnings
 import zlib
+from pathlib import Path
 
 from sage.geometry.polyhedron.constructor import Polyhedron
 from sage.modules.free_module import VectorSpace
@@ -538,7 +539,7 @@ def suppress_output():
     original_stdout_fd = sys.stdout.fileno()
     original_stderr_fd = sys.stderr.fileno()
 
-    with open(os.devnull, "w") as devnull:
+    with Path(os.devnull).open("w") as devnull:
         new_stdout = os.dup(original_stdout_fd)
         new_stderr = os.dup(original_stderr_fd)
         try:

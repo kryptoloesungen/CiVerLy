@@ -34,7 +34,6 @@ EXAMPLES::
     '0x11119999'
 """
 
-import glob
 import json
 import subprocess
 import time
@@ -42,6 +41,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import replace
 from math import ceil, sqrt
+from pathlib import Path
 
 from sage.modules.free_module_element import vector
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
@@ -1504,16 +1504,16 @@ class Cipher:
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
         file_name = model_options.path / self.name.replace(" ", "_")
-        with open(f"{file_name}sum.json", "w") as f:
+        with Path(f"{file_name}sum.json").open("w") as f:
             json.dump(self.sum_arr_sat, f)
             f.close()
 
         # Save the dictionary files as json
-        with open(model_options.path / (self.name + "_d.json"), "w") as f:
+        with (model_options.path / (self.name + "_d.json")).open("w") as f:
             json.dump(self.dictionaries_sat, f)
             f.close()
 
-        with open(model_options.path / (self.name + "_id.json"), "w") as f:
+        with (model_options.path / (self.name + "_id.json")).open("w") as f:
             json.dump(self.inv_dictionaries_sat, f)
             f.close()
 
@@ -1629,7 +1629,7 @@ class Cipher:
                 # the sum-counter aux vars) are excluded so that two
                 # solutions are considered the same when they agree on the
                 # trail.
-                with open(sum_arr_file) as f:
+                with sum_arr_file.open() as f:
                     sum_arr = json.load(f)
                 trail_vars = {int(var) for _, var in sum_arr} | set(
                     range(1, self.input_length + 1)
@@ -2030,7 +2030,7 @@ class Cipher:
             True
 
         """
-        with open(path, "w") as f:
+        with Path(path).open("w") as f:
             json.dump(self._to_dict(), f, default=lambda obj: int(obj))
         print(f"Object '{self.name}' has been exported to {path}.")
 
@@ -2156,7 +2156,7 @@ class Cipher:
 
         OUTPUT: A reconstructed :class:`Cipher` instance.
         """
-        with open(path) as f:
+        with Path(path).open() as f:
             d = json.load(f)
         return cls._from_dict(d)
 
@@ -2219,7 +2219,7 @@ class Cipher:
         tex_file_name = model_options.path / (stem + ".tex")
         pdf_file_name = model_options.path / (stem + ".pdf")
 
-        with open(tex_file_name, "w") as f:
+        with tex_file_name.open("w") as f:
             f.write(string)
 
         with suppress_output():
@@ -2239,16 +2239,16 @@ class Cipher:
             raise ChildProcessError("Error when compiling .tex file.")
 
         with suppress_output():
-            prefix = str(model_options.path)
+            # prefix = str(model_options.path)
             for pattern in [
-                "/*.synctex.gz",
-                "/*.fls",
-                "/*.aux",
-                "/*.log",
-                "/*.fdb_latexmk",
+                "*.synctex.gz",
+                "*.fls",
+                "*.aux",
+                "*.log",
+                "*.fdb_latexmk",
             ]:
-                for f in glob.glob(prefix + pattern):
-                    subprocess.Popen(["rm", "-f", f]).wait()
+                for f in model_options.path.glob(pattern):
+                   subprocess.Popen(["rm", "-f", f]).wait()
 
         print(f"Output file in: {pdf_file_name}")
 
@@ -2557,7 +2557,7 @@ class Cipher:
         input_file = model_options.path / (self.name + ".cnf")
         sum_arr_file = model_options.path / (self.name + "sum.json")
 
-        with open(sum_arr_file) as f:
+        with sum_arr_file.open() as f:
             sum_arr = json.load(f)
 
         sum_vars = {int(var) for _, var in sum_arr}

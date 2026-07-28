@@ -555,11 +555,11 @@ class SBoxCipher(Cipher):
             milp.set_objective(summation_result)
 
         # Save the dictionary files as json
-        with open(model_options.path / (self.name + "_d.json"), "w") as f:
+        with (model_options.path / (self.name + "_d.json")).open("w") as f:
             json.dump(self.dictionaries_milp, f)
             f.close()
 
-        with open(model_options.path / (self.name + "_id.json"), "w") as f:
+        with (model_options.path / (self.name + "_id.json")).open("w") as f:
             json.dump(self.inv_dictionaries_milp, f)
             f.close()
 

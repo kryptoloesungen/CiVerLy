@@ -77,7 +77,7 @@ class TrailNode:
         if hasattr(self.cipher_instance, attr):
             dictionaries = getattr(self.cipher_instance, attr)
         else:
-            with open(model_options.path / (self.name + "_d.json")) as f:
+            with (model_options.path / (self.name + "_d.json")).open() as f:
                 dictionaries = json.load(f)
 
         if model_options.optimization == OPTIMIZATION.SAT:

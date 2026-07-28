@@ -6,7 +6,7 @@ author = u"cryptosolutions GmbH"
 
 import six
 import sys
-import os
+from pathlib import Path
 from sage.env import SAGE_DOC_SRC, SAGE_DOC, SAGE_SRC
 
 try:
@@ -27,9 +27,9 @@ autodoc_default_options = {
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(package_folder))
+sys.path.insert(0, str(Path(package_folder).resolve()))
 #sys.path.append(os.path.join(SAGE_SRC, "sage_setup", "docbuild", "ext"))
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, str(Path().resolve()))
 
 
 print("Using sys.path = {}".format(sys.path))

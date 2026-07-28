@@ -9,7 +9,6 @@ the SBox with which the component is initialized).
 """
 
 import json
-import os
 import time
 import zlib
 from abc import ABC, abstractmethod
@@ -2370,8 +2369,8 @@ class SBox_CVL(Component):
             s_file_name = "".join([f"{s_entry:x}" for s_entry in self.S])
             s_file_ineq = model_options.path / (s_file_name + ".ineq.json")
             # Load inequations if we computed them already
-            if os.path.exists(s_file_ineq):
-                with open(s_file_ineq) as ineq_file:
+            if s_file_ineq.exists():
+                with s_file_ineq.open() as ineq_file:
                     inequations_for_prob = json.load(ineq_file)
             else:  # Create inequations for s-box transitions
                 # Originally, this method does not take the probability
@@ -2388,7 +2387,7 @@ class SBox_CVL(Component):
                         ddt, prob
                     )
                 # Cache inequations
-                with open(s_file_ineq, "w") as ineq_file:
+                with s_file_ineq.open("w") as ineq_file:
                     json.dump(inequations_for_prob, ineq_file)
 
             # Compute all points that do not have a given probability.
