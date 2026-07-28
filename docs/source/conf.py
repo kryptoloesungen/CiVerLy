@@ -1,13 +1,11 @@
 # General information about the project.
-project = u"CiVerLy"
+project = "CiVerLy"
 package_name = 'civerly'
 package_folder = "../../civerly"
-author = u"cryptosolutions GmbH"
+author = "cryptosolutions GmbH"
 
-import six
 import sys
 from pathlib import Path
-from sage.env import SAGE_DOC_SRC, SAGE_DOC, SAGE_SRC
 
 try:
     import sage.all
@@ -32,7 +30,7 @@ sys.path.insert(0, str(Path(package_folder).resolve()))
 sys.path.insert(0, str(Path().resolve()))
 
 
-print("Using sys.path = {}".format(sys.path))
+print(f"Using sys.path = {sys.path}")
 
 # -- General configuration ------------------------------------------------
 
@@ -63,7 +61,8 @@ master_doc = 'index'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from pkg_resources import get_distribution, DistributionNotFound
+from pkg_resources import DistributionNotFound, get_distribution
+
 # The full version, including alpha/beta/rc tags.
 try:
     release = get_distribution('civerly').version
