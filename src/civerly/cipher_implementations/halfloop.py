@@ -264,6 +264,6 @@ class HALFLOOP_CVL:
 
     def __new__(cls, *args, **kwargs):
         """Instantiate HALFLOOP."""
-        instance = super(HALFLOOP_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.halfloop_cipher

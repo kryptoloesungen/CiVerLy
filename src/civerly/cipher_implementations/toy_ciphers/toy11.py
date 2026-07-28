@@ -227,6 +227,6 @@ class Toy11:
         self.cipher = cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(Toy11, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher

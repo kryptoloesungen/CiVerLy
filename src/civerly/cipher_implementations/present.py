@@ -419,6 +419,6 @@ class PRESENT_CVL:
         self.present_cipher = present_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(PRESENT_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.present_cipher

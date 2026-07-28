@@ -236,6 +236,6 @@ class WEAK_PRESENT_CVL:
 
     def __new__(cls, *args, **kwargs):
         """Instantiate a WEAK_PRESENT cipher."""
-        instance = super(WEAK_PRESENT_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.weak_cipher

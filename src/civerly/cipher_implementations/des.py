@@ -257,7 +257,7 @@ class DES_F_CVL:
         self.f = f
 
     def __new__(cls, *args, **kwargs):
-        instance = super(DES_F_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.f
 
@@ -423,6 +423,6 @@ class DES_CVL:
         self.des = des
 
     def __new__(cls, *args, **kwargs):
-        instance = super(DES_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.des

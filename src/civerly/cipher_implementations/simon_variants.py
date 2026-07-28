@@ -275,6 +275,6 @@ class SIMON_Variants_CVL:
         self.simon_cipher = simon_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SIMON_Variants_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.simon_cipher

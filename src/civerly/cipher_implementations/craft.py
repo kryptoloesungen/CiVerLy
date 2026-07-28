@@ -343,6 +343,6 @@ class CRAFT_CVL:
         self.craft_cipher = craft_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(CRAFT_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.craft_cipher

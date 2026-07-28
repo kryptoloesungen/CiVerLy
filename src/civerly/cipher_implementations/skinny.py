@@ -1044,6 +1044,6 @@ class SKINNY_CVL:
         self.skinny_cipher = skinny_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SKINNY_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.skinny_cipher

@@ -638,6 +638,6 @@ class AES_CVL:
 
     def __new__(cls, *args, **kwargs):
         """Instantiate the AES."""
-        instance = super(AES_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.aes_cipher

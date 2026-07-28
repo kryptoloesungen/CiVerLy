@@ -229,6 +229,6 @@ class GIFT_CVL:
 
     def __new__(cls, *args, **kwargs):
         """Instantiate a GIFT cipher."""
-        instance = super(GIFT_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.gift_cipher

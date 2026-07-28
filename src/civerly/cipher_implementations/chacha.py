@@ -125,7 +125,7 @@ class ChachaQRF_CVL:
         self.chacha_qr = chacha_qr
 
     def __new__(cls, *args, **kwargs):
-        instance = super(ChachaQRF_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.chacha_qr
 
@@ -273,6 +273,6 @@ class Chacha_CVL:
         self.chacha_cipher = chacha_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(Chacha_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.chacha_cipher

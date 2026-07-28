@@ -446,6 +446,6 @@ class SPECK_CVL:
         self.speck_cipher = speck_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SPECK_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.speck_cipher

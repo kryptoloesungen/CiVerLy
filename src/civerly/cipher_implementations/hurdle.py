@@ -1012,7 +1012,7 @@ class HURDLE_F_CVL:
         self.cipher = hurdle_f
 
     def __new__(cls, *args, **kwargs):
-        instance = super(HURDLE_F_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher
 
@@ -1133,6 +1133,6 @@ class HURDLE_CVL:
             cipher.set_round_keys(k)
 
     def __new__(cls, *args, **kwargs):
-        instance = super(HURDLE_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher
