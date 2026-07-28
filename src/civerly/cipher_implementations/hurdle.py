@@ -95,10 +95,12 @@ def hurdle_key_schedule(masterkey):
 
 
 class HURDLE_F_CVL:
-    def __init__(self, rk=None) -> None:
+    def __init__(self, rk=0x0) -> None:
         r"""
         Implementation of HURDLE-II's F function, imitating MidnightBlue's
-        implementation.
+        implementation. It takes the following arguments:
+
+            - ``rk`` -- integer; the used round key (default: 0x0)
 
         TESTS::
 
@@ -119,8 +121,6 @@ class HURDLE_F_CVL:
             True
 
         """
-        if rk is None:
-            rk = 0x0
 
         # build F function
         hurdle_f = WordBasedCipher(4, 8, 8, name="F")
@@ -204,10 +204,20 @@ class HURDLE_F_CVL:
 
 
 class HURDLE_CVL:
-    def __init__(self, R=16, k=None, name=None) -> None:
+    def __init__(self, R=16, k=None, name="HURDLE-II") -> None:
         r"""
         Implementation of the HURDLE cipher, imitating MidnightBlue's
-        implementation.
+        implementation (https://github.com/MidnightBlueLabs/TETRA_crypto/blob/main/hurdle.c).
+        It takes the following arguments:
+
+            - ``R`` -- integer; Number of rounds (default: 16)
+
+            - ``k`` -- integer (128-bit); Master key (default: None).  When given,
+              the round keys are derived and injected immediately.
+
+            - ``name`` -- string; The name of the cipher (default: "HURDLE-II").
+              This will be used to name the cipher and the corresponding file
+              generated (such as the reports and cipher graphs).
 
         TESTS::
 
@@ -277,9 +287,6 @@ class HURDLE_CVL:
             12
 
         """
-
-        if name is None:
-            name = "HURDLE-II"
 
         cipher = WordBasedCipher(4, 16, 16, name=name)
 

@@ -143,7 +143,9 @@ class MODEL_OPTIONS:
         - ``sat_precision`` -- int; The number of decimal places which is used
           to find the optimal SAT-bound
 
-        - ``number_of_solutions`` -- number of solutions to find
+        - ``number_of_solutions`` int; -- number of solutions to find
+
+        - ``solve_time_limit`` -- int; time limit for solving process (in seconds).
 
         - ``path`` -- Path; directory where models will be written to
 
@@ -176,6 +178,7 @@ class MODEL_OPTIONS:
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
+            -> solve_time_limit : None
             -> path : CiVerLy-Models
         sage: model_options = MODEL_OPTIONS(
         ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -198,6 +201,7 @@ class MODEL_OPTIONS:
             -> solve_range : None
             -> sat_precision : 0
             -> number_of_solutions : 1
+            -> solve_time_limit : None
             -> path : CiVerLy-Models
     """
 
@@ -213,6 +217,7 @@ class MODEL_OPTIONS:
     solve_range: tuple = None
     sat_precision: int = 0
     number_of_solutions: int = 1
+    solve_time_limit: int = None
     path: Path = None
     write_to_file: bool = True
 

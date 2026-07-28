@@ -1586,6 +1586,55 @@ class Cipher:
         .. WARNING::
 
             Requires the specified solver to be installed.
+
+        TESTS::
+
+        Specify the necessary model options and analyse::
+
+            sage: # optional - glpk
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   aes = AES_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.GLPK,
+            ....:       path=Path(tmpdir))
+            ....:   aes.analyse(model_options)
+            1292 variables and 1349 constraints were written to ...
+            25
+            sage: from civerly.solvers import *
+            sage: aes.result['status'] == SOLVING_STATUS.SUCCESS
+            True
+
+        Exceeding the time limit yields a timeout-status::
+
+            sage: # optional - glpk, espresso
+            sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   cipher = SKINNY_CVL(R=9)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       milp_solver=SOLVER.GLPK,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
+            ....:       solve_time_limit=2,
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
+            27168 variables and 30849 constraints were written to ...
+            sage: from civerly.solvers import *
+            sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
+            True
+        
         """
         start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
@@ -1617,6 +1666,7 @@ class Cipher:
                     milp=self.milp,
                     number_of_solutions=model_options.number_of_solutions,
                     trail_vars=trail_vars,
+                    time_limit=model_options.solve_time_limit,
                 )
                 self._solve_time = 0
                 weights = []
@@ -1632,7 +1682,10 @@ class Cipher:
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return weights
             else:
-                self.result = model_options.milp_solver.solve(input_file)
+                self.result = model_options.milp_solver.solve(
+                    input_file,
+                    time_limit=model_options.solve_time_limit,
+                )
                 self._solve_time = self.result["solve_time"]
                 results_and_weight = (
                     self.result["assignment"], self.result["objective_value"]
@@ -1674,6 +1727,7 @@ class Cipher:
                     number_of_solutions=model_options.number_of_solutions,
                     trail_vars=trail_vars,
                     precision=model_options.sat_precision,
+                    time_limit=model_options.solve_time_limit,
                 )
                 self._solve_time = 0
                 weights = []
@@ -1696,6 +1750,7 @@ class Cipher:
                     sum_arr_file=sum_arr_file,
                     solve_range=model_options.solve_range,
                     precision=model_options.sat_precision,
+                    time_limit=model_options.solve_time_limit,
                 )
                 self._solve_time = self.result["solve_time"]
                 results_and_weight = (
