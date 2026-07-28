@@ -287,7 +287,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   gift.analyse(model_options)
-            3648 variables and 6081 constraints were written to...
+            2880 variables and 5313 constraints were written to...
             7
             sage: gift.milp.dump(model_options.path / "milp.json")
             sage: from civerly.milp import MILP_CVL
@@ -295,7 +295,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: milp = MILP_CVL.load(model_options.path / "milp.json")
             sage: milp.write_mps(str(model_options.path / "milp.mps"))
             Writing problem data to ...
-            21658 records were written
+            18970 records were written
             sage: # optional - scip
             sage: scip = SCIP_CVL()
             sage: result = scip.solve(model_options.path / "milp.mps")
