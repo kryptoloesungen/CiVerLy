@@ -272,10 +272,10 @@ class MILP_CVL(MixedIntegerLinearProgram):
         is deterministic):
 
             sage: from civerly.milp import MILP_CVL
-            sage: from civerly.cipher_implementations.gift import GIFT_CVL
+            sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: gift = GIFT_CVL(R=3)
+            sage: gift = GIFT64_CVL(R=3)
             sage: # optional - scip, espresso
             sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
             ....:   model_options = MODEL_OPTIONS(
