@@ -46,6 +46,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         super().__init__(*args, solver="GLPK", **kwargs)
         self.backend  = self.get_backend()
         self.__vars = {}
+        self.__var_by_index = {}
 
         self.VAR_IN  = self.new_variable(name="IN",  binary=True)
         self.VAR_OUT = self.new_variable(name="OUT", binary=True)
@@ -83,7 +84,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: # optional - scip espresso
+            sage: # optional - scip, espresso
             sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -115,11 +116,42 @@ class MILP_CVL(MixedIntegerLinearProgram):
         return self.__vars
 
     def get_var(self, index):
-        for var in self.vars.values():
-            for i, b_var in var.items():
-                if var.get_index(i) == index:
-                    return b_var
-        raise AssertionError("var not found")
+        """
+        Return the variable whose backend index is ``index``.
+
+        The lookup is served from a cache mapping backend indices to variables,
+        which is (re)built whenever ``index`` is missing from it. Rebuilding is
+        the only way to pick up variables that were created in the meantime, as
+        the components of a MIPVariable are created lazily. A cached entry never
+        goes stale, since the backend index of a variable never changes.
+
+        TESTS:
+
+        Variables created after the cache was built are still found::
+
+            sage: from civerly.milp import MILP_CVL
+            sage: milp = MILP_CVL()
+            sage: x = milp.new_variable(name="x", binary=True)
+            sage: x[0], x[1]
+            (x_0, x_1)
+            sage: milp.get_var(0) is x[0]
+            True
+            sage: x[2]
+            x_2
+            sage: milp.get_var(2) is x[2]
+            True
+            sage: milp.get_var(3)
+            Traceback (most recent call last):
+            ...
+            AssertionError: var not found
+        """
+        if index not in self.__var_by_index:
+            for var in self.vars.values():
+                for i, b_var in var.items():
+                    self.__var_by_index[var.get_index(i)] = b_var
+        if index not in self.__var_by_index:
+            raise AssertionError("var not found")
+        return self.__var_by_index[index]
 
 
     def new_variable(self, *args, **kwargs):

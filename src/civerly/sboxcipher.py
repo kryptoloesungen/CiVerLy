@@ -57,6 +57,29 @@ class SBoxCipher(Cipher):
         d["type"] = "SBoxCipher"
         return d
 
+    def _master_var(self, master_milp, node, port, index):
+        r"""
+        Return the variable of ``master_milp`` that corresponds to the ``port``
+        variable number ``index`` of ``self.nodes[node]``.
+
+        INPUT:
+
+            - ``master_milp`` -- ``MILP_CVL``; the milp the component milps were
+              appended to
+            - ``node`` -- integer; the index of the component in ``self.nodes``
+            - ``port`` -- ``'IN'`` or ``'OUT'``; which of the two ports of the
+              component to look at
+            - ``index`` -- integer; the (wordwise) number of the port variable
+
+        .. SEEALSO::
+            - :meth:`civerly.milp.MILP_CVL.append`, which builds the
+              ``self.inv_dictionaries_milp`` entry used for the translation.
+        """
+        local_index = self.nodes[node].milp.vars[port].get_index(index)
+        return master_milp.get_var(
+            self.inv_dictionaries_milp[node][local_index]
+        )
+
     def _model_milp(self, model_options, _first_iter=False):
         r"""
         Generate the model for ``self`` according to the given
@@ -222,9 +245,9 @@ class SBoxCipher(Cipher):
         for x in range(self.input_length // divide_by):
             __ASSERTION_CTR += 1
 
-            loc_ind  = self.IN.milp.vars['OUT'].get_index(x)
-            glob_ind = self.inv_dictionaries_milp[self.nodes.index(self.IN)][loc_ind]
-            compMILP_INx = master_milp.get_var(glob_ind)
+            compMILP_INx = self._master_var(
+                master_milp, self.nodes.index(self.IN), 'OUT', x
+            )
             master_milp.add_constraint(master_milp.VAR_IN[x] == compMILP_INx)
 
         assert __ASSERTION_CTR == self.input_length // divide_by, (
@@ -242,9 +265,7 @@ class SBoxCipher(Cipher):
         for y, (a, x) in set(output_arr):  # if comp is connected to output
             __ASSERTION_CTR += 1
 
-            loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
-            glob_ind = self.inv_dictionaries_milp[a][loc_ind]
-            var = master_milp.get_var(glob_ind)
+            var = self._master_var(master_milp, a, 'OUT', x)
             master_milp.add_constraint(var == master_milp.VAR_OUT[y])
             # NOTE watch out for what happens with the case below:
             # if input is directly connected to output. Without this, there
@@ -273,13 +294,8 @@ class SBoxCipher(Cipher):
 
         # take the (wordwise) edges in the graph to combine the MILPs
         for (a, b), (x, y) in edge_arr:
-            loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
-            glob_ind = self.inv_dictionaries_milp[a][loc_ind]
-            aOUTx = master_milp.get_var(glob_ind)
-
-            loc_ind  = self.nodes[b].milp.vars['IN'].get_index(y)
-            glob_ind = self.inv_dictionaries_milp[b][loc_ind]
-            bINy = master_milp.get_var(glob_ind)
+            aOUTx = self._master_var(master_milp, a, 'OUT', x)
+            bINy = self._master_var(master_milp, b, 'IN', y)
 
             if aOUTx not in branches:
                 branches[aOUTx] = []
@@ -370,9 +386,9 @@ class SBoxCipher(Cipher):
                     ) and not self.nodes[a].in_node:
                         pass  # skip OUT-nodes
                     else:
-                        loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
-                        glob_ind = self.inv_dictionaries_milp[a][loc_ind]
-                        master_milp.add_constraint(master_milp.get_var(glob_ind) == 0)
+                        master_milp.add_constraint(
+                            self._master_var(master_milp, a, 'OUT', x) == 0
+                        )
 
         # change back s.t. toplevel milp is written to file
         model_options, model_options_ = model_options_, model_options
