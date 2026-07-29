@@ -84,7 +84,7 @@ class SKINNY_CVL:
     def create_tk_schedules(s, z):
         r"""
         Helper function, creating the Tweakey schedules.
-        These arent AESlike ciphers because of the LFSR layer not obeying the
+        These aren't AESlike ciphers because of the LFSR layer not obeying the
         "MixColumn-condition" for AESlike ciphers.
 
         The reference values below are taken from the SKINNY implementation

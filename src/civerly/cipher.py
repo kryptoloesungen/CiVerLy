@@ -758,7 +758,7 @@ class Cipher:
         INPUT:
 
             - ``plaintext`` -- binary vector; The input to be evaluated. Must
-              have the appropiate dimension (``input_length``) in order to
+              have the appropriate dimension (``input_length``) in order to
               succeed.
 
         OUTPUT:

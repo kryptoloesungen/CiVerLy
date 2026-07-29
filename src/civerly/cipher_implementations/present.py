@@ -26,7 +26,7 @@ class PRESENT_CVL:
 
         EXAMPLES:
 
-        Encrypt a message (for verifying the implemenation)::
+        Encrypt a message (for verifying the implementation)::
 
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
@@ -56,7 +56,7 @@ class PRESENT_CVL:
             4
 
         Of course, since the branch number of any word-permutation is 2, this
-        result is not very interesting and unprecise, as the optimal solution
+        result is not very interesting and imprecise, as the optimal solution
         here would be one active word per round, which is specifically avoided
         to be possible in PRESENT. This indicates that generalized wordwise
         modeling might be a more reasonable approach. However, performing
@@ -376,7 +376,7 @@ class PRESENT_CVL:
         )
 
         # NOTE: This is an alternative component to the RK_CVL. Instead
-        # of seperating the key addition into a "factory" component that
+        # of separating the key addition into a "factory" component that
         # outputs the key, and an XOR addition, it makes more sense to combine
         # them to a component, which is the RoundkeyXOR_CVL component.
         # It eases the implementation in several aspects (such as modeling and

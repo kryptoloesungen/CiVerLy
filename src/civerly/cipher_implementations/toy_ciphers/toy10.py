@@ -9,7 +9,7 @@ from civerly.sboxcipher import SBoxCipher
 # cipher testing whether linear modeling is the same for the following
 # cases:
 #   - Either, when a normal 6 -> 6 linear layer is used
-#   - or when that linear layer is seperately defined by its coordinate
+#   - or when that linear layer is separately defined by its coordinate
 #     functions which are 6 -> 1 and therefore non-bijective.
 class Toy10:
     def __init__(self, split=False):

@@ -143,7 +143,7 @@ class WordBasedCipher(Cipher):
 
     def add_output(self, edges):
         r"""
-        Similarily to :meth:`add_subcipher`, the output edges are now reduced
+        Similarly to :meth:`add_subcipher`, the output edges are now reduced
         as well. Instead of ``wordsize`` many output edges coming from a node,
         the convention is now that output one edge of size ``wordsize`` is
         connected to the output.

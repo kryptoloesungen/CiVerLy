@@ -950,7 +950,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 new_sat.add_clause((-u[i],))
             return new_sat
 
-        # auxilary vars a_{i,j}
+        # auxiliary vars a_{i,j}
         a = [[new_sat.var() for _ in range(num)] for _ in range(L)]
 
         new_sat.add_clause((-u[0], a[0][0]))
@@ -1170,7 +1170,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
                 if re.search(self.timeout_string, file.read(), re.MULTILINE):
                     status = SOLVING_STATUS.TIMEOUT
 
-        # convert to seperate .sol files and get relevant info
+        # convert to separate .sol files and get relevant info
         _solutionpooljson_to_solfiles(data, solution_file, num_solutions)
 
         if errno != 0:

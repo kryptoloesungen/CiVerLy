@@ -148,7 +148,7 @@ class Component(ABC):
     def model(self, model_options, *args, **kwargs):
         r"""Model this component.
 
-        This method merely relays ``model_options`` to an appropiate
+        This method merely relays ``model_options`` to an appropriate
         subroutine.
         """
         start_time = time.perf_counter()
@@ -263,7 +263,7 @@ class I_CVL(Component):
 
             - ``input_length`` -- integer; The block size of the identity component.
               Since ``input_length == output_length`` in this case, it is not necessary to
-              pass the output_length as a seperate parameter.
+              pass the output_length as a separate parameter.
             - ``name`` -- string; The component name for easier identification (optional)
 
         OUTPUT: An instantiated ``I_CVL`` object.
@@ -453,7 +453,7 @@ class RK_CVL(C_CVL):
         In most of the cases, it might be easier to use ``RoundkeyXOR_CVL``
         instead of this.
 
-    The round-key component. Acts very similarily to ``C_CVL``, with the
+    The round-key component. Acts very similarly to ``C_CVL``, with the
     difference that the ``const`` value is allowed to be changed after
     instantiation. This allows for using test vectors with non-zero round keys,
     while treating the key schedules functionality as a blackbox.
@@ -508,7 +508,7 @@ class ConstXOR_CVL(Component):
     r"""
     The ``ConstXOR_CVL`` component. Used for an easier implementation of round
     constant addition in ciphers instead of using ``C_CVL`` and ``XOR_CVL``
-    seperately.
+    separately.
 
     INPUT:
 
@@ -611,7 +611,7 @@ class RoundkeyXOR_CVL(ConstXOR_CVL):
     r"""
     The ``RoundkeyXOR_CVL`` component. Used for an easier implementation of
     round constant addition in ciphers instead of using ``C_CVL`` and
-    ``XOR_CVL`` seperately. Acts very similarily to the ``ConstXOR_CVL``
+    ``XOR_CVL`` separately. Acts very similarly to the ``ConstXOR_CVL``
     component, with the difference that the ``const`` value is allowed to be
     changed after instantiation. This allows for using test vectors with
     non-zero round keys, while treating the key schedules functionality as a
@@ -1554,7 +1554,7 @@ class LinearLayer_CVL(Component):
                     assert all([self.input_length > u for u in (max(tup), i)])
 
                     # sub_constr : substituted constraints (with
-                    # the appropiate variables)
+                    # the appropriate variables)
                     sub_constr = (
                         constr[0]
                         + sum(
@@ -2952,7 +2952,7 @@ class ROT_AND_CVL(Component):
 
             # NOTE: Forbid alpha = (1, ..., 1)
             # If the case alpha = (1, ..., 1) should be handled, remove the
-            # constraint below and add the appropiate ones
+            # constraint below and add the appropriate ones
             ###########################################
             self.sat.add_clause((-ALPHA_ALL_ONES,))  #
             ###########################################

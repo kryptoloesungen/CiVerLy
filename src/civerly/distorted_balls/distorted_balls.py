@@ -17,7 +17,7 @@ def get_inequations(ddt, fixed_probability=None) -> list:
 
     EXAMPLES:
 
-        Encrypt a message (for verifying the implemenation)::
+        Encrypt a message (for verifying the implementation)::
 
             sage: from civerly.distorted_balls import distorted_balls
             sage: from sage.crypto.sboxes import PRESENT as PRESENT_S_sage

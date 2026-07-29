@@ -49,7 +49,7 @@ class SIMON_CVL:
 
         This cipher is "plug-and-play" usable, i.e. it can be directly used
         when imported. SIMON can be implemented in two different ways, either
-        using seperate `RotateLayer_CVL` and `AND_CVL` components, or by
+        using separate `RotateLayer_CVL` and `AND_CVL` components, or by
         combining them into a dedicated `ROT_AND_CVL` component. The second
         option allows for more precise results when modeling, as the modeling
         methods from https://eprint.iacr.org/2015/145.pdf are used instead of

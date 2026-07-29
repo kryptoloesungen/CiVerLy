@@ -177,7 +177,7 @@ def hw_tau(n, tau):
 
 def list_of_predecessor_vector_indices(v, num_bits):
     r"""
-    Return a list of integers that encode binary vectors preceeding ``v``,
+    Return a list of integers that encode binary vectors preceding ``v``,
     with the partial order :math:`v \prec w \iff v_i \leq w_i \forall i`.
 
     TESTS::
@@ -279,7 +279,7 @@ def translate_milp_constraint(VAR, constr):
 
 def _between_brackets(st):
     r"""
-    From the given string ``st``, return the integer which is inbetween the
+    From the given string ``st``, return the integer which is between the
     first pair of squared brackets in this string. This assumes that `st`
     contains such brackets in the first place.
 
@@ -401,7 +401,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     final_choices = []  # solution of reduction algorithm
 
     # STEP 3:
-    # use the found solution to generate a minimial MILP that models the
+    # use the found solution to generate a minimal MILP that models the
     # component
     for Z_index, use in results["Z"].items():
         if use != 0:
@@ -520,7 +520,7 @@ def translate_var(cipher, node, local_var):
 @contextlib.contextmanager
 def suppress_output():
     r"""
-    Util function that supresses any output on stdout and stderr.
+    Util function that suppresses any output on stdout and stderr.
     Exceptions will not be suppressed, however.
 
     TESTS::
