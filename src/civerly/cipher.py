@@ -252,12 +252,12 @@ class Cipher:
                     self.input_length // self._cipher_wordsize
                 ):
                     self.milp.add_constraint(
-                        self.MILP_OUT[i] == self.MILP_IN[i]
+                        self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
                     )
             elif model_options.granularity == GRANULARITY.BITWISE:
                 for i in range(self.input_length):
                     self.milp.add_constraint(
-                        self.MILP_OUT[i] == self.MILP_IN[i]
+                        self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
                     )
             else:
                 raise InvalidModelOptionException(
@@ -428,13 +428,15 @@ class Cipher:
         self.key_schedule = key_schedule
 
         self.milp = None
-        self.sat = None
-        self.X = None
+        self.sat  = None
 
         # attributes to keep timing information (in seconds)
         self._analyse_time = None
-        self._model_time = None
-        self._solve_time = None
+        self._model_time   = None
+        self._solve_time   = None
+
+        self.grid_in  = None
+        self.grid_out = None
 
     # Get-functions of various attributes:
     # --------------------------------------------------
@@ -1329,11 +1331,9 @@ class Cipher:
             # check if component was modeled before
             for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
-                    # copy over attributes related to modeling
-                    comp.sat         = prev.sat
-                    comp.SAT_IN      = prev.SAT_IN
-                    comp.SAT_OUT     = prev.SAT_OUT
-                    comp.sum_arr_sat = prev.sum_arr_sat
+                    # copy the component entirely
+                    comp = prev
+                    self.nodes[i_comp] = self.nodes[i_prev]
 
                     # copy the component sat programs
                     sats.append(comp.sat)
@@ -1528,6 +1528,7 @@ class Cipher:
         assert isinstance(_first_iter, bool)
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
+
         file_name = (model_options.path / self.name.replace(' ', '_'))
         with open(f"{file_name}sum.json", 'w') as f:
             json.dump(self.sum_arr_sat, f)
@@ -1541,6 +1542,7 @@ class Cipher:
         with open(model_options.path / (self.name + "_id.json"), 'w') as f:
             json.dump(self.inv_dictionaries_sat, f)
             f.close()
+
 
         if _first_iter:
             # At least one variable that does not belong to PROB needs to be
@@ -1654,7 +1656,7 @@ class Cipher:
                 # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
                 # helper/dummy variables are excluded so that two solutions
                 # are considered the same when they agree on the trail.
-                b = self.milp.get_backend()
+                b = self.milp.backend
                 trail_vars = {
                     b.col_name(i) for i in range(b.ncols())
                     if b.col_name(i).startswith("X")
@@ -1781,6 +1783,12 @@ class Cipher:
              - ``input_side`` -- bool; indicates whether grid shows the input
                (``True``) or output side (``False``)
         """
+        # don't recompute every time
+        if input_side and self.grid_in:
+            return self.grid_in
+        elif self.grid_out:
+            return self.grid_out
+        
         depths = self._dfs_traversal()
 
         # initialize grid
@@ -1861,10 +1869,14 @@ class Cipher:
                 grid_out[depths[node]][grid_index] = (node, y // divide_by)
             offset_out[depth] += self.nodes[node].output_length
 
+        # store so we don't recompute from scratch it every time
+        self.grid_in  = grid_in
+        self.grid_out = grid_out
+
         if input_side:
-            return grid_in
+            return self.grid_in
         else:
-            return grid_out
+            return self.grid_out
 
     def _from_grid(self, node_num, current_index, model_options, input_side=True):
         r"""

@@ -116,7 +116,7 @@ class WEAK_PRESENT_CVL:
 
             sage: # optional - scip, espresso
             sage: for i in range(cipher.input_length):
-            ....:     cipher.milp.add_constraint(cipher.nodes[0].MILP_OUT[i] == 1)
+            ....:     cipher.milp.add_constraint(cipher.milp.VAR_IN[i] == 1)
             sage: cipher.analyse(model_options)
             Using existing MILP model, make sure it is up to date!
             3648 variables and 6529 constraints were written to ...

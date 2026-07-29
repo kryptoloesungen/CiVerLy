@@ -12,16 +12,14 @@ supported for ciphers containing different non-linear components than
 ``SBox_CVL``, such as ``AddRX, AndRX``.
 """
 
-import io
 import json
-from contextlib import redirect_stdout
 from dataclasses import replace
-from sage.numerical.mip import MixedIntegerLinearProgram
 
+from civerly.milp import MILP_CVL
 from civerly.cipher import Cipher
 from civerly.component import SBox_CVL, LinearLayer_CVL, XOR_CVL
 from civerly.component import RK_CVL, C_CVL, I_CVL, RoundkeyXOR_CVL, ConstXOR_CVL
-from civerly.util import _before_brackets, _between_brackets, suppress_output
+from civerly.util import suppress_output
 from civerly.util import translate_milp_constraint
 from civerly.util import translate_var
 from civerly.model_options import OPTIMIZATION, GRANULARITY, CRYPTANALYSIS
@@ -169,13 +167,10 @@ class SBoxCipher(Cipher):
         # flag to stop when a model needs to be solved externally
         self._return_immediately_ = False
 
-        master_milp = MixedIntegerLinearProgram(
-            maximization=False, solver="GLPK")
-        self.MILP_IN = master_milp.new_variable(name="IN", binary=True)
-        self.MILP_OUT = master_milp.new_variable(name="OUT", binary=True)
+        master_milp = MILP_CVL(maximization=False)
 
-        # X is the main MILP variable being used
-        X = [
+        # VAR_MODEL is the main MIPVariable being used
+        VAR_MODEL = [
             master_milp.new_variable(binary=True, name=f"X{i}")
             for i in range(len(self.nodes))
         ]
@@ -190,20 +185,17 @@ class SBoxCipher(Cipher):
             # check if component was modeled before
             for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
-                    # copy over attributes related to modeling
-                    comp.milp         = prev.milp
-                    comp.MILP_IN      = prev.MILP_IN
-                    comp.MILP_OUT     = prev.MILP_OUT
-                    comp.sum_arr_milp = prev.sum_arr_milp
+                    # copy the component entirely (and its attributes!)
+                    self.nodes[i_comp] = self.nodes[i_prev]
+                    comp = prev
 
                     # copy the component milp programs
                     milps.append(comp.milp)
 
-                    for key, val in self.dictionaries_milp[i_prev].items():
-                        assert key[:key.index('X') + 1] == "X"
-                        self.dictionaries_milp[i_comp][
-                            f"X{i_comp}{key[key.index('['):]}"
-                        ] = val
+                    for local_var_prev in self.dictionaries_milp[i_prev].values():
+                        VAR_MODEL[i_comp][local_var_prev] # create MIPVariable
+                        key = VAR_MODEL[i_comp].get_index(local_var_prev)
+                        self.dictionaries_milp[i_comp][key] = local_var_prev
 
                     # copy the dictionaries
                     self.inv_dictionaries_milp[i_comp] = {
@@ -222,7 +214,7 @@ class SBoxCipher(Cipher):
 
                     for con in milps[i_prev].constraints():
                         master_milp.add_constraint(
-                            translate_milp_constraint(X[i_comp], con)
+                            translate_milp_constraint(VAR_MODEL[i_comp], con)
                         )
                     break
             else:
@@ -241,36 +233,12 @@ class SBoxCipher(Cipher):
                 ##############################################################
                 # parse the component MILP and adopt it into the master milp #
                 ##############################################################
-
-                stdout_var = io.StringIO()
-                with redirect_stdout(stdout_var):
-                    comp_milp.show()
-                show_output = repr(stdout_var.getvalue())
-
-                ind_var = show_output.index("Variables:")
-                show_variables = show_output[ind_var + len('Variables:\\n'):]
-
-                # tokenize the show_variables string into each assignments
-                assignments = []
-                tokenize_pos1 = 0
-                tokenize_pos2 = 0
-                while tokenize_pos2 < len(show_variables):
-                    tokenize_pos2 += \
-                        show_variables[tokenize_pos1:].index(")") + 5
-                    assignments.append(
-                        show_variables[tokenize_pos1: tokenize_pos2]
-                    )
-                    tokenize_pos1 = tokenize_pos2
-
-                # store the assignments in dictionary,
-                # as otherwise we wouldn't be able to recover variable names
-                # by their indices
-                for asg in assignments:
-                    asg = asg[:asg.index("is")]
-                    ind = int(asg[asg.index('=') + 1:].strip(' ')[2:])
-                    val = asg[:asg.index("=")].strip(" ")
-                    key = f"X{i_comp}[{ind}]"
-                    self.dictionaries_milp[i_comp][key] = val
+                for local_var in comp_milp.vars.values():
+                    for i in local_var.keys():
+                        VAR_MODEL[i_comp][local_var.get_index(i)]
+                        key = VAR_MODEL[i_comp].get_index(local_var.get_index(i))
+                        val = local_var.get_index(i)
+                        self.dictionaries_milp[i_comp][key] = val
 
                 self.inv_dictionaries_milp[i_comp] = {
                     v: k for k, v in self.dictionaries_milp[i_comp].items()
@@ -280,9 +248,8 @@ class SBoxCipher(Cipher):
                 # proper constraints in master_milp
                 for con in comp_milp.constraints():
                     master_milp.add_constraint(
-                        translate_milp_constraint(X[i_comp], con)
+                        translate_milp_constraint(VAR_MODEL[i_comp], con)
                     )
-
                 self.sum_arr_milp += [
                     (factor, self.inv_dictionaries_milp[i_comp][entry])
                     for factor, entry in comp.sum_arr_milp
@@ -292,7 +259,7 @@ class SBoxCipher(Cipher):
         #    -> Connect the MILPs with each other.           #
         ######################################################
 
-        # -------------- set MILP_IN and MILP_OUT variables ---------------- #
+        # -------------- set VAR_IN and VAR_OUT variables ---------------- #
         if model_options.granularity == GRANULARITY.BITWISE:
             divide_by = 1
         elif model_options.granularity == GRANULARITY.WORDWISE:
@@ -301,11 +268,11 @@ class SBoxCipher(Cipher):
         __ASSERTION_CTR = 0
         for x in range(self.input_length // divide_by):
             __ASSERTION_CTR += 1
-            # helper variable to make the code shorter
-            cmi = self.inv_dictionaries_milp[
-                self.nodes.index(self.IN)][f'OUT[{x}]']
-            compMILP_INx = X[_before_brackets(cmi)][_between_brackets(cmi)]
-            master_milp.add_constraint(self.MILP_IN[x] == compMILP_INx)
+
+            loc_ind  = self.IN.milp.vars['OUT'].get_index(x)
+            glob_ind = self.inv_dictionaries_milp[self.nodes.index(self.IN)][loc_ind]
+            compMILP_INx = master_milp.get_var(glob_ind)
+            master_milp.add_constraint(master_milp.VAR_IN[x] == compMILP_INx)
 
         assert __ASSERTION_CTR == self.input_length // divide_by, (
             f"({self.name}) "
@@ -321,29 +288,26 @@ class SBoxCipher(Cipher):
         __ASSERTION_CTR = 0
         for y, (a, x) in set(output_arr):  # if comp is connected to output
             __ASSERTION_CTR += 1
-            out_string = self.inv_dictionaries_milp[a][f'OUT[{x}]']
-            out_string_index = _between_brackets(out_string)
 
+            loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
+            glob_ind = self.inv_dictionaries_milp[a][loc_ind]
+            var = master_milp.get_var(glob_ind)
+            master_milp.add_constraint(var == master_milp.VAR_OUT[y])
+            # NOTE watch out for what happens with the case below:
             # if input is directly connected to output. Without this, there
             # does not exist a corresponding edge, which is why this case
             # would be ignored when modeled. In this case, connect in- and
             # output directly.
-            if a == self.nodes.index(self.IN):
-                cmi = self.inv_dictionaries_milp[
-                    self.nodes.index(self.IN)][f'OUT[{x}]']
-            master_milp.add_constraint(
-                X[a][out_string_index] == self.MILP_OUT[y]
-            )
+            # if a == self.nodes.index(self.IN):
+            #     cmi = self.inv_dictionaries_milp[
+            #         self.nodes.index(self.IN)][f'OUT[{x}]']
+
 
         assert __ASSERTION_CTR == self.output_length // divide_by, (
             f"({self.name}) "
             f"{__ASSERTION_CTR} != {self.output_length // divide_by}"
         )
-        # ------------------------------------------------------------------ #
-        # NOTE:
-        # k gives the internal label from inside the component. Therefore,
-        # checking whether "OUT"/"IN" is in k or whether comp == self.IN/ is
-        # in out are two entirely different things!!
+
         # -------------- Find comp.IN/OUT and connect these ---------------- #
         # dictionary of branches with key in_node and
         # value[out_node0, out_node1, ...]
@@ -356,15 +320,13 @@ class SBoxCipher(Cipher):
 
         # take the (wordwise) edges in the graph to combine the MILPs
         for (a, b), (x, y) in edge_arr:
-            # helper vars to shorten the code a bit
-            inv_dict_a_outx = self.inv_dictionaries_milp[a][f'OUT[{x}]']
-            aOUTx = X[_before_brackets(inv_dict_a_outx)][
-                _between_brackets(inv_dict_a_outx)]
+            loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
+            glob_ind = self.inv_dictionaries_milp[a][loc_ind]
+            aOUTx = master_milp.get_var(glob_ind)
 
-            # helper vars to shorten the code a bit
-            inv_dict_b_iny = self.inv_dictionaries_milp[b][f'IN[{y}]']
-            bINy = X[_before_brackets(inv_dict_b_iny)][
-                _between_brackets(inv_dict_b_iny)]
+            loc_ind  = self.nodes[b].milp.vars['IN'].get_index(y)
+            glob_ind = self.inv_dictionaries_milp[b][loc_ind]
+            bINy = master_milp.get_var(glob_ind)
 
             if aOUTx not in branches:
                 branches[aOUTx] = []
@@ -455,22 +417,21 @@ class SBoxCipher(Cipher):
                     ) and not self.nodes[a].in_node:
                         pass  # skip OUT-nodes
                     else:
-                        tmp = self.inv_dictionaries_milp[a][f'OUT[{x}]']
-                        master_milp.add_constraint(
-                            X[_before_brackets(tmp)][_between_brackets(tmp)] == 0
-                        )
-
-        self.X = X
+                        loc_ind  = self.nodes[a].milp.vars['OUT'].get_index(x)
+                        glob_ind = self.inv_dictionaries_milp[a][loc_ind]
+                        master_milp.add_constraint(master_milp.get_var(glob_ind) == 0)
 
         # change back s.t. toplevel milp is written to file
         model_options, model_options_ = model_options_, model_options
+
+        master_milp.VAR_MODEL = VAR_MODEL
 
         return self._finish_milp(model_options, master_milp,
                                  _first_iter=_first_iter)
 
     def _finish_milp(self, model_options, milp, _first_iter=False):
         r"""
-        Finish the given ``MixedIntegerLinearProgram``. That is, add a
+        Finish the given ``MILP_CVL``. That is, add a
         constraint that ensures that the input is active and add the objective
         function.
         If specified by ``model_options``, write the model to a file.
@@ -479,7 +440,7 @@ class SBoxCipher(Cipher):
 
             - ``model_options`` -- see
               :class:`civerly.model_options.MODEL_OPTIONS`
-            - ``milp`` -- ``MixedIntegerLinearProgram``; the milp to be
+            - ``milp`` -- ``MILP_CVL``; the milp to be
               finished
 
         OUTPUT:
@@ -506,21 +467,21 @@ class SBoxCipher(Cipher):
         # sum_arr contains:
         # - the variables that correspond to an SBox being active
         #   or not (wordwise)
-        # - the variables as before and the corresponding propagation
+        # - the variables and the corresponding propagation
         #   probability (bitwise)
         for factor, entry in self.sum_arr_milp:
             # negative factor since we want to MINIMIZE the MILP
             # while MAXIMIZING the propagation probability.
-            summation_result += -factor * self.X[
-                _before_brackets(entry)][_between_brackets(entry)]
 
-        if len(self.MILP_IN.items()) == 0:
+            summation_result += -factor * milp.get_var(entry)
+
+        if len(milp.VAR_IN.items()) == 0:
             raise ValueError("Empty MILP")
 
         if _first_iter:
             # Input should be active, i.e. the input
             # differences should be non-zero
-            milp.add_constraint(sum(self.MILP_IN) >= 1)
+            milp.add_constraint(milp.sum(milp.vars['IN']) >= 1)
 
             # bound the objective by `model_options.solve_range``
             if model_options.solve_range is not None:
@@ -605,6 +566,8 @@ class SBoxCipher(Cipher):
             for j, val in sub_dict.items():
                 assert val in (0, 1), f"{val} is not binary"
                 n_active += val
-                lhs += ((-1) ** val) * translate_var(self, self.nodes[i], self.X[i][j])
+                lhs += ((-1) ** val) * translate_var(
+                    self, self.nodes[i], self.milp.VAR_MODEL[i][j]
+                )
 
         self.milp.add_constraint(lhs >= 1 - n_active)

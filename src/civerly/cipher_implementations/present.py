@@ -288,6 +288,52 @@ class PRESENT_CVL:
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
             8
+        
+        Verify the well-known iterative linear trail for PRESENT: 
+
+            sage: # optional - scip, espresso
+            sage: from civerly.cipher_implementations.present \
+            ....:   import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir: 
+            ....:   cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            sage: cipher.model(model_options)
+            5312 variables and 8193 constraints were written to ...
+            Boolean Program (minimization, 5312 variables, 8193 constraints)
+            sage: MASK = 0x8000_0000_0000_0000
+            sage: for ROUND in range(1, 5):
+            ....:   for i in range(cipher.input_length):
+            ....:       ind = cipher.inv_dictionaries_milp[ROUND][cipher.nodes[ROUND].milp.VAR_IN.get_index(i)]
+            ....:       cipher.milp.add_constraint(cipher.milp.get_var(ind) == (MASK >> (63 - i)) & 1)
+            sage: for i in range(cipher.input_length):
+            ....:     ind = cipher.inv_dictionaries_milp[ROUND][cipher.nodes[ROUND].milp.VAR_OUT.get_index(i)]
+            ....:     cipher.milp.add_constraint(cipher.milp.get_var(ind) == (MASK >> (63 - i)) & 1)
+            sage: cipher.analyse(model_options)
+            Using existing MILP model, make sure it is up to date!
+            5312 variables and 8513 constraints were written to ...
+            8
+            sage: cipher.get_trail(model_options)
+            -> PRESENT : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path)
         """
 
         if rks == []:

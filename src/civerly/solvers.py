@@ -351,7 +351,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         to ``milp`` excluding the previous assignment and flushes ``milp``
         back to ``input_file`` before the next solve.
 
-        ``milp`` is required because Sage's ``MixedIntegerLinearProgram``
+        ``milp`` is required because ``MILP_CVL``
         cannot reconstruct itself from an MPS file -- the in-memory model
         must be threaded through from where it was built.
 
@@ -360,7 +360,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         INPUT:
 
             - ``input_file`` -- path to the MPS file; rewritten between iterations
-            - ``milp`` -- in-memory :class:`MixedIntegerLinearProgram` whose
+            - ``milp`` -- in-memory :class:`MILP_CVL` whose
               state matches ``input_file``
             - ``number_of_solutions`` -- maximum number of solutions to find
             - ``trail_vars`` -- optional iterable of MPS variable names that
@@ -441,15 +441,14 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         ``trail_vars`` participate in the constraint; helpers are ignored.
         Otherwise every variable in ``assignment`` is constrained.
         """
-        # Flatten the nested ``{name: {idx: val}}`` shape (from
-        # ``_process_solution_file``) back to the flat MPS variable names.
-        flat = {}
-        for name, sub in assignment.items():
-            if isinstance(sub, dict):
-                for idx, val in sub.items():
-                    flat[f"{name}[{idx}]"] = val
-            else:
-                flat[name] = sub
+        # Flatten the nested ``{name: {idx: val}}`` shape (as produced by
+        # ``_to_dict`` in every ``_process_solution_file`` implementation)
+        # back to the flat MPS variable names.
+        flat = {
+            f"{name}[{idx}]": val
+            for name, sub in assignment.items()
+            for idx, val in sub.items()
+        }
 
         if trail_vars is not None:
             trail_vars = set(trail_vars)
@@ -1688,7 +1687,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "AES.mps",
-            ....:     model_options.path / "AES.073904d3.sol",
+            ....:     model_options.path / "AES.6017446a.sol",
             ....:     model_options.path / "AES.log")
             <SOLVING_STATUS.SUCCESS: 1>
             sage: aes.analyse(model_options)

@@ -55,8 +55,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.modules.free_module_element import vector
 from sage.modules.free_module import VectorSpace
 from sage.geometry.polyhedron.constructor import Polyhedron
-from sage.sat.solvers.dimacs import DIMACS
-from sage.numerical.mip import MixedIntegerLinearProgram
+
 
 # suppress LazyImport warnings from Polyhedron class
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -227,10 +226,8 @@ def translate_sat_clause(VAR, clause):
         sage: clause = (1, -2, 3, -4, -5)
         sage: translate_sat_clause(VAR, clause)
         (11, -22, 33, -44, -55)
-        sage: from sage.numerical.mip import MixedIntegerLinearProgram
-        sage: milp = MixedIntegerLinearProgram(
-        ....:   maximization=False, solver="GLPK"
-        ....: )
+        sage: from civerly.milp import MILP_CVL
+        sage: milp = MILP_CVL(maximization=False)
         sage: VAR_milp = milp.new_variable(name="VAR", binary=True)
         sage: translate_sat_clause(VAR_milp, clause)
         (x_0, -1*x_1, x_2, -1*x_3, -1*x_4)
@@ -248,10 +245,8 @@ def translate_milp_constraint(VAR, constr):
     TESTS::
 
         sage: from civerly.util import translate_milp_constraint
-        sage: from sage.numerical.mip import MixedIntegerLinearProgram
-        sage: milp = MixedIntegerLinearProgram(
-        ....:   maximization=False, solver="GLPK"
-        ....: )
+        sage: from civerly.milp import MILP_CVL
+        sage: milp = MILP_CVL(maximization=False)
         sage: X = milp.new_variable(name="X", binary=True)
         sage: Y = milp.new_variable(name="Y", binary=True)
         sage: constr = (-1*X[0] + 2*X[1] >= X[2])
@@ -282,56 +277,6 @@ def translate_milp_constraint(VAR, constr):
         new_constr = constr[0] <= summ <= constr[2]
     return new_constr
 
-
-def _between_brackets(st):
-    r"""
-    From the given string ``st``, return the integer which is inbetween the
-    first pair of squared brackets in this string. This assumes that `st`
-    contains such brackets in the first place.
-
-    TESTS::
-
-        sage: from civerly.util import _between_brackets
-        sage: _between_brackets("TEST[5812]")
-        5812
-        sage: _between_brackets("TEST[912]TEST[120]")
-        912
-        sage: _between_brackets("[TEST]")
-        Traceback (most recent call last):
-        ...
-        ValueError: invalid literal for int() with base 10: 'TEST'
-
-    """
-    assert all(bracket in st for bracket in ('[', ']'))
-    return int(st[st.index('[') + 1: st.index(']')], 10)
-
-
-def _before_brackets(st):
-    r"""
-    From the given string ``st``, return the integer displayed between the
-    second char and the first squared open bracket.
-    As an example, from "X15[42]", return 15 as int.
-
-    NOTE: We assume ``st`` to have this form, and that the variable name is
-    one letter (just "X")!
-
-    TESTS::
-
-        sage: from civerly.util import _before_brackets
-        sage: _before_brackets("X921[1284]")
-        921
-        sage: _before_brackets("T1785[.-")
-        1785
-        sage: _before_brackets("TEST98[10]")
-        Traceback (most recent call last):
-        ...
-        ValueError: invalid literal for int() with base 10: 'EST98'
-
-    """
-    assert '[' in st
-    return int(st[1: st.index('[')], 10)
-
-
 def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     r"""
     Implements Yosuke Todos and Yu Sasakis Reduction Algorithm
@@ -340,6 +285,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
     from civerly.component import SBox_CVL, LinearLayer_CVL
+    from civerly.milp import MILP_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
 
@@ -392,9 +338,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 outcome = constr.eval(impossible_point) == 0
             if outcome is False:
                 R_bar[i_im].append(ic)
-    milp_to_minimize_milp = MixedIntegerLinearProgram(
-        maximization=False, solver="GLPK"
-    )
+    milp_to_minimize_milp = MILP_CVL(maximization=False)
     Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
     for r_arr in R_bar:
         if len(r_arr) > 0:
@@ -428,10 +372,10 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
             if isinstance(comp, SBox_CVL):
                 if i < comp.input_length:
                     # input bits
-                    tmp_arr.append(ai * comp.MILP_IN[i])
+                    tmp_arr.append(ai * comp.milp.VAR_IN[i])
                 elif i < comp.input_length + comp.output_length:
                     # output bits
-                    tmp_arr.append(ai * comp.MILP_OUT[i - comp.input_length])
+                    tmp_arr.append(ai * comp.milp.VAR_OUT[i - comp.input_length])
                 else:
                     # probability encoding bits
                     tmp_arr.append(
@@ -443,9 +387,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 # wordsize is set externally in
                 # wordbasedcipher.add_subcipher
                 if i < comp.binary_matrix.ncols() // comp.wordsize:
-                    tmp_arr.append(ai * comp.MILP_IN[i])
+                    tmp_arr.append(ai * comp.milp.VAR_IN[i])
                 else:
-                    tmp_arr.append(ai * comp.MILP_OUT[
+                    tmp_arr.append(ai * comp.milp.VAR_OUT[
                         i - (comp.input_length // comp.wordsize)
                     ])
 
