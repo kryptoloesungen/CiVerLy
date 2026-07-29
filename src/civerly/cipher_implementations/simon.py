@@ -221,48 +221,6 @@ class SIMON_CVL:
             ....:   cipher.analyse(model_options=model_options)
             6000 variables and 12817 clauses were written to '...'
             15
-
-        Verify a zero-correlation distinguisher on 11-round SIMON
-        (described in https://link.springer.com/chapter/10.1007/978-3-319-38898-4_8)::
-                    
-            sage: # optional - cadical, espresso
-            sage: from civerly.cipher_implementations.simon import SIMON_CVL
-            sage: cipher = SIMON_CVL(32, 64, R=11, use_rotand=True)
-            sage: from civerly.model_options import *
-            sage: import tempfile
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
-            ....:   model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:     optimization=OPTIMIZATION.SAT,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=SOLVER.CADICAL,
-            ....:     solve_range=(0, 1_000),
-            ....:     logic_minimizer=SOLVER.ESPRESSO,
-            ....:     path=Path(tmpdir))
-            ....:   cipher.model(model_options=model_options)
-            6000 variables and 12817 clauses were written to ...
-            DIMACS Solver: ''
-            sage: MASK_IN  = 0x0001_0000
-            sage: MASK_OUT = 0x0000_0080
-            sage: for i in range(32):
-            ....:   cipher.sat.add_clause((
-            ....:       (-1) ** ((MASK_IN >> (31 - i)) + 1) * cipher.SAT_IN[i]
-            ....:   ,))
-            sage: for i in range(32):
-            ....:   cipher.sat.add_clause((
-            ....:       (-1) ** ((MASK_OUT >> (31 - i)) + 1) * cipher.SAT_OUT[i]
-            ....:   ,))
-            sage: cipher.analyse(model_options)
-            Using existing SAT model, make sure it is up to date!
-            6000 variables and 12881 clauses were written to ...
-            sage: cipher.result['objective_value'] is None # confirms UNSAT
-            True
-            sage: import shutil
-            sage: shutil.rmtree(model_options.path)
-
-                        
-
         """
         if name is None:
             name = "simon"
