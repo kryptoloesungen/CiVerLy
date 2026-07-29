@@ -164,9 +164,6 @@ class SBoxCipher(Cipher):
         model_options_ = replace(model_options, write_to_file=False)
         model_options, model_options_ = model_options_, model_options
 
-        # flag to stop when a model needs to be solved externally
-        self._return_immediately_ = False
-
         master_milp = MILP_CVL(maximization=False)
 
         # VAR_MODEL is the main MIPVariable being used
@@ -221,14 +218,6 @@ class SBoxCipher(Cipher):
                 # model the components that have not been modeled before
                 comp_milp = comp.model(model_options, _first_iter=False)
                 milps.append(comp_milp)
-
-                # if we need to return immediately,
-                # (because a model must be solved externally)
-                # pass this up the program flow
-                if comp._return_immediately_:
-                    comp._return_immediately_ = False
-                    self._return_immediately_ = True
-                    return
 
                 ##############################################################
                 # parse the component MILP and adopt it into the master milp #

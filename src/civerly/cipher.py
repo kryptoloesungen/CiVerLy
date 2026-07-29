@@ -96,7 +96,6 @@ class Cipher:
 
             """
             self._cipher_wordsize = cipher_instance._wrd
-            self._return_immediately_ = False
             self.sum_arr_milp = []
             self.sum_arr_sat = []
             self.results = []
@@ -1305,9 +1304,6 @@ class Cipher:
         model_options_ = replace(model_options, write_to_file=False)
         model_options, model_options_ = model_options_, model_options
 
-        # flag to stop when a model needs to be solved externally
-        self._return_immediately_ = False
-
         # ------------------------------------------------------------------------
         cnf_file_name = (
             model_options.path / (f"{self.name.replace(' ', '_')}.cnf")
@@ -1380,14 +1376,6 @@ class Cipher:
                 # model the components that have not been modeled before
                 comp_sat = comp.model(model_options, _first_iter=False)
                 sats.append(comp_sat)
-
-                # if we need to return immediately,
-                # (because a model must be solved externally)
-                # pass this up the program flow
-                if comp._return_immediately_:
-                    comp._return_immediately_ = False
-                    self._return_immediately_ = True
-                    return
 
                 ##############################################################
                 # parse the component SAT and adopt it into the master sat   #
@@ -1703,8 +1691,6 @@ class Cipher:
                 self._finish_sat(
                     model_options, self.sat
                 )
-            if self._return_immediately_:
-                return
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:

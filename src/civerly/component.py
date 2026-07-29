@@ -97,7 +97,6 @@ class Component(ABC):
             self.__name = "Unnamed Component"
         self.__input_length = input_length
         self.__output_length = output_length
-        self._return_immediately_ = False
         self.results = []
 
         # attribute to keep timing information (in seconds)
