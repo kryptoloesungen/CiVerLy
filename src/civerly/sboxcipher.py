@@ -241,19 +241,11 @@ class SBoxCipher(Cipher):
         elif model_options.granularity == GRANULARITY.WORDWISE:
             divide_by = self.wordsize
 
-        __ASSERTION_CTR = 0
         for x in range(self.input_length // divide_by):
-            __ASSERTION_CTR += 1
-
             compMILP_INx = self._master_var(
                 master_milp, self.nodes.index(self.IN), 'OUT', x
             )
             master_milp.add_constraint(master_milp.VAR_IN[x] == compMILP_INx)
-
-        assert __ASSERTION_CTR == self.input_length // divide_by, (
-            f"({self.name}) "
-            f"{__ASSERTION_CTR} != {self.input_length // divide_by}"
-        )
 
         # (wordwise) edges connected to output
         output_arr = [
