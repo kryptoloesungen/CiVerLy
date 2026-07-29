@@ -25,7 +25,7 @@ def benchmark(CM):
 
         We benchmark two models, one for the AES and one for CRAFT::
 
-            sage: # optional - scip, espresso, cryptominisat
+            sage: # optional - scip espresso cryptominisat
             sage: from civerly.benchmark import benchmark
             sage: from civerly.cipher_implementations.aes import AES_CVL
             sage: from civerly.cipher_implementations.craft import CRAFT_CVL
@@ -81,7 +81,7 @@ def benchmark(CM):
 
         For a pretty printing, you may use ``tabulate``::
 
-            sage: # optional - scip, espresso, cryptominisat
+            sage: # optional - scip espresso cryptominisat
             sage: from tabulate import tabulate
             sage: print(tabulate(T[0], headers="firstrow")) # random
             Name      \#Variables    \#Constraints    $t_{M}$    $t_{S}$    w

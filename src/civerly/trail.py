@@ -423,7 +423,7 @@ class TrailNode:
 
         TESTS:
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
             ....:   import Toy7
             sage: from civerly.model_options import *

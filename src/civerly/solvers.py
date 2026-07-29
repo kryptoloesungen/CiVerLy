@@ -2137,7 +2137,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
             Traceback (most recent call last):
             ...
             civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer: ...
-            sage: # optional - espresso, cryptominisat
+            sage: # optional - espresso cryptominisat
             sage: SOLVER.ESPRESSO.invoke(
             ....:   model_options.path / "espresso-8e23b46a.pla",
             ....:   model_options.path / "espresso-8e23b46a_out.pla"

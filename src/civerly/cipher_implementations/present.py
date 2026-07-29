@@ -291,7 +291,7 @@ class PRESENT_CVL:
         
         Verify the well-known iterative linear trail for PRESENT: 
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *

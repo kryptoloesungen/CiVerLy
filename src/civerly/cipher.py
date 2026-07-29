@@ -1601,7 +1601,7 @@ class Cipher:
 
         Exceeding the time limit yields a timeout-status::
 
-            sage: # optional - glpk, espresso
+            sage: # optional - glpk espresso
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
@@ -2083,7 +2083,7 @@ class Cipher:
         After analysis, ``results`` holds the trail bit-patterns and is
         preserved verbatim through the JSON file::
 
-            sage: # optional - cadical, espresso
+            sage: # optional - cadical espresso
             sage: from civerly.model_options import *
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,

@@ -29,7 +29,7 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: # optional - gurobi, espresso
+            sage: # optional - gurobi espresso
             sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
@@ -51,7 +51,7 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
@@ -73,7 +73,7 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
@@ -92,7 +92,7 @@ class WEAK_PRESENT_CVL:
         Below we generate a custom model by adding constraints.
         First analyse the cipher as per usual:
             
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.weak_present \
             ....:   import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
@@ -114,7 +114,7 @@ class WEAK_PRESENT_CVL:
         
         Set all input bits to active and analyse again:
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: for i in range(cipher.input_length):
             ....:     cipher.milp.add_constraint(cipher.milp.VAR_IN[i] == 1)
             sage: cipher.analyse(model_options)
@@ -126,7 +126,7 @@ class WEAK_PRESENT_CVL:
             
         Remove temporary files:
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
 

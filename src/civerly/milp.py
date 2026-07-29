@@ -81,7 +81,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: present_cipher = PRESENT_CVL(R=4)
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -276,7 +276,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: gift = GIFT64_CVL(R=3)
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,

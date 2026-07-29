@@ -517,7 +517,7 @@ class SBoxCipher(Cipher):
 
         TESTS::
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *

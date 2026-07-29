@@ -214,7 +214,7 @@ class GIFT64_CVL:
             
         Model the cipher with SAT using different values for ``sat_precision``:
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -234,7 +234,7 @@ class GIFT64_CVL:
             2048 variables and 5377 clauses were written to ...
             3
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -606,7 +606,7 @@ class GIFT128_CVL:
 
         Model the cipher with SAT using different values for ``sat_precision``:
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.gift import GIFT128_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path

@@ -123,7 +123,7 @@ class RECTANGLE_CVL:
 
         Model the cipher with SAT:
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
@@ -146,7 +146,7 @@ class RECTANGLE_CVL:
 
         Linear cryptanalysis::
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
@@ -167,7 +167,7 @@ class RECTANGLE_CVL:
             7872 variables and 17217 clauses were written to ...
             6
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=4)
@@ -186,7 +186,7 @@ class RECTANGLE_CVL:
             7872 variables and 17217 clauses were written to ...
             6
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
             sage: rectangle_cipher = RECTANGLE_CVL(R=5)
