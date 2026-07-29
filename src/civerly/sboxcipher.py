@@ -277,10 +277,10 @@ class SBoxCipher(Cipher):
         # value[out_node0, out_node1, ...]
         branches = dict()
 
-        edge_arr = set([
+        edge_arr = {
             ((aa, bb), (xx//divide_by, yy//divide_by))
             for ((aa, bb), (xx, yy)) in self.edges
-        ])
+        }
 
         # take the (wordwise) edges in the graph to combine the MILPs
         for (a, b), (x, y) in edge_arr:
