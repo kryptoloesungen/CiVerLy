@@ -248,15 +248,19 @@ class SBoxCipher(Cipher):
             master_milp.add_constraint(master_milp.VAR_IN[x] == compMILP_INx)
 
         # (wordwise) edges connected to output
-        output_arr = [
+        output_arr = {
             (y//divide_by, (a, x//divide_by))
             for (y, (a, x)) in enumerate(self.outputs)
-        ]
+        }
 
-        __ASSERTION_CTR = 0
-        for y, (a, x) in set(output_arr):  # if comp is connected to output
-            __ASSERTION_CTR += 1
+        # wordwise, all bits of an output word have to come from the same
+        # component word, otherwise the (collapsed) set is too large
+        assert len(output_arr) == self.output_length // divide_by, (
+            f"({self.name}) "
+            f"{len(output_arr)} != {self.output_length // divide_by}"
+        )
 
+        for y, (a, x) in output_arr:  # if comp is connected to output
             var = self._master_var(master_milp, a, 'OUT', x)
             master_milp.add_constraint(var == master_milp.VAR_OUT[y])
             # NOTE watch out for what happens with the case below:
@@ -267,12 +271,6 @@ class SBoxCipher(Cipher):
             # if a == self.nodes.index(self.IN):
             #     cmi = self.inv_dictionaries_milp[
             #         self.nodes.index(self.IN)][f'OUT[{x}]']
-
-
-        assert __ASSERTION_CTR == self.output_length // divide_by, (
-            f"({self.name}) "
-            f"{__ASSERTION_CTR} != {self.output_length // divide_by}"
-        )
 
         # -------------- Find comp.IN/OUT and connect these ---------------- #
         # dictionary of branches with key in_node and
