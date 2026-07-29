@@ -216,7 +216,7 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
 
 class SPECK_CVL:
-    def __init__(self, block_size, key_size, R=None, rks=[], name=None):
+    def __init__(self, block_size, key_size, R=None, rks=None, name=None):
         r"""
         The CiVerLy implementation of SPECK. It takes the following arguments:
 
@@ -386,7 +386,7 @@ class SPECK_CVL:
             R = dictionary[(block_size, key_size)]
         # -------------------------------------------------------- #
         # roundkeys are defaulted to 0
-        if rks == []:
+        if not rks:
             rks = [0 for _ in range(R + 1)]
 
         # Initialization of the components

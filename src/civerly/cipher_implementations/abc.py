@@ -11,7 +11,7 @@ from civerly.sboxcipher import SBoxCipher
 
 
 class ABC_CVL:
-    def __init__(self, R=16, rks=[], name=None):
+    def __init__(self, R=16, rks=None, name=None):
         r"""
         The ABC cipher, a 128 bit block size Feistel cipher patented by Apple
         and first analysed in
@@ -102,7 +102,7 @@ class ABC_CVL:
             3
 
         """
-        if rks == []:
+        if not rks:
             rks = [0x0 for _ in range(R)]
 
         if name is None:

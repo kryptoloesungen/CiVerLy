@@ -5,7 +5,7 @@ from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class PRESENT_CVL:
-    def __init__(self, R=31, rks=[], name=None):
+    def __init__(self, R=31, rks=None, name=None):
         r"""
         The CiVerLy implementation of PRESENT. It takes in the following
         arguments:
@@ -293,7 +293,7 @@ class PRESENT_CVL:
         if name is None:
             name = "PRESENT"
 
-        if rks == []:
+        if not rks:
             rks = [0 for _ in range(R + 1)]  # set roundkeys = 0 as default
         s = SBox_CVL(present_S, name="SBox")
 

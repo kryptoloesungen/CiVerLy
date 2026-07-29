@@ -190,7 +190,7 @@ class Component(ABC):
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         return
 
-    def _to_tikz(self, _comps=[]):
+    def _to_tikz(self, _comps=None):
         r"""Generate TikZ code for this component."""
         return ""
 

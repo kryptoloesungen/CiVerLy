@@ -10,7 +10,7 @@ from civerly.component import (
 
 class SIMON_Variants_CVL:
     def __init__(
-        self, block_size, R, params=[8, 1, 2], rks=[], use_rotand=True, name=None
+        self, block_size, R, params=None, rks=None, use_rotand=True, name=None
     ):
         r"""
         TESTS::
@@ -205,7 +205,9 @@ class SIMON_Variants_CVL:
             name = "simon"
 
         n = int(block_size // 2)
-        if rks == []:
+        if params is None:
+            params = [8, 1, 2]
+        if not rks:
             rks = [0 for _ in range(R + 1)]
 
         # SIMON is an AndRX cipher, since its non-linear component

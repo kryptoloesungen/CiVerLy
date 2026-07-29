@@ -263,7 +263,7 @@ class DES_F_CVL:
 
 
 class DES_CVL:
-    def __init__(self, R, rks=[], name=None) -> None:
+    def __init__(self, R, rks=None, name=None) -> None:
         r"""
         The DES implementation.
         The test vectors are taken from https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.
@@ -316,7 +316,7 @@ class DES_CVL:
         if name is None:
             name = "DES"
 
-        if rks == []:
+        if not rks:
             rks = [0 for _ in range(R)]  # default to zero keys
 
         des = SBoxCipher(64, 64, name=name)

@@ -25,7 +25,7 @@ dictionary = {
 
 class SIMON_CVL:
     def __init__(
-        self, block_size, key_size, R=None, rks=[], use_rotand=True, name=None
+        self, block_size, key_size, R=None, rks=None, use_rotand=True, name=None
     ):
         r"""
         The CiVerLy implementation of SIMON. It takes the following arguments:
@@ -242,7 +242,7 @@ class SIMON_CVL:
         n = int(block_size // 2)
         if R is None:
             R = dictionary[(block_size, key_size)]
-        if rks == []:
+        if not rks:
             rks = [0 for _ in range(R + 1)]
 
         # SIMON is an AndRX cipher, since its non-linear component

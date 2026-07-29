@@ -298,7 +298,7 @@ class Cipher:
         def _to_dict(self):
             return {"type": "__Special_Node"}
 
-        def _to_tikz(self, _comps=[]):
+        def _to_tikz(self, _comps=None):
             return ""
 
     # --------- static variables
@@ -1027,7 +1027,7 @@ class Cipher:
         STRING += "\\end{document}\n"
         return STRING
 
-    def _to_tikz(self, _comps=[]):
+    def _to_tikz(self, _comps=None):
         r"""
         Convert the graph of ``self`` to tikz code.
 
@@ -1073,6 +1073,8 @@ class Cipher:
             <BLANKLINE>
             <BLANKLINE>
         """
+        if _comps is None:
+            _comps = []
         depths = self._dfs_traversal()
 
         STRING = ""
