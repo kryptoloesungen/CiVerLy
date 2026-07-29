@@ -1,6 +1,8 @@
 from sage.numerical.mip import MixedIntegerLinearProgram
 import json
 
+from civerly.util import translate_milp_constraint
+
 class MILP_CVL(MixedIntegerLinearProgram):
     r"""
     Wrapper for SageMath's :class:``MixedIntegerLinearProgram``, supporting JSON
@@ -396,3 +398,78 @@ class MILP_CVL(MixedIntegerLinearProgram):
                 milp.add_constraint(expr <= upper)
 
         return milp
+
+    def append(self, other, var):
+        r"""
+        Incorporate ``other`` into ``self``, by copying every variable of
+        ``other`` into the namespace of the MIPVariable ``var`` and adding all
+        constraints of ``other`` in terms of these new variables.
+
+        The backend index a variable has in ``other`` is used as the *key*
+        under which its counterpart is created in ``var``. Since the
+        constraints of ``other`` refer to their variables by exactly these
+        indices, translating them is a mere lookup in ``var``
+        (see :func:`civerly.util.translate_milp_constraint`).
+
+        The objective function of ``other`` is ignored.
+
+        INPUT:
+
+          - ``other`` -- ``MILP_CVL``; the milp to append
+
+          - ``var`` -- MIPVariable of ``self``, as returned by
+            :meth:`new_variable`; the namespace the variables of ``other`` are
+            copied into. It must not be used for anything else, as its keys are
+            dictated by ``other``.
+
+        OUTPUT:
+
+        A dict mapping the backend index of each variable created in ``self``
+        to the backend index of its counterpart in ``other``.
+
+        EXAMPLE:
+
+        Append a small milp to one that already holds a variable, so that the
+        indices of the two differ::
+
+            sage: from civerly.milp import MILP_CVL
+            sage: other = MILP_CVL()
+            sage: x = other.new_variable(name="x", binary=True)
+            sage: other.add_constraint(x[0] + 2*x[1] <= 1)
+            sage: other.to_dict()['constraints']
+            [[(0, 1), (1.0, 2.0), [None, 1.0]]]
+            sage: milp = MILP_CVL()
+            sage: milp.add_constraint(milp.VAR_IN[0] <= 1)
+            sage: X0 = milp.new_variable(name="X0", binary=True)
+            sage: milp.append(other, X0)
+            {1: 0, 2: 1}
+
+        The appended constraint refers to the variables of ``milp``, the
+        returned dict tells which variable of ``other`` each of them
+        corresponds to::
+
+            sage: milp.to_dict()['constraints']
+            [[(0,), (1.0,), [None, 1.0]], [(1, 2), (1.0, 2.0), [None, 1.0]]]
+
+        Appending the same milp twice under different namespaces duplicates it,
+        which is how a component that is used more than once is modeled only
+        once::
+
+            sage: X1 = milp.new_variable(name="X1", binary=True)
+            sage: milp.append(other, X1)
+            {3: 0, 4: 1}
+            sage: milp.number_of_constraints()
+            3
+        """
+        translation = {}
+        for other_var in other.vars.values():
+            for key in other_var.keys():
+                other_index = other_var.get_index(key)
+                # indexing ``var`` creates the corresponding variable in
+                # ``self``, as MIPVariable components are created lazily
+                translation[var.get_index(other_index)] = other_index
+
+        for constraint in other.constraints():
+            self.add_constraint(translate_milp_constraint(var, constraint))
+
+        return translation

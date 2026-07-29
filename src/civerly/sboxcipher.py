@@ -147,7 +147,6 @@ class SBoxCipher(Cipher):
                 1
                 sage: import shutil
                 sage: shutil.rmtree(tmpdir) # optional - scip
-
         """
         if model_options.granularity == GRANULARITY.WORDWISE \
                 and type(self) is SBoxCipher:
@@ -171,7 +170,6 @@ class SBoxCipher(Cipher):
             master_milp.new_variable(binary=True, name=f"X{i}")
             for i in range(len(self.nodes))
         ]
-        milps = []
         self.sum_arr_milp = []
 
         # dictionaries for translating variables in sage and the mps file
@@ -186,63 +184,29 @@ class SBoxCipher(Cipher):
                     self.nodes[i_comp] = self.nodes[i_prev]
                     comp = prev
 
-                    # copy the component milp programs
-                    milps.append(comp.milp)
-
-                    for local_var_prev in self.dictionaries_milp[i_prev].values():
-                        VAR_MODEL[i_comp][local_var_prev] # create MIPVariable
-                        key = VAR_MODEL[i_comp].get_index(local_var_prev)
-                        self.dictionaries_milp[i_comp][key] = local_var_prev
-
-                    # copy the dictionaries
-                    self.inv_dictionaries_milp[i_comp] = {
-                        v: k for k, v in self.dictionaries_milp[i_comp].items()
-                    }
-
                     # recursively copy component dictionaries
                     comp._copy_over_dictionaries_recursively(
                         prev, model_options)
-
-                    # copy the objective variables
-                    self.sum_arr_milp += [
-                        (factor, self.inv_dictionaries_milp[i_comp][entry])
-                        for factor, entry in prev.sum_arr_milp
-                    ]
-
-                    for con in milps[i_prev].constraints():
-                        master_milp.add_constraint(
-                            translate_milp_constraint(VAR_MODEL[i_comp], con)
-                        )
                     break
             else:
                 # model the components that have not been modeled before
-                comp_milp = comp.model(model_options, _first_iter=False)
-                milps.append(comp_milp)
+                comp.model(model_options, _first_iter=False)
 
-                ##############################################################
-                # parse the component MILP and adopt it into the master milp #
-                ##############################################################
-                for local_var in comp_milp.vars.values():
-                    for i in local_var.keys():
-                        VAR_MODEL[i_comp][local_var.get_index(i)]
-                        key = VAR_MODEL[i_comp].get_index(local_var.get_index(i))
-                        val = local_var.get_index(i)
-                        self.dictionaries_milp[i_comp][key] = val
+            ##################################################################
+            # parse the component MILP and adopt it into the master milp     #
+            ##################################################################
+            self.dictionaries_milp[i_comp] = master_milp.append(
+                comp.milp, VAR_MODEL[i_comp]
+            )
+            self.inv_dictionaries_milp[i_comp] = {
+                v: k for k, v in self.dictionaries_milp[i_comp].items()
+            }
 
-                self.inv_dictionaries_milp[i_comp] = {
-                    v: k for k, v in self.dictionaries_milp[i_comp].items()
-                }
-
-                # translate the abstract list given by '.constraints()' into
-                # proper constraints in master_milp
-                for con in comp_milp.constraints():
-                    master_milp.add_constraint(
-                        translate_milp_constraint(VAR_MODEL[i_comp], con)
-                    )
-                self.sum_arr_milp += [
-                    (factor, self.inv_dictionaries_milp[i_comp][entry])
-                    for factor, entry in comp.sum_arr_milp
-                ]
+            # translate the objective variables
+            self.sum_arr_milp += [
+                (factor, self.inv_dictionaries_milp[i_comp][entry])
+                for factor, entry in comp.sum_arr_milp
+            ]
 
         ######################################################
         #    -> Connect the MILPs with each other.           #
