@@ -331,31 +331,21 @@ class SBoxCipher(Cipher):
                 elif len(out_nodes) == 2:
                     # Model branching analog to XOR_CVL in the
                     # differential setting
+                    master_milp.add_constraint(
+                        -in_node + out_nodes[0] + out_nodes[1] >= 0
+                    )
+                    master_milp.add_constraint(
+                        in_node - out_nodes[0] + out_nodes[1] >= 0
+                    )
+                    master_milp.add_constraint(
+                        in_node + out_nodes[0] - out_nodes[1] >= 0
+                    )
                     if model_options.granularity == GRANULARITY.BITWISE:
-                        master_milp.add_constraint(
-                            -in_node + out_nodes[0] + out_nodes[1] >= 0
-                        )
-                        master_milp.add_constraint(
-                            in_node - out_nodes[0] + out_nodes[1] >= 0
-                        )
-                        master_milp.add_constraint(
-                            in_node + out_nodes[0] - out_nodes[1] >= 0
-                        )
                         master_milp.add_constraint(
                             -in_node - out_nodes[0] - out_nodes[1] >= -2
                         )
-                    if model_options.granularity == GRANULARITY.WORDWISE:
-                        master_milp.add_constraint(
-                            -in_node + out_nodes[0] + out_nodes[1] >= 0
-                        )
-                        master_milp.add_constraint(
-                            in_node - out_nodes[0] + out_nodes[1] >= 0
-                        )
-                        master_milp.add_constraint(
-                            in_node + out_nodes[0] - out_nodes[1] >= 0
-                        )
-                        # Skip fourth constraint as we are working with
-                        # activity patterns instead of values
+                    # Wordwise, the fourth constraint is skipped as we are
+                    # working with activity patterns instead of values
                 else:  # len(out_nodes) == 1
                     master_milp.add_constraint(out_nodes[0] == in_node)
             else:
