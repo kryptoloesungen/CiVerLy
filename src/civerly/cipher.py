@@ -53,13 +53,13 @@ from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
     OPTIMIZATION,
-    InvalidModelOptionException,
+    InvalidModelOptionError,
 )
 from civerly.trail import TrailNode
 from civerly.util import suppress_output, translate_sat_clause
 
 
-class CipherNotValidException(Exception):
+class CipherNotValidError(Exception):
     def __init__(self):
         r"""
         Exception which is thrown whenever the cipher is not finished, i.e.
@@ -253,7 +253,7 @@ class Cipher:
                 for i in range(self.input_length):
                     self.milp.add_constraint(self.MILP_OUT[i] == self.MILP_IN[i])
             else:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.granularity, GRANULARITY
                 )
             return self.milp
@@ -288,7 +288,7 @@ class Cipher:
                     self.sat.add_clause((self.SAT_OUT[i], -self.SAT_IN[i]))
                 return self.sat
             else:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.granularity, GRANULARITY
                 )
 
@@ -798,7 +798,7 @@ class Cipher:
             sage: vec_to_int(cipher(int_to_vec(0x52, 9)))
             Traceback (most recent call last):
             ...
-            civerly.cipher.CipherNotValidException:
+            civerly.cipher.CipherNotValidError:
             The cipher is not finished yet, as not all outputs are connected.
             Use '.add_output()' to be able to call.
 
@@ -814,7 +814,7 @@ class Cipher:
         if not isinstance(plaintext, (Iterable, Vector_mod2_dense)):
             raise TypeError("Wrong type, input must be Vector_mod2_dense")
         if self.is_valid is False:
-            raise CipherNotValidException()
+            raise CipherNotValidError()
         assert len(plaintext) == self.input_length, (
             f"(len(plaintext)) {len(plaintext)} "
             f"!= {self.input_length} (self.input_length)"
@@ -1198,7 +1198,7 @@ class Cipher:
             [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 3]
         """
         if not self.is_valid:
-            raise CipherNotValidException()
+            raise CipherNotValidError()
         visited = [False for _ in range(len(self.nodes))]
         dfs_order = []
         depths = [-1 for _ in range(len(self.nodes))]
@@ -1250,7 +1250,7 @@ class Cipher:
             self._model_time = time.perf_counter() - start_time
             return self._model
         else:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _model_milp(self, model_options, _first_iter=False):
         e = f"MILP modeling is not supported for {type(self)}!"
@@ -1279,7 +1279,7 @@ class Cipher:
         """
         assert isinstance(_first_iter, bool)
         if model_options.granularity == GRANULARITY.WORDWISE:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
                 message="Wordwise modeling is not supported for SAT!",
             )
@@ -1678,7 +1678,7 @@ class Cipher:
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return self.result["objective_value"]
         else:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _construct_grid(self, divide_by, input_side=True):
         r"""
@@ -1830,7 +1830,7 @@ class Cipher:
         elif model_options.optimization == OPTIMIZATION.SAT:
             raise NotImplementedError
         else:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def generate_report(self, model_options):
         """
@@ -2191,7 +2191,7 @@ class Cipher:
                 OPTIMIZATION.MILP,
                 OPTIMIZATION.SAT,
             }:
-                raise InvalidModelOptionException(val, enum)
+                raise InvalidModelOptionError(val, enum)
 
         cryptanalysis = cryptanalysis_map[model_options.cryptanalysis]
         granularity = granularity_map[model_options.granularity]

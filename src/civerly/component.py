@@ -35,7 +35,7 @@ from civerly.model_options import (
     LINEAR_LAYER_MODELING,
     OPTIMIZATION,
     SBOX_MODELING,
-    InvalidModelOptionException,
+    InvalidModelOptionError,
 )
 from civerly.util import (
     hw,
@@ -161,7 +161,7 @@ class Component(ABC):
             self._model_time = time.perf_counter() - start_time
             return model
         else:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _init_model(self, model_options):
         r"""Initialize empty MILP or SAT model for this component."""
@@ -173,7 +173,7 @@ class Component(ABC):
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.sum_arr_sat = []
             if model_options.granularity == GRANULARITY.WORDWISE:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.granularity,
                     message="Wordwise modeling is not supported using SAT",
                 )
@@ -185,7 +185,7 @@ class Component(ABC):
             self.SAT_IN = [self.sat.var() for _ in range(self.input_length)]
             self.SAT_OUT = [self.sat.var() for _ in range(self.output_length)]
         else:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         return
@@ -333,7 +333,7 @@ class I_CVL(Component):
         elif model_options.granularity == GRANULARITY.BITWISE:
             divide_by = 1
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
         for i in range(self.input_length // divide_by):
             self.milp.add_constraint(self.MILP_OUT[i] == self.MILP_IN[i])
@@ -354,7 +354,7 @@ class I_CVL(Component):
                 self.sat.add_clause((-self.SAT_OUT[i], self.SAT_IN[i]))
             return self.sat
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
 
 class C_CVL(Component):
@@ -417,7 +417,7 @@ class C_CVL(Component):
         elif model_options.granularity == GRANULARITY.BITWISE:
             divide_by = 1
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             for i in range(self.output_length // divide_by):
@@ -441,7 +441,7 @@ class C_CVL(Component):
                     self.sat.add_clause((self.SAT_OUT[i], -self.SAT_OUT[i]))
                 return self.sat
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
 
 class RK_CVL(C_CVL):
@@ -601,7 +601,7 @@ class ConstXOR_CVL(Component):
                 self.sat.add_clause((-self.SAT_OUT[i], self.SAT_IN[i]))
             return self.sat
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
 
 class RoundkeyXOR_CVL(ConstXOR_CVL):
@@ -803,7 +803,7 @@ class XOR_CVL(Component):
                     )
                     # Skip fourth constraint as we are working with activity patterns instead of values
                 return self.milp
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
         if model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
             # Masks for the two inputs and the output need to be equal
 
@@ -813,7 +813,7 @@ class XOR_CVL(Component):
             elif model_options.granularity == GRANULARITY.BITWISE:
                 divide_by = 1
             else:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.granularity, GRANULARITY
                 )
 
@@ -825,7 +825,7 @@ class XOR_CVL(Component):
                 # Output masks should also be the same
                 self.milp.add_constraint(self.MILP_IN[i] == self.MILP_OUT[i])
             return self.milp
-        raise InvalidModelOptionException(model_options.cryptanalysis, CRYPTANALYSIS)
+        raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
     def _model_sat(self, model_options):
         """
@@ -930,7 +930,7 @@ class ModAdd_CVL(Component):
         return cls(d["word_length"], name=d.get("name"))
 
     def _model_milp(self, model_options):
-        raise InvalidModelOptionException(
+        raise InvalidModelOptionError(
             model_options.optimization, message="ModAdd_CVL is not supported in MILP"
         )
 
@@ -1145,7 +1145,7 @@ class ModAdd_CVL(Component):
 
                 self.sum_arr_sat += [(10**model_options.sat_precision, PROB[i])]
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.cryptanalysis, CRYPTANALYSIS
             )
 
@@ -1209,7 +1209,7 @@ class AND_CVL(Component):
         return self.__word_length
 
     def _model_milp(self, model_options):
-        raise InvalidModelOptionException(
+        raise InvalidModelOptionError(
             model_options.optimization, message="AND_CVL is not supported in MILP"
         )
 
@@ -1275,7 +1275,7 @@ class AND_CVL(Component):
                 for row in and_sbox.S.linear_approximation_table("correlation")
             ]
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.cryptanalysis, CRYPTANALYSIS
             )
 
@@ -1458,19 +1458,19 @@ class LinearLayer_CVL(Component):
         elif model_options.granularity == GRANULARITY.BITWISE:
             return self._milp_bitwise(model_options)
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _model_sat(self, model_options):
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.BITWISE:
             return self._sat_bitwise(model_options)
         elif model_options.granularity == GRANULARITY.WORDWISE:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
                 message="SAT-modeling does not support a wordwise granularity.",
             )
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _milp_bitwise(self, model_options):
         r"""
@@ -1508,7 +1508,7 @@ class LinearLayer_CVL(Component):
             MILP_IN = self.MILP_OUT
             MILP_OUT = self.MILP_IN
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.cryptanalysis, CRYPTANALYSIS
             )
 
@@ -1564,7 +1564,7 @@ class LinearLayer_CVL(Component):
                     elif constr.is_equation():
                         self.milp.add_constraint(sub_constr == 0)
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.linear_layer_modeling, LINEAR_LAYER_MODELING
             )
 
@@ -1633,7 +1633,7 @@ class LinearLayer_CVL(Component):
                             if j in o_zero_inds
                         ]
                     else:
-                        raise InvalidModelOptionException(
+                        raise InvalidModelOptionError(
                             model_options.cryptanalysis, CRYPTANALYSIS
                         )
 
@@ -1684,7 +1684,7 @@ class LinearLayer_CVL(Component):
             elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
                 bn = self.branch_number_linear
             else:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.cryptanalysis, CRYPTANALYSIS
                 )
 
@@ -1719,7 +1719,7 @@ class LinearLayer_CVL(Component):
             )
 
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.linear_layer_modeling, LINEAR_LAYER_MODELING
             )
         return self.milp
@@ -1793,7 +1793,7 @@ class LinearLayer_CVL(Component):
             SAT_IN = self.SAT_OUT
             SAT_OUT = self.SAT_IN
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.cryptanalysis, CRYPTANALYSIS
             )
 
@@ -1858,7 +1858,7 @@ class LinearLayer_CVL(Component):
                         )
 
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.linear_layer_modeling, LINEAR_LAYER_MODELING
             )
 
@@ -1986,7 +1986,7 @@ class PermuteLayer_CVL(LinearLayer_CVL):
                     )
             return self.milp
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _model_sat(self, model_options):
         r"""
@@ -2038,7 +2038,7 @@ class PermuteLayer_CVL(LinearLayer_CVL):
                     )
             return self.sat
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
                 message="Wordwise modeling is not supported using SAT.",
             )
@@ -2210,19 +2210,19 @@ class SBox_CVL(Component):
         elif model_options.granularity == GRANULARITY.BITWISE:
             return self._milp_bitwise(model_options)
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _model_sat(self, model_options):
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.BITWISE:
             return self._sat_bitwise(model_options)
         elif model_options.granularity == GRANULARITY.WORDWISE:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
                 message="Wordwise modeling is not supported using SAT.",
             )
         else:
-            raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _milp_bitwise(self, model_options):
         r"""
@@ -2342,7 +2342,7 @@ class SBox_CVL(Component):
                 ]
             )
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.cryptanalysis, CRYPTANALYSIS
             )
 
@@ -2426,7 +2426,7 @@ class SBox_CVL(Component):
                 # that the probability does not match the desired one.
                 # The solver handles the "solution already on disk" cache
                 # check internally and (for an external solver) aborts via
-                # :class:`ExternalSolveRequired` when the user must solve.
+                # :class:`ExternalSolveRequiredError` when the user must solve.
                 milp_to_minimize_milp = MixedIntegerLinearProgram(
                     maximization=False, solver="GLPK"
                 )  # Reduction MILP
@@ -2639,7 +2639,7 @@ class SBox_CVL(Component):
                 for row in self.S.linear_approximation_table("correlation")
             ]
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.cryptanalysis, CRYPTANALYSIS
             )
 
@@ -2700,7 +2700,7 @@ class SBox_CVL(Component):
                 )
                 self.sat.add_clause(tup)
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.sbox_modeling, SBOX_MODELING
             )
         # ------------------------------------------------------------
@@ -2801,7 +2801,7 @@ class ROT_AND_CVL(Component):
         return cls(d["word_length"], d["r"], name=d.get("name"))
 
     def _model_milp(self, model_options) -> MixedIntegerLinearProgram:
-        raise InvalidModelOptionException(
+        raise InvalidModelOptionError(
             model_options.optimization, message="ROT_AND_CVL is not supported in MILP"
         )
 

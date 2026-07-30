@@ -1,6 +1,6 @@
 r"""Benchmark CiVerLy."""
 
-from civerly.model_options import OPTIMIZATION, InvalidModelOptionException
+from civerly.model_options import OPTIMIZATION, InvalidModelOptionError
 from civerly.solvers import SOLVING_STATUS
 from civerly.util import suppress_output
 
@@ -131,7 +131,7 @@ def benchmark(CM):
                 "Result",
             ]
         else:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
         table = [header]
         for cipher in ciphers:
             with suppress_output():
@@ -147,7 +147,7 @@ def benchmark(CM):
                 c = len(cipher._model.clauses())
                 row.append("")  # empty weight bound
             else:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.optimization, OPTIMIZATION
                 )
 

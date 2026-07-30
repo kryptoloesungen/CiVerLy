@@ -374,7 +374,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     # STEP 2.2:
     # Write the reduction MILP and solve it. The solver itself handles the
     # "solution already on disk" cache check and (for an external solver)
-    # aborts via :class:`ExternalSolveRequired` when the user must solve.
+    # aborts via :class:`ExternalSolveRequiredError` when the user must solve.
     for i_im, impossible_point in enumerate(imposset):
         for ic, constr in enumerate(convex_constraints):
             if constr.is_inequality():

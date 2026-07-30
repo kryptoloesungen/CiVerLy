@@ -87,7 +87,7 @@ As we rely on an external solver, we can simply put it to ``None`` in the
     sage: aes.model(model_options)
     Traceback (most recent call last):
     ...
-    civerly.solvers.ExternalSolveRequired: ExternalMILPSolver: solve
+    civerly.solvers.ExternalSolveRequiredError: ExternalMILPSolver: solve
     DOCTEST-AES-Models/MixColumn51845.mps externally and place the result
     at DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol, then re-run.
 

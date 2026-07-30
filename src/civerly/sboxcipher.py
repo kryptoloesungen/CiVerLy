@@ -34,7 +34,7 @@ from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
     OPTIMIZATION,
-    InvalidModelOptionException,
+    InvalidModelOptionError,
 )
 from civerly.util import (
     _before_brackets,
@@ -181,7 +181,7 @@ class SBoxCipher(Cipher):
             model_options.granularity == GRANULARITY.WORDWISE
             and type(self) is SBoxCipher
         ):
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
                 message="Wordwise modeling is not supported for the SBoxCipher class!",
             )
@@ -460,7 +460,7 @@ class SBoxCipher(Cipher):
                 else:  # len(out_nodes) == 1
                     master_milp.add_constraint(out_nodes[0] == in_node)
             else:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.cryptanalysis, CRYPTANALYSIS
                 )
         # ------------------------------------------------------------------- #
@@ -518,7 +518,7 @@ class SBoxCipher(Cipher):
             to be able to generate the report correctly.
         """
         if model_options.optimization != OPTIMIZATION.MILP:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
         summation_result = 0  # Construct the objective
         # sum_arr contains:

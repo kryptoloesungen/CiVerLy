@@ -81,7 +81,7 @@ class SOLVING_STATUS(Enum):
     ERROR = 3
 
 
-class ExternalSolveRequired(Exception):
+class ExternalSolveRequiredError(Exception):
     """
     Raised when an external solver is invoked but the solution file is not
     yet present. Provide a solution at the path shown in the message and
@@ -1674,7 +1674,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             sage: aes.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalMILPSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalMILPSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "MixColumn51845.mps",
@@ -1684,7 +1684,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             sage: aes.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalMILPSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalMILPSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "AES.mps",
@@ -1710,7 +1710,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         Signal that the user must solve the MILP externally.
 
         If ``solution_file`` already exists (e.g. the user provided it before
-        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequiredError`
         exception is raised carrying the input and expected output paths.
 
         INPUT:
@@ -1730,7 +1730,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
         self._check_can_invoke(input_file, solution_file, log_file)
         if solution_file.exists():
             return self._check_timeout(log_file, None, SOLVING_STATUS.SUCCESS)
-        raise ExternalSolveRequired(
+        raise ExternalSolveRequiredError(
             f"{self.name}: solve {input_file} externally and place the "
             f"result at {solution_file}, then re-run."
         )
@@ -1852,7 +1852,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             sage: with suppress_output(): present_cipher.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalSATSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.CRYPTOMINISAT.invoke(
             ....:   model_options.path / "PRESENT_obj50.cnf",
@@ -1862,7 +1862,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             sage: with suppress_output(): present_cipher.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalSATSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.CRYPTOMINISAT.invoke(
             ....:   model_options.path / "PRESENT_obj25.cnf",
@@ -1872,7 +1872,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             sage: with suppress_output(): present_cipher.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalSATSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.CRYPTOMINISAT.invoke(
             ....:   model_options.path / "PRESENT_obj12.cnf",
@@ -1882,7 +1882,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             sage: with suppress_output(): present_cipher.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalSATSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.CRYPTOMINISAT.invoke(
             ....:   model_options.path / "PRESENT_obj6.cnf",
@@ -1892,7 +1892,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             sage: with suppress_output(): present_cipher.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalSATSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.CRYPTOMINISAT.invoke(
             ....:   model_options.path / "PRESENT_obj3.cnf",
@@ -1902,7 +1902,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
             sage: with suppress_output(): present_cipher.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalSATSolver:
+            civerly.solvers.ExternalSolveRequiredError: ExternalSATSolver:
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.CRYPTOMINISAT.invoke(
             ....:   model_options.path / "PRESENT_obj5.cnf",
@@ -1931,7 +1931,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         Signal that the user must solve the SAT externally.
 
         If ``solution_file`` already exists (e.g. the user provided it before
-        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequiredError`
         exception is raised carrying the input and expected output paths.
 
         INPUT:
@@ -1951,7 +1951,7 @@ class EXTERNAL_SAT_SOLVER_CVL(SAT_SOLVER_CVL):
         self._check_can_invoke(input_file, solution_file, log_file)
         if solution_file.exists():
             return SOLVING_STATUS.SUCCESS
-        raise ExternalSolveRequired(
+        raise ExternalSolveRequiredError(
             f"{self.name}: solve {input_file} externally and place the "
             f"result at {solution_file}, then re-run."
         )
@@ -2140,7 +2140,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
             sage: cipher.analyse(model_options=model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer: ...
+            civerly.solvers.ExternalSolveRequiredError: ExternalLogicMinimizer: ...
             sage: # optional - espresso, cryptominisat
             sage: SOLVER.ESPRESSO.invoke(
             ....:   model_options.path / "espresso-8e23b46a.pla",
@@ -2194,7 +2194,7 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
             sage: gift_cipher.analyse(model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer:
+            civerly.solvers.ExternalSolveRequiredError: ExternalLogicMinimizer:
             minimize ... externally and place the result at ..., then re-run.
             sage: SOLVER.ESPRESSO.invoke(
             ....:     model_options.path / "espresso-d1bda7a.pla",
@@ -2216,7 +2216,7 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         Signal that the user must minimize the input externally.
 
         If ``solution_file`` already exists (e.g. the user provided it before
-        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequired`
+        re-running), this is a no-op. Otherwise, an :class:`ExternalSolveRequiredError`
         exception is raised carrying the input and expected output paths.
 
         INPUT:
@@ -2234,7 +2234,7 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
             - :attr:`SOLVING_STATUS.SUCCESS` when ``solution_file`` is present
         """
         if not solution_file.exists():
-            raise ExternalSolveRequired(
+            raise ExternalSolveRequiredError(
                 f"{self.name}: minimize {input_file} externally and place the "
                 f"result at {solution_file}, then re-run."
             )
