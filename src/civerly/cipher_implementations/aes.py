@@ -606,7 +606,7 @@ class AES_CVL:
             RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges
         )
 
-        for r in range(R - 1):
+        for _r in range(R - 1):
             edges = [(node, (i, i)) for i in range(16)]
             node = aes_cipher.add_subcipher(aes_round, edges)
             edges = [(node, (i, i)) for i in range(16)]

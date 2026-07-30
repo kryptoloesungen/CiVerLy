@@ -86,13 +86,13 @@ class WEAK_PRESENT_CVL:
 
         Below we generate a custom model by adding constraints.
         First analyse the cipher as per usual:
-            
+
             sage: # optional - scip, espresso
             sage: from civerly.cipher_implementations.weak_present \
             ....:   import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir: 
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
             ....:   cipher = WEAK_PRESENT_CVL(R=3)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -106,7 +106,7 @@ class WEAK_PRESENT_CVL:
             sage: cipher.analyse(model_options)
             3648 variables and 6465 constraints were written to ...
             5.4150374993
-        
+
         Set all input bits to active and analyse again:
 
             sage: # optional - scip, espresso
@@ -118,14 +118,14 @@ class WEAK_PRESENT_CVL:
             61.8300749986
             sage: cipher.results[0]['in'] == [1]*64
             True
-            
+
         Remove temporary files:
 
             sage: # optional - scip, espresso
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
 
-        
+
         """
         if name is None:
             name = "WEAK_PRESENT"

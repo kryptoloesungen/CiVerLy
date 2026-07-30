@@ -63,7 +63,7 @@ class Toy7:
             Using existing file ..., make sure it is up to date!
             1356 variables and 2507 constraints were written to '...'
             3
-        
+
         Try to find multiple solutions with SCIP:
 
             sage: # optional - scip # optional - espresso
@@ -86,9 +86,9 @@ class Toy7:
         Delete files:
 
             sage: # optional - scip # optional - espresso
-            sage: import shutil 
+            sage: import shutil
             sage: shutil.rmtree(tmpdir)
-            
+
         """
 
         cipher = SBoxCipher(24, 64, name="Toy7")

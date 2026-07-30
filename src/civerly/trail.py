@@ -87,7 +87,7 @@ class TrailNode:
                     s
                     > self.cipher_instance.input_length
                     + self.cipher_instance.output_length
-                    and s in dictionaries[comp_num].keys()
+                    and s in dictionaries[comp_num]
                 )
 
         depths = self.cipher_instance._dfs_traversal()
@@ -96,11 +96,19 @@ class TrailNode:
         ################################################
         depth_range = range(max(depths) + 1)
         max_width_in = max(
-            sum(n.input_length for n, d in zip(nodes, depths) if d == depth)
+            sum(
+                n.input_length
+                for n, d in zip(nodes, depths, strict=True)
+                if d == depth
+            )
             for depth in depth_range
         )
         max_width_out = max(
-            sum(n.output_length for n, d in zip(nodes, depths) if d == depth)
+            sum(
+                n.output_length
+                for n, d in zip(nodes, depths, strict=True)
+                if d == depth
+            )
             for depth in depth_range
         )
 
@@ -155,7 +163,7 @@ class TrailNode:
                 try:
                     # determine correct comp_num based on s being in
                     # dictionaries[comp_num]
-                    while s not in dictionaries[comp_num].keys():
+                    while s not in dictionaries[comp_num]:
                         comp_num += 1
                 except IndexError as error:
                     # if the variable comes from the summation logic that bound
@@ -200,7 +208,7 @@ class TrailNode:
             divide_by=divide_by, input_side=False
         )
         _node_results = {}
-        for comp_num, comp in enumerate(nodes):
+        for comp_num, _comp in enumerate(nodes):
             d = depths[comp_num]
             comp_bits_in = [
                 bits_in[d][i]
@@ -454,13 +462,16 @@ class TrailNode:
             sage: t1 == t2
             False
 
-            
         """
         return (
             isinstance(other, TrailNode)
             and self.input == other.input
             and self.output == other.output
-            and all([c1 == c2 for c1, c2 in zip(self.children, other.children)])
+            and len(self.children) == len(other.children)
+            and all(
+                c1 == c2
+                for c1, c2 in zip(self.children, other.children, strict=True)
+            )
         )
 
     def to_latex(self, model_options) -> str:

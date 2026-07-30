@@ -111,7 +111,7 @@ class Toy2:
         round.add_output([(node_out, (i, i)) for i in range(16)])
 
         node = cipher.IN
-        for r in range(4):
+        for _r in range(4):
             node = cipher.add_subcipher(round, [(node, (i, i)) for i in range(16)])
         cipher.add_output([(node, (i, i)) for i in range(16)])
 

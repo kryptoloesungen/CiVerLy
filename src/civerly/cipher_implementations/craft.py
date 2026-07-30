@@ -13,7 +13,7 @@ from civerly.component import (
 
 
 class CRAFT_CVL:
-    RC = [
+    RC = (
         0x11,
         0x84,
         0x42,
@@ -46,7 +46,7 @@ class CRAFT_CVL:
         0x34,
         0x12,
         0x85,
-    ]
+    )
 
     def __init__(self, R, name=None) -> None:
         r"""

@@ -16,7 +16,7 @@ from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
 
 
 class SKINNY_CVL:
-    consts = [
+    consts = (
         0x01,
         0x03,
         0x07,
@@ -79,7 +79,7 @@ class SKINNY_CVL:
         0x28,
         0x10,
         0x20,
-    ]
+    )
 
     def create_tk_schedules(s, z):
         r"""

@@ -319,12 +319,13 @@ class MODEL_OPTIONS:
                 ),
             )
 
-        if self.solve_range is not None:
-            if self.solve_range[0] < 0 or self.solve_range[0] > self.solve_range[1]:
-                raise InvalidModelOptionException(
-                    self.solve_range,
-                    message=f"solve_range = {self.solve_range} is not valid!",
-                )
+        if self.solve_range is not None and (
+            self.solve_range[0] < 0 or self.solve_range[0] > self.solve_range[1]
+        ):
+            raise InvalidModelOptionException(
+                self.solve_range,
+                message=f"solve_range = {self.solve_range} is not valid!",
+            )
         if self.sat_precision >= 5:
             raise InvalidModelOptionException(
                 f"{self.sat_precision = } is too large. "

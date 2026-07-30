@@ -1098,7 +1098,7 @@ class HURDLE_CVL:
         cipher = WordBasedCipher(4, 16, 16, name=name)
 
         round_node = cipher.IN
-        for r in range(R):
+        for _r in range(R):
             hurdle_f = HURDLE_F_CVL(rk=0)
 
             # build feistel round

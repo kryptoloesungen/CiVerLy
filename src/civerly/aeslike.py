@@ -95,7 +95,7 @@ class AESlike(WordSBoxCipher):
         """
         if type(sub_cipher) is LinearLayer_CVL:
             # this means LinearLayer, but not PermuteLayer or RotateLayer
-            if not sub_cipher.input_length == self.rows * self.wordsize:
+            if sub_cipher.input_length != self.rows * self.wordsize:
                 a = self.rows * self.wordsize
                 b = sub_cipher.input_length
                 e = "LinearLayer should be MixColumn and should be of size "

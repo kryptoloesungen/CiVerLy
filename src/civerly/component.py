@@ -223,19 +223,16 @@ class Component(ABC):
         liste = []
         for key, value in self.__dict__.items():
             if (
-                isinstance(value, (bool, str))
-                or isinstance(value, (MixedIntegerLinearProgram, DIMACS))
+                isinstance(value, (bool, str, MixedIntegerLinearProgram, DIMACS))
                 or any(
-                    [
-                        word in key
-                        for word in [
-                            "wordsize",
-                            "milp",
-                            "sat",
-                            "MILP",
-                            "SAT",
-                            "_model_time",
-                        ]
+                    word in key
+                    for word in [
+                        "wordsize",
+                        "milp",
+                        "sat",
+                        "MILP",
+                        "SAT",
+                        "_model_time",
                     ]
                 )
             ):
@@ -642,7 +639,6 @@ class RoundkeyXOR_CVL(ConstXOR_CVL):
     """
 
     def __init__(self, output_length, const, name=None):
-        r""" """
         super().__init__(output_length, const, name=name)
 
     @property
@@ -1284,7 +1280,7 @@ class AND_CVL(Component):
             )
 
         # Contains the possible entries of ddt.
-        set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+        set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
 
         PROB = [self.sat.var() for _ in range(len(set_ddt) * self.word_length)]
 
@@ -1294,7 +1290,8 @@ class AND_CVL(Component):
                 self.SAT_IN[i],
                 self.SAT_IN[i + self.word_length],
                 self.SAT_OUT[i],
-            ] + PROB[i * len(set_ddt) : (i + 1) * len(set_ddt)]
+                *PROB[i * len(set_ddt) : (i + 1) * len(set_ddt)],
+            ]
 
             for clause in one_bit_sbox_sat.clauses():
                 new_clause = translate_sat_clause(VAR, clause[0])
@@ -1455,7 +1452,6 @@ class LinearLayer_CVL(Component):
         )
 
     def _model_milp(self, model_options):
-        r""" """
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.WORDWISE:
             return self._milp_wordwise(model_options)
@@ -1465,7 +1461,6 @@ class LinearLayer_CVL(Component):
             raise InvalidModelOptionException(model_options.granularity, GRANULARITY)
 
     def _model_sat(self, model_options):
-        r""" """
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.BITWISE:
             return self._sat_bitwise(model_options)
@@ -1525,7 +1520,7 @@ class LinearLayer_CVL(Component):
         # Determine any missing inputs and add them into the dictionary
         # and set them to zero
         for i in range(binmatrix.ncols()):
-            if all([i not in xorsum for xorsum in array_of_xorsums]):
+            if all(i not in xorsum for xorsum in array_of_xorsums):
                 self.milp.add_constraint(MILP_IN[i] == 0)
 
         if model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.MORE_DUMMIES:
@@ -1541,17 +1536,18 @@ class LinearLayer_CVL(Component):
                 self.milp.add_constraint(int_sum == binary_rep)
         elif model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.CONVEX_HULL:
             for i, tup in enumerate(array_of_xorsums):
-                posset = []  # set of possible transitions
-                for j in range(1 << (len(tup) + 1)):
-                    # include all transitions with even hammingweight
-                    if hw(j) % 2 == 0:
-                        # x_1 + x_2 + x_3 = y_1, then 4.
-                        posset.append(vector(ZZ, int_to_vec(j, len(tup) + 1)))
+                # set of possible transitions: all transitions with even
+                # hammingweight (x_1 + x_2 + x_3 = y_1, then 4).
+                posset = [
+                    vector(ZZ, int_to_vec(j, len(tup) + 1))
+                    for j in range(1 << (len(tup) + 1))
+                    if hw(j) % 2 == 0
+                ]
                 convex_hull = Polyhedron(vertices=posset)
 
                 constrs = convex_hull.inequalities() + convex_hull.equations()
                 for constr in constrs:
-                    assert all([self.input_length > u for u in (max(tup), i)])
+                    assert all(self.input_length > u for u in (max(tup), i))
 
                     # sub_constr : substituted constraints (with
                     # the appropriate variables)
@@ -1614,13 +1610,12 @@ class LinearLayer_CVL(Component):
                     for j in o_wordarr:
                         o_binarr += all_vecs[j]
 
-                    i_zero_inds, o_zero_inds = [], []
-                    for pos in range(len(i_binarr)):
-                        if i_binarr[pos] == 0:
-                            i_zero_inds.append(pos)
-                    for pos in range(len(o_binarr)):
-                        if o_binarr[pos] == 0:
-                            o_zero_inds.append(pos)
+                    i_zero_inds = [
+                        pos for pos in range(len(i_binarr)) if i_binarr[pos] == 0
+                    ]
+                    o_zero_inds = [
+                        pos for pos in range(len(o_binarr)) if o_binarr[pos] == 0
+                    ]
 
                     # matrix_to_be_solved is a submatrix of the linear layer,
                     # together with additional rows restricting the
@@ -1674,10 +1669,8 @@ class LinearLayer_CVL(Component):
                     if (
                         current_dimension > 0
                         and all(
-                            [
-                                current_dimension > dimensions[index_dim]
-                                for index_dim in predecessors
-                            ]
+                            current_dimension > dimensions[index_dim]
+                            for index_dim in predecessors
                         )
                     ) or is_exc:
                         posset.append(i_wordarr + o_wordarr)
@@ -1973,7 +1966,6 @@ class PermuteLayer_CVL(LinearLayer_CVL):
         )
 
     def _model_milp(self, model_options):
-        r""" """
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.WORDWISE:
             # wordsize is set externally in wordbasedcipher.add_subcipher
@@ -2053,7 +2045,7 @@ class PermuteLayer_CVL(LinearLayer_CVL):
 
 
 class RotateLayer_CVL(PermuteLayer_CVL):
-    """
+    r"""
     The ``RotateLayer_CVL`` class, accepting a rotation amount and translating
     it into the corresponding permutation, such that most of the functionality
     is inherited by ``PermuteLayer_CVL``.
@@ -2076,7 +2068,7 @@ class RotateLayer_CVL(PermuteLayer_CVL):
     of the size ``word_coarseness``.
 
     .. NOTE::
-        This layer rotates to the **left**, i.e. :math:`\\lll`
+        This layer rotates to the **left**, i.e. :math:`\lll`
 
     EXAMPLES::
 
@@ -2355,7 +2347,7 @@ class SBox_CVL(Component):
             )
 
         # Contains the possible entries of ddt.
-        set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+        set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
 
         PROB = self.milp.new_variable(name="PROB", binary=True)
 
@@ -2378,7 +2370,7 @@ class SBox_CVL(Component):
                 # to do so is the iterate for every non-zero probability
                 # within the DDT and merge the resulting models while keeping
                 # track of the probability.
-                inequations_for_prob = dict()
+                inequations_for_prob = {}
                 for prob in set_ddt:
                     if prob == 0:
                         continue
@@ -2391,9 +2383,7 @@ class SBox_CVL(Component):
                     json.dump(inequations_for_prob, ineq_file)
 
             # Compute all points that do not have a given probability.
-            impossible_points_for_prob = {
-                prob: [] for prob in inequations_for_prob.keys()
-            }
+            impossible_points_for_prob = {prob: [] for prob in inequations_for_prob}
             for a in range(1 << self.input_length):
                 for b in range(1 << self.output_length):
                     for prob in impossible_points_for_prob:
@@ -2424,11 +2414,9 @@ class SBox_CVL(Component):
                         self.input_length + self.output_length - i - 1
                     ]
                 # Compare with right-hand size
-                if lhs < inequation[-1]:
-                    return True
-                return False
+                return lhs < inequation[-1]
 
-            reduction_solution = dict()
+            reduction_solution = {}
             for prob, impossible_points in impossible_points_for_prob.items():
                 s_file_mps = model_options.path / f"{s_file_name}.p{prob}.mps"
 
@@ -2524,14 +2512,15 @@ class SBox_CVL(Component):
                 reduction_algorithm_ST17(self, posset, model_options, PROB=PROB)
                 # ----------------------------------------------------------------
             elif model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND:
-                imposset = []
                 clauses = []
                 # compute imposset = complement of posset
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 L = self.input_length + self.output_length + len(set_ddt)
-                for transition_int in range(1 << L):
-                    if transition_int not in posset:
-                        imposset.append(transition_int)
+                imposset = [
+                    transition_int
+                    for transition_int in range(1 << L)
+                    if transition_int not in posset
+                ]
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 for impossible_transition in imposset:
                     tup = (
@@ -2655,7 +2644,7 @@ class SBox_CVL(Component):
             )
 
         # Contains the possible entries of ddt.
-        set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+        set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
 
         posset = []
 
@@ -2695,13 +2684,14 @@ class SBox_CVL(Component):
         # No reduction
         # ------------------------------------------------------------
         elif model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND:
-            imposset = []
             # compute imposset = complement of posset
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             L = len(SAT_VARS)
-            for transition_int in range(1 << L):
-                if transition_int not in posset:
-                    imposset.append(transition_int)
+            imposset = [
+                transition_int
+                for transition_int in range(1 << L)
+                if transition_int not in posset
+            ]
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             for impossible_transition in imposset:
                 tup = (

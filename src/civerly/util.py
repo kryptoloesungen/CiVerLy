@@ -193,10 +193,7 @@ def list_of_predecessor_vector_indices(v, num_bits):
 
     """
     assert num_bits <= len(v)
-    set_bit_indices = []
-    for i in range(num_bits):
-        if v[::-1][i] == 1:
-            set_bit_indices.append(i)
+    set_bit_indices = [i for i in range(num_bits) if v[::-1][i] == 1]
     out = []
     for vals in range(1 << len(set_bit_indices)):
         vals_vec = list(int_to_vec(vals, len(set_bit_indices)))
@@ -466,7 +463,7 @@ def _find_path(cipher, node, path=()):
     if not isinstance(cipher, Cipher):
         return None
     for i in range(len(cipher.nodes)):
-        sub_path = _find_path(cipher.nodes[i], node, path + (i,))
+        sub_path = _find_path(cipher.nodes[i], node, (*path, i))
         if sub_path is not None:
             return sub_path
 

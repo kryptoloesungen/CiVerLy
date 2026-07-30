@@ -218,7 +218,7 @@ class GIFT_CVL:
         # ------------------------------------------------ #
         gift_cipher = WordSBoxCipher(4, 16, 16, name=name)
         cipher_node = gift_cipher.IN
-        for r in range(R):
+        for _r in range(R):
             edges = [(cipher_node, (i, i)) for i in range(16)]
             cipher_node = gift_cipher.add_subcipher(gift_round, edges)
 

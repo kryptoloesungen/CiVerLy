@@ -37,8 +37,8 @@ def _float_or_int(value):
         3.4150374993
     """
     value = float(value)
-    if value.is_integer() or abs(value - int(round(value))) < 1e-8:
-        value = int(round(value))
+    if value.is_integer() or abs(value - round(value)) < 1e-8:
+        value = round(value)
     else:
         value = round(value, 10)
     return value
@@ -300,7 +300,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             lower_bound = _float_or_int(hit.group(2))
             return lower_bound, upper_bound
 
-        warnings.warn(f"No objective bounds found in {log_file}")
+        warnings.warn(f"No objective bounds found in {log_file}", stacklevel=2)
         return None, None
 
     def _check_timeout(self, log_file, time_limit, status):
@@ -1022,12 +1022,12 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             """
             try:
                 return int(str)
-            except ValueError:
+            except ValueError as err:
                 value_float = float(str)
-                value_int = int(round(value_float))
+                value_int = round(value_float)
                 if abs(value_float - value_int) < 1e-5:
                     return value_int
-                raise ValueError(f"Deviation from integer to high: {str}")
+                raise ValueError(f"Deviation from integer to high: {str}") from err
 
         assert file_content != [""], "The model is UNSAT"
 
@@ -1327,7 +1327,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
-        if any(["infeasible" in line for line in file_content[:10]]):
+        if any("infeasible" in line for line in file_content[:10]):
             raise ValueError("There is no solution found!")
         assignment = {}
         objective_value = file_content[1].strip(" ")
@@ -1335,7 +1335,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         objective_value = _float_or_int(objective_value)
         for line in file_content[2:-1]:
             line = line[: line.index("(")].replace(" ", "")
-            value = int(round(float(line[line.index("]") + 1 :])))
+            value = round(float(line[line.index("]") + 1 :]))
             name = line[: line.index("]") + 1]
             assignment[name] = value
 
@@ -1390,7 +1390,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
-        if any(["INFEASIBLE" in line for line in file_content[-10:]]):
+        if any("INFEASIBLE" in line for line in file_content[-10:]):
             raise ValueError("There is no solution found!")
 
         L, R = file_content[5].index("= ") + 2, file_content[5].index("(")
@@ -1792,7 +1792,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
                 lower, upper = super()._get_objective_bounds(log_file)
                 if (lower, upper) != (None, None):
                     return lower, upper
-        warnings.warn(f"No objective bounds found in {log_file}")
+        warnings.warn(f"No objective bounds found in {log_file}", stacklevel=2)
         return None, None
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
@@ -2058,8 +2058,10 @@ class LOGIC_MINIMIZER_CVL(ABC):
         """
         # create espresso input
         content = [f".i {len(possible_transitions[0])}", ".o 1"]
-        for possible_transition in possible_transitions:
-            content.append("".join([str(t) for t in possible_transition]) + " 1")
+        content.extend(
+            "".join([str(t) for t in possible_transition]) + " 1"
+            for possible_transition in possible_transitions
+        )
         content.append(".e")
         content = "\n".join(content) + "\n"
 
