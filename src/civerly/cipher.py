@@ -253,9 +253,7 @@ class Cipher:
                 for i in range(self.input_length):
                     self.milp.add_constraint(self.MILP_OUT[i] == self.MILP_IN[i])
             else:
-                raise InvalidModelOptionError(
-                    model_options.granularity, GRANULARITY
-                )
+                raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
             return self.milp
 
         def _model_sat(self, model_options):
@@ -288,9 +286,7 @@ class Cipher:
                     self.sat.add_clause((self.SAT_OUT[i], -self.SAT_IN[i]))
                 return self.sat
             else:
-                raise InvalidModelOptionError(
-                    model_options.granularity, GRANULARITY
-                )
+                raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
         def _copy_over_dictionaries_recursively(self, prev, model_options):
             return
@@ -2250,7 +2246,7 @@ class Cipher:
                 "*.fdb_latexmk",
             ]:
                 for f in model_options.path.glob(pattern):
-                   subprocess.Popen(["rm", "-f", f]).wait()
+                    subprocess.Popen(["rm", "-f", f]).wait()
 
         print(f"Output file in: {pdf_file_name}")
 
@@ -2447,9 +2443,7 @@ class Cipher:
 
                 mid_point = tuple(
                     sum(x) / 4
-                    for x in zip(
-                        *[corner_a, corner_b, corner_c, corner_d], strict=True
-                    )
+                    for x in zip(*[corner_a, corner_b, corner_c, corner_d], strict=True)
                 )
 
                 STRING += f"\t\t\\draw[very thick] {corner_a} -- {corner_b} -- {corner_c} -- {corner_d} -- {corner_a};\n"

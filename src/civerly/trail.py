@@ -97,9 +97,7 @@ class TrailNode:
         depth_range = range(max(depths) + 1)
         max_width_in = max(
             sum(
-                n.input_length
-                for n, d in zip(nodes, depths, strict=True)
-                if d == depth
+                n.input_length for n, d in zip(nodes, depths, strict=True) if d == depth
             )
             for depth in depth_range
         )
@@ -469,8 +467,7 @@ class TrailNode:
             and self.output == other.output
             and len(self.children) == len(other.children)
             and all(
-                c1 == c2
-                for c1, c2 in zip(self.children, other.children, strict=True)
+                c1 == c2 for c1, c2 in zip(self.children, other.children, strict=True)
             )
         )
 

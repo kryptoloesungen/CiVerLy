@@ -222,19 +222,16 @@ class Component(ABC):
         r"""Compute the hash of this component."""
         liste = []
         for key, value in self.__dict__.items():
-            if (
-                isinstance(value, (bool, str, MixedIntegerLinearProgram, DIMACS))
-                or any(
-                    word in key
-                    for word in [
-                        "wordsize",
-                        "milp",
-                        "sat",
-                        "MILP",
-                        "SAT",
-                        "_model_time",
-                    ]
-                )
+            if isinstance(value, (bool, str, MixedIntegerLinearProgram, DIMACS)) or any(
+                word in key
+                for word in [
+                    "wordsize",
+                    "milp",
+                    "sat",
+                    "MILP",
+                    "SAT",
+                    "_model_time",
+                ]
             ):
                 continue
             elif isinstance(value, matrix_type):
@@ -813,9 +810,7 @@ class XOR_CVL(Component):
             elif model_options.granularity == GRANULARITY.BITWISE:
                 divide_by = 1
             else:
-                raise InvalidModelOptionError(
-                    model_options.granularity, GRANULARITY
-                )
+                raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
             for i in range(self.word_length // divide_by):
                 # Masks for both inputs should be identical
@@ -1145,9 +1140,7 @@ class ModAdd_CVL(Component):
 
                 self.sum_arr_sat += [(10**model_options.sat_precision, PROB[i])]
         else:
-            raise InvalidModelOptionError(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         return self.sat
 
@@ -1275,9 +1268,7 @@ class AND_CVL(Component):
                 for row in and_sbox.S.linear_approximation_table("correlation")
             ]
         else:
-            raise InvalidModelOptionError(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         # Contains the possible entries of ddt.
         set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
@@ -1508,9 +1499,7 @@ class LinearLayer_CVL(Component):
             MILP_IN = self.MILP_OUT
             MILP_OUT = self.MILP_IN
         else:
-            raise InvalidModelOptionError(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         array_of_xorsums = []
         for row in binmatrix:
@@ -1793,9 +1782,7 @@ class LinearLayer_CVL(Component):
             SAT_IN = self.SAT_OUT
             SAT_OUT = self.SAT_IN
         else:
-            raise InvalidModelOptionError(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         if model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.EXCLUDE_ODD:
             for row_ind, row in enumerate(mat):
@@ -2342,9 +2329,7 @@ class SBox_CVL(Component):
                 ]
             )
         else:
-            raise InvalidModelOptionError(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         # Contains the possible entries of ddt.
         set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
@@ -2639,9 +2624,7 @@ class SBox_CVL(Component):
                 for row in self.S.linear_approximation_table("correlation")
             ]
         else:
-            raise InvalidModelOptionError(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         # Contains the possible entries of ddt.
         set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
@@ -2700,9 +2683,7 @@ class SBox_CVL(Component):
                 )
                 self.sat.add_clause(tup)
         else:
-            raise InvalidModelOptionError(
-                model_options.sbox_modeling, SBOX_MODELING
-            )
+            raise InvalidModelOptionError(model_options.sbox_modeling, SBOX_MODELING)
         # ------------------------------------------------------------
 
         self.sum_arr_sat += [

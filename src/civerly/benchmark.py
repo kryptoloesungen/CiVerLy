@@ -147,9 +147,7 @@ def benchmark(CM):
                 c = len(cipher._model.clauses())
                 row.append("")  # empty weight bound
             else:
-                raise InvalidModelOptionError(
-                    model_options.optimization, OPTIMIZATION
-                )
+                raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
             row.append(v)
             row.append(c)
