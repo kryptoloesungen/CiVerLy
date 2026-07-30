@@ -14,7 +14,7 @@ class CRAFT_CVL:
         0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85
     ]
 
-    def __init__(self, R, name="CRAFT") -> None:
+    def __init__(self, R, key_schedule=False, name="CRAFT") -> None:
         r"""
         The CiVerLy implementation of CRAFT. It takes the following arguments:
 

@@ -177,7 +177,7 @@ class DES_F_CVL:
 
 
 class DES_CVL:
-    def __init__(self, R, rks=[], name="DES") -> None:
+    def __init__(self, R, key_schedule=False, rks=[], name="DES") -> None:
         r"""
         The DES implementation.
         The test vectors are taken from https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.

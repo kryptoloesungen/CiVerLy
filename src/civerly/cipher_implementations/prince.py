@@ -84,7 +84,7 @@ M_layer = build_matrix(m_layer)
 Minv_ = build_matrix(m_inv_layer)
 
 class PRINCE_CVL:
-    def __init__(self, R=12, rks=[], name="PRINCE"):
+    def __init__(self, R=12, key_schedule=False, rks=[], name="PRINCE"):
         r"""
         CiVerLy implementation of PRINCE (https://eprint.iacr.org/2012/529.pdf).
         It takes the following arguments:

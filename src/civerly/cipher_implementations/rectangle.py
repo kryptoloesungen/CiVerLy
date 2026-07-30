@@ -3,7 +3,7 @@ from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
 from sage.crypto.sbox import SBox as SBox_sage
 
 class RECTANGLE_CVL:
-    def __init__(self, R=25, rks=[], name="RECTANGLE"): 
+    def __init__(self, R=25, key_schedule=False, rks=[], name="RECTANGLE"): 
         r"""
         CiVerly implementation of the Rectangle cipher (https://eprint.iacr.org/2014/084.pdf).
         It takes the following parameters:

@@ -360,7 +360,7 @@ class AES_KeySchedule_CVL(KeySchedule):
 class AES_CVL:
     """Implementation of the AES in CiVerLy."""
 
-    def __init__(self, R, k=None, name="AES") -> None:
+    def __init__(self, R, key_schedule=False, k=None, name="AES") -> None:
         r"""
         Implement AES-128 in CiVerLy.
 
@@ -595,13 +595,14 @@ class AES_CVL:
         aes_cipher.add_output([(node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
 
-        aes_cipher._rk_components = [aes_cipher.nodes[2*r+1] for r in range(R)] + [aes_cipher.nodes[2*R+2]]
-        aes_cipher.key_schedule = AES_KeySchedule_CVL(R)
+        if key_schedule:
+            # build key schedule
+            aes_cipher._rk_components = [aes_cipher.nodes[2*r+1] for r in range(R)] + [aes_cipher.nodes[2*R+2]]
+            aes_cipher.key_schedule = AES_KeySchedule_CVL(R)
+            if k is not None:
+                aes_cipher.set_round_keys(k)
 
         self.aes_cipher = aes_cipher
-
-        if k is not None:
-            aes_cipher.set_round_keys(k)
 
     def __new__(cls, *args, **kwargs):
         """Instantiate the AES."""

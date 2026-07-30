@@ -4,7 +4,7 @@ from sage.crypto.sboxes import PRESENT as present_S
 
 
 class PRESENT_CVL:
-    def __init__(self, R=31, rks=[], name="PRESENT"):
+    def __init__(self, R=31, key_schedule=False, rks=[], name="PRESENT"):
         r"""
         The CiVerLy implementation of PRESENT. It takes in the following
         arguments:
