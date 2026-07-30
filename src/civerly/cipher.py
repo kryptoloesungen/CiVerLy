@@ -1886,7 +1886,7 @@ class Cipher:
             "is not found in grid!"
         )
 
-    def read_results(self, model_options):
+    def read_results(self, model_options, index=-1):
         r"""
         Re-read the most recent solution from disk and return
         ``(assignment, objective_value)`` -- the shape :class:`TrailNode`
@@ -1902,8 +1902,13 @@ class Cipher:
             canonical ``.sat`` file, and the per-iteration files don't carry
             the weight. To re-read a SAT result, call :meth:`analyse` again.
         """
-        if hasattr(self, "result"):
-            return self.result["assignment"], self.result["objective_value"]
+        # if the results are still stored, look there
+        if hasattr(self, "results") and index < len(self.results):
+            return (
+                self.results[index]["assignment"],
+                self.results[index]["objective_value"]
+            )
+        # otherwise read from file (assuming the right name)
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file = model_options.path / (self.name + ".sol")
             objective_value, assignment = (
