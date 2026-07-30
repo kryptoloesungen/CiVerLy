@@ -1646,18 +1646,18 @@ class Cipher:
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return weights
             else:
-                self.result = model_options.milp_solver.solve(
+                result = model_options.milp_solver.solve(
                     input_file,
                     time_limit=model_options.solve_time_limit,
                 )
-                self._solve_time = self.result["solve_time"]
+                self.results.append(result)
+                self._solve_time = result["solve_time"]
                 results_and_weight = (
-                    self.result["assignment"],
-                    self.result["objective_value"],
+                    result["assignment"], result["objective_value"]
                 )
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
-                return self.result["objective_value"]
+                return result["objective_value"]
         elif model_options.optimization == OPTIMIZATION.SAT:
             if self.sat is None:
                 self.model(model_options)
@@ -1703,21 +1703,21 @@ class Cipher:
             else:
                 # if no sat_solver has been selected, we generate all cnf-files
                 # for the given solve_range
-                self.result = model_options.sat_solver.solve(
+                result = model_options.sat_solver.solve(
                     input_file,
                     sum_arr_file=sum_arr_file,
                     solve_range=model_options.solve_range,
                     precision=model_options.sat_precision,
                     time_limit=model_options.solve_time_limit,
                 )
-                self._solve_time = self.result["solve_time"]
+                self.results.append(result)
+                self._solve_time = result["solve_time"]
                 results_and_weight = (
-                    self.result["assignment"],
-                    self.result["objective_value"],
+                    result["assignment"], result["objective_value"]
                 )
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
-                return self.result["objective_value"]
+                return result["objective_value"]
         else:
             raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
@@ -1958,8 +1958,7 @@ class Cipher:
 
         if model_options.number_of_solutions == 1:
             results_and_weight = (
-                self.result["assignment"],
-                self.result["objective_value"],
+                self.results[0]["assignment"], self.results[0]["objective_value"]
             )
             root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
