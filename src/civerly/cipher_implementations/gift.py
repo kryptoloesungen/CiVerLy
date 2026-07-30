@@ -27,7 +27,7 @@ class GIFT64_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-    def __init__(self, R=28, rks=None, name="GIFT-64"):
+    def __init__(self, R=28, key_schedule=False, rks=[], name="GIFT-64"):
         r"""
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
 

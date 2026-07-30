@@ -6,7 +6,6 @@ from civerly.wordsboxcipher import WordSBoxCipher
 
 class WEAK_PRESENT_CVL:
     """Rudimentary implementation of WEAK_PRESENT."""
-
     def __init__(self, R=31, name="WEAK_PRESENT"):
         r"""
         The CiVerly implementation of a weakened version of PRESENT.

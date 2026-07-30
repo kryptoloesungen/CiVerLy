@@ -212,7 +212,7 @@ class HURDLE_F_CVL:
 
 
 class HURDLE_CVL:
-    def __init__(self, R=16, k=None, name="HURDLE-II") -> None:
+    def __init__(self, R=16, key_schedule=False, k=None, name="HURDLE-II") -> None:
         r"""
         Implementation of the HURDLE cipher, imitating MidnightBlue's
         implementation (https://github.com/MidnightBlueLabs/TETRA_crypto/blob/main/hurdle.c).

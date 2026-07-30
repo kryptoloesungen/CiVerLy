@@ -15,7 +15,7 @@ RC_FINAL = 0xD4
 
 
 class NOEKEON_CVL:
-    def __init__(self, R=16, k=0x0, name="Noekeon"):
+    def __init__(self, R=16, key_schedule=False, k=0x0, name="Noekeon"):
         r"""
         CiVerLy implementation of Noekeon (https://gro.noekeon.org/Noekeon-spec.pdf).
         It takes the following arguments:

@@ -67,8 +67,8 @@ class MIDORI64_CVL:
         [1, 1, 0, 1],
         [1, 1, 1, 0],
     )
-
-    def __init__(self, R=16, rks=None, name="MIDORI-64"):
+  
+    def __init__(self, R=16, key_schedule=False, rks=[], name="MIDORI-64"): 
         r"""
         CiVerLy Implementation of MIDORI-64. It takes the following arguments:
 
@@ -382,8 +382,8 @@ class MIDORI128_CVL:
         [1, 1, 0, 1],
         [1, 1, 1, 0],
     )
-
-    def __init__(self, R=20, rks=None, name="MIDORI-128"):
+ 
+    def __init__(self, R=20, key_schedule=False, rks=[], name="MIDORI-128"): 
         r"""
         CiVerLy Implementation of MIDORI-128. It takes the following arguments:
 

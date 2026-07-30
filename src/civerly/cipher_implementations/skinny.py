@@ -210,7 +210,7 @@ class SKINNY_CVL:
             return [tk1_schedule, tk2_schedule, tk3_schedule]
         raise ValueError(f"{z = } is an invalid parameter for create_tk_schedules.")
 
-    def __init__(self, n=64, t=64, R=None, key=None, name=None):
+    def __init__(self, n=64, t=64, R=None, key_schedule=False, key=None, name=None):
         r"""
         The civerly implementation of SKINNY. It takes the following
         arguments:

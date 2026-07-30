@@ -9,9 +9,8 @@ from civerly.component import (
 
 
 class SIMON_Variants_CVL:
-    def __init__(
-        self, block_size, R, params=None, rks=None, use_rotand=True, name="Simon"
-    ):
+    def __init__(self, block_size, R, params=[8, 1, 2], key_schedule=False,
+                 rks=[], use_rotand=True, name="Simon"):
         r"""
         CiVerLy implementation of SIMON-like ciphers. It takes the following parameters:
 

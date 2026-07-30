@@ -216,7 +216,7 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
 
 class SPECK_CVL:
-    def __init__(self, block_size, key_size, R=None, rks=None, name=None):
+    def __init__(self, block_size, key_size, R=None, key_schedule=False, rks=[], name=None):
         r"""
         The CiVerLy implementation of SPECK. It takes the following arguments:
 
@@ -438,10 +438,11 @@ class SPECK_CVL:
         # corresponding round node. Set key_schedule to a callable returning
         # R round keys to enable set_round_keys(k).
         # -------------------------------------------------------- #
-        speck_cipher._rk_components = [
-            speck_cipher.nodes[r + 1].nodes[node_after_keyadd] for r in range(R)
-        ]
-        speck_cipher.key_schedule = SPECK_KeySchedule_CVL(block_size, key_size, R)
+        if key_schedule:
+            speck_cipher._rk_components = [
+                speck_cipher.nodes[r+1].nodes[node_after_keyadd] for r in range(R)
+            ]
+            speck_cipher.key_schedule = SPECK_KeySchedule_CVL(block_size, key_size, R)
 
         self.speck_cipher = speck_cipher
 

@@ -5,7 +5,7 @@ from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class RECTANGLE_CVL:
-    def __init__(self, R=25, rks=None, name="RECTANGLE"):
+    def __init__(self, R=25, key_schedule=False, rks=[], name="RECTANGLE"): 
         r"""
         CiVerly implementation of the Rectangle cipher (https://eprint.iacr.org/2014/084.pdf).
         It takes the following parameters:
