@@ -1596,7 +1596,7 @@ class Cipher:
             1292 variables and 1349 constraints were written to ...
             25
             sage: from civerly.solvers import *
-            sage: aes.result['status'] == SOLVING_STATUS.SUCCESS
+            sage: aes.results[0]['status'] == SOLVING_STATUS.SUCCESS
             True
 
         Exceeding the time limit yields a timeout-status::
@@ -1620,7 +1620,7 @@ class Cipher:
             ....:   cipher.analyse(model_options)
             27168 variables and 30849 constraints were written to ...
             sage: from civerly.solvers import *
-            sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
+            sage: cipher.results[0]['status'] == SOLVING_STATUS.TIMEOUT
             True
         
         """
@@ -1903,7 +1903,7 @@ class Cipher:
             the weight. To re-read a SAT result, call :meth:`analyse` again.
         """
         # if the results are still stored, look there
-        if hasattr(self, "results") and index < len(self.results):
+        if 0 < index < len(self.results):
             return (
                 self.results[index]["assignment"],
                 self.results[index]["objective_value"]
@@ -2126,7 +2126,7 @@ class Cipher:
 
         """
         with open(path, "w") as f:
-            json.dump(self._to_dict(), f, default=lambda obj: int(obj))
+            json.dump(self._to_dict(), f) # , default=lambda obj: int(obj)
         print(f"Object '{self.name}' has been exported to {path}.")
 
     @classmethod

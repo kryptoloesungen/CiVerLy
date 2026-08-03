@@ -16,7 +16,7 @@ class KeySchedule(Cipher):
 
         sage: from civerly.cipher_implementations.aes import AES_CVL
         sage: from civerly.util import int_to_vec, vec_to_int
-        sage: aes = AES_CVL(R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c)
+        sage: aes = AES_CVL(R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c, key_schedule=True)
         sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
         sage: hex(vec_to_int(aes(pt)))
         '0x3925841d02dc09fbdc118597196a0b32'

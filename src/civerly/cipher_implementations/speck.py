@@ -104,7 +104,7 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: speck = SPECK_CVL(64, 96)
+            sage: speck = SPECK_CVL(64, 96, key_schedule=True)
             sage: speck.set_round_keys(0x131211100b0a090803020100)
             sage: vec_to_int(speck(int_to_vec(0x74614620736e6165, 64))) == \
             ....:   0x9f7952ec4175946c
@@ -127,7 +127,7 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: speck = SPECK_CVL(128, 128)
+            sage: speck = SPECK_CVL(128, 128, key_schedule=True)
             sage: speck.set_round_keys(0x0f0e0d0c0b0a09080706050403020100)
             sage: pt = int_to_vec(0x6c617669757165207469206564616d20, 128)
             sage: vec_to_int(speck(pt)) == 0xa65d9851797832657860fedf5c570d18
