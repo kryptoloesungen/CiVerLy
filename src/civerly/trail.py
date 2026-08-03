@@ -207,12 +207,6 @@ class TrailNode:
         self.input  = bits_out[0]
         self.output = bits_out[-1]
 
-        # Set .results on this cipher and each of its direct nodes
-        self.cipher_instance.results.append(
-            {"in": self.input, "out": self.output, "weight": self.weight}
-        )
-        # for comp_num, comp in enumerate(nodes):
-        #     comp.results.append(_node_results[comp_num])
         ################################################
 
         # Iterate through each subcipher
