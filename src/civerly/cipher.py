@@ -1916,7 +1916,25 @@ class Cipher:
             )
             return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
-            raise NotImplementedError
+
+            # search for lowest weight which was solvable
+            for w in range(*model_options.solve_range):
+                try: 
+                    matching_file = next(
+                        model_options.path.glob(f"{self.name}_obj{w}.*.sat")
+                    )
+                    with open(matching_file, "r") as f:
+                        line = f.readline()
+                        if line and line == "SAT\n":
+                            solution_file = matching_file
+                            break
+                except StopIteration:
+                    continue
+
+            objective_value, assignment = (
+                model_options.sat_solver._process_solution_file(solution_file)
+            )
+            return (assignment, objective_value)
         else:
             raise InvalidModelOptionException(
                 model_options.optimization, OPTIMIZATION
