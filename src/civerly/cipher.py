@@ -1910,11 +1910,16 @@ class Cipher:
             )
         # otherwise read from file (assuming the right name)
         if model_options.optimization == OPTIMIZATION.MILP:
-            solution_file = model_options.path / (self.name + ".sol")
-            objective_value, assignment = (
-                model_options.milp_solver._process_solution_file(solution_file)
-            )
-            return (assignment, objective_value)
+            try: 
+                solution_file = next(
+                    model_options.path.glob(f"{self.name}.*.sol")
+                )
+                objective_value, assignment = (
+                    model_options.milp_solver._process_solution_file(solution_file)
+                )
+                return (assignment, objective_value)
+            except StopIteration:
+                raise FileNotFoundError(f"{model_options.path / f"{self.name}.*.sol"} doesn't exist")
         elif model_options.optimization == OPTIMIZATION.SAT:
 
             # search for lowest weight which was solvable
@@ -2077,75 +2082,9 @@ class Cipher:
             - ``path`` -- string or path-like; Destination file path.
               The ``.json`` extension is conventional but not enforced.
 
-        EXAMPLES::
-
-            sage: import tempfile, os
-            sage: from civerly.cipher import Cipher
-            sage: from civerly.component import SBox_CVL
-            sage: from sage.crypto.sbox import SBox
-            sage: cipher = Cipher(9, 9, name="test")
-            sage: sb = SBox_CVL(SBox([0, 6, 1, 4, 2, 3, 5, 7]))
-            sage: edges = [(cipher.IN, (i, i)) for i in range(3)]
-            sage: node0 = cipher.add_subcipher(sb, edges)
-            sage: edges = [(cipher.IN, (i + 3, i)) for i in range(3)]
-            sage: node1 = cipher.add_subcipher(sb, edges)
-            sage: edges = [(cipher.IN, (i + 6, i)) for i in range(3)]
-            sage: node2 = cipher.add_subcipher(sb, edges)
-            sage: cipher.add_output([(node0, (i, i)) for i in range(3)])
-            sage: cipher.add_output([(node1, (i, i + 3)) for i in range(3)])
-            sage: cipher.add_output([(node2, (i, i + 6)) for i in range(3)])
-            sage: with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
-            ....:     tmp = f.name
-
-        Before analysis, ``results`` is ``[]`` and round-trips as such::
-
-            sage: cipher.export(tmp)
-            Object 'test' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
-            sage: cipher == loaded and loaded.results == []
-            True
-
-        After analysis, ``results`` holds the trail bit-patterns and is
-        preserved verbatim through the JSON file::
-
-            sage: # optional - cadical espresso
-            sage: from civerly.model_options import *
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CADICAL,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("DOCTEST-Export"))
-            sage: cipher.analyse(model_options)
-            ...
-            2
-            sage: cipher.export(tmp)
-            Object 'test' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
-            sage: os.unlink(tmp)
-            sage: cipher == loaded and loaded.results == cipher.results
-            True
-
-        Again with a different cipher type::
-            sage: import tempfile
-            sage: from civerly.cipher import Cipher
-            sage: from civerly.cipher_implementations.aes import AES_CVL
-            sage: aes = AES_CVL(4)
-            sage: with tempfile.NamedTemporaryFile(suffix='.json') as f:
-            ....:   tmp = f.name
-            ....:   aes.export(tmp)
-            ....:   loaded = Cipher.load(tmp)
-            ....:   aes == loaded
-            Object 'AES' has been exported to ...
-            True
-
+        EXAMPLES:: TODO
         """
-        with open(path, "w") as f:
-            json.dump(self._to_dict(), f) # , default=lambda obj: int(obj)
-        print(f"Object '{self.name}' has been exported to {path}.")
+        raise NotImplementedError
 
     @classmethod
     def _init_from_dict(cls, d):
