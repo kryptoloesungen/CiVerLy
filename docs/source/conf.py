@@ -1,16 +1,20 @@
+import sys
+from pathlib import Path
+
+from pkg_resources import DistributionNotFound, get_distribution
+
+try:
+    import sage.all  # noqa: F401
+except ImportError as err:
+    raise RuntimeError(
+        "to build the documentation you need to be inside a Sage shell (run first the command 'sage -sh' in a shell"
+    ) from err
+
 # General information about the project.
 project = "CiVerLy"
 package_name = 'civerly'
 package_folder = "../../civerly"
 author = "cryptosolutions GmbH"
-
-import sys
-from pathlib import Path
-
-try:
-    import sage.all
-except ImportError:
-    raise RuntimeError("to build the documentation you need to be inside a Sage shell (run first the command 'sage -sh' in a shell")
 
 
 autodoc_default_options = {
@@ -61,8 +65,6 @@ master_doc = 'index'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from pkg_resources import DistributionNotFound, get_distribution
-
 # The full version, including alpha/beta/rc tags.
 try:
     release = get_distribution('civerly').version
