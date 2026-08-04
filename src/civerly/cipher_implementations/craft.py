@@ -14,39 +14,10 @@ from civerly.component import (
 
 class CRAFT_CVL:
     RC = (
-        0x11,
-        0x84,
-        0x42,
-        0x25,
-        0x96,
-        0xC7,
-        0x63,
-        0xB1,
-        0x54,
-        0xA2,
-        0xD5,
-        0xE6,
-        0xF7,
-        0x73,
-        0x31,
-        0x14,
-        0x82,
-        0x45,
-        0x26,
-        0x97,
-        0xC3,
-        0x61,
-        0xB4,
-        0x52,
-        0xA5,
-        0xD6,
-        0xE7,
-        0xF3,
-        0x71,
-        0x34,
-        0x12,
-        0x85,
-    )
+        0x11, 0x84, 0x42, 0x25, 0x96, 0xc7, 0x63, 0xb1, 0x54, 0xa2, 0xd5,
+        0xe6, 0xf7, 0x73, 0x31, 0x14, 0x82, 0x45, 0x26, 0x97, 0xc3, 0x61,
+        0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85,
+    )  # fmt: skip
 
     def __init__(self, R, name=None) -> None:
         r"""
@@ -227,29 +198,10 @@ class CRAFT_CVL:
         # SBox layer
         # ------------------------------------------------------------------- #
         sboxlayer = AESlike(4, 4, 4, name="SBoxLayer")
-        sb = SBox_CVL(
-            SBox_sage(
-                (
-                    0xC,
-                    0xA,
-                    0xD,
-                    0x3,
-                    0xE,
-                    0xB,
-                    0xF,
-                    0x7,
-                    0x8,
-                    0x9,
-                    0x1,
-                    0x5,
-                    0x0,
-                    0x2,
-                    0x4,
-                    0x6,
-                )
-            ),
-            name="SBox",
-        )
+        sb = SBox_CVL(SBox_sage((
+            0xc, 0xa, 0xd, 0x3, 0xe, 0xb, 0xf, 0x7,
+            0x8, 0x9, 0x1, 0x5, 0x0, 0x2, 0x4, 0x6
+        )), name="SBox")  # fmt: skip
         for i in range(16):
             node = sboxlayer.add_subcipher(sb, [(sboxlayer.IN, (i, 0))])
             sboxlayer.add_output([(node, (0, i))])

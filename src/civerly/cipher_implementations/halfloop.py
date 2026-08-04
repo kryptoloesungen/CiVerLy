@@ -123,32 +123,9 @@ class HALFLOOP_CVL:
             node = sboxlayer.add_subcipher(sb, [(sboxlayer.IN, (i, 0))])
             sboxlayer.add_output([(node, (0, i))])
 
-        p = [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            8,
-            9,
-            20,
-            21,
-            22,
-            23,
-            16,
-            17,
-            18,
-            19,
-        ]
+        p = [0, 1, 2, 3, 4, 5, 6, 7,
+             10, 11, 12, 13, 14, 15, 8, 9,
+             20, 21, 22, 23, 16, 17, 18, 19]  # fmt: skip
         RotateRows = PermuteLayer_CVL(p, name="RotateRows")
 
         AES_irr = PolynomialRing(GF(2), name="a")("a^8 + a^4 + a^3 + a + 1")

@@ -61,19 +61,10 @@ class ASCON_CVL:
             name = "ascon"
 
         constants = [
-            0xF0,
-            0xE1,
-            0xD2,
-            0xC3,
-            0xB4,
-            0xA5,
-            0x96,
-            0x87,
-            0x78,
-            0x69,
-            0x5A,
-            0x4B,
-        ]
+            0xf0, 0xe1, 0xd2, 0xc3,
+            0xb4, 0xa5, 0x96, 0x87,
+            0x78, 0x69, 0x5a, 0x4b,
+        ]  # fmt: skip
 
         s = SBox_CVL(ascon_S, name="SBox")
 
