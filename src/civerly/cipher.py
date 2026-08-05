@@ -1667,8 +1667,6 @@ class Cipher:
             else:
                 print("Using existing SAT model, make sure it is up to date!")
                 self._finish_sat(model_options, self.sat)
-            if self._return_immediately_:
-                return
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:
