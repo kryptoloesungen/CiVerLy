@@ -23,7 +23,7 @@ from civerly.util import suppress_output
 from civerly.util import translate_milp_constraint
 from civerly.util import translate_var
 from civerly.model_options import OPTIMIZATION, GRANULARITY, CRYPTANALYSIS
-from civerly.model_options import InvalidModelOptionException
+from civerly.model_options import InvalidModelOptionError
 
 
 class SBoxCipher(Cipher):

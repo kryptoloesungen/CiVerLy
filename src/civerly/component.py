@@ -2388,7 +2388,7 @@ class SBox_CVL(Component):
                 # that the probability does not match the desired one.
                 # The solver handles the "solution already on disk" cache
                 # check internally and (for an external solver) aborts via
-                # :class:`ExternalSolveRequired` when the user must solve.
+                # :class:`ExternalSolveRequiredError` when the user must solve.
                 milp_to_minimize_milp = MILP_CVL(maximization=False)  # Reduction MILP
                 Z = milp_to_minimize_milp.new_variable(
                     name="Z", binary=True)
@@ -2494,7 +2494,6 @@ class SBox_CVL(Component):
                 VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
                     + [self.milp.VAR_OUT[v] for v in range(n_out)] \
                     + [PROB[v] for v in range(len(set_ddt))]
-                )
 
                 # translate SAT clauses into MILP constraints
                 for clause in clauses:
@@ -2525,7 +2524,6 @@ class SBox_CVL(Component):
                 VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
                     + [self.milp.VAR_OUT[v] for v in range(n_out)] \
                     + [PROB[v] for v in range(len(set_ddt))]
-                )
 
                 # translate SAT clauses into MILP constraints
                 for clause in clauses:
@@ -2758,7 +2756,7 @@ class ROT_AND_CVL(Component):
         return cls(d["word_length"], d["r"], name=d.get("name"))
 
     def _model_milp(self, model_options) -> MILP_CVL:
-        raise InvalidModelOptionException(
+        raise InvalidModelOptionError(
             model_options.optimization,
             message="ROT_AND_CVL is not supported in MILP"
         )

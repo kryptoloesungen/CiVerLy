@@ -135,9 +135,6 @@ class WEAK_PRESENT_CVL:
 
 
         """
-        if name is None:
-            name = "WEAK_PRESENT"
-
         S = SBox([7, 9, 11, 6, 2, 3, 1, 12, 4, 5, 15, 13, 8, 10, 14, 0])
         S = SBox_CVL(S, name="S")
 
