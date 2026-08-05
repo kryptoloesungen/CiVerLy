@@ -1922,6 +1922,7 @@ class Cipher:
                 raise FileNotFoundError(f"{model_options.path / f"{self.name}.*.sol"} doesn't exist")
         elif model_options.optimization == OPTIMIZATION.SAT:
 
+            solution_file = None
             # search for lowest weight which was solvable
             for w in range(*model_options.solve_range):
                 try: 
@@ -1936,6 +1937,10 @@ class Cipher:
                 except StopIteration:
                     continue
 
+            if solution_file is None:
+                raise FileNotFoundError(
+                    f"{model_options.path / f"{self.name}_obj{w}.*.sat"} doesn't exist"
+                )
             objective_value, assignment = (
                 model_options.sat_solver._process_solution_file(solution_file)
             )
