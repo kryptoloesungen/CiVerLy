@@ -26,9 +26,9 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.rings.integer_ring import ZZ
 from sage.sat.solvers.dimacs import DIMACS
 from sage.structure.element import Matrix as matrix_type
-from sage.geometry.polyhedron.constructor import Polyhedron
 
 from civerly.distorted_balls import distorted_balls
+from civerly.milp import MILP_CVL
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
@@ -47,7 +47,6 @@ from civerly.util import (
     translate_sat_clause,
     vec_to_int,
 )
-from civerly.milp import MILP_CVL
 
 
 class Component(ABC):
@@ -220,13 +219,10 @@ class Component(ABC):
         r"""Compute the hash of this component."""
         liste = []
         for key, value in self.__dict__.items():
-            if isinstance(value, (bool, str)):
-                continue
-            elif isinstance(value, (MILP_CVL, DIMACS)):
-                continue
-            elif any([word in key for word in [
-                    "wordsize", "milp", "sat", "MILP", "SAT", "_model_time"
-            ]]):
+            if isinstance(value, (bool, str, MILP_CVL, DIMACS)) or any(
+                word in key
+                for word in ["wordsize", "milp", "sat", "MILP", "SAT", "_model_time"]
+            ):
                 continue
             elif isinstance(value, matrix_type):
                 liste.append((key, tuple([tuple(v) for v in value])))
@@ -746,16 +742,28 @@ class XOR_CVL(Component):
             if model_options.granularity == GRANULARITY.BITWISE:
                 for i in range(self.word_length):
                     self.milp.add_constraint(
-                        -self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length] + self.milp.VAR_OUT[i] >=  0
+                        -self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length] + self.milp.VAR_OUT[i] >=  0
-                        )
+                        self.milp.VAR_IN[i]
+                        - self.milp.VAR_IN[i + self.word_length]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
+                    )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length] - self.milp.VAR_OUT[i] >=  0
-                        )
+                        self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length]
+                        - self.milp.VAR_OUT[i]
+                        >= 0
+                    )
                     self.milp.add_constraint(
-                        -self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length] - self.milp.VAR_OUT[i] >= -2
+                        -self.milp.VAR_IN[i]
+                        - self.milp.VAR_IN[i + self.word_length]
+                        - self.milp.VAR_OUT[i]
+                        >= -2
                     )
                 return self.milp
             if model_options.granularity == GRANULARITY.WORDWISE:
@@ -763,13 +771,22 @@ class XOR_CVL(Component):
                 # and should NOT be confused with self.word_length
                 for i in range(self.word_length // self.wordsize):
                     self.milp.add_constraint(
-                        -self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length//self.wordsize] + self.milp.VAR_OUT[i] >= 0
+                        -self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length // self.wordsize]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length//self.wordsize] + self.milp.VAR_OUT[i] >= 0
+                        self.milp.VAR_IN[i]
+                        - self.milp.VAR_IN[i + self.word_length // self.wordsize]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length//self.wordsize] - self.milp.VAR_OUT[i] >= 0
+                        self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length // self.wordsize]
+                        - self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     # Skip fourth constraint as we are working with activity patterns instead of values
                 return self.milp
@@ -788,12 +805,11 @@ class XOR_CVL(Component):
             for i in range(self.word_length // divide_by):
                 # Masks for both inputs should be identical
                 self.milp.add_constraint(
-                    self.milp.VAR_IN[i] == self.milp.VAR_IN[i + self.word_length//divide_by]
+                    self.milp.VAR_IN[i]
+                    == self.milp.VAR_IN[i + self.word_length // divide_by]
                 )
                 # Output masks should also be the same
-                self.milp.add_constraint(
-                    self.milp.VAR_IN[i] == self.milp.VAR_OUT[i]
-                )
+                self.milp.add_constraint(self.milp.VAR_IN[i] == self.milp.VAR_OUT[i])
             return self.milp
         raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
@@ -1484,7 +1500,7 @@ class LinearLayer_CVL(Component):
         # Determine any missing inputs and add them into the dictionary
         # and set them to zero
         for i in range(binmatrix.ncols()):
-            if all([i not in xorsum for xorsum in array_of_xorsums]):
+            if all(i not in xorsum for xorsum in array_of_xorsums):
                 self.milp.add_constraint(VAR_IN[i] == 0)
 
         if model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.MORE_DUMMIES:
@@ -1493,10 +1509,9 @@ class LinearLayer_CVL(Component):
             for i, tup in enumerate(array_of_xorsums):
                 ell = ceil(log2(len(tup) + 1))
                 int_sum = sum([VAR_IN[t] for t in tup]) + VAR_OUT[i]
-                binary_rep = sum([
-                    (1 << (i + 1)) * MILP_DUMMY[dummy_offset + i]
-                    for i in range(ell)
-                ])
+                binary_rep = sum(
+                    [(1 << (i + 1)) * MILP_DUMMY[dummy_offset + i] for i in range(ell)]
+                )
                 dummy_offset += ell
                 self.milp.add_constraint(int_sum == binary_rep)
         elif model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.CONVEX_HULL:
@@ -1515,11 +1530,15 @@ class LinearLayer_CVL(Component):
                     assert all(self.input_length > u for u in (max(tup), i))
 
                     # sub_constr : substituted constraints (with
-                    # the appropiate variables)
-                    sub_constr = constr[0] + sum(
-                        constr[ind + 1] * VAR_IN[tup[ind]]
-                        for ind in range(len(constr) - 2)
-                    ) + constr[-1] * VAR_OUT[i]
+                    # the appropriate variables)
+                    sub_constr = (
+                        constr[0]
+                        + sum(
+                            constr[ind + 1] * VAR_IN[tup[ind]]
+                            for ind in range(len(constr) - 2)
+                        )
+                        + constr[-1] * VAR_OUT[i]
+                    )
                     if constr.is_inequality():
                         self.milp.add_constraint(sub_constr >= 0)
                     elif constr.is_equation():
@@ -2165,7 +2184,7 @@ class SBox_CVL(Component):
             for i in range(self.input_length // self.wordsize):
                 self.milp.add_constraint(self.milp.VAR_OUT[i] == self.milp.VAR_IN[i])
                 # self.sum_arr_milp += [(-1, f"IN[{i}]")]
-                self.sum_arr_milp += [(-1, self.milp.vars['IN'].get_index(i))]
+                self.sum_arr_milp += [(-1, self.milp.vars["IN"].get_index(i))]
             return self.milp
         elif model_options.granularity == GRANULARITY.BITWISE:
             return self._milp_bitwise(model_options)
@@ -2386,8 +2405,7 @@ class SBox_CVL(Component):
                 # check internally and (for an external solver) aborts via
                 # :class:`ExternalSolveRequiredError` when the user must solve.
                 milp_to_minimize_milp = MILP_CVL(maximization=False)  # Reduction MILP
-                Z = milp_to_minimize_milp.new_variable(
-                    name="Z", binary=True)
+                Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
                 for point in impossible_points:
                     # Add a reduction inequation ensuring that each
                     # impossible point is removed by at least one
@@ -2487,9 +2505,11 @@ class SBox_CVL(Component):
                     clauses.append(tup)
 
                 n_in, n_out = self.input_length, self.output_length
-                VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
-                    + [self.milp.VAR_OUT[v] for v in range(n_out)] \
+                VAR = (
+                    [self.milp.VAR_IN[v] for v in range(n_in)]
+                    + [self.milp.VAR_OUT[v] for v in range(n_out)]
                     + [PROB[v] for v in range(len(set_ddt))]
+                )
 
                 # translate SAT clauses into MILP constraints
                 for clause in clauses:
@@ -2517,9 +2537,11 @@ class SBox_CVL(Component):
                 clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
                 n_in, n_out = self.input_length, self.output_length
-                VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
-                    + [self.milp.VAR_OUT[v] for v in range(n_out)] \
+                VAR = (
+                    [self.milp.VAR_IN[v] for v in range(n_in)]
+                    + [self.milp.VAR_OUT[v] for v in range(n_out)]
                     + [PROB[v] for v in range(len(set_ddt))]
+                )
 
                 # translate SAT clauses into MILP constraints
                 for clause in clauses:
@@ -2753,8 +2775,7 @@ class ROT_AND_CVL(Component):
 
     def _model_milp(self, model_options) -> MILP_CVL:
         raise InvalidModelOptionError(
-            model_options.optimization,
-            message="ROT_AND_CVL is not supported in MILP"
+            model_options.optimization, message="ROT_AND_CVL is not supported in MILP"
         )
 
     def _model_sat(self, model_options) -> DIMACS:

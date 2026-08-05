@@ -1,8 +1,9 @@
 from civerly.addrx import AddRX
-from civerly.component import RotateLayer_CVL, ModAdd_CVL, XOR_CVL
+from civerly.component import XOR_CVL, ModAdd_CVL, RotateLayer_CVL
+
 
 class SalsaQRF_CVL:
-    #Salsa quarter round function
+    # Salsa quarter round function
     def __init__(self, name=None):
         r"""
         The CiVerLy implementation of the Salsa QRF. Since there is nothing
@@ -14,7 +15,7 @@ class SalsaQRF_CVL:
             sage: from civerly.cipher_implementations.salsa import SalsaQRF_CVL
             sage: qrf = SalsaQRF_CVL()
             sage: hex(vec_to_int(qrf(int_to_vec(
-            ....:   0x11111111_22222222_33333333_44444444, 
+            ....:   0x11111111_22222222_33333333_44444444,
             ....: 128))))
             '0x44444444888888880000000055555555'
 
@@ -81,11 +82,11 @@ class SalsaQRF_CVL:
         if name is None:
             name = "Salsa-QRF"
         salsa_qr = AddRX(32, 4, 4, name=name)
-        #modular addition operation
+        # modular addition operation
         add = ModAdd_CVL(32, name="add")
-        #xor operation
+        # xor operation
         xor = XOR_CVL(32, name="xor")
-        #rotate operation
+        # rotate operation
         rot7 = RotateLayer_CVL(32, 7, name="rot7")
         rot9 = RotateLayer_CVL(32, 9, name="rot9")
         rot13 = RotateLayer_CVL(32, 13, name="rot13")
@@ -104,7 +105,7 @@ class SalsaQRF_CVL:
         t5 = salsa_qr.add_subcipher(rot13, [(t4, (0, 0))])
         d1 = salsa_qr.add_subcipher(xor, [(salsa_qr.IN, (3, 0)), (t5, (0, 1))])
         # Step 4: a ^= rotl(d1 + c1, 18)
-        t6 = salsa_qr.add_subcipher( add, [(d1, (0, 0)), (c1, (0, 1))])
+        t6 = salsa_qr.add_subcipher(add, [(d1, (0, 0)), (c1, (0, 1))])
         t7 = salsa_qr.add_subcipher(rot18, [(t6, (0, 0))])
         a1 = salsa_qr.add_subcipher(xor, [(salsa_qr.IN, (0, 0)), (t7, (0, 1))])
 
@@ -113,10 +114,11 @@ class SalsaQRF_CVL:
         self.salsa_qr = salsa_qr
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SalsaQRF_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.salsa_qr
-    
+
+
 class Salsa_CVL:
     # Salsa stream generator
     def __init__(self, R=8, name="Salsa"):
@@ -178,7 +180,7 @@ class Salsa_CVL:
             1
 
         """
-        
+
         salsa_qr = SalsaQRF_CVL()
 
         salsa_cipher = AddRX(32, 16, 16, name=name)
@@ -186,9 +188,9 @@ class Salsa_CVL:
 
         # apply the round function 4 times
         def apply_round(round_name, tuples, in_node):
-            rounds=AddRX(32, 16, 16, name=round_name)
+            rounds = AddRX(32, 16, 16, name=round_name)
             out = {}
-            for(a, b, c, d) in tuples:
+            for a, b, c, d in tuples:
                 out_node = rounds.add_subcipher(
                     salsa_qr,
                     [
@@ -202,10 +204,12 @@ class Salsa_CVL:
                 out[b] = (out_node, 1)
                 out[c] = (out_node, 2)
                 out[d] = (out_node, 3)
-            
+
             rounds.add_output([(out[i][0], (out[i][1], i)) for i in range(16)])
-            return salsa_cipher.add_subcipher(rounds, [(in_node, (i,i)) for i in range(16)])
-        
+            return salsa_cipher.add_subcipher(
+                rounds, [(in_node, (i, i)) for i in range(16)]
+            )
+
         column_tuples = [
             (0, 4, 8, 12),
             (5, 9, 13, 1),
@@ -222,15 +226,15 @@ class Salsa_CVL:
         # for odd rounds, the round function is applied column-wise
         # otherwise, the round function is applied row-wise
         for r in range(R):
-            if r%2 == 0:
-                state = apply_round(f"column_round_{r+1}", column_tuples, state)
+            if r % 2 == 0:
+                state = apply_round(f"column_round_{r + 1}", column_tuples, state)
             else:
-                state = apply_round(f"row_round_{r+1}", row_tuples, state)
-        
+                state = apply_round(f"row_round_{r + 1}", row_tuples, state)
+
         salsa_cipher.add_output([(state, (i, i)) for i in range(16)])
         self.salsa_cipher = salsa_cipher
-   
+
     def __new__(cls, *args, **kwargs):
-        instance = super(Salsa_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.salsa_cipher

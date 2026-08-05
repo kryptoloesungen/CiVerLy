@@ -1,7 +1,10 @@
-from sage.numerical.mip import MixedIntegerLinearProgram
 import json
+from pathlib import Path
+
+from sage.numerical.mip import MixedIntegerLinearProgram
 
 from civerly.util import translate_milp_constraint
+
 
 class MILP_CVL(MixedIntegerLinearProgram):
     r"""
@@ -26,6 +29,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         sage: [milp.backend.objective_coefficient(i) for i in range(milp.number_of_constraints())]
         [0.0, 3.0, -2.0]
     """
+
     def __init__(self, *args, **kwargs):
         """
         Initialize :class:``MILP_CVL``. The process is almost identical to the initialization
@@ -44,11 +48,11 @@ class MILP_CVL(MixedIntegerLinearProgram):
         # always default to glpk solver for sage wrapper to minimize dependencies
         kwargs.pop("solver", None)
         super().__init__(*args, solver="GLPK", **kwargs)
-        self.backend  = self.get_backend()
+        self.backend = self.get_backend()
         self.__vars = {}
         self.__var_by_index = {}
 
-        self.VAR_IN  = self.new_variable(name="IN",  binary=True)
+        self.VAR_IN = self.new_variable(name="IN", binary=True)
         self.VAR_OUT = self.new_variable(name="OUT", binary=True)
         self.VAR_MODEL = None
 
@@ -56,12 +60,12 @@ class MILP_CVL(MixedIntegerLinearProgram):
         """
         Compares two MILP_CVL instances with each other by considering
         the corresponding dictionaries (see :meth:``to_dict``).
-        Comparing two :class:``MixedIntegerLinearProgram`` objects considers the 
+        Comparing two :class:``MixedIntegerLinearProgram`` objects considers the
         objects themselves, not whether the MILPs they represent are actually equal,
         which is done here.
 
         TESTS:
-        
+
             sage: import tempfile
             sage: from civerly.milp import MILP_CVL
             sage: milp = MILP_CVL()
@@ -153,35 +157,32 @@ class MILP_CVL(MixedIntegerLinearProgram):
             raise AssertionError("var not found")
         return self.__var_by_index[index]
 
-
     def new_variable(self, *args, **kwargs):
         """
-        Override :meth:``MixedIntegerLinearProgram.new_variable`` to 
-        also store this variable inside ``self.vars``, and store the 
+        Override :meth:``MixedIntegerLinearProgram.new_variable`` to
+        also store this variable inside ``self.vars``, and store the
         MIPVariable type as its attribute, so that we can recover it
         when reconstructing it inside `from_dict`.
-        
+
         There are four variable types:
         real (default), binary, integer, nonnegative.
         Setting them appropriately is crucial, as it would otherwise
         change the underlying MILP and its solution space completely.
         """
-        name = kwargs.get("name", None)
+        name = kwargs.get("name")
         var_types = [
-            kwargs.get("real", None),
-            kwargs.get("binary", None),
-            kwargs.get("integer", None),
-            kwargs.get("nonnegative", None),
+            kwargs.get("real"),
+            kwargs.get("binary"),
+            kwargs.get("integer"),
+            kwargs.get("nonnegative"),
         ]
-        if any(var_types): 
-            var_type = var_types.index(True)
-        else:
-            var_type = 0 # 'real' is the default
+        # 'real' is the default
+        var_type = var_types.index(True) if any(var_types) else 0
 
         var = super().new_variable(*args, **kwargs)
         # add new attributes + methods
         var.type = var_type
-        var.get_index = lambda i: list(var[i].dict().keys())[0]
+        var.get_index = lambda i: next(iter(var[i].dict().keys()))
 
         self.__vars[name] = var
         return var
@@ -193,13 +194,13 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
         - filename -- str; The json filename to dump ``self`` into.
         """
-        with open(filename, "w") as f:
+        with Path(filename).open("w") as f:
             json.dump(self.to_dict(), fp=f)
         return
 
     def to_dict(self):
-        """
-        Make ``MILP_CVL`` json-serializable by creating a dictionary with 
+        r"""
+        Make ``MILP_CVL`` json-serializable by creating a dictionary with
         the following information:
 
         - maximization -- bool; Determines if the objective is to maximize or not.
@@ -208,13 +209,13 @@ class MILP_CVL(MixedIntegerLinearProgram):
             - ``name`` -- string; The name of the MIPVariable object.
             - ``index`` -- int; The index of this variable inside the MIPVariable object
               (recall, MIPVariables are dictionaries)
-            - ``backend_index`` -- int; The index of the corresponding backend variable. 
+            - ``backend_index`` -- int; The index of the corresponding backend variable.
               In the backend, the variables are of the form ``x_1234``, ``backend_index``
               stores the integer 1234.
             - ``var_type`` -- int; an integer indicating whether the MIPVariable is real (0),
               binary (1), integer (2), nonnegative (3).
 
-        - objective -- list of floats, indexed by the variables list; contains the coefficients 
+        - objective -- list of floats, indexed by the variables list; contains the coefficients
           for the objective function. If we would have ``x[0] - 2*x[1] + x[3]``, the 'objective'
           list would be ``[1.0, -2.0, 0.0, 1.0]``.
 
@@ -227,8 +228,8 @@ class MILP_CVL(MixedIntegerLinearProgram):
             An example would look as follows:
             ``[..., [(611, 613, 614, 616, 617, 619), (-1.0, -1.0, 1.0, -1.0, -1.0, -1.0), [None, 0.0]], ...]``
             translates to the constraint :math:``-variables[611] - variables[613] + variables[614]
-            - variables[616] - variables[617] - variables[619] \leq 0``
-            
+            - variables[616] - variables[617] - variables[619] \\leq 0``
+
         EXAMPLE::
 
             sage: from civerly.cipher_implementations.present \
@@ -272,7 +273,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         """
         return {
             "maximization": self.backend.is_maximization(),
-            "variables": [ # has the form [('x', 0, 0, <var_type>), ('x', 1, 1, <var_type>), ...]
+            "variables": [  # has the form [('x', 0, 0, <var_type>), ('x', 1, 1, <var_type>), ...]
                 (name, int(index), int(str(backend_index)[2:]), var.type)
                 for name, var in list(self.vars.items())
                 for index, backend_index in var.items()
@@ -282,18 +283,26 @@ class MILP_CVL(MixedIntegerLinearProgram):
                 for i in range(self.number_of_variables())
             ],
             "constraints": [
-                list(zip(*sorted(zip( # sort them with same permutation
-                    list(map(int, self.backend.row(i)[0])),   # indices
-                    list(map(float, self.backend.row(i)[1])), # coeffs
-                )))) + [[
-                    float(e)
-                    if e is not None else None
-                    for e in self.backend.row_bounds(i)
-                ]]
+                [
+                    *zip(
+                        *sorted(
+                            zip(  # sort them with same permutation
+                                list(map(int, self.backend.row(i)[0])),  # indices
+                                list(map(float, self.backend.row(i)[1])),
+                                strict=False,  # coeffs
+                            )
+                        ),
+                        strict=False,
+                    ),
+                    [
+                        float(e) if e is not None else None
+                        for e in self.backend.row_bounds(i)
+                    ],
+                ]
                 for i in range(self.number_of_constraints())
             ],
         }
-    
+
     @classmethod
     def load(cls, filename):
         """
@@ -338,7 +347,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: import shutil
             sage: shutil.rmtree(model_options.path, ignore_errors=True)
         """
-        with open(filename) as f:
+        with Path(filename).open() as f:
             data = json.load(f)
         return cls.from_dict(data)
 
@@ -388,7 +397,9 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
         # sort for var_id (the backend index), so that milp.new_variable
         # implicitly reconstructs them
-        for var_name, key, var_id, var_type in sorted(data["variables"], key=lambda x: x[2]):
+        for var_name, key, var_id, var_type in sorted(
+            data["variables"], key=lambda x: x[2]
+        ):
             if var_name not in mip_vars:
                 type_attr = ["real", "binary", "integer", "nonnegative"][var_type]
                 kwargs = {"name": var_name, type_attr: True}
@@ -412,10 +423,9 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
         # reconstruct the constraints
         for indices, coefficients, (lower, upper) in data["constraints"]:
-
             expr = sum(
                 coef * id_to_var[var_id]
-                for var_id, coef in zip(indices, coefficients)
+                for var_id, coef in zip(indices, coefficients, strict=False)
             )
 
             if lower is not None and upper is not None:

@@ -1,24 +1,25 @@
 from civerly.andrx import AndRX
 from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
 
+
 class SIMECK_CVL:
-    def __init__(self, block_size=32, key_size=64, R=32, rks=[], name="Simeck"):
+    def __init__(self, block_size=32, key_size=64, R=32, rks=None, name="Simeck"):
         r"""
         CiVerLy implementation of the Simeck cipher. It takes the following arguments:
 
             - ``block_size`` -- integer; The block size (default: 32).
-            
+
             - ``key_size`` -- integer; The key size (default: 64).
-            
+
             - ``rks`` -- list[int]; Round keys (default: []).
-            
+
             - ``R`` -- integer; Number of rounds (default: 32)
 
             - ``name`` -- string; The name of the cipher (default: "Simeck").
               Will be used to name the cipher and the corresponding files
               generated (such as the reports and cipher graphs).
 
-        
+
         EXAMPLES::
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: from civerly.cipher_implementations.simeck import SIMECK_CVL
@@ -127,6 +128,8 @@ class SIMECK_CVL:
             sage: shutil.rmtree("./DOCTEST-Simeck-Models/", ignore_errors=True)
         """
 
+        if rks is None:
+            rks = []
         assert (block_size, key_size) == (32, 64), (
             "As of now, only Simeck32/64 is supported"
         )
@@ -144,7 +147,7 @@ class SIMECK_CVL:
         xor1 = XOR_CVL(16, name="xor")
         # key addition
         key_add = RoundkeyXOR_CVL(16, 0x0, name="rk")
-        
+
         # Implementation of SIMECK round function
         # L_{i+1} = R_i
         # R_{i+1} = [(L_i ^ (R_i & ROL(R_i, 5))) ^ ROL(R_i, 1)] ^ k_i
@@ -154,27 +157,34 @@ class SIMECK_CVL:
         # ROL(R, 5)
         node_rot5 = simeck_round.add_subcipher(rot5, [(simeck_round.IN, (0, 0))])
         # R & ROL(R, 5)
-        node_and1 = simeck_round.add_subcipher(and1, [(simeck_round.IN, (0, 0)), (node_rot5, (0, 1))])
+        node_and1 = simeck_round.add_subcipher(
+            and1, [(simeck_round.IN, (0, 0)), (node_rot5, (0, 1))]
+        )
         # (R & ROL(R, 5)) ^ ROL1
-        node_xor1 = simeck_round.add_subcipher(xor1, [(node_and1, (0, 0)), (node_rot1, (0, 1))])
+        node_xor1 = simeck_round.add_subcipher(
+            xor1, [(node_and1, (0, 0)), (node_rot1, (0, 1))]
+        )
         # ((R & ROL(R, 5)) ^ ROL1) ^ L
-        node_xor2 = simeck_round.add_subcipher(xor1, [(node_xor1, (0, 0)), (simeck_round.IN, (1, 1))])
+        node_xor2 = simeck_round.add_subcipher(
+            xor1, [(node_xor1, (0, 0)), (simeck_round.IN, (1, 1))]
+        )
         # R_{i+1}
         node_keyxor = simeck_round.add_subcipher(key_add, [(node_xor2, (0, 0))])
         simeck_round.add_output([(node_keyxor, (0, 0)), (simeck_round.IN, (0, 1))])
 
-        #apply the feistel round function 32 times, each round using a different round key
+        # apply the feistel round function 32 times, each round using a different round key
         simeck_cipher = AndRX(16, 2, 2, name=name)
         node = simeck_cipher.IN
         for r in range(R):
             simeck_round.nodes[node_keyxor].const = rks[r]
-            node = simeck_cipher.add_subcipher(simeck_round, [(node, (0, 0)), (node, (1, 1))])
+            node = simeck_cipher.add_subcipher(
+                simeck_round, [(node, (0, 0)), (node, (1, 1))]
+            )
 
         simeck_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
         self.simeck_cipher = simeck_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SIMECK_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.simeck_cipher
-

@@ -1,5 +1,3 @@
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL
 from sage.crypto.sbox import SBox
 
 from civerly.component import PermuteLayer_CVL, SBox_CVL
@@ -94,7 +92,7 @@ class WEAK_PRESENT_CVL:
 
         Below we generate a custom model by adding constraints.
         First analyse the cipher as per usual:
-            
+
             sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.weak_present \
             ....:   import WEAK_PRESENT_CVL

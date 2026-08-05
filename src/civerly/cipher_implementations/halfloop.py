@@ -210,7 +210,7 @@ class HALFLOOP_CVL:
         edges += [(node_XOR5, (i, 256 + i)) for i in range(8)]
         key_schedule.add_output(edges)
 
-        halfloop_cipher = SBoxCipher(24+64, 24, name=name)
+        halfloop_cipher = SBoxCipher(24 + 64, 24, name=name)
         K = C_CVL(64, k % (1 << 64), "k2")  # k2, second half of key
         K = halfloop_cipher.add_subcipher(K, [])
 

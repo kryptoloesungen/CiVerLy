@@ -1,9 +1,9 @@
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, RoundkeyXOR_CVL, LinearLayer_CVL
 from sage.crypto.sboxes import PRINCE as prince_S
-
 from sage.matrix.special import zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.component import LinearLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
 F2 = GF(2)
 
@@ -12,19 +12,43 @@ F2 = GF(2)
 # M' is constructed following the method depicted in the original paper
 M_ = [
     [
-        0x0111, 0x2220, 0x4404, 0x8088,
-        0x1011, 0x0222, 0x4440, 0x8808,
-        0x1101, 0x2022, 0x0444, 0x8880,
-        0x1110, 0x2202, 0x4044, 0x0888
+        0x0111,
+        0x2220,
+        0x4404,
+        0x8088,
+        0x1011,
+        0x0222,
+        0x4440,
+        0x8808,
+        0x1101,
+        0x2022,
+        0x0444,
+        0x8880,
+        0x1110,
+        0x2202,
+        0x4044,
+        0x0888,
     ],
-
     [
-        0x1110, 0x2202, 0x4044, 0x0888,
-        0x0111, 0x2220, 0x4404, 0x8088,
-        0x1011, 0x0222, 0x4440, 0x8808,
-        0x1101, 0x2022, 0x0444, 0x8880
+        0x1110,
+        0x2202,
+        0x4044,
+        0x0888,
+        0x0111,
+        0x2220,
+        0x4404,
+        0x8088,
+        0x1011,
+        0x0222,
+        0x4440,
+        0x8808,
+        0x1101,
+        0x2022,
+        0x0444,
+        0x8880,
     ],
 ]
+
 
 # This helper function performs a multiplication over GF(2)
 # of a 16-bit vector with a 16x16 binary matrix
@@ -38,14 +62,16 @@ def vec_mat_mult(vec, mat):
             out ^= mat[i]
     return out & 0xFFFF
 
+
 # This function implements M' by computing each column of the matrix.
 # To this end, we multiply M_ with a internal state column
 def m_prime_layer(x):
-    M_0 = vec_mat_mult((x >>  0) & 0xFFFF, M_[0])
+    M_0 = vec_mat_mult((x >> 0) & 0xFFFF, M_[0])
     M_1 = vec_mat_mult((x >> 16) & 0xFFFF, M_[1])
     M_2 = vec_mat_mult((x >> 32) & 0xFFFF, M_[1])
     M_3 = vec_mat_mult((x >> 48) & 0xFFFF, M_[0])
     return (M_3 << 48) | (M_2 << 32) | (M_1 << 16) | M_0
+
 
 # This function applies a shift row, similar to AES shift
 # Each row is shifted by its row index
@@ -57,17 +83,20 @@ def shift_rows(x, inverse=False):
     row_mask = 0xF000F000F000F000
     out = x & row_mask
     for i in range(1, 4):
-        row = x & (row_mask >> (4*i))
-        shift = i*16 if inverse else (64 - i*16)
+        row = x & (row_mask >> (4 * i))
+        shift = i * 16 if inverse else (64 - i * 16)
         shift %= 64
-        out |= ((row >> shift) | (row << (64-shift))) & ((1<<64)-1)
+        out |= ((row >> shift) | (row << (64 - shift))) & ((1 << 64) - 1)
     return out
+
 
 def m_layer(x):
     return shift_rows(m_prime_layer(x), inverse=False)
 
+
 def m_inv_layer(x):
     return m_prime_layer(shift_rows(x, inverse=True))
+
 
 # This function builds a 64x64 matrix by converting back to MSB-indexing
 def build_matrix(f):
@@ -79,12 +108,14 @@ def build_matrix(f):
             A[i, j] = (y >> (63 - i)) & 1
     return A
 
+
 Mprime_ = build_matrix(m_prime_layer)
 M_layer = build_matrix(m_layer)
 Minv_ = build_matrix(m_inv_layer)
 
+
 class PRINCE_CVL:
-    def __init__(self, R=12, rks=[], name="PRINCE"):
+    def __init__(self, R=12, rks=None, name="PRINCE"):
         r"""
         CiVerLy implementation of PRINCE (https://eprint.iacr.org/2012/529.pdf).
         It takes the following arguments:
@@ -111,12 +142,12 @@ class PRINCE_CVL:
             ....:   0x0000000000000000, 0x13198a2e03707344, 0xa4093822299f31d0,
             ....:   0x082efa98ec4e6c89, 0x452821e638d01377, 0xbe5466cf34e90c6c,
             ....:   0x7ef84f78fd955cb1, 0x85840851f1ac43aa, 0xc882d32f25323c54,
-            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd 
+            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd
             ....: ]
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: prince_cipher = PRINCE_CVL(R=12, rks=rks)
-            sage: C = vec_to_int(prince_cipher(int_to_vec(0x0000000000000000, 64))) 
+            sage: C = vec_to_int(prince_cipher(int_to_vec(0x0000000000000000, 64)))
             sage: print(hex(C))
             0x818665aa0d02dfda
 
@@ -124,12 +155,12 @@ class PRINCE_CVL:
             ....:   0x0000000000000000, 0x13198a2e03707344, 0xa4093822299f31d0,
             ....:   0x082efa98ec4e6c89, 0x452821e638d01377, 0xbe5466cf34e90c6c,
             ....:   0x7ef84f78fd955cb1, 0x85840851f1ac43aa, 0xc882d32f25323c54,
-            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd 
+            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd
             ....: ]
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: prince_cipher = PRINCE_CVL(R=12, rks=rks)
-            sage: C = vec_to_int(prince_cipher(int_to_vec(0xFFFFFFFFFFFFFFFF, 64))) 
+            sage: C = vec_to_int(prince_cipher(int_to_vec(0xFFFFFFFFFFFFFFFF, 64)))
             sage: print(hex(C))
             0x604ae6ca03c20ada
 
@@ -138,7 +169,7 @@ class PRINCE_CVL:
             ....:   0x0000000000000000, 0x13198a2e03707344, 0xa4093822299f31d0,
             ....:   0x082efa98ec4e6c89, 0x452821e638d01377, 0xbe5466cf34e90c6c,
             ....:   0x7ef84f78fd955cb1, 0x85840851f1ac43aa, 0xc882d32f25323c54,
-            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd 
+            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd
             ....: ]
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
@@ -146,7 +177,7 @@ class PRINCE_CVL:
             sage: P  = 0x0000000000000000
             sage: k0 = 0xFFFFFFFFFFFFFFFF
             sage: k0_ = 0xFFFFFFFFFFFFFFFE
-            sage: C_ = vec_to_int(prince_cipher(int_to_vec(P ^^ k0, 64))) 
+            sage: C_ = vec_to_int(prince_cipher(int_to_vec(P ^^ k0, 64)))
             sage: C =  C_ ^^ k0_
             sage: print(hex(C))
             0x9fb51935fc3df524
@@ -157,13 +188,13 @@ class PRINCE_CVL:
             ....:   0xFFFFFFFFFFFFFFFF, 0xece675d1fc8f8cbb, 0x5bf6c7ddd660ce2f,
             ....:   0xf7d1056713b19376, 0xbad7de19c72fec88, 0x41ab9930cb16f393,
             ....:   0x8107b087026aa34e, 0x7a7bf7ae0e53bc55, 0x377d2cd0dacdc3ab,
-            ....:   0x9b5aee6a1f1c9ef2, 0x2c4a5c6635f3dc66, 0x3f53d6483683af22 
+            ....:   0x9b5aee6a1f1c9ef2, 0x2c4a5c6635f3dc66, 0x3f53d6483683af22
             ....: ]
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: prince_cipher = PRINCE_CVL(R=12, rks=rks)
             sage: P  = 0x0000000000000000
-            sage: C = vec_to_int(prince_cipher(int_to_vec(P, 64))) 
+            sage: C = vec_to_int(prince_cipher(int_to_vec(P, 64)))
             sage: print(hex(C))
             0x78a54cbe737bb7ef
 
@@ -179,11 +210,11 @@ class PRINCE_CVL:
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: prince_cipher = PRINCE_CVL(R=12, rks=rks)
             sage: P  = 0x0123456789abcdef
-            sage: C = vec_to_int(prince_cipher(int_to_vec(P, 64))) 
+            sage: C = vec_to_int(prince_cipher(int_to_vec(P, 64)))
             sage: print(hex(C))
-            0xae25ad3ca8fa9ccf    
+            0xae25ad3ca8fa9ccf
 
-            
+
             sage: # optional - cryptominisat
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.model_options import *
@@ -241,11 +272,13 @@ class PRINCE_CVL:
             ....:   prince_cipher.analyse(model_options)
             1712 variables and 4641 clauses were written to ...
             1
-        
+
         """
-        
+
+        if rks is None:
+            rks = []
         if rks == []:
-            rks = [0]*12
+            rks = [0] * 12
         else:
             assert len(rks) >= R, "More round keys are needed"
             rks = list(rks[:R])
@@ -264,7 +297,7 @@ class PRINCE_CVL:
             n = s_layer_inv.add_subcipher(sb_inv, [(s_layer_inv.IN, (j, 0))])
             s_layer_inv.add_output([(n, (0, j))])
 
-        # Linear layers: M, M' and inverse M   
+        # Linear layers: M, M' and inverse M
         M = LinearLayer_CVL(M_layer, name="M")
         Mprime = LinearLayer_CVL(Mprime_, name="Mprime")
         Minv = LinearLayer_CVL(Minv_, name="Minv")

@@ -206,13 +206,13 @@ class DES_CVL:
         It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds.
-            
+
             - ``rks`` -- list[int]; The round keys (default [])
-            
+
             - ``name`` -- string; The name of the cipher (default: "DES").
               Will be used to name the cipher and the corresponding files
               generated (such as the reports and cipher graphs).
-        
+
         TESTS::
 
             sage: from civerly.cipher_implementations.des import DES_CVL

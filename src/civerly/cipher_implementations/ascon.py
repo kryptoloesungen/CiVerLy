@@ -57,7 +57,7 @@ class ASCON_CVL:
 
 
         """
-        
+
         constants = [
             0xf0, 0xe1, 0xd2, 0xc3,
             0xb4, 0xa5, 0x96, 0x87,

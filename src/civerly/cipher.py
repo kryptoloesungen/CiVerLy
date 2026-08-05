@@ -246,9 +246,7 @@ class Cipher:
             """
             Component._init_model(self, model_options)
             if model_options.granularity == GRANULARITY.WORDWISE:
-                for i in range(
-                    self.input_length // self._cipher_wordsize
-                ):
+                for i in range(self.input_length // self._cipher_wordsize):
                     self.milp.add_constraint(
                         self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
                     )
@@ -421,14 +419,14 @@ class Cipher:
         self.key_schedule = key_schedule
 
         self.milp = None
-        self.sat  = None
+        self.sat = None
 
         # attributes to keep timing information (in seconds)
         self._analyse_time = None
-        self._model_time   = None
-        self._solve_time   = None
+        self._model_time = None
+        self._solve_time = None
 
-        self.grid_in  = None
+        self.grid_in = None
         self.grid_out = None
 
     # Get-functions of various attributes:
@@ -1512,7 +1510,6 @@ class Cipher:
             json.dump(self.inv_dictionaries_sat, f)
             f.close()
 
-
         if _first_iter:
             # At least one variable that does not belong to PROB needs to be
             # active
@@ -1603,7 +1600,7 @@ class Cipher:
             sage: from civerly.solvers import *
             sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
             True
-        
+
         """
         start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
@@ -1748,7 +1745,7 @@ class Cipher:
             return self.grid_in
         elif self.grid_out:
             return self.grid_out
-        
+
         depths = self._dfs_traversal()
 
         # initialize grid
@@ -1829,7 +1826,7 @@ class Cipher:
             offset_out[depth] += self.nodes[node].output_length
 
         # store so we don't recompute from scratch it every time
-        self.grid_in  = grid_in
+        self.grid_in = grid_in
         self.grid_out = grid_out
 
         if input_side:

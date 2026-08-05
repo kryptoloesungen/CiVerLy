@@ -136,12 +136,14 @@ class TrailNode:
                     ]
 
                     # the bit index in the IN/OUT node corresponding to local_ind
-                    id_in  = [
-                        cur_idx for cur_idx in comp.milp.VAR_IN.keys()  # noqa: SIM118
-                        if comp.milp.VAR_IN.get_index(cur_idx)  == local_ind
+                    id_in = [
+                        cur_idx
+                        for cur_idx in comp.milp.VAR_IN.keys()  # noqa: SIM118
+                        if comp.milp.VAR_IN.get_index(cur_idx) == local_ind
                     ]
                     id_out = [
-                        cur_idx for cur_idx in comp.milp.VAR_OUT.keys()  # noqa: SIM118
+                        cur_idx
+                        for cur_idx in comp.milp.VAR_OUT.keys()  # noqa: SIM118
                         if comp.milp.VAR_OUT.get_index(cur_idx) == local_ind
                     ]
                     assert len(id_in) + len(id_out) <= 1, (
@@ -150,7 +152,7 @@ class TrailNode:
 
                     # Draw the input nodes of each component, as well as
                     # the output of the last component.
-                    bool1 = len(id_in)  == 1
+                    bool1 = len(id_in) == 1
                     bool2 = len(id_out) == 1
 
                     if bool1 and comp_num > 0:  # dont draw self.IN.in
@@ -262,7 +264,7 @@ class TrailNode:
                 # from the parent's nested results entry for this comp_num
                 sub_results = {}
                 var_name = f"X{comp_num}"
-                if var_name not in results.keys():
+                if var_name not in results:
                     raise AssertionError(f"{comp_num} not in results")
                 for s_ind, solution_bit_value in results[var_name].items():
                     local_index = dictionaries[comp_num][
@@ -273,22 +275,26 @@ class TrailNode:
                             if local_index == _var.get_index(ind):
                                 tr_ind, tr_name = ind, name
                                 break_out = True
-                            if break_out: break
-                        if break_out: break
+                            if break_out:
+                                break
+                        if break_out:
+                            break
                     break_out = False
-                    if tr_name not in sub_results.keys():
+                    if tr_name not in sub_results:
                         sub_results[tr_name] = {}
                     sub_results[tr_name][tr_ind] = solution_bit_value
 
                 # Compute the weight of this subcipher's trail from the
                 # parent's objective contributions for comp_num.
-                if hasattr(self.cipher_instance, 'sum_arr_milp'):
+                if hasattr(self.cipher_instance, "sum_arr_milp"):
                     sub_weight = 0
                     for factor, v in self.cipher_instance.sum_arr_milp:
                         for var_name, var in self.cipher_instance.milp.vars.items():
                             for index in var.keys():  # noqa: SIM118
                                 if var.get_index(index) == v:
-                                    sub_weight += -factor * int(results[var_name][index])
+                                    sub_weight += -factor * int(
+                                        results[var_name][index]
+                                    )
                 else:
                     sub_weight = 0
             else:  # SAT

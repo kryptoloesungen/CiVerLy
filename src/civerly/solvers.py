@@ -43,9 +43,9 @@ def _float_or_int(value):
         value = round(value)
     else:
         value = round(value, 10)
-    
-    # handle SCIP edge case 
-    if value >= 1.0e+20:
+
+    # handle SCIP edge case
+    if value >= 1.0e20:
         return None
 
     return value
@@ -268,7 +268,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
                 objective_value, assignment = self._process_solution_file(solution_file)
             else:
                 objective_value, assignment = None, {}
-            
+
             objective_bounds = self._get_objective_bounds(log_file)
         else:
             objective_value = None
@@ -306,7 +306,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             content = file.read()
 
         hits = list(re.finditer(self.bounds_regexp, content, re.MULTILINE))
-        if hits == []: # bounds havent been found yet.
+        if hits == []:  # bounds haven't been found yet.
             return (None, None)
 
         # use last hit
@@ -668,8 +668,8 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                         "satisfiability": None,
                         "assignment": None,
                         "solve_time": time_limit,
-                        "model": constrained, 
-                        "model_time": model_time
+                        "model": constrained,
+                        "model_time": model_time,
                     }
             else:
                 remaining = None
@@ -1352,11 +1352,11 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         if any("infeasible" in line for line in file_content[:10]):
             raise ValueError("There is no solution found!")
 
-        if any(["no solution available" in line for line in file_content[:10]]):
+        if any("no solution available" in line for line in file_content[:10]):
             objective_value = None
         else:
             objective_value = file_content[1].strip(" ")
-            objective_value = objective_value[objective_value.index(":")+1:]
+            objective_value = objective_value[objective_value.index(":") + 1 :]
             objective_value = _float_or_int(objective_value)
 
         assignment = {}
@@ -1381,7 +1381,9 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         super().__init__()
         self.name = "GLPK"
         self.timeout_string = r"TIME LIMIT EXCEEDED"
-        self.bounds_regexp = r'.*mip\s*=\s*(\S+|not found yet)\s*>=\s*(\S+|not found yet).*'
+        self.bounds_regexp = (
+            r".*mip\s*=\s*(\S+|not found yet)\s*>=\s*(\S+|not found yet).*"
+        )
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
         """Build the GLPK CLI command list."""
@@ -1417,13 +1419,13 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
-        if any(["INTEGER EMPTY" in line for line in file_content[:10]]):
+        if any("INTEGER EMPTY" in line for line in file_content[:10]):
             raise ValueError("There is no solution found!")
-        
-        elif any(["INTEGER UNDEFINED" in line for line in file_content[:10]]):
+
+        elif any("INTEGER UNDEFINED" in line for line in file_content[:10]):
             objective_value = None
         else:
-            L, R = file_content[5].index("= ")+2, file_content[5].index("(")
+            L, R = file_content[5].index("= ") + 2, file_content[5].index("(")
             objective_value = _float_or_int(file_content[5][L:R])
 
         ind_start, ind_end = None, None

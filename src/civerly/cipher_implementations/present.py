@@ -289,15 +289,15 @@ class PRESENT_CVL:
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
             8
-        
-        Verify the well-known iterative linear trail for PRESENT: 
+
+        Verify the well-known iterative linear trail for PRESENT:
 
             sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir: 
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
             ....:   cipher = PRESENT_CVL(R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,

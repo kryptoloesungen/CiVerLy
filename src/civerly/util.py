@@ -50,7 +50,6 @@ from pathlib import Path
 from sage.geometry.polyhedron.constructor import Polyhedron
 from sage.modules.free_module import VectorSpace
 from sage.modules.free_module_element import vector
-from sage.numerical.mip import MixedIntegerLinearProgram
 from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.rings.integer import Integer
 from sage.rings.integer_ring import ZZ
@@ -269,6 +268,7 @@ def translate_milp_constraint(VAR, constr):
         new_constr = constr[0] <= summ <= constr[2]
     return new_constr
 
+
 def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     r"""
     Implements Yosuke Todos and Yu Sasakis Reduction Algorithm
@@ -276,7 +276,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     which models the problem of choosing a minimal subset of
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
-    from civerly.component import SBox_CVL, LinearLayer_CVL
+    from civerly.component import LinearLayer_CVL, SBox_CVL
     from civerly.milp import MILP_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
@@ -379,9 +379,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 if i < comp.binary_matrix.ncols() // comp.wordsize:
                     tmp_arr.append(ai * comp.milp.VAR_IN[i])
                 else:
-                    tmp_arr.append(ai * comp.milp.VAR_OUT[
-                        i - (comp.input_length // comp.wordsize)
-                    ])
+                    tmp_arr.append(
+                        ai * comp.milp.VAR_OUT[i - (comp.input_length // comp.wordsize)]
+                    )
 
         if ineq.is_inequality():
             comp.milp.add_constraint(sum(tmp_arr) + ineq.b() >= 0)
