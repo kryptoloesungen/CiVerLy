@@ -234,7 +234,6 @@ class SIMON_CVL:
             ....:   cipher.analyse(model_options=model_options)
             6000 variables and 12817 clauses were written to '...'
             15
-
         """
         if name is None:
             name = "simon"

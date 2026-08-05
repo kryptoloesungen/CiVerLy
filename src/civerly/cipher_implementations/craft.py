@@ -19,14 +19,14 @@ class CRAFT_CVL:
         0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85,
     )  # fmt: skip
 
-    def __init__(self, R, name=None) -> None:
+    def __init__(self, R, name="CRAFT") -> None:
         r"""
         The CiVerLy implementation of CRAFT. It takes the following arguments:
 
             - ``R`` -- integer; Specifies the number of rounds that are
               performed.
 
-            - ``name`` -- string (optional); The name of the cipher.
+            - ``name`` -- string; The name of the cipher (default: "CRAFT").
               Will be used to name the cipher and the corresponding files
               generated (such as the reports and cipher graphs).
 
@@ -192,8 +192,6 @@ class CRAFT_CVL:
             sage: c14 == R14
             True
         """
-        if name is None:
-            name = "CRAFT"
 
         # SBox layer
         # ------------------------------------------------------------------- #

@@ -97,7 +97,6 @@ class Cipher:
 
             """
             self._cipher_wordsize = cipher_instance._wrd
-            self._return_immediately_ = False
             self.sum_arr_milp = []
             self.sum_arr_sat = []
             self.results = []
@@ -247,11 +246,17 @@ class Cipher:
             """
             Component._init_model(self, model_options)
             if model_options.granularity == GRANULARITY.WORDWISE:
-                for i in range(self.input_length // self._cipher_wordsize):
-                    self.milp.add_constraint(self.MILP_OUT[i] == self.MILP_IN[i])
+                for i in range(
+                    self.input_length // self._cipher_wordsize
+                ):
+                    self.milp.add_constraint(
+                        self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
+                    )
             elif model_options.granularity == GRANULARITY.BITWISE:
                 for i in range(self.input_length):
-                    self.milp.add_constraint(self.MILP_OUT[i] == self.MILP_IN[i])
+                    self.milp.add_constraint(
+                        self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
+                    )
             else:
                 raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
             return self.milp
@@ -416,13 +421,15 @@ class Cipher:
         self.key_schedule = key_schedule
 
         self.milp = None
-        self.sat = None
-        self.X = None
+        self.sat  = None
 
         # attributes to keep timing information (in seconds)
         self._analyse_time = None
-        self._model_time = None
-        self._solve_time = None
+        self._model_time   = None
+        self._solve_time   = None
+
+        self.grid_in  = None
+        self.grid_out = None
 
     # Get-functions of various attributes:
     # --------------------------------------------------
@@ -1288,9 +1295,6 @@ class Cipher:
         model_options_ = replace(model_options, write_to_file=False)
         model_options, model_options_ = model_options_, model_options
 
-        # flag to stop when a model needs to be solved externally
-        self._return_immediately_ = False
-
         # ------------------------------------------------------------------------
         cnf_file_name = model_options.path / (f"{self.name.replace(' ', '_')}.cnf")
         if model_options.path is not None:
@@ -1312,11 +1316,9 @@ class Cipher:
             # check if component was modeled before
             for i_prev, prev in enumerate(self.nodes[:i_comp]):
                 if comp == prev:
-                    # copy over attributes related to modeling
-                    comp.sat = prev.sat
-                    comp.SAT_IN = prev.SAT_IN
-                    comp.SAT_OUT = prev.SAT_OUT
-                    comp.sum_arr_sat = prev.sum_arr_sat
+                    # copy the component entirely
+                    comp = prev
+                    self.nodes[i_comp] = self.nodes[i_prev]
 
                     # copy the component sat programs
                     sats.append(comp.sat)
@@ -1358,14 +1360,6 @@ class Cipher:
                 # model the components that have not been modeled before
                 comp_sat = comp.model(model_options, _first_iter=False)
                 sats.append(comp_sat)
-
-                # if we need to return immediately,
-                # (because a model must be solved externally)
-                # pass this up the program flow
-                if comp._return_immediately_:
-                    comp._return_immediately_ = False
-                    self._return_immediately_ = True
-                    return
 
                 ##############################################################
                 # parse the component SAT and adopt it into the master sat   #
@@ -1518,6 +1512,7 @@ class Cipher:
             json.dump(self.inv_dictionaries_sat, f)
             f.close()
 
+
         if _first_iter:
             # At least one variable that does not belong to PROB needs to be
             # active
@@ -1560,6 +1555,55 @@ class Cipher:
         .. WARNING::
 
             Requires the specified solver to be installed.
+
+        TESTS::
+
+        Specify the necessary model options and analyse::
+
+            sage: # optional - glpk
+            sage: from civerly.cipher_implementations.aes import AES_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   aes = AES_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.GLPK,
+            ....:       path=Path(tmpdir))
+            ....:   aes.analyse(model_options)
+            1292 variables and 1349 constraints were written to ...
+            25
+            sage: from civerly.solvers import *
+            sage: aes.result['status'] == SOLVING_STATUS.SUCCESS
+            True
+
+        Exceeding the time limit yields a timeout-status::
+
+            sage: # optional - glpk espresso
+            sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   cipher = SKINNY_CVL(R=9)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.BITWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:       sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:       milp_solver=SOLVER.GLPK,
+            ....:       logic_minimizer=SOLVER.ESPRESSO,
+            ....:       solve_time_limit=2,
+            ....:       path=Path(tmpdir))
+            ....:   cipher.analyse(model_options)
+            27168 variables and 30849 constraints were written to ...
+            sage: from civerly.solvers import *
+            sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
+            True
+        
         """
         start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
@@ -1577,7 +1621,7 @@ class Cipher:
                 # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
                 # helper/dummy variables are excluded so that two solutions
                 # are considered the same when they agree on the trail.
-                b = self.milp.get_backend()
+                b = self.milp.backend
                 trail_vars = {
                     b.col_name(i)
                     for i in range(b.ncols())
@@ -1588,6 +1632,7 @@ class Cipher:
                     milp=self.milp,
                     number_of_solutions=model_options.number_of_solutions,
                     trail_vars=trail_vars,
+                    time_limit=model_options.solve_time_limit,
                 )
                 self._solve_time = 0
                 weights = []
@@ -1604,7 +1649,10 @@ class Cipher:
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return weights
             else:
-                self.result = model_options.milp_solver.solve(input_file)
+                self.result = model_options.milp_solver.solve(
+                    input_file,
+                    time_limit=model_options.solve_time_limit,
+                )
                 self._solve_time = self.result["solve_time"]
                 results_and_weight = (
                     self.result["assignment"],
@@ -1641,6 +1689,7 @@ class Cipher:
                     number_of_solutions=model_options.number_of_solutions,
                     trail_vars=trail_vars,
                     precision=model_options.sat_precision,
+                    time_limit=model_options.solve_time_limit,
                 )
                 self._solve_time = 0
                 weights = []
@@ -1664,6 +1713,7 @@ class Cipher:
                     sum_arr_file=sum_arr_file,
                     solve_range=model_options.solve_range,
                     precision=model_options.sat_precision,
+                    time_limit=model_options.solve_time_limit,
                 )
                 self._solve_time = self.result["solve_time"]
                 results_and_weight = (
@@ -1695,6 +1745,12 @@ class Cipher:
              - ``input_side`` -- bool; indicates whether grid shows the input
                (``True``) or output side (``False``)
         """
+        # don't recompute every time
+        if input_side and self.grid_in:
+            return self.grid_in
+        elif self.grid_out:
+            return self.grid_out
+        
         depths = self._dfs_traversal()
 
         # initialize grid
@@ -1774,10 +1830,14 @@ class Cipher:
                 grid_out[depths[node]][grid_index] = (node, y // divide_by)
             offset_out[depth] += self.nodes[node].output_length
 
+        # store so we don't recompute from scratch it every time
+        self.grid_in  = grid_in
+        self.grid_out = grid_out
+
         if input_side:
-            return grid_in
+            return self.grid_in
         else:
-            return grid_out
+            return self.grid_out
 
     def _from_grid(self, node_num, current_index, model_options, input_side=True):
         r"""
@@ -1997,7 +2057,7 @@ class Cipher:
         After analysis, ``results`` holds the trail bit-patterns and is
         preserved verbatim through the JSON file::
 
-            sage: # optional - cadical, espresso
+            sage: # optional - cadical espresso
             sage: from civerly.model_options import *
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,

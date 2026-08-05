@@ -36,11 +36,18 @@ def _float_or_int(value):
         sage: _float_or_int("3.415037499300e+00")
         3.4150374993
     """
+    if value in ("not found yet", "-inf", "inf", "-"):
+        return None
     value = float(value)
     if value.is_integer() or abs(value - round(value)) < 1e-8:
         value = round(value)
     else:
         value = round(value, 10)
+    
+    # handle SCIP edge case 
+    if value >= 1.0e+20:
+        return None
+
     return value
 
 
@@ -257,7 +264,11 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             objective_value, assignment = self._process_solution_file(solution_file)
             objective_bounds = (objective_value, objective_value)
         elif status == SOLVING_STATUS.TIMEOUT:
-            objective_value, assignment = self._process_solution_file(solution_file)
+            if solution_file.exists():
+                objective_value, assignment = self._process_solution_file(solution_file)
+            else:
+                objective_value, assignment = None, {}
+            
             objective_bounds = self._get_objective_bounds(log_file)
         else:
             objective_value = None
@@ -294,7 +305,12 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         with log_file.open("r") as file:
             content = file.read()
 
-        hit = re.search(self.bounds_regexp, content, re.MULTILINE)
+        hits = list(re.finditer(self.bounds_regexp, content, re.MULTILINE))
+        if hits == []: # bounds havent been found yet.
+            return (None, None)
+
+        # use last hit
+        hit = hits[-1]
         if hit:
             upper_bound = _float_or_int(hit.group(1))
             lower_bound = _float_or_int(hit.group(2))
@@ -339,7 +355,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         to ``milp`` excluding the previous assignment and flushes ``milp``
         back to ``input_file`` before the next solve.
 
-        ``milp`` is required because Sage's ``MixedIntegerLinearProgram``
+        ``milp`` is required because ``MILP_CVL``
         cannot reconstruct itself from an MPS file -- the in-memory model
         must be threaded through from where it was built.
 
@@ -348,7 +364,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         INPUT:
 
             - ``input_file`` -- path to the MPS file; rewritten between iterations
-            - ``milp`` -- in-memory :class:`MixedIntegerLinearProgram` whose
+            - ``milp`` -- in-memory :class:`MILP_CVL` whose
               state matches ``input_file``
             - ``number_of_solutions`` -- maximum number of solutions to find
             - ``trail_vars`` -- optional iterable of MPS variable names that
@@ -428,15 +444,14 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         ``trail_vars`` participate in the constraint; helpers are ignored.
         Otherwise every variable in ``assignment`` is constrained.
         """
-        # Flatten the nested ``{name: {idx: val}}`` shape (from
-        # ``_process_solution_file``) back to the flat MPS variable names.
-        flat = {}
-        for name, sub in assignment.items():
-            if isinstance(sub, dict):
-                for idx, val in sub.items():
-                    flat[f"{name}[{idx}]"] = val
-            else:
-                flat[name] = sub
+        # Flatten the nested ``{name: {idx: val}}`` shape (as produced by
+        # ``_to_dict`` in every ``_process_solution_file`` implementation)
+        # back to the flat MPS variable names.
+        flat = {
+            f"{name}[{idx}]": val
+            for name, sub in assignment.items()
+            for idx, val in sub.items()
+        }
 
         if trail_vars is not None:
             trail_vars = set(trail_vars)
@@ -635,7 +650,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 "trace": trace,
             }
 
-        def _decide_at(w):
+        def _decide_at(w) -> dict:
             sat = DIMACS()
             sat.read(str(input_file))
             start_time_model = time.perf_counter()
@@ -648,7 +663,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             if deadline is not None:
                 remaining = deadline - time.perf_counter()
                 if remaining <= 0:
-                    return SOLVING_STATUS.TIMEOUT
+                    return {
+                        "status": SOLVING_STATUS.TIMEOUT,
+                        "satisfiability": None,
+                        "assignment": None,
+                        "solve_time": time_limit,
+                        "model": constrained, 
+                        "model_time": model_time
+                    }
             else:
                 remaining = None
             trace[w] = self.decide(tmp_cnf, time_limit=remaining)
@@ -1329,10 +1351,15 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         if any("infeasible" in line for line in file_content[:10]):
             raise ValueError("There is no solution found!")
+
+        if any(["no solution available" in line for line in file_content[:10]]):
+            objective_value = None
+        else:
+            objective_value = file_content[1].strip(" ")
+            objective_value = objective_value[objective_value.index(":")+1:]
+            objective_value = _float_or_int(objective_value)
+
         assignment = {}
-        objective_value = file_content[1].strip(" ")
-        objective_value = objective_value[objective_value.index(":") + 1 :]
-        objective_value = _float_or_int(objective_value)
         for line in file_content[2:-1]:
             line = line[: line.index("(")].replace(" ", "")
             value = round(float(line[line.index("]") + 1 :]))
@@ -1354,7 +1381,7 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         super().__init__()
         self.name = "GLPK"
         self.timeout_string = r"TIME LIMIT EXCEEDED"
-        self.bounds_regexp = r".*mip\s*=\s*(\S+)\s*>=\s*(\S+).*"
+        self.bounds_regexp = r'.*mip\s*=\s*(\S+|not found yet)\s*>=\s*(\S+|not found yet).*'
 
     def _build_command(self, input_file, solution_file, log_file, time_limit):
         """Build the GLPK CLI command list."""
@@ -1390,11 +1417,14 @@ class GLPK_CVL(MILP_SOLVER_CVL):
         with solution_file.open("r") as f:
             file_content = f.read().split("\n")
 
-        if any("INFEASIBLE" in line for line in file_content[-10:]):
+        if any(["INTEGER EMPTY" in line for line in file_content[:10]]):
             raise ValueError("There is no solution found!")
-
-        L, R = file_content[5].index("= ") + 2, file_content[5].index("(")
-        objective_value = _float_or_int(file_content[5][L:R])
+        
+        elif any(["INTEGER UNDEFINED" in line for line in file_content[:10]]):
+            objective_value = None
+        else:
+            L, R = file_content[5].index("= ")+2, file_content[5].index("(")
+            objective_value = _float_or_int(file_content[5][L:R])
 
         ind_start, ind_end = None, None
         bs, be = False, False
@@ -1614,7 +1644,7 @@ class CADICAL_CVL(SAT_SOLVER_CVL):
         ]
         if time_limit is not None:
             command.insert(2, "-t")
-            command.insert(3, str(time_limit))
+            command.insert(3, str(int(time_limit)))
         return command
 
     def _process_solution_file(self, solution_file):
@@ -1688,7 +1718,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "AES.mps",
-            ....:     model_options.path / "AES.073904d3.sol",
+            ....:     model_options.path / "AES.6017446a.sol",
             ....:     model_options.path / "AES.log")
             <SOLVING_STATUS.SUCCESS: 1>
             sage: aes.analyse(model_options)
@@ -2140,8 +2170,8 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
             sage: cipher.analyse(model_options=model_options)
             Traceback (most recent call last):
             ...
-            civerly.solvers.ExternalSolveRequiredError: ExternalLogicMinimizer: ...
-            sage: # optional - espresso, cryptominisat
+            civerly.solvers.ExternalSolveRequired: ExternalLogicMinimizer: ...
+            sage: # optional - espresso cryptominisat
             sage: SOLVER.ESPRESSO.invoke(
             ....:   model_options.path / "espresso-8e23b46a.pla",
             ....:   model_options.path / "espresso-8e23b46a_out.pla"
@@ -2174,12 +2204,12 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
         Simulate external Espresso minimization::
 
             sage: # optional - cryptominisat  # optional - espresso
-            sage: from civerly.cipher_implementations.gift import GIFT_CVL
+            sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
             sage: import tempfile
             sage: tmpdir = tempfile.mkdtemp()
-            sage: gift_cipher = GIFT_CVL(R=2)
+            sage: gift_cipher = GIFT64_CVL(R=2)
             sage: model_options = MODEL_OPTIONS(
             ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:   optimization=OPTIMIZATION.SAT,
@@ -2200,7 +2230,7 @@ class EXTERNAL_LOGIC_MINIMIZER_CVL(LOGIC_MINIMIZER_CVL):
             ....:     model_options.path / "espresso-d1bda7a.pla",
             ....:     model_options.path / "espresso-d1bda7a_out.pla")
             sage: gift_cipher.analyse(model_options)
-            2560 variables and 6401 clauses were written to '...'
+            2048 variables and 5377 clauses were written to '...'
             3.4
             sage: import shutil
             sage: shutil.rmtree(tmpdir)

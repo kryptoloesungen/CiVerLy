@@ -9,10 +9,28 @@ from civerly.component import (
 
 
 class SIMON_Variants_CVL:
-    def __init__(
-        self, block_size, R, params=None, rks=None, use_rotand=True, name=None
-    ):
+    def __init__(self, block_size, R, params=[8, 1, 2], rks=[],
+                 use_rotand=True, name="Simon"):
         r"""
+        CiVerLy implementation of SIMON-like ciphers. It takes the following parameters:
+
+            - ``block_size`` -- integer; the block size.
+
+            - ``R`` -- integer; the number of rounds.
+
+            - ``params`` -- [int, int, int]; the rotation constants a, b, c, specifying
+              the specific SIMON variant.
+
+            - ``rks`` -- list[int]; the round keys (default: []).
+
+            - ``use_rotand`` -- bool; Indicates whether the ``ROT_AND_CVL`` component 
+              and its more accurate model from (https://eprint.iacr.org/2015/145)
+              should be used.
+
+            - ``name`` -- string; The name (default: "Simon").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
+
         TESTS::
 
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
@@ -201,8 +219,6 @@ class SIMON_Variants_CVL:
 
         """
 
-        if name is None:
-            name = "simon"
 
         n = int(block_size // 2)
         if params is None:

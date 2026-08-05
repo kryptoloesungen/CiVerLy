@@ -1,11 +1,5 @@
-"""
-A rudimentary implementation of a weakend version of PRESENT.
-
-The S-box is swapped out such that its linearity is 12 and its differential
-uniformity is 6. The main purpose of this is to test CiVerLy on trails with
-non-integer weight.
-"""
-
+from civerly.wordsboxcipher import WordSBoxCipher
+from civerly.component import SBox_CVL, PermuteLayer_CVL
 from sage.crypto.sbox import SBox
 
 from civerly.component import PermuteLayer_CVL, SBox_CVL
@@ -15,9 +9,20 @@ from civerly.wordsboxcipher import WordSBoxCipher
 class WEAK_PRESENT_CVL:
     """Rudimentary implementation of WEAK_PRESENT."""
 
-    def __init__(self, R=31, name=None):
+    def __init__(self, R=31, name="WEAK_PRESENT"):
         r"""
-        Initizalise WEAK_PRESENT.
+        The CiVerly implementation of a weakened version of PRESENT.
+
+        The S-box is swapped out such that its linearity is 12 and its differential
+        uniformity is 6. The main purpose of this is to test CiVerLy on trails with
+        non-integer weight. It takes the following parameters:
+
+            - ``R`` -- integer; Number of rounds (default: 31)
+
+            - ``name`` -- string; The name of the cipher (default: "WEAK_PRESENT").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
+
 
         TESTS::
 
@@ -27,7 +32,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
+            sage: # optional - gurobi espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -48,7 +54,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
+            sage: # optional - scip espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -69,7 +76,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
+            sage: # optional - scip espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -86,8 +94,8 @@ class WEAK_PRESENT_CVL:
 
         Below we generate a custom model by adding constraints.
         First analyse the cipher as per usual:
-
-            sage: # optional - scip, espresso
+            
+            sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.weak_present \
             ....:   import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
@@ -109,9 +117,9 @@ class WEAK_PRESENT_CVL:
 
         Set all input bits to active and analyse again:
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: for i in range(cipher.input_length):
-            ....:     cipher.milp.add_constraint(cipher.nodes[0].MILP_OUT[i] == 1)
+            ....:     cipher.milp.add_constraint(cipher.milp.VAR_IN[i] == 1)
             sage: cipher.analyse(model_options)
             Using existing MILP model, make sure it is up to date!
             3648 variables and 6529 constraints were written to ...
@@ -121,7 +129,7 @@ class WEAK_PRESENT_CVL:
 
         Remove temporary files:
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
 

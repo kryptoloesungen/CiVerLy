@@ -17,7 +17,14 @@ class ABC_CVL:
         and first analysed in
         https://link.springer.com/chapter/10.1007/978-3-031-56232-7_13.
         The main weakness is the lack of diffusion between each byte of
-        the state, which CiVerLy also recognizes.
+        the state, which CiVerLy also finds. It takes the
+        following arguments:
+
+            - ``R`` -- integer; Number of rounds (default 16)
+
+            - ``rks`` -- list[int]; The round keys (default [])
+
+            - ``name`` -- string; The object's name (default "ABC")
 
 
         TESTS:
@@ -104,9 +111,6 @@ class ABC_CVL:
         """
         if not rks:
             rks = [0x0 for _ in range(R)]
-
-        if name is None:
-            name = "ABC"
 
         cipher = SBoxCipher(128, 128, name=name)
         abc_round = SBoxCipher(128, 128, name="ABC-round")

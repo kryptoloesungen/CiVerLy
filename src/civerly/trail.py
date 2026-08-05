@@ -123,26 +123,44 @@ class TrailNode:
         if model_options.optimization == OPTIMIZATION.MILP:
             for var_name, var_dict in results.items():
                 if var_name in ("IN", "OUT"):
-                    # if var_name is MILP_IN or MILP_OUT, we skip it
+                    # if var_name is VAR_IN or VAR_OUT, we skip it
                     continue
-                comp_num = int(var_name[1:])
-                for s_ind, solution_bit_value in var_dict.items():
-                    translated_component = dictionaries[comp_num][
-                        f"{var_name}[{s_ind}]"
-                    ]
-                    # Draw the input nodes of each component
-                    bool1 = "IN" in translated_component
-                    # We also draw the output of the last component.
-                    bool2 = "OUT" in translated_component
 
-                    if bool1 and comp_num != 0:  # dont draw self.IN.in
-                        current_index = _between_brackets(translated_component)
+                # recover comp_num and comp
+                comp_num = int(var_name[1:])
+                comp = cipher_instance.nodes[comp_num]
+
+                for s_ind, solution_bit_value in var_dict.items():
+                    local_ind = dictionaries[comp_num][
+                        cipher_instance.milp.vars[var_name].get_index(s_ind)
+                    ]
+
+                    # the bit index in the IN/OUT node corresponding to local_ind
+                    id_in  = [
+                        cur_idx for cur_idx in comp.milp.VAR_IN.keys()
+                        if comp.milp.VAR_IN.get_index(cur_idx)  == local_ind
+                    ]
+                    id_out = [
+                        cur_idx for cur_idx in comp.milp.VAR_OUT.keys()
+                        if comp.milp.VAR_OUT.get_index(cur_idx) == local_ind
+                    ]
+                    assert len(id_in) + len(id_out) <= 1, (
+                        f"There should be only one variable with index {local_ind}!"
+                    )
+
+                    # Draw the input nodes of each component, as well as
+                    # the output of the last component.
+                    bool1 = len(id_in)  == 1
+                    bool2 = len(id_out) == 1
+
+                    if bool1 and comp_num > 0:  # dont draw self.IN.in
+                        current_index = id_in[0]
                         bit_ind = self.cipher_instance._from_grid(
                             comp_num, current_index, model_options, input_side=True
                         )
                         bits_in[depths[comp_num]][bit_ind] = solution_bit_value
                     elif bool2:
-                        current_index = _between_brackets(translated_component)
+                        current_index = id_out[0]
                         bit_ind = self.cipher_instance._from_grid(
                             comp_num, current_index, model_options, input_side=False
                         )
@@ -244,25 +262,33 @@ class TrailNode:
                 # from the parent's nested results entry for this comp_num
                 sub_results = {}
                 var_name = f"X{comp_num}"
-                for s_ind, solution_bit_value in results.get(var_name, {}).items():
-                    translated = dictionaries[comp_num][f"{var_name}[{s_ind}]"]
-                    tr_name, tr_rest = translated.split("[", 1)
-                    tr_ind = int(tr_rest.rstrip("]"))
-                    sub_results.setdefault(tr_name, {})[tr_ind] = solution_bit_value
+                if var_name not in results.keys():
+                    raise AssertionError(f"{comp_num} not in results")
+                for s_ind, solution_bit_value in results[var_name].items():
+                    local_index = dictionaries[comp_num][
+                        cipher_instance.milp.vars[var_name].get_index(s_ind)
+                    ]
+                    for name, _var in comp.milp.vars.items():
+                        for ind in _var.keys():
+                            if local_index == _var.get_index(ind):
+                                tr_ind, tr_name = ind, name
+                                break_out = True
+                            if break_out: break
+                        if break_out: break
+                    break_out = False
+                    if tr_name not in sub_results.keys():
+                        sub_results[tr_name] = {}
+                    sub_results[tr_name][tr_ind] = solution_bit_value
+
                 # Compute the weight of this subcipher's trail from the
                 # parent's objective contributions for comp_num.
-                prefix = f"X{comp_num}["
-                if hasattr(self.cipher_instance, "sum_arr_milp"):
-                    sub_weight = sum(
-                        -factor
-                        * int(
-                            results.get(f"X{comp_num}", {}).get(
-                                int(v[len(prefix) : -1]), 0
-                            )
-                        )
-                        for factor, v in self.cipher_instance.sum_arr_milp
-                        if v.startswith(prefix)
-                    )
+                if hasattr(self.cipher_instance, 'sum_arr_milp'):
+                    sub_weight = 0
+                    for factor, v in self.cipher_instance.sum_arr_milp:
+                        for var_name, var in self.cipher_instance.milp.vars.items():
+                            for index in var.keys():
+                                if var.get_index(index) == v:
+                                    sub_weight += -factor * int(results[var_name][index])
                 else:
                     sub_weight = 0
             else:  # SAT
@@ -436,7 +462,7 @@ class TrailNode:
 
         TESTS:
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
             ....:   import Toy7
             sage: from civerly.model_options import *

@@ -20,17 +20,18 @@ from civerly.sboxcipher import SBoxCipher
 
 
 class HALFLOOP_CVL:
-    r"""Implementation of HALFLOOP-24 in CiVerLy."""
-
-    def __init__(self, R, k=None, name=None) -> None:
+    def __init__(self, R, k=None, name="HALFLOOP-24") -> None:
         r"""
-        Implement HALFLOOP in CiVerLy.
+        Implementation of HALFLOOP-24 in CiVerLy, together with its key schedule.
 
         INPUT:
 
-            - ``R`` -- integer; Number of rounds.
+            - ``R`` -- integer; Number of rounds (must be <= 10)
 
-            - ``name`` -- string; The name of the cipher (optional).
+            - ``k`` -- integer (128-bit); Master key (default: None).  When given,
+              the round keys are derived and injected immediately.
+
+            - ``name`` -- string; The name of the cipher (default: "HALFLOOP-24").
               This will be used to name the cipher and the corresponding file
               generated (such as the reports and cipher graphs).
 
@@ -109,9 +110,6 @@ class HALFLOOP_CVL:
         RCs = [0x01, 0x02]  # AES key schedule is only applied for 2 rounds
 
         assert R <= 10
-
-        if name is None:
-            name = "HALFLOOP-24"
 
         if k is None:
             k = 0x0
@@ -212,7 +210,7 @@ class HALFLOOP_CVL:
         edges += [(node_XOR5, (i, 256 + i)) for i in range(8)]
         key_schedule.add_output(edges)
 
-        halfloop_cipher = SBoxCipher(24 + 64, 24, "HALFLOOP-24")
+        halfloop_cipher = SBoxCipher(24+64, 24, name=name)
         K = C_CVL(64, k % (1 << 64), "k2")  # k2, second half of key
         K = halfloop_cipher.add_subcipher(K, [])
 

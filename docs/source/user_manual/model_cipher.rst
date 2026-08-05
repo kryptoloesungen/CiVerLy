@@ -124,6 +124,14 @@ General Options
   This defaults to 0.
   Increasing it will have a drastic impact on performance.
 
+* ``solve_time_limit``
+
+  This model option, passed as an integer, sets a hard limit on the time needed
+  for the solving process. When the time limit is reached, the solving process will be terminated immediately,
+  even when non-optimal solutions (or none at all) have been found so far. 
+  When the time limit is reached, it is useful to consider the ``result['objective_bounds']`` attribute of the analysed cipher object,
+  as it contains the lower and upper bounds for the objective value.
+
 Techniques to model Components
 """""""""""""""""""""""""""""""
 

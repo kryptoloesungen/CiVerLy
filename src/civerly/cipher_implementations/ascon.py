@@ -9,13 +9,13 @@ from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class ASCON_CVL:
-    def __init__(self, R=12, name=None):
+    def __init__(self, R=12, name="Ascon"):
         r"""
         The CiVerLy implementation of ASCON. It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds.
 
-            - ``name`` -- string; The name of the cipher (optional).
+            - ``name`` -- string; The name of the cipher (default: "Ascon").
               Will be used to name the cipher and the corresponding files
               generated (such as the reports and cipher graphs).
 
@@ -57,9 +57,7 @@ class ASCON_CVL:
 
 
         """
-        if name is None:
-            name = "ascon"
-
+        
         constants = [
             0xf0, 0xe1, 0xd2, 0xc3,
             0xb4, 0xa5, 0x96, 0x87,

@@ -49,7 +49,7 @@ from civerly.sboxcipher import SBoxCipher
 class DES_F_CVL:
     def __init__(self):
         r"""
-        The implementation of DES-F.
+        The implementation of DES-F, taking no arguments.
         The test vectors are taken from
         https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.
 
@@ -203,7 +203,16 @@ class DES_CVL:
         r"""
         The DES implementation.
         The test vectors are taken from https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.
+        It takes the following arguments:
 
+            - ``R`` -- integer; Number of rounds.
+            
+            - ``rks`` -- list[int]; The round keys (default [])
+            
+            - ``name`` -- string; The name of the cipher (default: "DES").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
+        
         TESTS::
 
             sage: from civerly.cipher_implementations.des import DES_CVL
