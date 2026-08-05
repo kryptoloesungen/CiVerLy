@@ -22,7 +22,6 @@ from sage.matrix.constructor import Matrix as matrix
 from sage.matrix.special import block_matrix, identity_matrix
 from sage.modules.free_module_element import vector
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
-from sage.numerical.mip import MixedIntegerLinearProgram
 from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.rings.integer_ring import ZZ
 from sage.sat.solvers.dimacs import DIMACS
@@ -168,9 +167,6 @@ class Component(ABC):
         r"""Initialize empty MILP or SAT model for this component."""
         if model_options.optimization == OPTIMIZATION.MILP:
             self.sum_arr_milp = []
-            self.milp = MixedIntegerLinearProgram(maximization=False, solver="GLPK")
-            self.MILP_IN = self.milp.new_variable(name="IN", binary=True)
-            self.MILP_OUT = self.milp.new_variable(name="OUT", binary=True)
             self.milp = MILP_CVL(maximization=False)
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.sum_arr_sat = []

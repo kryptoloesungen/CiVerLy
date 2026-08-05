@@ -137,11 +137,11 @@ class TrailNode:
 
                     # the bit index in the IN/OUT node corresponding to local_ind
                     id_in  = [
-                        cur_idx for cur_idx in comp.milp.VAR_IN.keys()
+                        cur_idx for cur_idx in comp.milp.VAR_IN.keys()  # noqa: SIM118
                         if comp.milp.VAR_IN.get_index(cur_idx)  == local_ind
                     ]
                     id_out = [
-                        cur_idx for cur_idx in comp.milp.VAR_OUT.keys()
+                        cur_idx for cur_idx in comp.milp.VAR_OUT.keys()  # noqa: SIM118
                         if comp.milp.VAR_OUT.get_index(cur_idx) == local_ind
                     ]
                     assert len(id_in) + len(id_out) <= 1, (
@@ -269,7 +269,7 @@ class TrailNode:
                         cipher_instance.milp.vars[var_name].get_index(s_ind)
                     ]
                     for name, _var in comp.milp.vars.items():
-                        for ind in _var.keys():
+                        for ind in _var.keys():  # noqa: SIM118
                             if local_index == _var.get_index(ind):
                                 tr_ind, tr_name = ind, name
                                 break_out = True
@@ -286,7 +286,7 @@ class TrailNode:
                     sub_weight = 0
                     for factor, v in self.cipher_instance.sum_arr_milp:
                         for var_name, var in self.cipher_instance.milp.vars.items():
-                            for index in var.keys():
+                            for index in var.keys():  # noqa: SIM118
                                 if var.get_index(index) == v:
                                     sub_weight += -factor * int(results[var_name][index])
                 else:

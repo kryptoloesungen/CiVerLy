@@ -495,7 +495,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         """
         translation = {}
         for other_var in other.vars.values():
-            for key in other_var.keys():
+            for key in other_var.keys():  # noqa: SIM118
                 other_index = other_var.get_index(key)
                 # indexing ``var`` creates the corresponding variable in
                 # ``self``, as MIPVariable components are created lazily
