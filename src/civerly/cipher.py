@@ -1910,16 +1910,19 @@ class Cipher:
             )
         # otherwise read from file (assuming the right name)
         if model_options.optimization == OPTIMIZATION.MILP:
-            try: 
-                solution_file = next(
-                    model_options.path.glob(f"{self.name}.*.sol")
-                )
-                objective_value, assignment = (
-                    model_options.milp_solver._process_solution_file(solution_file)
-                )
-                return (assignment, objective_value)
-            except StopIteration:
-                raise FileNotFoundError(f"{model_options.path / f"{self.name}.*.sol"} doesn't exist")
+            if (model_options.path / f"{self.name}.sol").exists():
+                solution_file = (model_options.path / f"{self.name}.sol")
+            else:
+                try: 
+                    solution_file = next(
+                        model_options.path.glob(f"{self.name}.*.sol")
+                    )
+                except StopIteration:
+                    raise FileNotFoundError(f"{model_options.path / f"{self.name}.*.sol"} does not exist")
+            objective_value, assignment = (
+                model_options.milp_solver._process_solution_file(solution_file)
+            )
+            return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
 
             solution_file = None
@@ -1931,7 +1934,7 @@ class Cipher:
                     )
                     with open(matching_file, "r") as f:
                         line = f.readline()
-                        if line and line == "SAT\n":
+                        if line and line in ("SAT\n", "s SATISFIABLE\n"):
                             solution_file = matching_file
                             break
                 except StopIteration:
@@ -1939,7 +1942,7 @@ class Cipher:
 
             if solution_file is None:
                 raise FileNotFoundError(
-                    f"{model_options.path / f"{self.name}_obj{w}.*.sat"} doesn't exist"
+                    f"{model_options.path / f"{self.name}_obj{w}.*.sat"} does not exist"
                 )
             objective_value, assignment = (
                 model_options.sat_solver._process_solution_file(solution_file)
