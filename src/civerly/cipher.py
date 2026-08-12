@@ -1883,12 +1883,12 @@ class Cipher:
             if (model_options.path / f"{self.name}.sol").exists():
                 solution_file = (model_options.path / f"{self.name}.sol")
             else:
-                try: 
+                try:
                     solution_file = next(
                         model_options.path.glob(f"{self.name}.*.sol")
                     )
-                except StopIteration:
-                    raise FileNotFoundError(f"{model_options.path / f"{self.name}.*.sol"} does not exist")
+                except StopIteration as e:
+                    raise FileNotFoundError(f"{model_options.path / f"{self.name}.*.sol"} does not exist") from e
             objective_value, assignment = (
                 model_options.milp_solver._process_solution_file(solution_file)
             )
@@ -1898,11 +1898,11 @@ class Cipher:
             solution_file = None
             # search for lowest weight which was solvable
             for w in range(*model_options.solve_range):
-                try: 
+                try:
                     matching_file = next(
                         model_options.path.glob(f"{self.name}_obj{w}.*.sat")
                     )
-                    with open(matching_file, "r") as f:
+                    with Path.open(matching_file) as f:
                         line = f.readline()
                         if line and line in ("SAT\n", "s SATISFIABLE\n"):
                             solution_file = matching_file

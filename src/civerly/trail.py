@@ -226,7 +226,7 @@ class TrailNode:
         grid_in  = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=True)
         grid_out = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=False)
         self._node_results = {}
-        for comp_num, comp in enumerate(nodes):
+        for comp_num in range(len(nodes)):
             d = depths[comp_num]
             comp_bits_in  = [bits_in[d][i]  for i, (n, _) in enumerate(grid_in[d])  if n == comp_num and bits_in[d][i]  is not None]
             comp_bits_out = [bits_out[d][i] for i, (n, _) in enumerate(grid_out[d]) if n == comp_num and bits_out[d][i] is not None]
