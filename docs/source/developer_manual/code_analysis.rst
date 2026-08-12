@@ -42,3 +42,7 @@ Link checking
 .. code-block:: console
 
    $ make check-links
+
+All files tracked by git are checked, except images.
+The options passed to lychee, such as the accepted status codes and the URLs to
+ignore, are configured in ``lychee.toml`` in the project root.
