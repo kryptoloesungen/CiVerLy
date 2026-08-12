@@ -57,6 +57,7 @@ class TrailNode:
         self.bits_in = None
         self.bits_out = None
         self._parent_depth = _parent_depth
+        self._comp_num = None
         self.cipher_instance = cipher_instance
         self.name = cipher_instance.name
         self.input_length = cipher_instance.input_length
@@ -188,15 +189,18 @@ class TrailNode:
                     )
                     bits_out[depths[comp_num]][bit_ind] = solution_bit_value
 
-        # Extract per-node result slices before None removal changes indexing
+        # Extract per-node result slices before None removal changes indexing.
+        # Filtering by grid ownership (rather than a running offset over the
+        # row) keeps each component's bits correct even when a sibling at the
+        # same depth has unassigned (None) grid slots that get dropped below.
         grid_in  = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=True)
         grid_out = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=False)
-        _node_results = {}
+        self._node_results = {}
         for comp_num, comp in enumerate(nodes):
             d = depths[comp_num]
             comp_bits_in  = [bits_in[d][i]  for i, (n, _) in enumerate(grid_in[d])  if n == comp_num and bits_in[d][i]  is not None]
             comp_bits_out = [bits_out[d][i] for i, (n, _) in enumerate(grid_out[d]) if n == comp_num and bits_out[d][i] is not None]
-            _node_results[comp_num] = {"in": comp_bits_in, "out": comp_bits_out}
+            self._node_results[comp_num] = {"in": comp_bits_in, "out": comp_bits_out}
 
         # realign bits_in, bits_out by removing any 'None' entries
         bits_in  = [[e for e in row if e is not None] for row in bits_in]
@@ -268,12 +272,14 @@ class TrailNode:
                     sub_weight = 0
             # recurse
             if not isinstance(comp, Component):
-                self.children.append(TrailNode(
+                child = TrailNode(
                     comp,
                     model_options=model_options,
                     results_and_weight=(sub_results, sub_weight),
                     _parent_depth=depths[comp_num]
-                ))
+                )
+                child._comp_num = comp_num
+                self.children.append(child)
 
         # link siblings
         for i in range(len(self.children) - 1):
@@ -485,11 +491,12 @@ class TrailNode:
                 ---SBoxLayer--->
             [1, 0, 0, 0, 0, 1, 0, 0] (7)
 
-        Checks: (1)==(4), (2)==(5), (2)==(6), (3)==(7).
+        Checks: (1)==(4), (2)==(5), (2)==(6), (3)==(7), i.e.:
+            parent._node_results[child._comp_num]["in"]  == child.bits_out[0]   (input)
+            parent._node_results[child._comp_num]["out"] == child.bits_out[-1]  (output)
 
-        For each child at depth d in the parent, this amounts to:
-            parent.bits_in[d]   == child.bits_out[0]    (input match)
-            parent.bits_out[d]  == child.bits_out[-1]   (output match)
+        The ``_node_results`` attribute is used so it stays correct regardless of gaps
+        coming from other components at the same depth.
 
         Note that this is a purely syntactic verification of the report, there
         is no validation on a semantic level!
@@ -500,20 +507,14 @@ class TrailNode:
         if not self.children or None in (self.input, self.output):
             return valid
 
-        dmax = 1 + max([child._parent_depth for child in self.children])
-        off_in  = [0]*dmax
-        off_out = [0]*dmax
-
         for child in self.children:
             d = child._parent_depth
 
-            expected_in  = self.bits_in[d][off_in[d] : off_in[d] + len(child.input)]
-            expected_out = self.bits_out[d][off_out[d] : off_out[d] + len(child.output)]
+            node_result  = self._node_results[child._comp_num]
+            expected_in  = node_result["in"]
+            expected_out = node_result["out"]
             actual_in    = child.bits_out[0]
             actual_out   = child.bits_out[-1]
-
-            off_in[d]  += len(child.input)
-            off_out[d] += len(child.output)
 
             if expected_in and actual_in and expected_in != actual_in:
                 raise AssertionError(
