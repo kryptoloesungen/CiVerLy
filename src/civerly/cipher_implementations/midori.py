@@ -5,7 +5,7 @@ consists of S-layer (SubCell) and P-layer (ShuffleCell & MixColumn)
 and KeyAdd. The state is represented by a 4x4 matrix.
 Midori64:
     - block size  of 64 bits
-    - key length of 128 bits 
+    - key length of 128 bits
     - cell size in the 4x4 matrix is 4 bits
     - number of rounds is 16
     - Sb0[x]
@@ -38,33 +38,37 @@ KeyAdd:
         - The ith n-bit round key RKi is XORed to a state S
 
 """
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL, LinearLayer_CVL
-from civerly.aeslike import AESlike
 
 from sage.crypto.sbox import SBox as SBox_sage
-from sage.matrix.special import zero_matrix, identity_matrix, block_matrix
+from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.aeslike import AESlike
+from civerly.component import (
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
+from civerly.wordsboxcipher import WordSBoxCipher
+
 
 class MIDORI64_CVL:
     # Sb_0 specifications
     SB0 = (
-        0xC, 0xA, 0xD, 0x3,
-        0xE, 0xB, 0xF, 0x7,
-        0x8, 0x9, 0x1, 0x5,
-        0x0, 0x2, 0x4, 0x6
-    )
-    # ShuffleCell permutation matrix 
-    SHUFFLE = [0, 10, 5, 15, 14, 4, 11, 1, 9, 3, 12, 6, 7, 13, 2, 8]
+        0xC, 0xA, 0xD, 0x3, 0xE, 0xB, 0xF, 0x7, 0x8, 0x9, 0x1, 0x5, 0x0, 0x2, 0x4, 0x6,
+    )  # fmt: skip
+    # ShuffleCell permutation matrix
+    SHUFFLE = (0, 10, 5, 15, 14, 4, 11, 1, 9, 3, 12, 6, 7, 13, 2, 8)
     # Binary permutation MixColumn matrix
-    M = [
+    M = (
         [0, 1, 1, 1],
         [1, 0, 1, 1],
-        [1, 1, 0, 1], 
+        [1, 1, 0, 1],
         [1, 1, 1, 0],
-    ]
-  
-    def __init__(self, R=16, rks=[], name="MIDORI-64"): 
+    )
+
+    def __init__(self, R=16, rks=None, name="MIDORI-64"):
         r"""
         CiVerLy Implementation of MIDORI-64. It takes the following arguments:
 
@@ -83,7 +87,7 @@ class MIDORI64_CVL:
             sage: midori64_cipher = MIDORI64_CVL(R=10)
             sage: hex(vec_to_int(midori64_cipher(int_to_vec(0xabcd1234, 64))))
             '0x13b622dcaa65dbc3'
-            
+
 
         TESTS::
 
@@ -120,8 +124,8 @@ class MIDORI64_CVL:
             sage: vec_to_int(midori64_cipher(int_to_vec(0x42c20fd3b586879e, 64))) \
             ....:   == 0x66bcdc6270d901cd
             True
-        
-        Model the cipher with MILP: 
+
+        Model the cipher with MILP:
 
             sage: # optional - scip
             sage: from civerly.cipher_implementations.midori import MIDORI64_CVL
@@ -222,7 +226,7 @@ class MIDORI64_CVL:
             ....:   assert "Unnamed Component" not in trail
             3856 variables and 10417 clauses were written to ...
             14
-        
+
         Linear cryptanalysis::
 
             sage: # optional - cryptominisat # optional - espresso
@@ -245,7 +249,7 @@ class MIDORI64_CVL:
             ....:   assert "Unnamed Component" not in trail
             3856 variables and 10129 clauses were written to ...
             7
-            
+
             sage: # optional - cryptominisat # optional - espresso
             sage: from civerly.cipher_implementations.midori import MIDORI64_CVL
             sage: from civerly.model_options import *
@@ -269,19 +273,21 @@ class MIDORI64_CVL:
 
         """
 
+        if rks is None:
+            rks = []
         if rks == []:
-            rks = [0]  * (R+1)
+            rks = [0] * (R + 1)
         else:
             # If the rks are provided, then we check if the number of
             # rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks 
-            # If len(rks) > R, then we consider only the needed number of rks 
+            # If len(rks) < R, then add zero rks
+            # If len(rks) > R, then we consider only the needed number of rks
             rks = list(rks)
-            if len(rks) < (R+1):
-                rks = rks + [0] * ((R+1) - len(rks))
-            elif len(rks) > (R+1):
-                rks = rks[:(R+1)]
-        
+            if len(rks) < (R + 1):
+                rks = rks + [0] * ((R + 1) - len(rks))
+            elif len(rks) > (R + 1):
+                rks = rks[: (R + 1)]
+
         # SubCell
         sb0 = SBox_CVL(SBox_sage(MIDORI64_CVL.SB0), name="Sb0")
         subcells = WordSBoxCipher(4, 16, 16, name="SubCell")
@@ -295,21 +301,24 @@ class MIDORI64_CVL:
             for i, j in enumerate(p):
                 inv[j] = i
             return inv
-        shuffle_cell = PermuteLayer_CVL(inv_perm(MIDORI64_CVL.SHUFFLE), word_coarseness=4, name="ShuffleCell")
+
+        shuffle_cell = PermuteLayer_CVL(
+            inv_perm(MIDORI64_CVL.SHUFFLE), word_coarseness=4, name="ShuffleCell"
+        )
 
         # MixColum
-        I = identity_matrix(GF(2), 4)
+        I = identity_matrix(GF(2), 4)  # noqa: E741
         MC = []
         for r in range(4):
-            row = []
-            for c in range(4):
-                row.append(I if MIDORI64_CVL.M[r][c] == 1 else 0)
+            row = [I if MIDORI64_CVL.M[r][c] == 1 else 0 for c in range(4)]
             MC.append(row)
 
         MC_matrix = block_matrix(GF(2), MC, subdivide=False)
         mc_layer = LinearLayer_CVL(
-            MC_matrix, branch_number_differential=4,
-            branch_number_linear=4, name="MixColumn"
+            MC_matrix,
+            branch_number_differential=4,
+            branch_number_linear=4,
+            name="MixColumn",
         )
 
         # Apply MixColumn to 4 columns indep
@@ -318,9 +327,9 @@ class MIDORI64_CVL:
             # column indices in the 16-nibble state are:
             # (0+col, 4+col, 8+col, 12+col) == (col + 4*k) for k=0..3
             node = mc_layers.add_subcipher(
-                mc_layer, [(mc_layers.IN, (4*rows + k, k)) for k in range(4)]
-            ) 
-            mc_layers.add_output([(node, (k, 4*rows + k)) for k in range(4)])
+                mc_layer, [(mc_layers.IN, (4 * rows + k, k)) for k in range(4)]
+            )
+            mc_layers.add_output([(node, (k, 4 * rows + k)) for k in range(4)])
 
         # Full cipher
         midori = WordSBoxCipher(4, 16, 16, name=name)
@@ -331,43 +340,50 @@ class MIDORI64_CVL:
         state = midori.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
 
         # Rounds 0..R-2
-        for r in range(R-1):
-            state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)]) 
-            state = midori.add_subcipher(shuffle_cell, [(state, (i, i)) for i in range(16)]) 
-            state = midori.add_subcipher(mc_layers, [(state, (i, i)) for i in range(16)]) 
-            ark = RoundkeyXOR_CVL(64, const=rks[r+1], name=f"KeyAdd_RK{r}")    
-            state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)]) 
+        for r in range(R - 1):
+            state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
+            state = midori.add_subcipher(
+                shuffle_cell, [(state, (i, i)) for i in range(16)]
+            )
+            state = midori.add_subcipher(
+                mc_layers, [(state, (i, i)) for i in range(16)]
+            )
+            ark = RoundkeyXOR_CVL(64, const=rks[r + 1], name=f"KeyAdd_RK{r}")
+            state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
 
         # Final SubCell
-        state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)]) 
+        state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
 
         # Final keyAdd 15
         arkf = RoundkeyXOR_CVL(64, const=rks[R], name="KeyAdd_15")
-        state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)]) 
+        state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
 
         midori.add_output([(state, (i, i)) for i in range(16)])
         self.midori_cipher = midori
 
     def __new__(cls, *args, **kwargs):
-        instance = super(MIDORI64_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.midori_cipher
 
+
 class MIDORI128_CVL:
-    #Sb1 to construct SSb0, SSb1, SSb2 and SSb3
-    SB1 = [0x1, 0x0, 0x5, 0x3, 0xE, 0x2, 0xF, 0x7, 0xD, 0xA, 0x9, 0xB, 0xC, 0x8, 0x4, 0x6]
-    
-    #ShuffleCell permutation
-    SHUFFLE = [0, 10, 5, 15, 14, 4, 11, 1, 9, 3, 12, 6, 7, 13, 2, 8]
-    #MixColumn matrix
-    M = [
+    # Sb1 to construct SSb0, SSb1, SSb2 and SSb3
+    SB1 = (
+        0x1, 0x0, 0x5, 0x3, 0xE, 0x2, 0xF, 0x7, 0xD, 0xA, 0x9, 0xB, 0xC, 0x8, 0x4, 0x6,
+    )  # fmt: skip
+
+    # ShuffleCell permutation
+    SHUFFLE = (0, 10, 5, 15, 14, 4, 11, 1, 9, 3, 12, 6, 7, 13, 2, 8)
+    # MixColumn matrix
+    M = (
         [0, 1, 1, 1],
         [1, 0, 1, 1],
-        [1, 1, 0, 1], 
+        [1, 1, 0, 1],
         [1, 1, 1, 0],
-    ]
- 
-    def __init__(self, R=20, rks=[], name="MIDORI-128"): 
+    )
+
+    def __init__(self, R=20, rks=None, name="MIDORI-128"):
         r"""
         CiVerLy Implementation of MIDORI-128. It takes the following arguments:
 
@@ -392,7 +408,7 @@ class MIDORI128_CVL:
 
         Using test vectors from the original specification (see Appendix A
         in https://eprint.iacr.org/2015/1142.pdf):
-        
+
             sage: rks = [
             ....:   0x00000000000000000000000000000000, 0x00000001000100010100010100000101,
             ....:   0x00010101010000000101000000000000, 0x01000100000100000000010100010001,
@@ -433,7 +449,7 @@ class MIDORI128_CVL:
             ....:   == 0x1e0ac4fddff71b4c1801b73ee4afc83d
             True
 
-        Model the cipher with MILP: 
+        Model the cipher with MILP:
 
             sage: # optional - scip
             sage: from civerly.cipher_implementations.midori import MIDORI128_CVL
@@ -496,7 +512,7 @@ class MIDORI128_CVL:
             ....:   assert "Unnamed Component" not in trail
             7712 variables and 47845 clauses were written to ...
             14
-        
+
         Linear cryptanalysis::
 
             sage: # optional - cryptominisat # optional - espresso
@@ -522,13 +538,16 @@ class MIDORI128_CVL:
 
         """
 
+        if rks is None:
+            rks = []
         if rks == []:
-            rks = [0]  * (R+1)
+            rks = [0] * (R + 1)
         if len(rks) != R + 1:
-            raise ValueError(f"Midori128 expects rks of length R+1")
-      
-        # SubCell 
+            raise ValueError("Midori128 expects rks of length R+1")
+
+        # SubCell
         sb1 = self.SB1
+
         def apply_sb1_on_nibbles(x):
             lo = x & 0x0F
             hi = (x >> 4) & 0x0F
@@ -536,35 +555,99 @@ class MIDORI128_CVL:
 
         def ssb0(x):
             # Mirrors the C reference SSb0 bit-permutation -> Sb1-on-nibbles -> bit-permutation
-            x = ((x & 0x80) >> 4) | ((x & 0x40) >> 0) | ((x & 0x20) >> 4) | ((x & 0x10) >> 0) | \
-                ((x & 0x08) << 4) | ((x & 0x04) << 0) | ((x & 0x02) << 4) | ((x & 0x01) << 0)
+            x = (
+                ((x & 0x80) >> 4)
+                | ((x & 0x40) >> 0)
+                | ((x & 0x20) >> 4)
+                | ((x & 0x10) >> 0)
+                | ((x & 0x08) << 4)
+                | ((x & 0x04) << 0)
+                | ((x & 0x02) << 4)
+                | ((x & 0x01) << 0)
+            )
             x = apply_sb1_on_nibbles(x)
-            x = ((x & 0x80) >> 4) | ((x & 0x40) >> 0) | ((x & 0x20) >> 4) | ((x & 0x10) << 0) | \
-                ((x & 0x08) << 4) | ((x & 0x04) << 0) | ((x & 0x02) << 4) | ((x & 0x01) << 0)
+            x = (
+                ((x & 0x80) >> 4)
+                | ((x & 0x40) >> 0)
+                | ((x & 0x20) >> 4)
+                | ((x & 0x10) << 0)
+                | ((x & 0x08) << 4)
+                | ((x & 0x04) << 0)
+                | ((x & 0x02) << 4)
+                | ((x & 0x01) << 0)
+            )
             return x
 
         def ssb1(x):
-            x = ((x & 0x80) >> 3) | ((x & 0x40) << 1) | ((x & 0x20) >> 3) | ((x & 0x10) >> 3) | \
-                ((x & 0x08) >> 3) | ((x & 0x04) << 1) | ((x & 0x02) << 5) | ((x & 0x01) << 5)
+            x = (
+                ((x & 0x80) >> 3)
+                | ((x & 0x40) << 1)
+                | ((x & 0x20) >> 3)
+                | ((x & 0x10) >> 3)
+                | ((x & 0x08) >> 3)
+                | ((x & 0x04) << 1)
+                | ((x & 0x02) << 5)
+                | ((x & 0x01) << 5)
+            )
             x = apply_sb1_on_nibbles(x)
-            x = ((x & 0x80) >> 1) | ((x & 0x40) >> 5) | ((x & 0x20) >> 5) | ((x & 0x10) << 3) | \
-                ((x & 0x08) >> 1) | ((x & 0x04) << 3) | ((x & 0x02) << 3) | ((x & 0x01) << 3)
+            x = (
+                ((x & 0x80) >> 1)
+                | ((x & 0x40) >> 5)
+                | ((x & 0x20) >> 5)
+                | ((x & 0x10) << 3)
+                | ((x & 0x08) >> 1)
+                | ((x & 0x04) << 3)
+                | ((x & 0x02) << 3)
+                | ((x & 0x01) << 3)
+            )
             return x
 
         def ssb2(x):
-            x = ((x & 0x80) >> 6) | ((x & 0x40) >> 2) | ((x & 0x20) << 2) | ((x & 0x10) << 2) | \
-                ((x & 0x08) << 2) | ((x & 0x04) >> 2) | ((x & 0x02) << 2) | ((x & 0x01) << 2)
+            x = (
+                ((x & 0x80) >> 6)
+                | ((x & 0x40) >> 2)
+                | ((x & 0x20) << 2)
+                | ((x & 0x10) << 2)
+                | ((x & 0x08) << 2)
+                | ((x & 0x04) >> 2)
+                | ((x & 0x02) << 2)
+                | ((x & 0x01) << 2)
+            )
             x = apply_sb1_on_nibbles(x)
-            x = ((x & 0x80) >> 2) | ((x & 0x40) >> 2) | ((x & 0x20) >> 2) | ((x & 0x10) << 2) | \
-                ((x & 0x08) >> 2) | ((x & 0x04) >> 2) | ((x & 0x02) << 6) | ((x & 0x01) << 2)
+            x = (
+                ((x & 0x80) >> 2)
+                | ((x & 0x40) >> 2)
+                | ((x & 0x20) >> 2)
+                | ((x & 0x10) << 2)
+                | ((x & 0x08) >> 2)
+                | ((x & 0x04) >> 2)
+                | ((x & 0x02) << 6)
+                | ((x & 0x01) << 2)
+            )
             return x
 
         def ssb3(x):
-            x = ((x & 0x80) >> 5) | ((x & 0x40) >> 1) | ((x & 0x20) >> 1) | ((x & 0x10) >> 1) | \
-                ((x & 0x08) << 3) | ((x & 0x04) >> 1) | ((x & 0x02) >> 1) | ((x & 0x01) << 7)
+            x = (
+                ((x & 0x80) >> 5)
+                | ((x & 0x40) >> 1)
+                | ((x & 0x20) >> 1)
+                | ((x & 0x10) >> 1)
+                | ((x & 0x08) << 3)
+                | ((x & 0x04) >> 1)
+                | ((x & 0x02) >> 1)
+                | ((x & 0x01) << 7)
+            )
             x = apply_sb1_on_nibbles(x)
-            x = ((x & 0x80) >> 7) | ((x & 0x40) >> 3) | ((x & 0x20) << 1) | ((x & 0x10) << 1) | \
-                ((x & 0x08) << 1) | ((x & 0x04) << 5) | ((x & 0x02) << 1) | ((x & 0x01) << 1)
+            x = (
+                ((x & 0x80) >> 7)
+                | ((x & 0x40) >> 3)
+                | ((x & 0x20) << 1)
+                | ((x & 0x10) << 1)
+                | ((x & 0x08) << 1)
+                | ((x & 0x04) << 5)
+                | ((x & 0x02) << 1)
+                | ((x & 0x01) << 1)
+            )
             return x
 
         SSb0 = [ssb0(x) for x in range(256)]
@@ -590,31 +673,33 @@ class MIDORI128_CVL:
             for i, j in enumerate(p):
                 inv[j] = i
             return inv
-        shuffle = PermuteLayer_CVL(inv_perm(self.SHUFFLE), word_coarseness=8, name="ShuffleCell")
+
+        shuffle = PermuteLayer_CVL(
+            inv_perm(self.SHUFFLE), word_coarseness=8, name="ShuffleCell"
+        )
 
         # MixColumn
-        I = identity_matrix(GF(2), 8)
-        O = zero_matrix(GF(2), 8)
+        I = identity_matrix(GF(2), 8)  # noqa: E741
+        O = zero_matrix(GF(2), 8)  # noqa: E741
         MC = []
         for r in range(4):
-            row = []
-            for c in range(4):
-                row.append(I if MIDORI128_CVL.M[r][c] == 1 else O)
+            row = [I if MIDORI128_CVL.M[r][c] == 1 else O for c in range(4)]
             MC.append(row)
-        MC_matrix = block_matrix(GF(2), MC, subdivide=False) 
+        MC_matrix = block_matrix(GF(2), MC, subdivide=False)
         mc_layer = LinearLayer_CVL(
-            MC_matrix, branch_number_differential=4,
-            branch_number_linear=4, name="MixColumn"
+            MC_matrix,
+            branch_number_differential=4,
+            branch_number_linear=4,
+            name="MixColumn",
         )
 
         # Apply MixColumn to each ROW block (indices 4*row + k)
         mc_layers = AESlike(8, rows=4, cols=4, name="MixColumnLayer")
         for row in range(4):
             node = mc_layers.add_subcipher(
-                mc_layer,
-                [(mc_layers.IN, (4*row + k, k)) for k in range(4)]
+                mc_layer, [(mc_layers.IN, (4 * row + k, k)) for k in range(4)]
             )
-            mc_layers.add_output([(node, (k, 4*row + k)) for k in range(4)])
+            mc_layers.add_output([(node, (k, 4 * row + k)) for k in range(4)])
 
         # Full cipher
         midori = WordSBoxCipher(8, 16, 16, name=name)
@@ -625,24 +710,26 @@ class MIDORI128_CVL:
         state = midori.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
 
         # Rounds 0..R-2
-        for r in range(R-1):
-            state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)]) 
-            state = midori.add_subcipher(shuffle, [(state, (i, i)) for i in range(16)]) 
-            state = midori.add_subcipher(mc_layers, [(state, (i, i)) for i in range(16)]) 
-            ark = RoundkeyXOR_CVL(128, const=rks[r+1], name=f"KeyAdd_RK{r}")    
-            state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)]) 
+        for r in range(R - 1):
+            state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
+            state = midori.add_subcipher(shuffle, [(state, (i, i)) for i in range(16)])
+            state = midori.add_subcipher(
+                mc_layers, [(state, (i, i)) for i in range(16)]
+            )
+            ark = RoundkeyXOR_CVL(128, const=rks[r + 1], name=f"KeyAdd_RK{r}")
+            state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
 
         # Final SubCell
-        state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)]) 
+        state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
 
         # Final keyAdd 19
         arkf = RoundkeyXOR_CVL(128, const=rks[R], name="KeyAdd_19")
-        state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)]) 
+        state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
 
         midori.add_output([(state, (i, i)) for i in range(16)])
         self.midori_cipher = midori
 
     def __new__(cls, *args, **kwargs):
-        instance = super(MIDORI128_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.midori_cipher

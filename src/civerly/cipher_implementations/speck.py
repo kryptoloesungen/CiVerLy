@@ -1,13 +1,26 @@
 from civerly.addrx import AddRX
-from civerly.component import ModAdd_CVL, XOR_CVL, RotateLayer_CVL, ConstXOR_CVL
-from civerly.component import RoundkeyXOR_CVL
+from civerly.component import (
+    XOR_CVL,
+    ConstXOR_CVL,
+    ModAdd_CVL,
+    RotateLayer_CVL,
+    RoundkeyXOR_CVL,
+)
 from civerly.keyschedule import KeySchedule
 
 # Dictionary to determine the number of rounds, based on the cipher parameters.
 # Has the form: dictionary[(block_size,key_size)] = R
 dictionary = {
-    (32, 64): 22, (48, 72): 22, (48, 96): 23, (64, 96): 26, (64, 128): 27,
-    (96, 96): 28, (96, 144): 29, (128, 128): 32, (128, 192): 33, (128, 256): 34
+    (32, 64): 22,
+    (48, 72): 22,
+    (48, 96): 23,
+    (64, 96): 26,
+    (64, 128): 27,
+    (96, 96): 28,
+    (96, 144): 29,
+    (128, 128): 32,
+    (128, 192): 33,
+    (128, 256): 34,
 }
 
 
@@ -144,7 +157,9 @@ class SPECK_KeySchedule_CVL(KeySchedule):
         if R is None:
             R = dictionary[(block_size, key_size)]
 
-        super().__init__(key_size, R * n, name=f"SPECK-{block_size}/{key_size}-KeySchedule")
+        super().__init__(
+            key_size, R * n, name=f"SPECK-{block_size}/{key_size}-KeySchedule"
+        )
 
         # Master key layout (MSB first): l_{m-2} | ... | l_0 | k_0
         # l_j is at IN bits (m-2-j)*n .. (m-1-j)*n - 1  (for j = 0 .. m-2)
@@ -192,15 +207,16 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
         OUTPUT: List of ``R`` integers, one per round.
         """
-        from civerly.util import int_to_vec, vec_to_int
         from civerly.cipher import Cipher
+        from civerly.util import int_to_vec, vec_to_int
+
         bits = Cipher.eval(self, int_to_vec(k, self.input_length))
         n = self._n
-        return [vec_to_int(bits[i * n:(i + 1) * n]) for i in range(self._R)]
+        return [vec_to_int(bits[i * n : (i + 1) * n]) for i in range(self._R)]
 
 
 class SPECK_CVL:
-    def __init__(self, block_size, key_size, R=None, rks=[], name=None):
+    def __init__(self, block_size, key_size, R=None, rks=None, name=None):
         r"""
         The CiVerLy implementation of SPECK. It takes the following arguments:
 
@@ -364,14 +380,14 @@ class SPECK_CVL:
             alpha = 8
             beta = 3
 
-        n = int(block_size//2)
+        n = int(block_size // 2)
         if R is None:
             # use default no. of rounds
             R = dictionary[(block_size, key_size)]
         # -------------------------------------------------------- #
         # roundkeys are defaulted to 0
-        if rks == []:
-            rks = [0 for _ in range(R+1)]
+        if not rks:
+            rks = [0 for _ in range(R + 1)]
 
         # Initialization of the components
         # -------------------------------------------------------- #
@@ -394,20 +410,14 @@ class SPECK_CVL:
         )
 
         keyadd = RoundkeyXOR_CVL(n, 0x0, name="keyadd")
-        node_after_keyadd = speck_round.add_subcipher(
-            keyadd, [(node_modadd, (0, 0))]
-        )
+        node_after_keyadd = speck_round.add_subcipher(keyadd, [(node_modadd, (0, 0))])
 
-        node_rotbeta = speck_round.add_subcipher(
-            rot_beta, [(speck_round.IN, (1, 0))]
-        )
+        node_rotbeta = speck_round.add_subcipher(rot_beta, [(speck_round.IN, (1, 0))])
         node_xor2 = speck_round.add_subcipher(
             xor, [(node_rotbeta, (0, 0)), (node_after_keyadd, (0, 1))]
         )
 
-        speck_round.add_output(
-            [(node_after_keyadd, (0, 0)), (node_xor2, (0, 1))]
-        )
+        speck_round.add_output([(node_after_keyadd, (0, 0)), (node_xor2, (0, 1))])
         # -------------------------------------------------------- #
 
         # Adding SPECK rounds into the cipher
@@ -429,13 +439,13 @@ class SPECK_CVL:
         # R round keys to enable set_round_keys(k).
         # -------------------------------------------------------- #
         speck_cipher._rk_components = [
-            speck_cipher.nodes[r+1].nodes[node_after_keyadd] for r in range(R)
+            speck_cipher.nodes[r + 1].nodes[node_after_keyadd] for r in range(R)
         ]
         speck_cipher.key_schedule = SPECK_KeySchedule_CVL(block_size, key_size, R)
 
         self.speck_cipher = speck_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SPECK_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.speck_cipher

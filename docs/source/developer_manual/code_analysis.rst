@@ -11,6 +11,7 @@ Run all checks at once with:
    $ make lint
 
 This runs the linter, checks formatting, scans for spelling mistakes, and verifies that all hyperlinks are alive.
+The same target runs in CI on every push and pull request.
 The individual tools and their targets are described below.
 
 Linting
@@ -42,3 +43,7 @@ Link checking
 .. code-block:: console
 
    $ make check-links
+
+All files tracked by git are checked, except images.
+The options passed to lychee, such as the accepted status codes and the URLs to
+ignore, are configured in ``lychee.toml`` in the project root.

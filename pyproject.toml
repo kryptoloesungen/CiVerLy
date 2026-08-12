@@ -28,17 +28,22 @@ select = [
   "F",    # pyflakes - undefined names, unused imports
   "E",    # pycodestyle errors
   "W",    # pycodestyle warnings
-  "I",    # isort
+  "I",    # isort - order of imports; useful
   "B",    # flake8-bugbear - common bug patterns
   "UP",   # pyupgrade - modernize syntax
   "RUF",  # ruff-native rules
   "TC",   # flake8-type-checking - TYPE_CHECKING imports
-  "N",    # pep8-naming conventions
+  "N818", # pep8-naming - exception names should end in "Error"
   "SIM",  # flake8-simplify - simplifiable code patterns
   "PLE",  # pylint errors only (high signal, skip PLR/PLW/PLC)
   "PTH",  # use pathlib instead of os.path
   "C4",   # flake8-comprehensions - unnecessary list/dict/set calls
+  "D419", # pydocstyle - docstring should not be empty
+  "D301", # pydocstyle - use r""" if the docstring contains backslashes
+  "PERF401", # perflint - use list comprehension/extend instead of append-in-loop
 ]
 ignore = [
   "E501", # line length - let the formatter handle this
+  "N",    # pep8-naming - conflicts with Krypto-Notation (S, R, K, M) and _CVL-Suffix
+  "D",    # pydocstyle - conflicts with Sage's own docstring conventions
 ]

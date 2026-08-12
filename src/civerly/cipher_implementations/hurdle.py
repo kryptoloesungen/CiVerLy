@@ -1,7 +1,7 @@
 from sage.crypto.sbox import SBox
+
+from civerly.component import RK_CVL, XOR_CVL, ModAdd_CVL, PermuteLayer_CVL, SBox_CVL
 from civerly.wordbasedcipher import WordBasedCipher
-from civerly.component import ModAdd_CVL, RK_CVL, XOR_CVL, SBox_CVL
-from civerly.component import PermuteLayer_CVL
 
 
 def hurdle_key_schedule(masterkey):
@@ -52,7 +52,7 @@ def hurdle_key_schedule(masterkey):
         a2a53eecbce04657591a7daa
 
     """
-    k = [(masterkey >> (8*(15 - i))) & 0xff for i in range(16)]
+    k = [(masterkey >> (8 * (15 - i))) & 0xFF for i in range(16)]
     kk = [
         [k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15]],
         [k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4]],
@@ -69,8 +69,8 @@ def hurdle_key_schedule(masterkey):
         [k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11]],
         [k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0]],
         [k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5]],
-        [k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10]]
-    ]
+        [k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10]],
+    ]  # fmt: skip
     const = [
         [0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00],   # rk00
         [0x3C,  0xA7,  0xEC,  0x25,  0x79,  0x57,  0xDF,  0xC0,  0x38,  0x0A,  0x33,  0x1E,  0xF3,  0x8C,  0xF4,  0xF7],   # rk01
@@ -88,8 +88,11 @@ def hurdle_key_schedule(masterkey):
         [0x66,  0xDF,  0x91,  0x87,  0x93,  0xFD,  0x94,  0x58,  0xDB,  0xBD,  0x75,  0x8B,  0xA0,  0xE9,  0x84,  0x58],   # rk13
         [0xC1,  0x33,  0xB4,  0xFE,  0xC4,  0x22,  0x54,  0x60,  0xD1,  0x8E,  0x6B,  0x78,  0x2C,  0x1D,  0x73,  0x64],   # rk14
         [0x1E,  0xF3,  0x8C,  0xF4,  0xF7,  0x3C,  0xA7,  0xEC,  0x25,  0x79,  0x57,  0xDF,  0xC0,  0x38,  0x0A,  0x33]    # rk15
+    ]  # fmt: skip
+    out = [
+        sum([(kk[row][i] ^ const[row][i]) << (8 * (15 - i)) for i in range(4, 16)])
+        for row in range(16)
     ]
-    out = [sum([(kk[row][i] ^ const[row][i]) << (8*(15 - i)) for i in range(4, 16)]) for row in range(16)]
 
     return out
 
@@ -129,13 +132,18 @@ class HURDLE_F_CVL:
         rk_node = hurdle_f.add_subcipher(rk_comp, [])
         rk_adds = [None for _ in range(12)]
 
-        E = [3-i for i in [1, 3, 0, 2, 3, 1, 2, 0, 3, 2, 1, 0]]
+        E = [3 - i for i in [1, 3, 0, 2, 3, 1, 2, 0, 3, 2, 1, 0]]
         for i in range(12):
             rk_add = ModAdd_CVL(8, name=f"rk_add{i}")
-            rk_adds[i] = hurdle_f.add_subcipher(rk_add, [
-                (hurdle_f.IN, (2*E[i], 0)), (hurdle_f.IN, (2*E[i] + 1, 1)),
-                (rk_node, (2*i, 2)), (rk_node, (2*i + 1, 3))
-            ])
+            rk_adds[i] = hurdle_f.add_subcipher(
+                rk_add,
+                [
+                    (hurdle_f.IN, (2 * E[i], 0)),
+                    (hurdle_f.IN, (2 * E[i] + 1, 1)),
+                    (rk_node, (2 * i, 2)),
+                    (rk_node, (2 * i + 1, 3)),
+                ],
+            )
 
         sb = SBox([
             0xF4, 0x65, 0x01, 0x00, 0xBA, 0x7A, 0xA7, 0x47, 0x98, 0xDD, 0x9D,
@@ -162,43 +170,43 @@ class HURDLE_F_CVL:
             0x86, 0xB4, 0xF3, 0x74, 0xFA, 0x6A, 0xB2, 0x21, 0x6D, 0xEA, 0xB5,
             0xE7, 0xE3, 0xC9, 0xD3, 0x8F, 0x03, 0x75, 0xE8, 0xD4, 0x42, 0xFD,
             0x7E, 0xFF, 0x7F
-        ])
+        ])  # fmt: skip
         S = [SBox_CVL(sb, name=f"HURDLE-S{i}") for i in range(12)]
 
         sbox_nodes = [None for _ in range(12)]
-        sbox_nodes[11] = hurdle_f.add_subcipher(S[11], [
-            (rk_adds[11], (j, j)) for j in range(2)
-        ])
+        sbox_nodes[11] = hurdle_f.add_subcipher(
+            S[11], [(rk_adds[11], (j, j)) for j in range(2)]
+        )
 
         for i in range(10, -1, -1):
             xor = XOR_CVL(8, name=f"xor{i}")
-            node = hurdle_f.add_subcipher(xor, [
-                (rk_adds[i], (j, j)) for j in range(2)
-            ] + [
-                (sbox_nodes[i + 1], (j, j + 2)) for j in range(2)
-            ])
+            node = hurdle_f.add_subcipher(
+                xor,
+                [(rk_adds[i], (j, j)) for j in range(2)]
+                + [(sbox_nodes[i + 1], (j, j + 2)) for j in range(2)],
+            )
 
-            sbox_nodes[i] = hurdle_f.add_subcipher(S[i], [
-                (node, (j, j)) for j in range(2)
-            ])
+            sbox_nodes[i] = hurdle_f.add_subcipher(
+                S[i], [(node, (j, j)) for j in range(2)]
+            )
 
         perm = [
-            0, 4,  8, 12, 16, 20, 24, 28,
-            1, 5,  9, 13, 17, 21, 25, 29,
+            0, 4, 8, 12, 16, 20, 24, 28,
+            1, 5, 9, 13, 17, 21, 25, 29,
             2, 6, 10, 14, 18, 22, 26, 30,
-            3, 7, 11, 15, 19, 23, 27, 31
-        ]
+            3, 7, 11, 15, 19, 23, 27, 31,
+        ]  # fmt: skip
         P = PermuteLayer_CVL([perm[i] for i in range(32)], name="P").inv()
 
-        node_perm = hurdle_f.add_subcipher(P, [
-            (sbox_nodes[i], (1, i)) for i in range(8)
-        ])
+        node_perm = hurdle_f.add_subcipher(
+            P, [(sbox_nodes[i], (1, i)) for i in range(8)]
+        )
         hurdle_f.add_output([(node_perm, (i, i)) for i in range(8)])
 
         self.cipher = hurdle_f
 
     def __new__(cls, *args, **kwargs):
-        instance = super(HURDLE_F_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher
 
@@ -291,8 +299,7 @@ class HURDLE_CVL:
         cipher = WordBasedCipher(4, 16, 16, name=name)
 
         round_node = cipher.IN
-        for r in range(R):
-
+        for _r in range(R):
             hurdle_f = HURDLE_F_CVL(rk=0)
 
             # build feistel round
@@ -301,15 +308,13 @@ class HURDLE_CVL:
                 hurdle_f, [(hurdle_round.IN, (i + 8, i)) for i in range(8)]
             )
             feistel_xor = XOR_CVL(32, name="feistel_xor")
-            node = hurdle_round.add_subcipher(feistel_xor, [
-                (hurdle_round.IN, (i, i)) for i in range(8)
-            ] + [
-                (node, (i, i + 8)) for i in range(8)
-            ])
-            hurdle_round.add_output([(node, (i, i + 8)) for i in range(8)])
-            hurdle_round.add_output(
-                [(hurdle_round.IN, (i + 8, i)) for i in range(8)]
+            node = hurdle_round.add_subcipher(
+                feistel_xor,
+                [(hurdle_round.IN, (i, i)) for i in range(8)]
+                + [(node, (i, i + 8)) for i in range(8)],
             )
+            hurdle_round.add_output([(node, (i, i + 8)) for i in range(8)])
+            hurdle_round.add_output([(hurdle_round.IN, (i + 8, i)) for i in range(8)])
             round_node = cipher.add_subcipher(
                 hurdle_round, [(round_node, (i, i)) for i in range(16)]
             )
@@ -318,7 +323,9 @@ class HURDLE_CVL:
         cipher.add_output([(round_node, (i, (i + 8) % 16)) for i in range(16)])
 
         # collect RK references after deepcopying is complete
-        cipher._rk_components = [cipher.nodes[r+1].nodes[1].nodes[1] for r in range(R)]
+        cipher._rk_components = [
+            cipher.nodes[r + 1].nodes[1].nodes[1] for r in range(R)
+        ]
         cipher.key_schedule = hurdle_key_schedule
 
         self.cipher = cipher
@@ -327,6 +334,6 @@ class HURDLE_CVL:
             cipher.set_round_keys(k)
 
     def __new__(cls, *args, **kwargs):
-        instance = super(HURDLE_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher

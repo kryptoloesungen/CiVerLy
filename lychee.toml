@@ -1,0 +1,21 @@
+# Configuration for lychee, run via the `check-links` Makefile target.
+# See https://lychee.cli.rs/guides/config/ for all available options.
+
+# Some hosts reject requests that do not look like they come from a browser.
+user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0"
+
+# Be gentle with the servers we query.
+max_concurrency = 1
+retry_wait_time = 1
+
+# In addition to the defaults, accept 403 since some hosts refuse
+# automated requests instead of reporting a broken link.
+accept = [
+    "100..=103",
+    "200..=299",
+    "403",
+]
+
+exclude = [
+    "^https://scipopt\\.org/",
+]

@@ -37,7 +37,6 @@ from civerly.component import Component
 
 
 class WordBasedCipher(Cipher):
-
     def __init__(self, wordsize, input_num_words, output_num_words, name=None):
         r"""
         .. SEEALSO::
@@ -54,11 +53,7 @@ class WordBasedCipher(Cipher):
         """
         self.__wordsize = wordsize
         self._wrd = wordsize
-        super().__init__(
-            input_num_words * wordsize,
-            output_num_words * wordsize,
-            name
-        )
+        super().__init__(input_num_words * wordsize, output_num_words * wordsize, name)
 
     @property
     def wordsize(self):
@@ -85,7 +80,9 @@ class WordBasedCipher(Cipher):
     @classmethod
     def _init_from_dict(cls, d):
         ws = d["wordsize"]
-        return cls(ws, d["input_length"] // ws, d["output_length"] // ws, name=d["name"])
+        return cls(
+            ws, d["input_length"] // ws, d["output_length"] // ws, name=d["name"]
+        )
 
     def add_subcipher(self, sub_cipher, edges):
         r"""
@@ -121,22 +118,32 @@ class WordBasedCipher(Cipher):
         """
         if isinstance(sub_cipher, Component):
             sub_cipher.wordsize = self.wordsize
-            return super().add_subcipher(sub_cipher=sub_cipher, edges=[
-                (a, (x*self.wordsize + o, y*self.wordsize + o))
-                for o in range(self.wordsize) for a, (x, y) in edges
-            ])
+            return super().add_subcipher(
+                sub_cipher=sub_cipher,
+                edges=[
+                    (a, (x * self.wordsize + o, y * self.wordsize + o))
+                    for o in range(self.wordsize)
+                    for a, (x, y) in edges
+                ],
+            )
         if isinstance(sub_cipher, WordBasedCipher):
             if sub_cipher.wordsize != self.wordsize:
-                raise AssertionError(f"Wordsize mismatch: {sub_cipher.wordsize = } != {self.wordsize = }") # noqa
-            return super().add_subcipher(sub_cipher=sub_cipher, edges=[
-                (a, (x*self.wordsize + o, y*self.wordsize + o))
-                for o in range(self.wordsize) for a, (x, y) in edges
-            ])
+                raise AssertionError(
+                    f"Wordsize mismatch: {sub_cipher.wordsize = } != {self.wordsize = }"
+                )
+            return super().add_subcipher(
+                sub_cipher=sub_cipher,
+                edges=[
+                    (a, (x * self.wordsize + o, y * self.wordsize + o))
+                    for o in range(self.wordsize)
+                    for a, (x, y) in edges
+                ],
+            )
         raise TypeError(f"Trying to add illegal component {type(sub_cipher)}.")
 
     def add_output(self, edges):
         r"""
-        Similarily to :meth:`add_subcipher`, the output edges are now reduced
+        Similarly to :meth:`add_subcipher`, the output edges are now reduced
         as well. Instead of ``wordsize`` many output edges coming from a node,
         the convention is now that output one edge of size ``wordsize`` is
         connected to the output.
@@ -153,7 +160,10 @@ class WordBasedCipher(Cipher):
             True
 
         """
-        return super().add_output(edges=[
-            (a, (x*self.wordsize + o, y*self.wordsize + o))
-            for o in range(self.wordsize) for (a, (x, y)) in edges
-        ])
+        return super().add_output(
+            edges=[
+                (a, (x * self.wordsize + o, y * self.wordsize + o))
+                for o in range(self.wordsize)
+                for (a, (x, y)) in edges
+            ]
+        )

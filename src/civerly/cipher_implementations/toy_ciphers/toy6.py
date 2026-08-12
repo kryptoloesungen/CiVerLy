@@ -40,17 +40,31 @@ class Toy6:
         cipher = Cipher(32, 16, name="Toy6")
 
         node_rot1 = cipher.add_subcipher(rot5, [(cipher.IN, (i, i)) for i in range(16)])
-        node_rot2 = cipher.add_subcipher(rot7, [(cipher.IN, (i + 16, i)) for i in range(16)])
+        node_rot2 = cipher.add_subcipher(
+            rot7, [(cipher.IN, (i + 16, i)) for i in range(16)]
+        )
 
-        node_xor1 = cipher.add_subcipher(modadd, [(node_rot1, (i, i)) for i in range(16)] + [(cipher.IN, (i, i + 16)) for i in range(16)])
-        node_xor2 = cipher.add_subcipher(modadd, [(node_rot2, (i, i)) for i in range(16)] + [(cipher.IN, (i + 16, i + 16)) for i in range(16)])
+        node_xor1 = cipher.add_subcipher(
+            modadd,
+            [(node_rot1, (i, i)) for i in range(16)]
+            + [(cipher.IN, (i, i + 16)) for i in range(16)],
+        )
+        node_xor2 = cipher.add_subcipher(
+            modadd,
+            [(node_rot2, (i, i)) for i in range(16)]
+            + [(cipher.IN, (i + 16, i + 16)) for i in range(16)],
+        )
 
-        node_modadd1 = cipher.add_subcipher(modadd, [(node_xor1, (i, i)) for i in range(16)] + [(node_xor2, (i, i + 16)) for i in range(16)])
+        node_modadd1 = cipher.add_subcipher(
+            modadd,
+            [(node_xor1, (i, i)) for i in range(16)]
+            + [(node_xor2, (i, i + 16)) for i in range(16)],
+        )
         cipher.add_output([(node_modadd1, (i, i)) for i in range(16)])
 
         self.cipher = cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(Toy6, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher

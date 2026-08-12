@@ -1,28 +1,34 @@
-from civerly.aeslike import AESlike
-from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
-from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
-from civerly.component import LinearLayer_CVL, I_CVL
-from civerly.util import int_to_vec, vec_to_int
 from sage.crypto.sbox import SBox
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.matrix.special import zero_matrix, identity_matrix, block_matrix
 from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
+from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.aeslike import AESlike
+from civerly.component import (
+    I_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
+from civerly.util import int_to_vec, vec_to_int
+from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
 
 
 class SKINNY_CVL:
-    consts = [
+    consts = (
         0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3E, 0x3D, 0x3B, 0x37, 0x2F, 0x1E,
         0x3C, 0x39, 0x33, 0x27, 0x0E, 0x1D, 0x3A, 0x35, 0x2B, 0x16, 0x2C,
         0x18, 0x30, 0x21, 0x02, 0x05, 0x0B, 0x17, 0x2E, 0x1C, 0x38, 0x31,
         0x23, 0x06, 0x0D, 0x1B, 0x36, 0x2D, 0x1A, 0x34, 0x29, 0x12, 0x24,
         0x08, 0x11, 0x22, 0x04, 0x09, 0x13, 0x26, 0x0C, 0x19, 0x32, 0x25,
-        0x0A, 0x15, 0x2A, 0x14, 0x28, 0x10, 0x20
-    ]
+        0x0A, 0x15, 0x2A, 0x14, 0x28, 0x10, 0x20,
+    )  # fmt: skip
 
     def create_tk_schedules(s, z):
         r"""
         Helper function, creating the Tweakey schedules.
-        These arent AESlike ciphers because of the LFSR layer not obeying the
+        These aren't AESlike ciphers because of the LFSR layer not obeying the
         "MixColumn-condition" for AESlike ciphers.
 
         The reference values below are taken from the SKINNY implementation
@@ -104,7 +110,9 @@ class SKINNY_CVL:
 
         """
         pt_perm = [9, 15, 8, 13, 10, 14, 12, 11, 0, 1, 2, 3, 4, 5, 6, 7]
-        PT = PermuteLayer_CVL([pt_perm[i] for i in range(16)], word_coarseness=s, name="PT").inv()
+        PT = PermuteLayer_CVL(
+            [pt_perm[i] for i in range(16)], word_coarseness=s, name="PT"
+        ).inv()
 
         # TK1-schedule
         # ------------------------------------------------------------
@@ -123,31 +131,30 @@ class SKINNY_CVL:
             )
 
             if s == 4:
-                lfsr2_mat = [[0, 1, 0, 0],
-                             [0, 0, 1, 0],
-                             [0, 0, 0, 1],
-                             [1, 1, 0, 0]]
+                lfsr2_mat = [[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1], [1, 1, 0, 0]]
             else:  # if s == 8
-                lfsr2_mat = [[0, 1, 0, 0, 0, 0, 0, 0],
-                             [0, 0, 1, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 1, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 1, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 1, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 1, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 1],
-                             [1, 0, 1, 0, 0, 0, 0, 0]]
+                lfsr2_mat = [
+                    [0, 1, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 1, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 1, 0, 0, 0, 0, 0],
+                ]
             LFSR2 = LinearLayer_CVL(matrix(GF(2), lfsr2_mat), name="LFSR2")
 
             lfsr_layer = WordSBoxCipher(s, 16, 16, name="lfsr_layer2")
             for j in range(2):  # Add LFSRs
                 for i in range(4):
                     node_lfsr2 = lfsr_layer.add_subcipher(
-                        LFSR2, [(lfsr_layer.IN, (i + 4*j, 0))]
+                        LFSR2, [(lfsr_layer.IN, (i + 4 * j, 0))]
                     )
-                    lfsr_layer.add_output([(node_lfsr2, (0, i + 4*j))])
+                    lfsr_layer.add_output([(node_lfsr2, (0, i + 4 * j))])
             for j in range(2, 4):  # Connect the rest directly to output
                 lfsr_layer.add_output(
-                    [(lfsr_layer.IN, (4*j + i, 4*j + i)) for i in range(4)]
+                    [(lfsr_layer.IN, (4 * j + i, 4 * j + i)) for i in range(4)]
                 )
 
             node_tk2 = tk2_schedule.add_subcipher(
@@ -164,31 +171,30 @@ class SKINNY_CVL:
             )
 
             if s == 4:
-                lfsr3_mat = [[1, 0, 0, 1],
-                             [1, 0, 0, 0],
-                             [0, 1, 0, 0],
-                             [0, 0, 1, 0]]
+                lfsr3_mat = [[1, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
             else:  # if s == 8
-                lfsr3_mat = [[0, 1, 0, 0, 0, 0, 0, 1],
-                             [1, 0, 0, 0, 0, 0, 0, 0],
-                             [0, 1, 0, 0, 0, 0, 0, 0],
-                             [0, 0, 1, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 1, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 1, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 1, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 1, 0]]
+                lfsr3_mat = [
+                    [0, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 1, 0],
+                ]
             LFSR3 = LinearLayer_CVL(matrix(GF(2), lfsr3_mat), name="LFSR3")
 
             lfsr_layer = WordSBoxCipher(s, 16, 16, name="lfsr_layer3")
             for j in range(2):  # Add LFSRs
                 for i in range(4):
                     node_lfsr3 = lfsr_layer.add_subcipher(
-                        LFSR3, [(lfsr_layer.IN, (4*j + i, 0))]
+                        LFSR3, [(lfsr_layer.IN, (4 * j + i, 0))]
                     )
-                    lfsr_layer.add_output([(node_lfsr3, (0, 4*j + i))])
+                    lfsr_layer.add_output([(node_lfsr3, (0, 4 * j + i))])
             for j in range(2, 4):  # Connect the rest directly to output
                 lfsr_layer.add_output(
-                    [(lfsr_layer.IN, (4*j + i, 4*j + i)) for i in range(4)]
+                    [(lfsr_layer.IN, (4 * j + i, 4 * j + i)) for i in range(4)]
                 )
 
             node_tk3 = tk3_schedule.add_subcipher(
@@ -202,9 +208,7 @@ class SKINNY_CVL:
             return [tk1_schedule, tk2_schedule]
         if z == 3:
             return [tk1_schedule, tk2_schedule, tk3_schedule]
-        raise ValueError(
-            f"{z = } is an invalid parameter for create_tk_schedules." # noqa
-        )
+        raise ValueError(f"{z = } is an invalid parameter for create_tk_schedules.")
 
     def __init__(self, n=64, t=64, R=None, key=None, name=None):
         r"""
@@ -503,8 +507,8 @@ class SKINNY_CVL:
         assert n in [64, 128], (
             f"The block size of SKINNY can only be 64 or 128, not {n}!"
         )
-        assert t in [n, 2*n, 3*n], (
-            f"The tweakey size of SKINNY can only be {n}, {2*n} or {3*n}, "
+        assert t in [n, 2 * n, 3 * n], (
+            f"The tweakey size of SKINNY can only be {n}, {2 * n} or {3 * n}, "
             f"but not {t}!"
         )
 
@@ -516,8 +520,12 @@ class SKINNY_CVL:
             name = "SKINNY"
 
         round_dict = {
-            (64, 64): 32, (64, 128): 36, (64, 192): 40,
-            (128, 128): 40, (128, 256): 48, (128, 384): 56
+            (64, 64): 32,
+            (64, 128): 36,
+            (64, 192): 40,
+            (128, 128): 40,
+            (128, 256): 48,
+            (128, 384): 56,
         }
 
         if R is None:
@@ -533,7 +541,7 @@ class SKINNY_CVL:
             sbox = SBox_CVL(SBox([
                 0xc, 0x6, 0x9, 0x0, 0x1, 0xa, 0x2, 0xb,
                 0x3, 0x8, 0x5, 0xd, 0x4, 0xe, 0x7, 0xf
-            ]), name="S4")
+            ]), name="S4")  # fmt: skip
         else:
             s8_arr = [
                 0x65, 0x4c, 0x6a, 0x42, 0x4b, 0x63, 0x43, 0x6b, 0x55,
@@ -564,8 +572,8 @@ class SKINNY_CVL:
                 0x18, 0xae, 0x16, 0x1f, 0xa7, 0x17, 0xaf, 0x01, 0xb2,
                 0x0e, 0xbe, 0x07, 0xb7, 0x0f, 0xbf, 0xe2, 0xca, 0xee,
                 0xc6, 0xcf, 0xe7, 0xc7, 0xef, 0xd2, 0xf2, 0xde, 0xfe,
-                0xd7, 0xf7, 0xdf, 0xff
-            ]
+                0xd7, 0xf7, 0xdf, 0xff,
+            ]  # fmt: skip
             sbox = SBox_CVL(SBox(s8_arr), name="S8")
 
         for i in range(16):
@@ -576,30 +584,34 @@ class SKINNY_CVL:
         # AddConstants
         # ------------------------------------------------------------
         addconstants = AESlike(s, rows=4, cols=4, name="AddConstants")
-        xor_consts = RoundkeyXOR_CVL(3*s, const=0, name="XORconstants")
+        xor_consts = RoundkeyXOR_CVL(3 * s, const=0, name="XORconstants")
         node_xorconst = addconstants.add_subcipher(
-            xor_consts, [(addconstants.IN, (4*i, i)) for i in range(3)]
+            xor_consts, [(addconstants.IN, (4 * i, i)) for i in range(3)]
         )
-        addconstants.add_output([(node_xorconst, (i, 4*i)) for i in range(3)])
+        addconstants.add_output([(node_xorconst, (i, 4 * i)) for i in range(3)])
 
         node_I = addconstants.add_subcipher(
-            I_CVL(13*s, name="I"),
+            I_CVL(13 * s, name="I"),
             [
-                (addconstants.IN, (i, i - 1 - i//4 + i//12))
-                for i in range(16) if i not in [0, 4, 8]
+                (addconstants.IN, (i, i - 1 - i // 4 + i // 12))
+                for i in range(16)
+                if i not in [0, 4, 8]
+            ],
+        )
+        addconstants.add_output(
+            [
+                (node_I, (i - 1 - i // 4 + i // 12, i))
+                for i in range(16)
+                if i not in [0, 4, 8]
             ]
         )
-        addconstants.add_output([
-            (node_I, (i - 1 - i//4 + i//12, i))
-            for i in range(16) if i not in [0, 4, 8]
-        ])
         # ------------------------------------------------------------
 
         # AddRoundTweakey
         # ------------------------------------------------------------
         addroundtweakey = AESlike(s, rows=4, cols=4, name="AddRoundTweakey")
-        atk1 = RoundkeyXOR_CVL(4*s, const=0, name="atk1")
-        atk2 = RoundkeyXOR_CVL(4*s, const=0, name="atk2")
+        atk1 = RoundkeyXOR_CVL(4 * s, const=0, name="atk1")
+        atk2 = RoundkeyXOR_CVL(4 * s, const=0, name="atk2")
 
         node_atk1 = addroundtweakey.add_subcipher(
             atk1, [(addroundtweakey.IN, (i, i)) for i in range(4)]
@@ -609,8 +621,7 @@ class SKINNY_CVL:
         )
 
         node_I2 = addroundtweakey.add_subcipher(
-            I_CVL(8*s, name="I"),
-            [(addroundtweakey.IN, (i + 8, i)) for i in range(8)]
+            I_CVL(8 * s, name="I"), [(addroundtweakey.IN, (i + 8, i)) for i in range(8)]
         )
         addroundtweakey.add_output([(node_I2, (i, i + 8)) for i in range(8)])
         addroundtweakey.add_output([(node_atk1, (i, i)) for i in range(4)])
@@ -619,9 +630,11 @@ class SKINNY_CVL:
 
         # ShiftRows
         # ------------------------------------------------------------
-        shiftrows = PermuteLayer_CVL(perm=[
-            0, 1, 2, 3, 7, 4, 5, 6, 10, 11, 8, 9, 13, 14, 15, 12
-        ], word_coarseness=s, name="ShiftRows").inv()
+        shiftrows = PermuteLayer_CVL(
+            perm=[0, 1, 2, 3, 7, 4, 5, 6, 10, 11, 8, 9, 13, 14, 15, 12],
+            word_coarseness=s,
+            name="ShiftRows",
+        ).inv()
         # ------------------------------------------------------------
 
         # MixColumns
@@ -631,24 +644,26 @@ class SKINNY_CVL:
         I = identity_matrix(GF(2), s)  # noqa: E741
         O = zero_matrix(GF(2), s)  # noqa: E741
 
-        matrix_mc = [[I, O, I, I],
-                     [I, O, O, O],
-                     [O, I, I, O],
-                     [I, O, I, O]]
+        matrix_mc = [[I, O, I, I], [I, O, O, O], [O, I, I, O], [I, O, I, O]]
 
-        mc = LinearLayer_CVL(block_matrix(GF(2), matrix_mc, subdivide=False),
-                             branch_number_differential=2, name="MC")
+        mc = LinearLayer_CVL(
+            block_matrix(GF(2), matrix_mc, subdivide=False),
+            branch_number_differential=2,
+            name="MC",
+        )
 
         for j in range(4):
             node = mixcolumns.add_subcipher(
-                mc, [(mixcolumns.IN, (i+4*j, i)) for i in range(4)]
+                mc, [(mixcolumns.IN, (i + 4 * j, i)) for i in range(4)]
             )
-            mixcolumns.add_output([(node, (i, i+4*j)) for i in range(4)])
+            mixcolumns.add_output([(node, (i, i + 4 * j)) for i in range(4)])
         # ------------------------------------------------------------
         # Transpose for correct alignment
-        TR = PermuteLayer_CVL(perm=[
-            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15
-        ], word_coarseness=s, name="Transpose")
+        TR = PermuteLayer_CVL(
+            perm=[0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15],
+            word_coarseness=s,
+            name="Transpose",
+        )
 
         skinny_round = AESlike(s, rows=4, cols=4, name="SKINNY-round")
 
@@ -683,17 +698,13 @@ class SKINNY_CVL:
         tk_schedules = SKINNY_CVL.create_tk_schedules(s, z)
 
         # divide up the key into [TK1, TK2, TK3]
-        current_tweakeys = [
-            (key >> (y*n)) & ((1 << n) - 1) for y in range(z)
-        ][::-1]
+        current_tweakeys = [(key >> (y * n)) & ((1 << n) - 1) for y in range(z)][::-1]
         final_tweakeys = [0 for _ in range(R)]
         for r in range(R):
             for w in range(z):
                 final_tweakeys[r] ^= current_tweakeys[w]
             current_tweakeys = [
-                vec_to_int(tk_schedules[w](
-                    int_to_vec(current_tweakeys[w], n)
-                ))
+                vec_to_int(tk_schedules[w](int_to_vec(current_tweakeys[w], n)))
                 for w in range(z)
             ]  # Update tweakeys with the respective tk-schedule
 
@@ -702,19 +713,24 @@ class SKINNY_CVL:
             # Set roundconstant values
             # ---------------------------------------------
             # Compute (c0, c1, c2) from the round constants
-            current_constant = ((SKINNY_CVL.consts[r] & 0xf) << (2*s)) \
-                | (((SKINNY_CVL.consts[r] >> 4) & 0x3) << s) \
+            current_constant = (
+                ((SKINNY_CVL.consts[r] & 0xF) << (2 * s))
+                | (((SKINNY_CVL.consts[r] >> 4) & 0x3) << s)
                 | 0x2
-            skinny_round.nodes[node_round_const].nodes[node_xorconst].const = \
-                current_constant
+            )
+            skinny_round.nodes[node_round_const].nodes[
+                node_xorconst
+            ].const = current_constant
             # ---------------------------------------------
 
             # Set roundtweakey values
             # ---------------------------------------------
-            skinny_round.nodes[node_round_tweakey].nodes[node_atk1].const = \
-                (final_tweakeys[r] >> (3*4*s)) & ((1 << (4*s)) - 1)
-            skinny_round.nodes[node_round_tweakey].nodes[node_atk2].const = \
-                (final_tweakeys[r] >> (2*4*s)) & ((1 << (4*s)) - 1)
+            skinny_round.nodes[node_round_tweakey].nodes[node_atk1].const = (
+                final_tweakeys[r] >> (3 * 4 * s)
+            ) & ((1 << (4 * s)) - 1)
+            skinny_round.nodes[node_round_tweakey].nodes[node_atk2].const = (
+                final_tweakeys[r] >> (2 * 4 * s)
+            ) & ((1 << (4 * s)) - 1)
             # ---------------------------------------------
 
             node_cipher = skinny_cipher.add_subcipher(
@@ -726,6 +742,6 @@ class SKINNY_CVL:
         self.skinny_cipher = skinny_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SKINNY_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.skinny_cipher
