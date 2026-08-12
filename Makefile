@@ -34,19 +34,19 @@ help:
 # ==============================================================================
 
 check:
-	ruff check $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff check $(TEST_DIR)
 
 check-fix:
-	ruff check --fix $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff check --fix $(TEST_DIR)
 
 format:
-	ruff format $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff format $(TEST_DIR)
 
 format-check:
-	ruff format --check $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff format --check $(TEST_DIR)
 
 spell:
-	codespell $(TEST_DIR) docs
+	$(NIX_OR_NOTHING) codespell $(TEST_DIR) docs
 
 # lychee options live in lychee.toml. The config file itself is skipped
 # because its exclude patterns would be picked up as (broken) links.
