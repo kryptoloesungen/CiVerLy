@@ -1,19 +1,32 @@
 from civerly.andrx import AndRX
-from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
-from civerly.component import ROT_AND_CVL
+from civerly.component import (
+    AND_CVL,
+    ROT_AND_CVL,
+    XOR_CVL,
+    RotateLayer_CVL,
+    RoundkeyXOR_CVL,
+)
 
 # Dictionary to determine the number of rounds, based on the cipher parameters.
 # Has the form: dictionary[(block_size,key_size)] = R
 dictionary = {
-    (32, 64): 32, (48, 72): 36, (48, 96): 36, (64, 96): 42, (64, 128): 44,
-    (96, 96): 52, (96, 144): 56, (128, 128): 68,
-    (128, 192): 69, (128, 256): 72
+    (32, 64): 32,
+    (48, 72): 36,
+    (48, 96): 36,
+    (64, 96): 42,
+    (64, 128): 44,
+    (96, 96): 52,
+    (96, 144): 56,
+    (128, 128): 68,
+    (128, 192): 69,
+    (128, 256): 72,
 }
 
 
 class SIMON_CVL:
-    def __init__(self, block_size, key_size, R=None, rks=[], use_rotand=True,
-                 name=None):
+    def __init__(
+        self, block_size, key_size, R=None, rks=None, use_rotand=True, name=None
+    ):
         r"""
         The CiVerLy implementation of SIMON. It takes the following arguments:
 
@@ -36,7 +49,7 @@ class SIMON_CVL:
 
         This cipher is "plug-and-play" usable, i.e. it can be directly used
         when imported. SIMON can be implemented in two different ways, either
-        using seperate `RotateLayer_CVL` and `AND_CVL` components, or by
+        using separate `RotateLayer_CVL` and `AND_CVL` components, or by
         combining them into a dedicated `ROT_AND_CVL` component. The second
         option allows for more precise results when modeling, as the modeling
         methods from https://eprint.iacr.org/2015/145.pdf are used instead of
@@ -228,8 +241,8 @@ class SIMON_CVL:
         n = int(block_size // 2)
         if R is None:
             R = dictionary[(block_size, key_size)]
-        if rks == []:
-            rks = [0 for _ in range(R+1)]
+        if not rks:
+            rks = [0 for _ in range(R + 1)]
 
         # SIMON is an AndRX cipher, since its non-linear component
         # is logical AND.
@@ -249,41 +262,27 @@ class SIMON_CVL:
         # Implementation of SIMON round
         # ------------------------------------------------ #
         if not use_rotand:  # insert RotateLayer_CVL + AND_CVL components
-            node_rot1 = simon_round.add_subcipher(
-                rot1, [(simon_round.IN, (0, 0))]
-            )
-            node_rot8 = simon_round.add_subcipher(
-                rot8, [(simon_round.IN, (0, 0))]
-            )
+            node_rot1 = simon_round.add_subcipher(rot1, [(simon_round.IN, (0, 0))])
+            node_rot8 = simon_round.add_subcipher(rot8, [(simon_round.IN, (0, 0))])
             node_and = simon_round.add_subcipher(
                 and1, [(node_rot1, (0, 0)), (node_rot8, (0, 1))]
             )
             node_xor1 = simon_round.add_subcipher(
-                xor,  [(node_and, (0, 0)), (simon_round.IN, (1, 1))]
+                xor, [(node_and, (0, 0)), (simon_round.IN, (1, 1))]
             )
-        else:              # insert ROT_AND_CVL component
-            node_rot1 = simon_round.add_subcipher(
-                rot1, [(simon_round.IN, (0, 0))]
-            )
-            node_rot_and = simon_round.add_subcipher(
-                ra1,  [(node_rot1, (0, 0))]
-            )
+        else:  # insert ROT_AND_CVL component
+            node_rot1 = simon_round.add_subcipher(rot1, [(simon_round.IN, (0, 0))])
+            node_rot_and = simon_round.add_subcipher(ra1, [(node_rot1, (0, 0))])
             node_xor1 = simon_round.add_subcipher(
-                xor,  [(node_rot_and, (0, 0)), (simon_round.IN, (1, 1))]
+                xor, [(node_rot_and, (0, 0)), (simon_round.IN, (1, 1))]
             )
 
-        node_rot2 = simon_round.add_subcipher(
-            rot2, [(simon_round.IN, (0, 0))]
-        )
+        node_rot2 = simon_round.add_subcipher(rot2, [(simon_round.IN, (0, 0))])
         node_xor2 = simon_round.add_subcipher(
-            xor,  [(node_xor1, (0, 0)), (node_rot2, (0, 1))]
+            xor, [(node_xor1, (0, 0)), (node_rot2, (0, 1))]
         )
-        node_keyxor = simon_round.add_subcipher(
-            key_add, [(node_xor2, (0, 0))]
-        )
-        simon_round.add_output(
-            [(node_keyxor, (0, 0)), (simon_round.IN, (0, 1))]
-        )
+        node_keyxor = simon_round.add_subcipher(key_add, [(node_xor2, (0, 0))])
+        simon_round.add_output([(node_keyxor, (0, 0)), (simon_round.IN, (0, 1))])
         # ------------------------------------------------ #
 
         # Adding SIMON rounds into the cipher
@@ -303,6 +302,6 @@ class SIMON_CVL:
         self.simon_cipher = simon_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SIMON_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.simon_cipher

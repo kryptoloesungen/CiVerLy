@@ -34,31 +34,32 @@ EXAMPLES::
     '0x11119999'
 """
 
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.modules.vector_mod2_dense import Vector_mod2_dense
-from sage.matrix.constructor import Matrix as matrix
-from sage.modules.free_module_element import vector
-from sage.sat.solvers.dimacs import DIMACS
-
+import json
+import subprocess
+import time
 from collections.abc import Iterable
+from copy import deepcopy
 from dataclasses import replace
 from math import ceil, sqrt
-from copy import deepcopy
-import subprocess
-import json
-import glob
-import time
+from pathlib import Path
 
-from civerly.util import translate_sat_clause
-from civerly.util import suppress_output
-from civerly.model_options import InvalidModelOptionException
-from civerly.model_options import OPTIMIZATION, GRANULARITY
-from civerly.model_options import CRYPTANALYSIS
+from sage.modules.free_module_element import vector
+from sage.modules.vector_mod2_dense import Vector_mod2_dense
+from sage.rings.finite_rings.finite_field_constructor import GF
+from sage.sat.solvers.dimacs import DIMACS
+
 from civerly.component import Component
+from civerly.model_options import (
+    CRYPTANALYSIS,
+    GRANULARITY,
+    OPTIMIZATION,
+    InvalidModelOptionError,
+)
 from civerly.trail import TrailNode
+from civerly.util import suppress_output, translate_sat_clause
 
 
-class CipherNotValidException(Exception):
+class CipherNotValidError(Exception):
     def __init__(self):
         r"""
         Exception which is thrown whenever the cipher is not finished, i.e.
@@ -110,9 +111,7 @@ class Cipher:
             self.in_node = in_node
 
         def __hash__(self):
-            return hash((
-                self.in_node, self.input_length, self.output_length
-            ))
+            return hash((self.in_node, self.input_length, self.output_length))
 
         def __eq__(self, other):
             return hash(self) == hash(other)
@@ -247,9 +246,7 @@ class Cipher:
             """
             Component._init_model(self, model_options)
             if model_options.granularity == GRANULARITY.WORDWISE:
-                for i in range(
-                    self.input_length // self._cipher_wordsize
-                ):
+                for i in range(self.input_length // self._cipher_wordsize):
                     self.milp.add_constraint(
                         self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
                     )
@@ -259,9 +256,7 @@ class Cipher:
                         self.milp.VAR_OUT[i] == self.milp.VAR_IN[i]
                     )
             else:
-                raise InvalidModelOptionException(
-                    model_options.granularity, GRANULARITY
-                )
+                raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
             return self.milp
 
         def _model_sat(self, model_options):
@@ -294,9 +289,7 @@ class Cipher:
                     self.sat.add_clause((self.SAT_OUT[i], -self.SAT_IN[i]))
                 return self.sat
             else:
-                raise InvalidModelOptionException(
-                    model_options.granularity, GRANULARITY
-                )
+                raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
         def _copy_over_dictionaries_recursively(self, prev, model_options):
             return
@@ -304,7 +297,7 @@ class Cipher:
         def _to_dict(self):
             return {"type": "__Special_Node"}
 
-        def _to_tikz(self, _comps=[]):
+        def _to_tikz(self, _comps=None):
             return ""
 
     # --------- static variables
@@ -403,38 +396,37 @@ class Cipher:
         # self._wrd is used for generate_report, to determine the displayed
         # wordsize. Any subclass of WordBasedCipher will overwrite this value
         # with `self.wordsize`
-        self._wrd = getattr(self, '_wrd', 4)
-        
+        self._wrd = getattr(self, "_wrd", 4)
+
         self.__is_valid = False
         self.__IN = Cipher.__Special_Node(self, in_node=True)
         self.__OUT = Cipher.__Special_Node(self, in_node=False)
         self.__nodes = [self.IN]  # list of subciphers in this cipher
         self.__edges = []
-        self.__outputs = [Cipher.NOT_SET]*self.__output_length
+        self.__outputs = [Cipher.NOT_SET] * self.__output_length
 
         # self.results stores all trails found by analyse() when
         # number_of_solutions > 1. Each entry is a dict
         # {"in": [...], "out": [...], "weight": <value>}.
         self.results = []
 
-
         # self.trail_nodes stores the TrailNode objects built during
         # analyse() for number_of_solutions > 1, one per solution.
         # Used by generate_report() and get_trail() to avoid re-reading
         # solution files.
         self.trail_nodes = []
-        
+
         self.key_schedule = key_schedule
 
         self.milp = None
-        self.sat  = None
+        self.sat = None
 
         # attributes to keep timing information (in seconds)
         self._analyse_time = None
-        self._model_time   = None
-        self._solve_time   = None
+        self._model_time = None
+        self._solve_time = None
 
-        self.grid_in  = None
+        self.grid_in = None
         self.grid_out = None
 
     # Get-functions of various attributes:
@@ -615,7 +607,7 @@ class Cipher:
             ....:   0x09cc2a7e2222eeee
             True
         """
-        if not hasattr(self, '_rk_components'):
+        if not hasattr(self, "_rk_components"):
             raise AttributeError(
                 f"{self.name} has no _rk_components attribute. "
                 f"Set self._rk_components to the list of RK_CVL components "
@@ -627,7 +619,11 @@ class Cipher:
                 f"Omit set_round_keys() to use the default zero-key behavior."
             )
         rks = self.key_schedule(k)
-        for comp, val in zip(self._rk_components, rks):
+        # key_schedule may yield more round keys than this (possibly
+        # reduced-round) cipher has _rk_components for; only the leading
+        # ones are consumed. strict=False makes that intentional
+        # truncation explicit (silences ruff's B905).
+        for comp, val in zip(self._rk_components, rks, strict=False):
             comp.const = val
 
     @property
@@ -694,9 +690,7 @@ class Cipher:
         """
         # If self.OUT is in self.nodes and we "invalidate" the cipher again
         if len(edges) != sub_cipher.input_length:
-            raise IndexError(
-                f"{len(edges) = } != {sub_cipher.input_length = }" # noqa
-            )
+            raise IndexError(f"{len(edges) = } != {sub_cipher.input_length = }")
 
         if sub_cipher != self.OUT:
             if self.is_valid:
@@ -731,7 +725,7 @@ class Cipher:
         (a, b), (x, y) = edge
 
         for existing_edge in self.edges:
-            (aa, bb), (xx, yy) = existing_edge
+            (_aa, bb), (_xx, yy) = existing_edge
             assert (bb, yy) != (b, y), (
                 "Another edge already goes into that index of the node: "
                 f"{(bb, yy)} == {(b, y)}"
@@ -769,7 +763,7 @@ class Cipher:
         INPUT:
 
             - ``plaintext`` -- binary vector; The input to be evaluated. Must
-              have the appropiate dimension (``input_length``) in order to
+              have the appropriate dimension (``input_length``) in order to
               succeed.
 
         OUTPUT:
@@ -805,7 +799,7 @@ class Cipher:
             sage: vec_to_int(cipher(int_to_vec(0x52, 9)))
             Traceback (most recent call last):
             ...
-            civerly.cipher.CipherNotValidException:
+            civerly.cipher.CipherNotValidError:
             The cipher is not finished yet, as not all outputs are connected.
             Use '.add_output()' to be able to call.
 
@@ -821,7 +815,7 @@ class Cipher:
         if not isinstance(plaintext, (Iterable, Vector_mod2_dense)):
             raise TypeError("Wrong type, input must be Vector_mod2_dense")
         if self.is_valid is False:
-            raise CipherNotValidException()
+            raise CipherNotValidError()
         assert len(plaintext) == self.input_length, (
             f"(len(plaintext)) {len(plaintext)} "
             f"!= {self.input_length} (self.input_length)"
@@ -906,7 +900,7 @@ class Cipher:
             Not calling this function correctly (or at all) leads to an error
             upon evaluation.
         """
-        for (a, (x, y)) in edges:
+        for a, (x, y) in edges:
             e = f"{y} must be < {self.output_length}"
             assert y < self.output_length, e
             if a != self.IN:
@@ -915,10 +909,7 @@ class Cipher:
                     f"{a} < {len(self.__nodes)}"
                 )
                 assert a < len(self.nodes), e
-                e = (
-                    "Invalid index. "
-                    "You probably use a wrong node-variable to connect."
-                )
+                e = "Invalid index. You probably use a wrong node-variable to connect."
                 assert x < self.nodes[a].output_length, e
                 self.__outputs[y] = (a, x)
             else:
@@ -930,7 +921,6 @@ class Cipher:
             # behaviour from cipher subclasses)
             edges = [(a, (x, y)) for y, (a, x) in enumerate(self.outputs)]
             Cipher.add_subcipher(self, self.OUT, edges)
-
 
     def __eq__(self, other) -> bool:
         r"""
@@ -969,18 +959,18 @@ class Cipher:
         initialization process is different.
         """
 
-        set_outputs = set([ax for ax in self.outputs if ax != Cipher.NOT_SET])
+        set_outputs = {ax for ax in self.outputs if ax != Cipher.NOT_SET}
         arr = {
-                (hash(a), hash(b)): tuple(sorted([
-                    xy for (ab, xy) in self.edges if ab == (a, b)
-                ]))
-                for (a, b) in set(_ab for _ab, _ in self.edges)
-            } | {
-                (hash(self.nodes[a]), hash(self.OUT)): tuple(sorted([
-                    (x, y) for y, (_a, x) in enumerate(set_outputs) if _a == a
-                ]))
-                for a, _ in set_outputs
-            }
+            (hash(a), hash(b)): tuple(
+                sorted([xy for (ab, xy) in self.edges if ab == (a, b)])
+            )
+            for (a, b) in {_ab for _ab, _ in self.edges}
+        } | {
+            (hash(self.nodes[a]), hash(self.OUT)): tuple(
+                sorted([(x, y) for y, (_a, x) in enumerate(set_outputs) if _a == a])
+            )
+            for a, _ in set_outputs
+        }
         return hash(tuple(arr.items()))
 
     def __repr__(self):
@@ -989,10 +979,10 @@ class Cipher:
         """
         r = f"{self.name}: {self.input_length} -> {self.output_length} bits"
         if len(self.nodes) > 0:
-            r += ("\n    Sub ciphers:")
+            r += "\n    Sub ciphers:"
         for i, v in enumerate(self.nodes):
             if not isinstance(v, Cipher.__Special_Node):
-                name = v.name if v.name is not None else 'Unnamed cipher'
+                name = v.name if v.name is not None else "Unnamed cipher"
                 l_in = v.input_length
                 l_out = v.output_length
                 r += f"\n    {i}: {name}: {l_in} -> {l_out} bits"
@@ -1029,8 +1019,8 @@ class Cipher:
         STRING += "\t\t\\resizebox{!}{0.8\\textheight}{#1}%\n"
         STRING += "\t\\fi\n"
         STRING += "}\n"
-        name = self.name.replace('_', '\\_')
-        STRING += "\\title{Graph of \\texttt{"+name+"}}\n"
+        name = self.name.replace("_", "\\_")
+        STRING += "\\title{Graph of \\texttt{" + name + "}}\n"
         STRING += "\\author{ }\n"
         STRING += "\\institute{\\texttt{cryptosolutions}}\n"
         STRING += "\\begin{document}\n"
@@ -1042,7 +1032,7 @@ class Cipher:
         STRING += "\\end{document}\n"
         return STRING
 
-    def _to_tikz(self, _comps=[]):
+    def _to_tikz(self, _comps=None):
         r"""
         Convert the graph of ``self`` to tikz code.
 
@@ -1088,36 +1078,38 @@ class Cipher:
             <BLANKLINE>
             <BLANKLINE>
         """
+        if _comps is None:
+            _comps = []
         depths = self._dfs_traversal()
 
         STRING = ""
-        name = self.name.replace('_', '\\_')
-        STRING += "\\section{Graph of \\texttt{"+name+"} }\n"
+        name = self.name.replace("_", "\\_")
+        STRING += "\\section{Graph of \\texttt{" + name + "} }\n"
         STRING += "\\begin{center}\n"
         STRING += "\\specialresizebox{\n"
         STRING += "\\begin{tikzpicture}\n"
 
         maximal_count = max([depths.count(i) for i in depths])
 
-        ctr = {dd: 0 for dd in set(depths)}
+        ctr = dict.fromkeys(set(depths), 0)
         # Draw each node
         for i in range(len(self.nodes)):
             if i == 0:
-                STRING += f"\t\\node[circle,draw] at ({maximal_count//2}, 0) "
+                STRING += f"\t\\node[circle,draw] at ({maximal_count // 2}, 0) "
                 STRING += f"(node{i}) {{ \\tiny \\texttt{{in}} }};\n"
             else:
                 STRING += "\t\\node[circle,draw] at "
-                STRING += f"({2*ctr[depths[i]]}, {-2*depths[i]}) (node{i}) "
-                name = self.nodes[i].name.replace('_', '\\_')
+                STRING += f"({2 * ctr[depths[i]]}, {-2 * depths[i]}) (node{i}) "
+                name = self.nodes[i].name.replace("_", "\\_")
                 STRING += f"{{ \\tiny \\texttt{{ {name} }} }};\n"
             ctr[depths[i]] += 1
         STRING += "\t\\node[circle,draw] at "
-        STRING += f"({maximal_count//2}, {-2*depths[i] - 2}) (out) "
+        STRING += f"({maximal_count // 2}, {-2 * depths[i] - 2}) (out) "
         STRING += "{ \\tiny \\texttt{out} };\n"
 
         without_index_list = [ab for ab, xy in self.edges]
         # draw the edges on a component wise level
-        for (a, b) in set(without_index_list):
+        for a, b in set(without_index_list):
             if type(a) is int:
                 STRING += f"\t\\draw[-latex] (node{a}) -- (node{b}) "
                 k = without_index_list.count((a, b))
@@ -1145,11 +1137,10 @@ class Cipher:
 
         # recursively iterate through the subciphers
         for i, subcipher in enumerate(self.nodes):
-            if i > 0:
-                # To avoid redundancy of displaying the components
-                if subcipher not in _comps:
-                    STRING += subcipher._to_tikz(_comps=_comps)
-                    _comps.append(subcipher)
+            # To avoid redundancy of displaying the components
+            if i > 0 and subcipher not in _comps:
+                STRING += subcipher._to_tikz(_comps=_comps)
+                _comps.append(subcipher)
 
         return STRING
 
@@ -1162,14 +1153,13 @@ class Cipher:
             if visited[node]:
                 # If this node has been visited before,
                 order.remove(node)
-            order.append(node)            # move it to the end of our DFS-order
+            order.append(node)  # move it to the end of our DFS-order
             depths[node] = current_depth  # and overwrite its depth
-            visited[node] = True          # as well as its visited status
+            visited[node] = True  # as well as its visited status
             for b in [b for (a, b), _ in self.edges if node == a]:
                 # if not visited[b]: # reiterate over already visited nodes to
                 # get the maximum depth
-                self._dfs_traversal_help(
-                    b, visited, order, depths, current_depth + 1)
+                self._dfs_traversal_help(b, visited, order, depths, current_depth + 1)
 
     def _dfs_traversal(self):
         """
@@ -1209,17 +1199,18 @@ class Cipher:
             [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 3]
         """
         if not self.is_valid:
-            raise CipherNotValidException()
+            raise CipherNotValidError()
         visited = [False for _ in range(len(self.nodes))]
         dfs_order = []
         depths = [-1 for _ in range(len(self.nodes))]
 
-        self._dfs_traversal_help(self.nodes.index(self.IN), visited, dfs_order,
-                                 depths, 0)
+        self._dfs_traversal_help(
+            self.nodes.index(self.IN), visited, dfs_order, depths, 0
+        )
 
         # handle components like ``C_CVL`` that are unreachable using
         # conventional DFS-search
-        for (a, b), (x, y) in self.edges:
+        for (a, b), (_x, _y) in self.edges:
             if not visited[a] and visited[b]:
                 depths[a] = depths[b] - 1
                 visited[a] = True
@@ -1260,9 +1251,7 @@ class Cipher:
             self._model_time = time.perf_counter() - start_time
             return self._model
         else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-                )
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _model_milp(self, model_options, _first_iter=False):
         e = f"MILP modeling is not supported for {type(self)}!"
@@ -1291,9 +1280,9 @@ class Cipher:
         """
         assert isinstance(_first_iter, bool)
         if model_options.granularity == GRANULARITY.WORDWISE:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
-                message="Wordwise modeling is not supported for SAT!"
+                message="Wordwise modeling is not supported for SAT!",
             )
 
         # create the directory models are written to
@@ -1305,9 +1294,7 @@ class Cipher:
         model_options, model_options_ = model_options_, model_options
 
         # ------------------------------------------------------------------------
-        cnf_file_name = (
-            model_options.path / (f"{self.name.replace(' ', '_')}.cnf")
-        )
+        cnf_file_name = model_options.path / (f"{self.name.replace(' ', '_')}.cnf")
         if model_options.path is not None:
             master_sat = DIMACS(filename=cnf_file_name)
         else:
@@ -1339,7 +1326,7 @@ class Cipher:
                         master_sat.var(): val
                         for _, val in sorted(
                             self.dictionaries_sat[i_prev].items(),
-                            key=lambda _tup: _tup[0]
+                            key=lambda _tup: _tup[0],
                         )
                     }
                     self.inv_dictionaries_sat[i_comp] = {
@@ -1347,9 +1334,7 @@ class Cipher:
                     }
 
                     # recursively copy component dictionaries
-                    comp._copy_over_dictionaries_recursively(
-                        prev, model_options
-                    )
+                    comp._copy_over_dictionaries_recursively(prev, model_options)
                     # copy the objective variables
                     self.sum_arr_sat += [
                         (factor, self.inv_dictionaries_sat[i_comp][entry])
@@ -1361,14 +1346,11 @@ class Cipher:
                         clause = []
                         for variable in asg[0]:
                             assert variable != 0, (
-                                "During translation, a variable appears to"
-                                "have value 0!"
+                                "During translation, a variable appears tohave value 0!"
                             )
                             clause.append(
-                                (-1)**(variable < 0) *
-                                self.inv_dictionaries_sat[i_comp][
-                                    abs(variable)
-                                ]
+                                (-1) ** (variable < 0)
+                                * self.inv_dictionaries_sat[i_comp][abs(variable)]
                             )
                         master_sat.add_clause(tuple(clause))
                     break
@@ -1380,7 +1362,7 @@ class Cipher:
                 ##############################################################
                 # parse the component SAT and adopt it into the master sat   #
                 ##############################################################
-                for variable in range(1, comp_sat.nvars()+1):
+                for variable in range(1, comp_sat.nvars() + 1):
                     new_index = master_sat.var()
                     self.dictionaries_sat[i_comp][new_index] = variable
                 self.inv_dictionaries_sat[i_comp] = {
@@ -1392,14 +1374,11 @@ class Cipher:
                     clause = []
                     for variable in asg[0]:
                         assert variable != 0, (
-                            "During translation, a variable appears to"
-                            "have value 0!"
+                            "During translation, a variable appears tohave value 0!"
                         )
                         clause.append(
-                            (-1)**(variable < 0) *
-                            self.inv_dictionaries_sat[i_comp][
-                                abs(variable)
-                            ]
+                            (-1) ** (variable < 0)
+                            * self.inv_dictionaries_sat[i_comp][abs(variable)]
                         )
                     master_sat.add_clause(tuple(clause))
 
@@ -1414,45 +1393,46 @@ class Cipher:
         for i_comp, comp in enumerate(self.nodes):
             if comp == self.IN:
                 for x in range(comp.input_length):
-                    master_sat.add_clause((
-                        self.SAT_IN[x],
-                        -self.inv_dictionaries_sat[i_comp][x+1]
-                    ))
-                    master_sat.add_clause((
-                        -self.SAT_IN[x],
-                        self.inv_dictionaries_sat[i_comp][x+1]
-                    ))
+                    master_sat.add_clause(
+                        (self.SAT_IN[x], -self.inv_dictionaries_sat[i_comp][x + 1])
+                    )
+                    master_sat.add_clause(
+                        (-self.SAT_IN[x], self.inv_dictionaries_sat[i_comp][x + 1])
+                    )
             elif comp == self.OUT:
                 for x in range(comp.output_length):
-                    master_sat.add_clause((
-                        self.inv_dictionaries_sat[i_comp][
-                            x + 1 + comp.input_length],
-                        -self.SAT_OUT[x]
-                    ))
-                    master_sat.add_clause((
-                        -self.inv_dictionaries_sat[i_comp][
-                            x + 1 + comp.input_length],
-                        self.SAT_OUT[x]
-                    ))
+                    master_sat.add_clause(
+                        (
+                            self.inv_dictionaries_sat[i_comp][
+                                x + 1 + comp.input_length
+                            ],
+                            -self.SAT_OUT[x],
+                        )
+                    )
+                    master_sat.add_clause(
+                        (
+                            -self.inv_dictionaries_sat[i_comp][
+                                x + 1 + comp.input_length
+                            ],
+                            self.SAT_OUT[x],
+                        )
+                    )
 
         # -------------- Find comp.IN/OUT and connect these -------------- #
         # dictionary of branches with key in_node and value [out_node0,
         # out_node1, ...]
-        branches = dict()
+        branches = {}
         # take the edges in the graph to combine the SATs
         for (a, b), (x, y) in self.edges:
-            bINy = self.inv_dictionaries_sat[b][y+1]
-            aOUTx = self.inv_dictionaries_sat[a][
-                x + 1 + self.nodes[a].input_length]
+            bINy = self.inv_dictionaries_sat[b][y + 1]
+            aOUTx = self.inv_dictionaries_sat[a][x + 1 + self.nodes[a].input_length]
             if aOUTx not in branches:
                 branches[aOUTx] = []
             branches[aOUTx].append(bINy)
 
         # Implement branching
         for in_node, out_nodes in branches.items():
-            assert len(out_nodes) > 0, (
-                f"Component {in_node} needs to have an output!"
-            )
+            assert len(out_nodes) > 0, f"Component {in_node} needs to have an output!"
 
             if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
                 # All output branches receive the difference of the input
@@ -1462,22 +1442,24 @@ class Cipher:
                     master_sat.add_clause((in_node, -out_node))
 
             elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
-                from civerly.component import LinearLayer_CVL
-                from civerly.model_options import MODEL_OPTIONS
-                from civerly.model_options import LINEAR_LAYER_MODELING
                 from sage.matrix.constructor import Matrix as matrix
 
+                from civerly.component import LinearLayer_CVL
+                from civerly.model_options import LINEAR_LAYER_MODELING, MODEL_OPTIONS
+
                 # Linear model of n-branching == Differential model of n-XOR
-                mat = matrix([1]*len(out_nodes))
+                mat = matrix([1] * len(out_nodes))
 
                 branching = LinearLayer_CVL(mat)
-                branching_sat = branching._model_sat(MODEL_OPTIONS(
-                    cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-                    optimization=OPTIMIZATION.SAT,
-                    linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-                    granularity=GRANULARITY.BITWISE)
+                branching_sat = branching._model_sat(
+                    MODEL_OPTIONS(
+                        cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                        optimization=OPTIMIZATION.SAT,
+                        linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+                        granularity=GRANULARITY.BITWISE,
+                    )
                 )
-                branching_nodes = out_nodes + [in_node]
+                branching_nodes = [*out_nodes, in_node]
                 # copy over the clauses generated by ``LinearLayer_CVL``
                 for clause in branching_sat.clauses():
                     master_sat.add_clause(
@@ -1490,19 +1472,17 @@ class Cipher:
         for a in range(len(self.nodes)):
             for x in range(self.nodes[a].output_length):
                 if (a, x) not in edge_arr + self.outputs:
-                    if isinstance(self.nodes[a], Cipher.__Special_Node) \
-                            and not self.nodes[a].in_node:
+                    if (
+                        isinstance(self.nodes[a], Cipher.__Special_Node)
+                        and not self.nodes[a].in_node
+                    ):
                         pass  # skip OUT-nodes
                     else:
-                        master_sat.add_clause(
-                            (-self.inv_dictionaries_sat[a][x+1],)
-                        )
+                        master_sat.add_clause((-self.inv_dictionaries_sat[a][x + 1],))
 
         model_options, model_options_ = model_options_, model_options
 
-        return self._finish_sat(
-            model_options, master_sat, _first_iter=_first_iter
-        )
+        return self._finish_sat(model_options, master_sat, _first_iter=_first_iter)
 
     def _finish_sat(self, model_options, sat, _first_iter=False):
         r"""
@@ -1516,28 +1496,26 @@ class Cipher:
         assert isinstance(_first_iter, bool)
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
-
-        file_name = (model_options.path / self.name.replace(' ', '_'))
-        with open(f"{file_name}sum.json", 'w') as f:
+        file_name = model_options.path / self.name.replace(" ", "_")
+        with Path(f"{file_name}sum.json").open("w") as f:
             json.dump(self.sum_arr_sat, f)
             f.close()
 
         # Save the dictionary files as json
-        with open(model_options.path / (self.name + "_d.json"), 'w') as f:
+        with (model_options.path / (self.name + "_d.json")).open("w") as f:
             json.dump(self.dictionaries_sat, f)
             f.close()
 
-        with open(model_options.path / (self.name + "_id.json"), 'w') as f:
+        with (model_options.path / (self.name + "_id.json")).open("w") as f:
             json.dump(self.inv_dictionaries_sat, f)
             f.close()
-
 
         if _first_iter:
             # At least one variable that does not belong to PROB needs to be
             # active
             tup = tuple(
                 var
-                for var in range(1, sat.nvars()+1)
+                for var in range(1, sat.nvars() + 1)
                 if var not in [entry for _, entry in self.sum_arr_sat]
             )
             sat.add_clause(tup)
@@ -1547,7 +1525,7 @@ class Cipher:
             print(
                 f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
                 "were written to "
-                f"'{str(model_options.path / (self.name + '.cnf'))}'"
+                f"'{model_options.path / (self.name + '.cnf')!s}'"
             )
 
         self.sat = sat
@@ -1622,7 +1600,7 @@ class Cipher:
             sage: from civerly.solvers import *
             sage: cipher.results[0]['status'] == SOLVING_STATUS.TIMEOUT
             True
-        
+
         """
         start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
@@ -1633,12 +1611,8 @@ class Cipher:
             if self.milp is None:
                 self.model(model_options)
             else:
-                print(
-                    "Using existing MILP model, make sure it is up to date!"
-                )
-                self._finish_milp(
-                    model_options, self.milp
-                )
+                print("Using existing MILP model, make sure it is up to date!")
+                self._finish_milp(model_options, self.milp)
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
                 # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
@@ -1646,7 +1620,8 @@ class Cipher:
                 # are considered the same when they agree on the trail.
                 b = self.milp.backend
                 trail_vars = {
-                    b.col_name(i) for i in range(b.ncols())
+                    b.col_name(i)
+                    for i in range(b.ncols())
                     if b.col_name(i).startswith("X")
                 }
                 all_results = model_options.milp_solver.solve_multiple(
@@ -1663,7 +1638,8 @@ class Cipher:
                     if r["objective_value"] is None:
                         continue
                     TrailNode(
-                        self, model_options,
+                        self,
+                        model_options,
                         (r["assignment"], r["objective_value"]),
                     )
                     weights.append(r["objective_value"])
@@ -1677,7 +1653,8 @@ class Cipher:
                 self.results.append(result)
                 self._solve_time = result["solve_time"]
                 results_and_weight = (
-                    result["assignment"], result["objective_value"]
+                    result["assignment"],
+                    result["objective_value"],
                 )
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
@@ -1686,26 +1663,20 @@ class Cipher:
             if self.sat is None:
                 self.model(model_options)
             else:
-                print(
-                    "Using existing SAT model, make sure it is up to date!"
-                )
-                self._finish_sat(
-                    model_options, self.sat
-                )
+                print("Using existing SAT model, make sure it is up to date!")
+                self._finish_sat(model_options, self.sat)
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
             if model_options.number_of_solutions > 1:
-                start_time = time.perf_counter()
                 # Trail vars: the sum_arr variables (which encode the weight)
                 # plus the input variables. Helper/auxiliary clauses (e.g.
                 # the sum-counter aux vars) are excluded so that two
                 # solutions are considered the same when they agree on the
                 # trail.
-                with open(sum_arr_file, 'r') as f:
+                with sum_arr_file.open() as f:
                     sum_arr = json.load(f)
-                trail_vars = (
-                    {int(var) for _, var in sum_arr}
-                    | set(range(1, self.input_length + 1))
+                trail_vars = {int(var) for _, var in sum_arr} | set(
+                    range(1, self.input_length + 1)
                 )
                 all_results = model_options.sat_solver.solve_multiple(
                     input_file=input_file,
@@ -1723,7 +1694,8 @@ class Cipher:
                     if r["objective_value"] is None:
                         continue
                     TrailNode(
-                        self, model_options,
+                        self,
+                        model_options,
                         (r["assignment"], r["objective_value"]),
                     )
                     weights.append(r["objective_value"])
@@ -1742,15 +1714,14 @@ class Cipher:
                 self.results.append(result)
                 self._solve_time = result["solve_time"]
                 results_and_weight = (
-                    result["assignment"], result["objective_value"]
+                    result["assignment"],
+                    result["objective_value"],
                 )
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return result["objective_value"]
         else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-            )
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _construct_grid(self, divide_by, input_side=True):
         r"""
@@ -1776,14 +1747,14 @@ class Cipher:
             return self.grid_in
         elif self.grid_out:
             return self.grid_out
-        
+
         depths = self._dfs_traversal()
 
         # initialize grid
         grid_in = []
         grid_out = []
 
-        for depth in range(max(depths)+1):
+        for depth in range(max(depths) + 1):
             width_in = sum(
                 self.nodes[w].input_length // divide_by
                 for w in range(len(self.nodes))
@@ -1803,11 +1774,11 @@ class Cipher:
             grid_out[0][i] = (self.nodes.index(self.IN), i)
 
         offset_in = [self.IN.input_length] + [0 for _ in range(max(depths))]
-        offset_out = [0 for _ in range(max(depths)+1)]
+        offset_out = [0 for _ in range(max(depths) + 1)]
         visited = [True] + [False for _ in range(1, len(self.nodes))]
 
         # fill the grid
-        for depth in range(max(depths)+1):
+        for depth in range(max(depths) + 1):
             # grid_out -> grid_in, following along the edges
             # ----------------------------------------
 
@@ -1818,9 +1789,10 @@ class Cipher:
                     for (a, b), (x, y) in self.edges
                     if depths[b] == depth
                 ],
-                key=lambda _inp: _inp[0][1])
+                key=lambda _inp: _inp[0][1],
+            )
 
-            for ctr, ((a, b), (x, y)) in enumerate(sorted_edges_depth):
+            for ctr, ((_a, b), (_x, y)) in enumerate(sorted_edges_depth):
                 # if we find a new component (i.e. we finished the previous one
                 # because we sorted the edges)
                 if b not in [e[0][1] for e in sorted_edges_depth[:ctr]]:
@@ -1834,11 +1806,9 @@ class Cipher:
 
             # grid_in -> grid_out, preserving order in the current layer
             # ----------------------------------------------------------
-            for ctr, (b, y) in enumerate(grid_in[depth]):
+            for ctr, (b, _y) in enumerate(grid_in[depth]):
                 if b not in [b for (b, _) in grid_in[depth][:ctr]]:
-                    for b_bit in range(
-                        self.nodes[b].output_length // divide_by
-                    ):
+                    for b_bit in range(self.nodes[b].output_length // divide_by):
                         grid_out[depth][offset_out[depth]] = (b, b_bit)
                         offset_out[depth] += 1
 
@@ -1858,7 +1828,7 @@ class Cipher:
             offset_out[depth] += self.nodes[node].output_length
 
         # store so we don't recompute from scratch it every time
-        self.grid_in  = grid_in
+        self.grid_in = grid_in
         self.grid_out = grid_out
 
         if input_side:
@@ -1949,9 +1919,7 @@ class Cipher:
             )
             return (assignment, objective_value)
         else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-            )
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def generate_report(self, model_options):
         """
@@ -1984,7 +1952,7 @@ class Cipher:
             # 3. Verify correctness
             root_node.verify_correctness()
             # 4. Generate LaTeX string
-            string  = self._latex_header(model_options, results_and_weight[1])
+            string = self._latex_header(model_options, results_and_weight[1])
             string += root_node.to_latex(model_options)
             string += "\\end{document}\n"
             # 5. Write to .tex file and compile to pdf
@@ -1997,17 +1965,18 @@ class Cipher:
                     "analyse() to have been called first with the same "
                     "model_options."
                 )
-            for i, (tn, sol) in enumerate(zip(self.trail_nodes, self.results)):
+            for i, (tn, sol) in enumerate(
+                zip(self.trail_nodes, self.results, strict=True)
+            ):
                 # 3. Verify correctness
                 tn.verify_correctness()
                 # 4. Generate LaTeX string
-                string  = self._latex_header(model_options, sol["weight"])
+                string = self._latex_header(model_options, sol["weight"])
                 string += tn.to_latex(model_options)
                 string += "\\end{document}\n"
                 # 5. Write to .tex file and compile to pdf
                 self._write_and_compile_tex(
-                    string, model_options,
-                    _stem=f"{self.name}_sol{i}"
+                    string, model_options, _stem=f"{self.name}_sol{i}"
                 )
 
     def get_trail(self, model_options):
@@ -2027,7 +1996,8 @@ class Cipher:
 
         if model_options.number_of_solutions == 1:
             results_and_weight = (
-                self.results[0]["assignment"], self.results[0]["objective_value"]
+                self.results[0]["assignment"],
+                self.results[0]["objective_value"]
             )
             root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
@@ -2064,8 +2034,7 @@ class Cipher:
         ]
 
         output_dicts = [
-            list(entry) if entry is not None else None
-            for entry in self.outputs
+            list(entry) if entry is not None else None for entry in self.outputs
         ]
 
         return {
@@ -2092,7 +2061,9 @@ class Cipher:
 
         EXAMPLES:: TODO
         """
-        raise NotImplementedError
+        with Path(path).open("w") as f:
+            json.dump(self._to_dict(), f, default=lambda obj: int(obj))
+        print(f"Object '{self.name}' has been exported to {path}.")
 
     @classmethod
     def _init_from_dict(cls, d):
@@ -2109,17 +2080,27 @@ class Cipher:
         Restore nodes, edges, outputs and results onto an empty cipher shell
         using data from a dictionary produced by :meth:`_to_dict`.
         """
+        from civerly.addrx import AddRX
+        from civerly.aeslike import AESlike
+        from civerly.andrx import AndRX
         from civerly.component import (
-            I_CVL, C_CVL, RK_CVL, ConstXOR_CVL, RoundkeyXOR_CVL,
-            XOR_CVL, ModAdd_CVL, AND_CVL, LinearLayer_CVL,
-            PermuteLayer_CVL, RotateLayer_CVL, SBox_CVL, ROT_AND_CVL,
+            AND_CVL,
+            C_CVL,
+            I_CVL,
+            RK_CVL,
+            ROT_AND_CVL,
+            XOR_CVL,
+            ConstXOR_CVL,
+            LinearLayer_CVL,
+            ModAdd_CVL,
+            PermuteLayer_CVL,
+            RotateLayer_CVL,
+            RoundkeyXOR_CVL,
+            SBox_CVL,
         )
         from civerly.sboxcipher import SBoxCipher
         from civerly.wordbasedcipher import WordBasedCipher
         from civerly.wordsboxcipher import WordSBoxCipher
-        from civerly.aeslike import AESlike
-        from civerly.addrx import AddRX
-        from civerly.andrx import AndRX
 
         _TYPE_MAP = {
             "Cipher": Cipher,
@@ -2147,30 +2128,34 @@ class Cipher:
         def node_from_dict(nd):
             class_var = _TYPE_MAP[nd["type"]]
             if class_var is None:
-                raise ValueError(f"Unknown node type {nd["type"]!r} in JSON")
+                raise ValueError(f"Unknown node type {nd['type']!r} in JSON")
             return class_var._from_dict(nd)
 
         # Restore the IN node's result (index 0)
         cipher.nodes[0].results = d["nodes"][0]["results"]
-        w = 1 if type(cipher) == Cipher else cipher.wordsize
+        w = 1 if type(cipher) is Cipher else cipher.wordsize
 
         for node_idx, nd in enumerate(d["nodes"][1:], start=1):
             component = node_from_dict(nd)
-            incoming = list(set([
-                (a, (x//w, y//w))
-                for (a, b), (x, y) in d["edges"]
-                if b == node_idx
-            ]))
+            incoming = list(
+                {
+                    (a, (x // w, y // w))
+                    for (a, b), (x, y) in d["edges"]
+                    if b == node_idx
+                }
+            )
             cipher.add_subcipher(component, incoming)
             if not isinstance(component, Cipher):
                 cipher.nodes[node_idx].results = nd["results"]
 
-        output_edges = list(set([
-            (a, (x//w, y//w))
-            for y, entry in enumerate(d["outputs"])
-            if entry is not None
-            for a, x in [entry]
-        ]))
+        output_edges = list(
+            {
+                (a, (x // w, y // w))
+                for y, entry in enumerate(d["outputs"])
+                if entry is not None
+                for a, x in [entry]
+            }
+        )
         if output_edges:
             cipher.add_output(output_edges)
 
@@ -2198,7 +2183,7 @@ class Cipher:
 
         OUTPUT: A reconstructed :class:`Cipher` instance.
         """
-        with open(path) as f:
+        with Path(path).open() as f:
             d = json.load(f)
         return cls._from_dict(d)
 
@@ -2208,33 +2193,38 @@ class Cipher:
         """
         cryptanalysis_map = {
             CRYPTANALYSIS.DIFFERENTIAL: "differential",
-            CRYPTANALYSIS.LINEAR:       "linear",
+            CRYPTANALYSIS.LINEAR: "linear",
         }
         granularity_map = {
             GRANULARITY.WORDWISE: "Wordwise",
-            GRANULARITY.BITWISE:  "Bitwise",
+            GRANULARITY.BITWISE: "Bitwise",
         }
         opt_map = {
             OPTIMIZATION.MILP: "MILP",
-            OPTIMIZATION.SAT:  "SAT",
+            OPTIMIZATION.SAT: "SAT",
         }
         for val, enum in [
             (model_options.cryptanalysis, CRYPTANALYSIS),
-            (model_options.granularity,   GRANULARITY),
-            (model_options.optimization,  OPTIMIZATION),
+            (model_options.granularity, GRANULARITY),
+            (model_options.optimization, OPTIMIZATION),
         ]:
-            if val not in {CRYPTANALYSIS.DIFFERENTIAL, CRYPTANALYSIS.LINEAR,
-                           GRANULARITY.WORDWISE, GRANULARITY.BITWISE,
-                           OPTIMIZATION.MILP, OPTIMIZATION.SAT}:
-                raise InvalidModelOptionException(val, enum)
+            if val not in {
+                CRYPTANALYSIS.DIFFERENTIAL,
+                CRYPTANALYSIS.LINEAR,
+                GRANULARITY.WORDWISE,
+                GRANULARITY.BITWISE,
+                OPTIMIZATION.MILP,
+                OPTIMIZATION.SAT,
+            }:
+                raise InvalidModelOptionError(val, enum)
 
         cryptanalysis = cryptanalysis_map[model_options.cryptanalysis]
-        granularity   = granularity_map[model_options.granularity]
-        milp_or_sat   = opt_map[model_options.optimization]
-        name = self.name.replace('_', '\\_')
+        granularity = granularity_map[model_options.granularity]
+        milp_or_sat = opt_map[model_options.optimization]
+        name = self.name.replace("_", "\\_")
 
         # define \statematrix as empty command so sub-ciphers can renewcommand
-        STRING  = "\\documentclass{article}\n"
+        STRING = "\\documentclass{article}\n"
         STRING += "\\usepackage{amssymb}\n"
         STRING += "\\usepackage{tikz}\n\\usepackage[margin=2cm]{geometry}\n"
         STRING += "\\usetikzlibrary{arrows}\n"
@@ -2256,27 +2246,35 @@ class Cipher:
         tex_file_name = model_options.path / (stem + ".tex")
         pdf_file_name = model_options.path / (stem + ".pdf")
 
-        with open(tex_file_name, 'w') as f:
+        with tex_file_name.open("w") as f:
             f.write(string)
 
         with suppress_output():
-            process = subprocess.Popen([
-                "pdflatex",
-                f"-output-directory={str(model_options.path)}",
-                "-synctex=1",
-                "-interaction=nonstopmode",
-                "-file-line-error",
-                "-recorder",
-                tex_file_name])
+            process = subprocess.Popen(
+                [
+                    "pdflatex",
+                    f"-output-directory={model_options.path!s}",
+                    "-synctex=1",
+                    "-interaction=nonstopmode",
+                    "-file-line-error",
+                    "-recorder",
+                    tex_file_name,
+                ]
+            )
 
         if process.wait() != 0:
             raise ChildProcessError("Error when compiling .tex file.")
 
         with suppress_output():
-            prefix = str(model_options.path)
-            for pattern in ["/*.synctex.gz", "/*.fls", "/*.aux",
-                            "/*.log", "/*.fdb_latexmk"]:
-                for f in glob.glob(prefix + pattern):
+            # prefix = str(model_options.path)
+            for pattern in [
+                "*.synctex.gz",
+                "*.fls",
+                "*.aux",
+                "*.log",
+                "*.fdb_latexmk",
+            ]:
+                for f in model_options.path.glob(pattern):
                     subprocess.Popen(["rm", "-f", f]).wait()
 
         print(f"Output file in: {pdf_file_name}")
@@ -2289,18 +2287,19 @@ class Cipher:
         """
         from civerly.aeslike import AESlike
 
-        depths    = self._dfs_traversal()
-        divide_by = self.wordsize if model_options.granularity == GRANULARITY.WORDWISE else 1
+        depths = self._dfs_traversal()
+        divide_by = (
+            self.wordsize if model_options.granularity == GRANULARITY.WORDWISE else 1
+        )
 
         space_between_layers = 3
         space_between_in_out = 2
 
         # Local copies so nibble-padding below does not mutate the node
-        bits_in  = [row[:] for row in trail_node.bits_in]
+        bits_in = [row[:] for row in trail_node.bits_in]
         bits_out = [row[:] for row in trail_node.bits_out]
 
-
-        STRING  = f"\\newpage\n"
+        STRING = "\\newpage\n"
         STRING += f"\\section{{{self.name.replace('_', '\\_')}}}\n"
 
         w = trail_node.weight
@@ -2309,7 +2308,7 @@ class Cipher:
         elif model_options.granularity == GRANULARITY.BITWISE:
             obj_label = {
                 CRYPTANALYSIS.DIFFERENTIAL: "differential probability",
-                CRYPTANALYSIS.LINEAR:       "linear correlation",
+                CRYPTANALYSIS.LINEAR: "linear correlation",
             }[model_options.cryptanalysis]
             STRING += f"Maximal {obj_label}: $2^{{-{w}}}$\n\n"
 
@@ -2317,27 +2316,35 @@ class Cipher:
 
         if isinstance(self, AESlike):
             STRING += "\\renewcommand{\\statematrix}[2]{\n"
-            STRING += f"\t\\draw (#1, #2) rectangle (#1 + {self.cols}, #2 + {self.rows});\n"
+            STRING += (
+                f"\t\\draw (#1, #2) rectangle (#1 + {self.cols}, #2 + {self.rows});\n"
+            )
             for cl in range(self.cols):
-                STRING += f"\t\\draw (#1 + {cl}, #2) -- (#1 + {cl}, #2 + {self.rows});\n"
+                STRING += (
+                    f"\t\\draw (#1 + {cl}, #2) -- (#1 + {cl}, #2 + {self.rows});\n"
+                )
             for rw in range(self.rows):
-                STRING += f"\t\\draw (#1, #2 + {rw}) -- (#1 + {self.cols}, #2 + {rw});\n"
+                STRING += (
+                    f"\t\\draw (#1, #2 + {rw}) -- (#1 + {self.cols}, #2 + {rw});\n"
+                )
             STRING += "}\n"
 
-        scale = sqrt((-0.75 + self._wrd/4) * 4)
+        scale = sqrt((-0.75 + self._wrd / 4) * 4)
 
         STRING += "\\begin{center}\n"
         if isinstance(self, AESlike):
             STRING += "\t\\resizebox{0.7\\textwidth}{!}{\\begin{tikzpicture}\n"
         else:
-            if scale * self.input_length//self._wrd > space_between_layers * max(depths):
+            if scale * self.input_length // self._wrd > space_between_layers * max(
+                depths
+            ):
                 STRING += "\t\\resizebox{0.7\\textwidth}{!}{\\begin{tikzpicture}\n"
             else:
                 STRING += "\t\\resizebox{!}{0.8\\textheight}{\\begin{tikzpicture}\n"
 
         # Draw state arrays / component structure
         if isinstance(self, AESlike):
-            for layer in range(max(depths)+1):
+            for layer in range(max(depths) + 1):
                 x_pos = (layer % 4) * (self.cols + 2)
                 y_pos = -(layer // 4) * (self.rows + 1)
                 STRING += f"\t\t\\statematrix{{{x_pos}}}{{{y_pos}}}\n"
@@ -2347,19 +2354,27 @@ class Cipher:
                 STRING += "}{\\longrightarrow}$};\n"
         else:  # SBoxCipher
             for (a, b), (x, y) in self.edges:
-                xx = self._from_grid(a, x//divide_by, model_options=model_options, input_side=False)
-                yy = self._from_grid(b, y//divide_by, model_options=model_options, input_side=True)
+                xx = self._from_grid(
+                    a, x // divide_by, model_options=model_options, input_side=False
+                )
+                yy = self._from_grid(
+                    b, y // divide_by, model_options=model_options, input_side=True
+                )
 
                 top_a = -depths[a] * (space_between_layers + space_between_in_out)
-                bot_b = -(depths[b] * (space_between_layers + space_between_in_out) - space_between_in_out + 1)
+                bot_b = -(
+                    depths[b] * (space_between_layers + space_between_in_out)
+                    - space_between_in_out
+                    + 1
+                )
 
                 if b == self.nodes.index(self.OUT):
                     STRING += "\t\t\\draw[thin, dashed, ->] "
                 else:
                     STRING += "\t\t\\draw[thin, ->] "
-                STRING += f"({scale * divide_by * (0.5 + xx)/self._wrd}, "
+                STRING += f"({scale * divide_by * (0.5 + xx) / self._wrd}, "
                 STRING += f"{top_a - space_between_in_out}) -- "
-                STRING += f"({scale * divide_by * (0.5 + yy)/self._wrd}, "
+                STRING += f"({scale * divide_by * (0.5 + yy) / self._wrd}, "
                 STRING += f"{bot_b});\n"
 
             for a, na in enumerate(self.nodes):
@@ -2367,48 +2382,134 @@ class Cipher:
                     continue
 
                 top = -depths[a] * (space_between_layers + space_between_in_out)
-                bot = -depths[a] * (space_between_layers + space_between_in_out) - space_between_in_out + 1
+                bot = (
+                    -depths[a] * (space_between_layers + space_between_in_out)
+                    - space_between_in_out
+                    + 1
+                )
 
                 if na.input_length > 0:
-                    corner_a = (scale * divide_by * self._from_grid(a, 0, model_options=model_options, input_side=True)/self._wrd, top)
+                    corner_a = (
+                        scale
+                        * divide_by
+                        * self._from_grid(
+                            a, 0, model_options=model_options, input_side=True
+                        )
+                        / self._wrd,
+                        top,
+                    )
                 else:
-                    corner_a = (scale * divide_by * self._from_grid(a, na.output_length//(2*divide_by), model_options=model_options, input_side=False)/self._wrd, top)
+                    corner_a = (
+                        scale
+                        * divide_by
+                        * self._from_grid(
+                            a,
+                            na.output_length // (2 * divide_by),
+                            model_options=model_options,
+                            input_side=False,
+                        )
+                        / self._wrd,
+                        top,
+                    )
 
-                corner_b = (scale * divide_by * self._from_grid(a, 0, model_options=model_options, input_side=False)/self._wrd, bot)
-                corner_c = (scale * divide_by * (self._from_grid(a, (na.output_length-1)//divide_by, model_options=model_options, input_side=False) + 1)/self._wrd, bot)
+                corner_b = (
+                    scale
+                    * divide_by
+                    * self._from_grid(
+                        a, 0, model_options=model_options, input_side=False
+                    )
+                    / self._wrd,
+                    bot,
+                )
+                corner_c = (
+                    scale
+                    * divide_by
+                    * (
+                        self._from_grid(
+                            a,
+                            (na.output_length - 1) // divide_by,
+                            model_options=model_options,
+                            input_side=False,
+                        )
+                        + 1
+                    )
+                    / self._wrd,
+                    bot,
+                )
 
                 if na.input_length > 0:
-                    corner_d = (scale * divide_by * (self._from_grid(a, (na.input_length-1)//divide_by, model_options=model_options, input_side=True) + 1)/self._wrd, top)
+                    corner_d = (
+                        scale
+                        * divide_by
+                        * (
+                            self._from_grid(
+                                a,
+                                (na.input_length - 1) // divide_by,
+                                model_options=model_options,
+                                input_side=True,
+                            )
+                            + 1
+                        )
+                        / self._wrd,
+                        top,
+                    )
                 else:
-                    corner_d = (scale * divide_by * (self._from_grid(a, na.output_length//(2*divide_by), model_options=model_options, input_side=False) + 1)/self._wrd, top)
+                    corner_d = (
+                        scale
+                        * divide_by
+                        * (
+                            self._from_grid(
+                                a,
+                                na.output_length // (2 * divide_by),
+                                model_options=model_options,
+                                input_side=False,
+                            )
+                            + 1
+                        )
+                        / self._wrd,
+                        top,
+                    )
 
-                mid_point = tuple(sum(x)/4 for x in zip(*[corner_a, corner_b, corner_c, corner_d]))
+                mid_point = tuple(
+                    sum(x) / 4
+                    for x in zip(*[corner_a, corner_b, corner_c, corner_d], strict=True)
+                )
 
                 STRING += f"\t\t\\draw[very thick] {corner_a} -- {corner_b} -- {corner_c} -- {corner_d} -- {corner_a};\n"
                 STRING += f"\t\t\\node[] at {mid_point} {{\\tiny ${na.name.replace('_', '\\_')}$}};\n"
 
         # Convert raw bits to display arrays based on granularity
         if model_options.granularity == GRANULARITY.WORDWISE:
-            arr_in  = bits_in
+            arr_in = bits_in
             arr_out = bits_out
         elif model_options.granularity == GRANULARITY.BITWISE:
-            for i in range(max(depths)+1):  # pad to word boundary
-                bits_in[i]  += [0] * (-len(bits_in[i])  % self._wrd)
+            for i in range(max(depths) + 1):  # pad to word boundary
+                bits_in[i] += [0] * (-len(bits_in[i]) % self._wrd)
                 bits_out[i] += [0] * (-len(bits_out[i]) % self._wrd)
 
             # Group bits into words for display
-            nibbles_in  = [[None] * (len(bits_in[d])  // self._wrd) for d in range(max(depths)+1)]
-            nibbles_out = [[None] * (len(bits_out[d]) // self._wrd) for d in range(max(depths)+1)]
-            for d in range(max(depths)+1):
-                nibbles_in[d]  = [
-                    sum(bits_in[d][i:i+self._wrd][j]  << (self._wrd-1-j) for j in range(self._wrd))
-                    for i in range(0, len(bits_in[d]),  self._wrd)
+            nibbles_in = [
+                [None] * (len(bits_in[d]) // self._wrd) for d in range(max(depths) + 1)
+            ]
+            nibbles_out = [
+                [None] * (len(bits_out[d]) // self._wrd) for d in range(max(depths) + 1)
+            ]
+            for d in range(max(depths) + 1):
+                nibbles_in[d] = [
+                    sum(
+                        bits_in[d][i : i + self._wrd][j] << (self._wrd - 1 - j)
+                        for j in range(self._wrd)
+                    )
+                    for i in range(0, len(bits_in[d]), self._wrd)
                 ]
                 nibbles_out[d] = [
-                    sum(bits_out[d][i:i+self._wrd][j] << (self._wrd-1-j) for j in range(self._wrd))
+                    sum(
+                        bits_out[d][i : i + self._wrd][j] << (self._wrd - 1 - j)
+                        for j in range(self._wrd)
+                    )
                     for i in range(0, len(bits_out[d]), self._wrd)
                 ]
-            arr_in  = nibbles_in
+            arr_in = nibbles_in
             arr_out = nibbles_out
 
         # Fill in values
@@ -2421,19 +2522,17 @@ class Cipher:
 
             for i in range(len(arr_layer)):
                 if arr_layer[i] is not None:  # Only draw the filled-in bits
-
                     if isinstance(self, AESlike):
                         if model_options.granularity == GRANULARITY.BITWISE:
-                            tikz_entry = f"\\huge \\texttt{{ {arr_layer[i]:0{ceil(self._wrd/4)}x} }}"
+                            tikz_entry = f"\\huge \\texttt{{ {arr_layer[i]:0{ceil(self._wrd / 4)}x} }}"
                         elif model_options.granularity == GRANULARITY.WORDWISE:
-                            if arr_layer[i] in [1, '1']:
+                            if arr_layer[i] in [1, "1"]:
                                 tikz_entry = "$\\blacksquare$"
-                            elif arr_layer[i] in [0, '0']:
+                            elif arr_layer[i] in [0, "0"]:
                                 tikz_entry = "$\\square$"
                             else:
                                 raise AssertionError(
-                                    "Got a non-boolean value in the "
-                                    "solution file"
+                                    "Got a non-boolean value in the solution file"
                                 )
 
                         # only draw output of each layer
@@ -2447,26 +2546,29 @@ class Cipher:
                         if j == len(arr_out) - 1 and bool_finished_arrin:
                             continue  # skip self.OUT.out
 
-                        computed_draw_depth = j * (space_between_layers + space_between_in_out)
+                        computed_draw_depth = j * (
+                            space_between_layers + space_between_in_out
+                        )
                         if bool_finished_arrin:
                             computed_draw_depth += space_between_in_out
 
                         STRING += f"\t\t\\node[draw, minimum width={scale}cm, "
                         STRING += "minimum height=1cm] "
-                        STRING += f"at ({(i + 0.5) * scale}, {-computed_draw_depth + 0.5})"
+                        STRING += (
+                            f"at ({(i + 0.5) * scale}, {-computed_draw_depth + 0.5})"
+                        )
 
                         if model_options.granularity == GRANULARITY.BITWISE:
-                            STRING += f"{{\\huge \\texttt{{{f'{arr_layer[i]:0{ceil(self._wrd/4)}x}'}}}}};\n"
+                            STRING += f"{{\\huge \\texttt{{{f'{arr_layer[i]:0{ceil(self._wrd / 4)}x}'}}}}};\n"
 
                         elif model_options.granularity == GRANULARITY.WORDWISE:
-                            if arr_layer[i] in [1, '1']:
+                            if arr_layer[i] in [1, "1"]:
                                 tikz_entry = "$\\blacksquare$"
-                            elif arr_layer[i] in [0, '0']:
+                            elif arr_layer[i] in [0, "0"]:
                                 tikz_entry = "$\\square$"
                             else:
                                 raise AssertionError(
-                                    "Got a non-boolean value in the "
-                                    "solution file"
+                                    "Got a non-boolean value in the solution file"
                                 )
                             STRING += f"{{{tikz_entry}}};\n"
 
@@ -2483,7 +2585,7 @@ class Cipher:
         input_file = model_options.path / (self.name + ".cnf")
         sum_arr_file = model_options.path / (self.name + "sum.json")
 
-        with open(sum_arr_file, 'r') as f:
+        with sum_arr_file.open() as f:
             sum_arr = json.load(f)
 
         sum_vars = {int(var) for _, var in sum_arr}
@@ -2491,8 +2593,7 @@ class Cipher:
         blocking_var_list = sorted(sum_vars | input_vars)
 
         blocking_clause = tuple(
-            (-v if results.get(v, 0) == 1 else v)
-            for v in blocking_var_list
+            (-v if results.get(v, 0) == 1 else v) for v in blocking_var_list
         )
 
         sat = DIMACS()

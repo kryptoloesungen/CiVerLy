@@ -7,37 +7,46 @@ modular additions (``ModAdd_CVL``). Calling the ``Component`` performs the
 corresponding evaluation (e.g. calling ``SBox_CVL`` performs a table lookup of
 the SBox with which the component is initialized).
 """
-import os
+
 import json
-import zlib
 import time
-from math import log2, gcd, ceil
+import zlib
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from math import ceil, gcd, log2
 
+from sage.combinat.permutation import Permutation
 from sage.crypto.sbox import SBox
+from sage.geometry.polyhedron.constructor import Polyhedron
+from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import block_matrix, identity_matrix
 from sage.modules.free_module_element import vector
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
-from sage.rings.integer_ring import ZZ
 from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.combinat.permutation import Permutation
-from sage.matrix.constructor import Matrix as matrix
-from sage.structure.element import Matrix as matrix_type
-from sage.matrix.special import identity_matrix, block_matrix
+from sage.rings.integer_ring import ZZ
 from sage.sat.solvers.dimacs import DIMACS
-from sage.geometry.polyhedron.constructor import Polyhedron
+from sage.structure.element import Matrix as matrix_type
 
-from civerly.util import list_of_predecessor_vector_indices
-from civerly.util import hw, hw_tau, suppress_output
-from civerly.util import reduction_algorithm_ST17
-from civerly.util import vec_to_int, int_to_vec
-from civerly.util import translate_sat_clause
-from civerly.model_options import GRANULARITY, LINEAR_LAYER_MODELING
-from civerly.model_options import CRYPTANALYSIS, OPTIMIZATION
-from civerly.model_options import InvalidModelOptionException
-from civerly.model_options import SBOX_MODELING
 from civerly.distorted_balls import distorted_balls
 from civerly.milp import MILP_CVL
+from civerly.model_options import (
+    CRYPTANALYSIS,
+    GRANULARITY,
+    LINEAR_LAYER_MODELING,
+    OPTIMIZATION,
+    SBOX_MODELING,
+    InvalidModelOptionError,
+)
+from civerly.util import (
+    hw,
+    hw_tau,
+    int_to_vec,
+    list_of_predecessor_vector_indices,
+    reduction_algorithm_ST17,
+    suppress_output,
+    translate_sat_clause,
+    vec_to_int,
+)
 
 
 class Component(ABC):
@@ -138,7 +147,7 @@ class Component(ABC):
     def model(self, model_options, *args, **kwargs):
         r"""Model this component.
 
-        This method merely relays ``model_options`` to an appropiate
+        This method merely relays ``model_options`` to an appropriate
         subroutine.
         """
         start_time = time.perf_counter()
@@ -151,9 +160,7 @@ class Component(ABC):
             self._model_time = time.perf_counter() - start_time
             return model
         else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-                )
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _init_model(self, model_options):
         r"""Initialize empty MILP or SAT model for this component."""
@@ -163,26 +170,24 @@ class Component(ABC):
         elif model_options.optimization == OPTIMIZATION.SAT:
             self.sum_arr_sat = []
             if model_options.granularity == GRANULARITY.WORDWISE:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.granularity,
-                    message="Wordwise modeling is not supported using SAT"
+                    message="Wordwise modeling is not supported using SAT",
                 )
             if model_options.path is not None:
-                fn = model_options.path/f"{self.name.replace(' ', '_')}.cnf"
+                fn = model_options.path / f"{self.name.replace(' ', '_')}.cnf"
                 self.sat = DIMACS(filename=fn)
             else:
                 self.sat = DIMACS()
             self.SAT_IN = [self.sat.var() for _ in range(self.input_length)]
             self.SAT_OUT = [self.sat.var() for _ in range(self.output_length)]
         else:
-            raise InvalidModelOptionException(
-                model_options.optimization, OPTIMIZATION
-            )
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
     def _copy_over_dictionaries_recursively(self, prev, model_options):
         return
 
-    def _to_tikz(self, _comps=[]):
+    def _to_tikz(self, _comps=None):
         r"""Generate TikZ code for this component."""
         return ""
 
@@ -214,13 +219,10 @@ class Component(ABC):
         r"""Compute the hash of this component."""
         liste = []
         for key, value in self.__dict__.items():
-            if isinstance(value, (bool, str)):
-                continue
-            elif isinstance(value, (MILP_CVL, DIMACS)):
-                continue
-            elif any([word in key for word in [
-                    "wordsize", "milp", "sat", "MILP", "SAT", "_model_time"
-            ]]):
+            if isinstance(value, (bool, str, MILP_CVL, DIMACS)) or any(
+                word in key
+                for word in ["wordsize", "milp", "sat", "MILP", "SAT", "_model_time"]
+            ):
                 continue
             elif isinstance(value, matrix_type):
                 liste.append((key, tuple([tuple(v) for v in value])))
@@ -245,7 +247,7 @@ class I_CVL(Component):
 
             - ``input_length`` -- integer; The block size of the identity component.
               Since ``input_length == output_length`` in this case, it is not necessary to
-              pass the output_length as a seperate parameter.
+              pass the output_length as a separate parameter.
             - ``name`` -- string; The component name for easier identification (optional)
 
         OUTPUT: An instantiated ``I_CVL`` object.
@@ -318,9 +320,7 @@ class I_CVL(Component):
         elif model_options.granularity == GRANULARITY.BITWISE:
             divide_by = 1
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
         for i in range(self.input_length // divide_by):
             self.milp.add_constraint(self.milp.VAR_OUT[i] == self.milp.VAR_IN[i])
@@ -341,9 +341,7 @@ class I_CVL(Component):
                 self.sat.add_clause((-self.SAT_OUT[i], self.SAT_IN[i]))
             return self.sat
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
 
 class C_CVL(Component):
@@ -369,6 +367,7 @@ class C_CVL(Component):
 
     OUTPUT: A constant component initialized with ``const``.
     """
+
     def __init__(self, output_length, const, name=None):
         super().__init__(0, output_length, name=name)
         self.__const = const
@@ -405,9 +404,7 @@ class C_CVL(Component):
         elif model_options.granularity == GRANULARITY.BITWISE:
             divide_by = 1
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             for i in range(self.output_length // divide_by):
@@ -423,7 +420,7 @@ class C_CVL(Component):
         if model_options.granularity == GRANULARITY.BITWISE:
             if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
                 for i in range(self.output_length):
-                    self.sat.add_clause((-self.SAT_OUT[i], ))
+                    self.sat.add_clause((-self.SAT_OUT[i],))
                 return self.sat
             elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
                 # For linear modeling, C_CVL is "don't care"
@@ -431,9 +428,7 @@ class C_CVL(Component):
                     self.sat.add_clause((self.SAT_OUT[i], -self.SAT_OUT[i]))
                 return self.sat
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
 
 class RK_CVL(C_CVL):
@@ -442,7 +437,7 @@ class RK_CVL(C_CVL):
         In most of the cases, it might be easier to use ``RoundkeyXOR_CVL``
         instead of this.
 
-    The round-key component. Acts very similarily to ``C_CVL``, with the
+    The round-key component. Acts very similarly to ``C_CVL``, with the
     difference that the ``const`` value is allowed to be changed after
     instantiation. This allows for using test vectors with non-zero round keys,
     while treating the key schedules functionality as a blackbox.
@@ -459,6 +454,7 @@ class RK_CVL(C_CVL):
 
     OUTPUT: A round-key component initialized with ``const``.
     """
+
     def __init__(self, output_length, const, name=None):
         super().__init__(output_length, const, name=name)
 
@@ -496,7 +492,7 @@ class ConstXOR_CVL(Component):
     r"""
     The ``ConstXOR_CVL`` component. Used for an easier implementation of round
     constant addition in ciphers instead of using ``C_CVL`` and ``XOR_CVL``
-    seperately.
+    separately.
 
     INPUT:
 
@@ -543,6 +539,7 @@ class ConstXOR_CVL(Component):
 
 
     """
+
     def __init__(self, output_length, const, name=None):
         super().__init__(output_length, output_length, name=name)
         self.__const = const
@@ -591,16 +588,14 @@ class ConstXOR_CVL(Component):
                 self.sat.add_clause((-self.SAT_OUT[i], self.SAT_IN[i]))
             return self.sat
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
 
 class RoundkeyXOR_CVL(ConstXOR_CVL):
     r"""
     The ``RoundkeyXOR_CVL`` component. Used for an easier implementation of
     round constant addition in ciphers instead of using ``C_CVL`` and
-    ``XOR_CVL`` seperately. Acts very similarily to the ``ConstXOR_CVL``
+    ``XOR_CVL`` separately. Acts very similarly to the ``ConstXOR_CVL``
     component, with the difference that the ``const`` value is allowed to be
     changed after instantiation. This allows for using test vectors with
     non-zero round keys, while treating the key schedules functionality as a
@@ -629,10 +624,8 @@ class RoundkeyXOR_CVL(ConstXOR_CVL):
         sage: hex(vec_to_int(roundkeyxor(int_to_vec(0xababcdcd,32))))
         '0xbbb27fd9'
     """
-    def __init__(self, output_length, const, name=None):
-        r"""
 
-        """
+    def __init__(self, output_length, const, name=None):
         super().__init__(output_length, const, name=name)
 
     @property
@@ -692,14 +685,15 @@ class XOR_CVL(Component):
         ....: ))))
         '0x3030303'
     """
+
     def __init__(self, word_length, name=None):
-        super().__init__(2*word_length, word_length, name=name)
+        super().__init__(2 * word_length, word_length, name=name)
         self.__word_length = word_length
 
     def eval(self, x):
         # Accept a vector of length 2n ``x||y``, and return ``x \oplus y``.
-        A = vec_to_int(x[:self.word_length])
-        B = vec_to_int(x[self.word_length:])
+        A = vec_to_int(x[: self.word_length])
+        B = vec_to_int(x[self.word_length :])
         return int_to_vec(A ^ B, self.word_length)
 
     @property
@@ -748,16 +742,28 @@ class XOR_CVL(Component):
             if model_options.granularity == GRANULARITY.BITWISE:
                 for i in range(self.word_length):
                     self.milp.add_constraint(
-                        -self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length] + self.milp.VAR_OUT[i] >=  0
+                        -self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length] + self.milp.VAR_OUT[i] >=  0
-                        )
+                        self.milp.VAR_IN[i]
+                        - self.milp.VAR_IN[i + self.word_length]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
+                    )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length] - self.milp.VAR_OUT[i] >=  0
-                        )
+                        self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length]
+                        - self.milp.VAR_OUT[i]
+                        >= 0
+                    )
                     self.milp.add_constraint(
-                        -self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length] - self.milp.VAR_OUT[i] >= -2
+                        -self.milp.VAR_IN[i]
+                        - self.milp.VAR_IN[i + self.word_length]
+                        - self.milp.VAR_OUT[i]
+                        >= -2
                     )
                 return self.milp
             if model_options.granularity == GRANULARITY.WORDWISE:
@@ -765,19 +771,26 @@ class XOR_CVL(Component):
                 # and should NOT be confused with self.word_length
                 for i in range(self.word_length // self.wordsize):
                     self.milp.add_constraint(
-                        -self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length//self.wordsize] + self.milp.VAR_OUT[i] >= 0
+                        -self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length // self.wordsize]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] - self.milp.VAR_IN[i+self.word_length//self.wordsize] + self.milp.VAR_OUT[i] >= 0
+                        self.milp.VAR_IN[i]
+                        - self.milp.VAR_IN[i + self.word_length // self.wordsize]
+                        + self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     self.milp.add_constraint(
-                         self.milp.VAR_IN[i] + self.milp.VAR_IN[i+self.word_length//self.wordsize] - self.milp.VAR_OUT[i] >= 0
+                        self.milp.VAR_IN[i]
+                        + self.milp.VAR_IN[i + self.word_length // self.wordsize]
+                        - self.milp.VAR_OUT[i]
+                        >= 0
                     )
                     # Skip fourth constraint as we are working with activity patterns instead of values
                 return self.milp
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
         if model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
             # Masks for the two inputs and the output need to be equal
 
@@ -787,23 +800,18 @@ class XOR_CVL(Component):
             elif model_options.granularity == GRANULARITY.BITWISE:
                 divide_by = 1
             else:
-                raise InvalidModelOptionException(
-                    model_options.granularity, GRANULARITY
-                )
+                raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
             for i in range(self.word_length // divide_by):
                 # Masks for both inputs should be identical
                 self.milp.add_constraint(
-                    self.milp.VAR_IN[i] == self.milp.VAR_IN[i + self.word_length//divide_by]
+                    self.milp.VAR_IN[i]
+                    == self.milp.VAR_IN[i + self.word_length // divide_by]
                 )
                 # Output masks should also be the same
-                self.milp.add_constraint(
-                    self.milp.VAR_IN[i] == self.milp.VAR_OUT[i]
-                )
+                self.milp.add_constraint(self.milp.VAR_IN[i] == self.milp.VAR_OUT[i])
             return self.milp
-        raise InvalidModelOptionException(
-            model_options.cryptanalysis, CRYPTANALYSIS
-        )
+        raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
     def _model_sat(self, model_options):
         """
@@ -821,7 +829,6 @@ class XOR_CVL(Component):
         """
         self._init_model(model_options)
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
-
             n = self.word_length
 
             alpha = [self.SAT_IN[i] for i in range(n)]
@@ -837,7 +844,6 @@ class XOR_CVL(Component):
             return self.sat
 
         elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
-
             n = self.word_length
 
             alpha = [self.SAT_IN[i] for i in range(n)]
@@ -879,13 +885,14 @@ class ModAdd_CVL(Component):
         ....: )))
         '0x23232323'
     """
+
     def __init__(self, word_length, name=None):
-        super().__init__(2*word_length, word_length, name=name)
+        super().__init__(2 * word_length, word_length, name=name)
         self.__word_length = word_length
 
     def eval(self, x):
-        A = vec_to_int(x[:self.word_length])
-        B = vec_to_int(x[self.word_length:])
+        A = vec_to_int(x[: self.word_length])
+        B = vec_to_int(x[self.word_length :])
         return int_to_vec((A + B) % (1 << self.word_length), self.word_length)
 
     @property
@@ -909,9 +916,8 @@ class ModAdd_CVL(Component):
         return cls(d["word_length"], name=d.get("name"))
 
     def _model_milp(self, model_options):
-        raise InvalidModelOptionException(
-            model_options.optimization,
-            message="ModAdd_CVL is not supported in MILP"
+        raise InvalidModelOptionError(
+            model_options.optimization, message="ModAdd_CVL is not supported in MILP"
         )
 
     def _model_sat(self, model_options):
@@ -932,7 +938,6 @@ class ModAdd_CVL(Component):
         """
         self._init_model(model_options)
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
-
             n = self.word_length
 
             alpha = [self.SAT_IN[i] for i in range(n)]
@@ -942,38 +947,109 @@ class ModAdd_CVL(Component):
             # NOTE that alpha[n-1] is LSB and alpha[0] is MSB
             # Clauses for ModAdd (excluding LSB)
             for i in range(n - 1):
-                self.sat.add_clause((alpha[i], beta[i], -gamma[i], alpha[i+1], beta[i+1], gamma[i+1]))
-                self.sat.add_clause((alpha[i], -beta[i], gamma[i], alpha[i+1], beta[i+1], gamma[i+1]))
-                self.sat.add_clause((-alpha[i], beta[i], gamma[i], alpha[i+1], beta[i+1], gamma[i+1]))
-                self.sat.add_clause((-alpha[i], -beta[i], -gamma[i], alpha[i+1], beta[i+1], gamma[i+1]))
-                self.sat.add_clause((alpha[i], beta[i], gamma[i], -alpha[i+1], -beta[i+1], -gamma[i+1]))
-                self.sat.add_clause((alpha[i], -beta[i], -gamma[i], -alpha[i+1], -beta[i+1], -gamma[i+1]))
-                self.sat.add_clause((-alpha[i], beta[i], -gamma[i], -alpha[i+1], -beta[i+1], -gamma[i+1]))
-                self.sat.add_clause((-alpha[i], -beta[i], gamma[i], -alpha[i+1], -beta[i+1], -gamma[i+1]))
+                self.sat.add_clause(
+                    (
+                        alpha[i],
+                        beta[i],
+                        -gamma[i],
+                        alpha[i + 1],
+                        beta[i + 1],
+                        gamma[i + 1],
+                    )
+                )
+                self.sat.add_clause(
+                    (
+                        alpha[i],
+                        -beta[i],
+                        gamma[i],
+                        alpha[i + 1],
+                        beta[i + 1],
+                        gamma[i + 1],
+                    )
+                )
+                self.sat.add_clause(
+                    (
+                        -alpha[i],
+                        beta[i],
+                        gamma[i],
+                        alpha[i + 1],
+                        beta[i + 1],
+                        gamma[i + 1],
+                    )
+                )
+                self.sat.add_clause(
+                    (
+                        -alpha[i],
+                        -beta[i],
+                        -gamma[i],
+                        alpha[i + 1],
+                        beta[i + 1],
+                        gamma[i + 1],
+                    )
+                )
+                self.sat.add_clause(
+                    (
+                        alpha[i],
+                        beta[i],
+                        gamma[i],
+                        -alpha[i + 1],
+                        -beta[i + 1],
+                        -gamma[i + 1],
+                    )
+                )
+                self.sat.add_clause(
+                    (
+                        alpha[i],
+                        -beta[i],
+                        -gamma[i],
+                        -alpha[i + 1],
+                        -beta[i + 1],
+                        -gamma[i + 1],
+                    )
+                )
+                self.sat.add_clause(
+                    (
+                        -alpha[i],
+                        beta[i],
+                        -gamma[i],
+                        -alpha[i + 1],
+                        -beta[i + 1],
+                        -gamma[i + 1],
+                    )
+                )
+                self.sat.add_clause(
+                    (
+                        -alpha[i],
+                        -beta[i],
+                        gamma[i],
+                        -alpha[i + 1],
+                        -beta[i + 1],
+                        -gamma[i + 1],
+                    )
+                )
 
-            self.sat.add_clause((alpha[n-1], beta[n-1], -gamma[n-1]))
-            self.sat.add_clause((alpha[n-1], -beta[n-1], gamma[n-1]))
-            self.sat.add_clause((-alpha[n-1], beta[n-1], gamma[n-1]))
-            self.sat.add_clause((-alpha[n-1], -beta[n-1], -gamma[n-1]))
+            self.sat.add_clause((alpha[n - 1], beta[n - 1], -gamma[n - 1]))
+            self.sat.add_clause((alpha[n - 1], -beta[n - 1], gamma[n - 1]))
+            self.sat.add_clause((-alpha[n - 1], beta[n - 1], gamma[n - 1]))
+            self.sat.add_clause((-alpha[n - 1], -beta[n - 1], -gamma[n - 1]))
 
             PROB = [self.sat.var() for _ in range(n - 1)]
 
             # encode probability
             # ---------------------------------------------------------------------------
             for i in range(n - 1):
-                self.sat.add_clause((-alpha[i+1], gamma[i+1], PROB[i]))
-                self.sat.add_clause((beta[i+1], -gamma[i+1], PROB[i]))
-                self.sat.add_clause((alpha[i+1], -beta[i+1], PROB[i]))
-                self.sat.add_clause((alpha[i+1],  beta[i+1], gamma[i+1], -PROB[i]))
-                self.sat.add_clause((-alpha[i+1], -beta[i+1], -gamma[i+1], -PROB[i]))
+                self.sat.add_clause((-alpha[i + 1], gamma[i + 1], PROB[i]))
+                self.sat.add_clause((beta[i + 1], -gamma[i + 1], PROB[i]))
+                self.sat.add_clause((alpha[i + 1], -beta[i + 1], PROB[i]))
+                self.sat.add_clause((alpha[i + 1], beta[i + 1], gamma[i + 1], -PROB[i]))
+                self.sat.add_clause(
+                    (-alpha[i + 1], -beta[i + 1], -gamma[i + 1], -PROB[i])
+                )
 
-                self.sum_arr_sat += [
-                    (1 * 10**model_options.sat_precision, PROB[i])
-                ]
+                self.sum_arr_sat += [(1 * 10**model_options.sat_precision, PROB[i])]
             # ---------------------------------------------------------------------------
 
         elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
-
             n = self.word_length
 
             alpha = [self.SAT_IN[i] for i in range(n)]
@@ -982,7 +1058,7 @@ class ModAdd_CVL(Component):
             PROB = [self.sat.var() for _ in range(n)]
 
             # PROB[0] == 0
-            self.sat.add_clause((-PROB[0], ))
+            self.sat.add_clause((-PROB[0],))
 
             # alpha[0] + beta[0] + gamma[0] + PROB[1] == 0
             self.sat.add_clause((alpha[0], beta[0], gamma[0], -PROB[1]))
@@ -998,22 +1074,54 @@ class ModAdd_CVL(Component):
             # for j in range(0, n-2)
             for j in range(1, n - 1):
                 # From LinearLayer_CVL:
-                self.sat.add_clause((alpha[j], beta[j], gamma[j], PROB[j], -PROB[j+1]))
-                self.sat.add_clause((alpha[j], beta[j], gamma[j], -PROB[j], PROB[j+1]))
-                self.sat.add_clause((alpha[j], beta[j], -gamma[j], PROB[j], PROB[j+1]))
-                self.sat.add_clause((alpha[j], -beta[j], gamma[j], PROB[j], PROB[j+1]))
-                self.sat.add_clause((-alpha[j], beta[j], gamma[j], PROB[j], PROB[j+1]))
-                self.sat.add_clause((alpha[j], beta[j], -gamma[j], -PROB[j], -PROB[j+1]))
-                self.sat.add_clause((alpha[j], -beta[j], gamma[j], -PROB[j], -PROB[j+1]))
-                self.sat.add_clause((alpha[j], -beta[j], -gamma[j], PROB[j], -PROB[j+1]))
-                self.sat.add_clause((alpha[j], -beta[j], -gamma[j], -PROB[j], PROB[j+1]))
-                self.sat.add_clause((-alpha[j], beta[j], gamma[j], -PROB[j], -PROB[j+1]))
-                self.sat.add_clause((-alpha[j], beta[j], -gamma[j], PROB[j], -PROB[j+1]))
-                self.sat.add_clause((-alpha[j], beta[j], -gamma[j], -PROB[j], PROB[j+1]))
-                self.sat.add_clause((-alpha[j], -beta[j], gamma[j], PROB[j], -PROB[j+1]))
-                self.sat.add_clause((-alpha[j], -beta[j], gamma[j], -PROB[j], PROB[j+1]))
-                self.sat.add_clause((-alpha[j], -beta[j], -gamma[j], PROB[j], PROB[j+1]))
-                self.sat.add_clause((-alpha[j], -beta[j], -gamma[j], -PROB[j], -PROB[j+1]))
+                self.sat.add_clause(
+                    (alpha[j], beta[j], gamma[j], PROB[j], -PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (alpha[j], beta[j], gamma[j], -PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (alpha[j], beta[j], -gamma[j], PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (alpha[j], -beta[j], gamma[j], PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], beta[j], gamma[j], PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (alpha[j], beta[j], -gamma[j], -PROB[j], -PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (alpha[j], -beta[j], gamma[j], -PROB[j], -PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (alpha[j], -beta[j], -gamma[j], PROB[j], -PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (alpha[j], -beta[j], -gamma[j], -PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], beta[j], gamma[j], -PROB[j], -PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], beta[j], -gamma[j], PROB[j], -PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], beta[j], -gamma[j], -PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], -beta[j], gamma[j], PROB[j], -PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], -beta[j], gamma[j], -PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], -beta[j], -gamma[j], PROB[j], PROB[j + 1])
+                )
+                self.sat.add_clause(
+                    (-alpha[j], -beta[j], -gamma[j], -PROB[j], -PROB[j + 1])
+                )
 
             for i in range(n):
                 self.sat.add_clause((alpha[i], -gamma[i], PROB[i]))
@@ -1021,13 +1129,9 @@ class ModAdd_CVL(Component):
                 self.sat.add_clause((beta[i], -gamma[i], PROB[i]))
                 self.sat.add_clause((-beta[i], gamma[i], PROB[i]))
 
-                self.sum_arr_sat += [
-                    (10**model_options.sat_precision, PROB[i])
-                ]
+                self.sum_arr_sat += [(10**model_options.sat_precision, PROB[i])]
         else:
-            raise InvalidModelOptionException(
-                model_options.cryptanalysis, CRYPTANALYSIS
-                )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         return self.sat
 
@@ -1057,14 +1161,15 @@ class AND_CVL(Component):
         ....: )))
         '0x10101010'
     """
+
     def __init__(self, word_length, name=None):
-        super().__init__(2*word_length, word_length, name=name)
+        super().__init__(2 * word_length, word_length, name=name)
         self.__word_length = word_length
 
     def eval(self, x):
         # Accepts a vector of length 2n ``x||y``, and returns ``x & y``.
-        A = vec_to_int(x[:self.word_length])
-        B = vec_to_int(x[self.word_length:])
+        A = vec_to_int(x[: self.word_length])
+        B = vec_to_int(x[self.word_length :])
         return int_to_vec(A & B, self.word_length)
 
     def __repr__(self):
@@ -1088,9 +1193,8 @@ class AND_CVL(Component):
         return self.__word_length
 
     def _model_milp(self, model_options):
-        raise InvalidModelOptionException(
-            model_options.optimization,
-            message="AND_CVL is not supported in MILP"
+        raise InvalidModelOptionError(
+            model_options.optimization, message="AND_CVL is not supported in MILP"
         )
 
     def _model_sat(self, model_options):
@@ -1151,16 +1255,14 @@ class AND_CVL(Component):
             # use LAT instead of DDT. The naming is not right here,
             # but it doesn't change the functionality
             ddt = [
-                [abs(int(entry*len(and_sbox.S))) for entry in row]
+                [abs(int(entry * len(and_sbox.S))) for entry in row]
                 for row in and_sbox.S.linear_approximation_table("correlation")
             ]
         else:
-            raise InvalidModelOptionException(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         # Contains the possible entries of ddt.
-        set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+        set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
 
         PROB = [self.sat.var() for _ in range(len(set_ddt) * self.word_length)]
 
@@ -1168,9 +1270,10 @@ class AND_CVL(Component):
             # combine left and right inputs and output of i'th and SBox
             VAR = [
                 self.SAT_IN[i],
-                self.SAT_IN[i+self.word_length],
-                self.SAT_OUT[i]
-            ] + PROB[i*len(set_ddt): (i + 1)*len(set_ddt)]
+                self.SAT_IN[i + self.word_length],
+                self.SAT_OUT[i],
+                *PROB[i * len(set_ddt) : (i + 1) * len(set_ddt)],
+            ]
 
             for clause in one_bit_sbox_sat.clauses():
                 new_clause = translate_sat_clause(VAR, clause[0])
@@ -1178,10 +1281,13 @@ class AND_CVL(Component):
                     self.sat.add_clause(new_clause)
 
         self.sum_arr_sat += [
-            (-int(
-                10**model_options.sat_precision
-                * log2(set_ddt[i % len(set_ddt)] / ddt[0][0])
-            ), PROBi)
+            (
+                -int(
+                    10**model_options.sat_precision
+                    * log2(set_ddt[i % len(set_ddt)] / ddt[0][0])
+                ),
+                PROBi,
+            )
             for i, PROBi in enumerate(PROB)
         ]
 
@@ -1229,12 +1335,18 @@ class LinearLayer_CVL(Component):
         - More on binary matrices:
           ``sage.matrix.matrix_mod2_dense.Matrix_mod2_dense``
     """
-    def __init__(self, binary_matrix, branch_number_differential=None,
-                 branch_number_linear=None, name=None):
+
+    def __init__(
+        self,
+        binary_matrix,
+        branch_number_differential=None,
+        branch_number_linear=None,
+        name=None,
+    ):
         super().__init__(
             input_length=binary_matrix.ncols(),
             output_length=binary_matrix.nrows(),
-            name=name
+            name=name,
         )
         self.__branch_number_differential = branch_number_differential
         self.__branch_number_linear = branch_number_linear
@@ -1292,22 +1404,21 @@ class LinearLayer_CVL(Component):
     def _to_dict(self):
         def _int_or_none(x):
             return int(x) if x is not None else None
+
         return {
             "type": "LinearLayer_CVL",
             "name": self.name,
             "binary_matrix": [
-                [int(x) for x in row]
-                for row in self.binary_matrix.rows()
+                [int(x) for x in row] for row in self.binary_matrix.rows()
             ],
-            "branch_number_differential": _int_or_none(
-                self.branch_number_differential
-            ),
+            "branch_number_differential": _int_or_none(self.branch_number_differential),
             "branch_number_linear": _int_or_none(self.branch_number_linear),
         }
 
     @classmethod
     def _from_dict(cls, d):
         from sage.matrix.constructor import Matrix as matrix
+
         mat = matrix(GF(2), d["binary_matrix"])
         return cls(
             mat,
@@ -1319,38 +1430,29 @@ class LinearLayer_CVL(Component):
     def inv(self):
         r"""Create the inverse of the current instance."""
         return LinearLayer_CVL(
-            binary_matrix=self.binary_matrix.inverse(),
-            name=self.name
+            binary_matrix=self.binary_matrix.inverse(), name=self.name
         )
 
     def _model_milp(self, model_options):
-        r"""
-        """
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.WORDWISE:
             return self._milp_wordwise(model_options)
         elif model_options.granularity == GRANULARITY.BITWISE:
             return self._milp_bitwise(model_options)
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _model_sat(self, model_options):
-        r"""
-        """
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.BITWISE:
             return self._sat_bitwise(model_options)
         elif model_options.granularity == GRANULARITY.WORDWISE:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
-                message="SAT-modeling does not support a wordwise granularity."
+                message="SAT-modeling does not support a wordwise granularity.",
             )
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _milp_bitwise(self, model_options):
         r"""
@@ -1388,9 +1490,7 @@ class LinearLayer_CVL(Component):
             VAR_IN = self.milp.VAR_OUT
             VAR_OUT = self.milp.VAR_IN
         else:
-            raise InvalidModelOptionException(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         array_of_xorsums = []
         for row in binmatrix:
@@ -1400,51 +1500,52 @@ class LinearLayer_CVL(Component):
         # Determine any missing inputs and add them into the dictionary
         # and set them to zero
         for i in range(binmatrix.ncols()):
-            if all([i not in xorsum for xorsum in array_of_xorsums]):
+            if all(i not in xorsum for xorsum in array_of_xorsums):
                 self.milp.add_constraint(VAR_IN[i] == 0)
 
-        if model_options.linear_layer_modeling == \
-                LINEAR_LAYER_MODELING.MORE_DUMMIES:
+        if model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.MORE_DUMMIES:
             MILP_DUMMY = self.milp.new_variable(name="MILP_DUMMY", binary=True)
             dummy_offset = 0
             for i, tup in enumerate(array_of_xorsums):
                 ell = ceil(log2(len(tup) + 1))
                 int_sum = sum([VAR_IN[t] for t in tup]) + VAR_OUT[i]
-                binary_rep = sum([
-                    (1 << (i + 1)) * MILP_DUMMY[dummy_offset + i]
-                    for i in range(ell)
-                ])
+                binary_rep = sum(
+                    [(1 << (i + 1)) * MILP_DUMMY[dummy_offset + i] for i in range(ell)]
+                )
                 dummy_offset += ell
                 self.milp.add_constraint(int_sum == binary_rep)
-        elif model_options.linear_layer_modeling == \
-                LINEAR_LAYER_MODELING.CONVEX_HULL:
+        elif model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.CONVEX_HULL:
             for i, tup in enumerate(array_of_xorsums):
-                posset = []  # set of possible transitions
-                for j in range(1 << (len(tup)+1)):
-                    # include all transitions with even hammingweight
-                    if hw(j) % 2 == 0:
-                        # x_1 + x_2 + x_3 = y_1, then 4.
-                        posset.append(vector(ZZ, int_to_vec(j, len(tup) + 1)))
+                # set of possible transitions: all transitions with even
+                # hammingweight (x_1 + x_2 + x_3 = y_1, then 4).
+                posset = [
+                    vector(ZZ, int_to_vec(j, len(tup) + 1))
+                    for j in range(1 << (len(tup) + 1))
+                    if hw(j) % 2 == 0
+                ]
                 convex_hull = Polyhedron(vertices=posset)
 
                 constrs = convex_hull.inequalities() + convex_hull.equations()
                 for constr in constrs:
-                    assert all([self.input_length > u for u in (max(tup), i)])
+                    assert all(self.input_length > u for u in (max(tup), i))
 
                     # sub_constr : substituted constraints (with
-                    # the appropiate variables)
-                    sub_constr = constr[0] + sum(
-                        constr[ind + 1] * VAR_IN[tup[ind]]
-                        for ind in range(len(constr) - 2)
-                    ) + constr[-1] * VAR_OUT[i]
+                    # the appropriate variables)
+                    sub_constr = (
+                        constr[0]
+                        + sum(
+                            constr[ind + 1] * VAR_IN[tup[ind]]
+                            for ind in range(len(constr) - 2)
+                        )
+                        + constr[-1] * VAR_OUT[i]
+                    )
                     if constr.is_inequality():
                         self.milp.add_constraint(sub_constr >= 0)
                     elif constr.is_equation():
                         self.milp.add_constraint(sub_constr == 0)
         else:
-            raise InvalidModelOptionException(
-                model_options.linear_layer_modeling,
-                LINEAR_LAYER_MODELING
+            raise InvalidModelOptionError(
+                model_options.linear_layer_modeling, LINEAR_LAYER_MODELING
             )
 
         return self.milp
@@ -1463,8 +1564,10 @@ class LinearLayer_CVL(Component):
         as a MILP.
         """
 
-        if model_options.linear_layer_modeling == \
-                LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE:
+        if (
+            model_options.linear_layer_modeling
+            == LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE
+        ):
             posset = []  # possible set of transitions
             dimensions = []  # kernel-dimensions of each entry
             # wordsize is set externally in wordbasedcipher.add_subcipher
@@ -1472,34 +1575,32 @@ class LinearLayer_CVL(Component):
             vec_len_in = self.binary_matrix.ncols() // self.wordsize
             vec_len_out = self.binary_matrix.nrows() // self.wordsize
             # all-zero and all-ones vecs for lookup below
-            all_vecs = ([0]*self.wordsize, [1]*self.wordsize)
+            all_vecs = ([0] * self.wordsize, [1] * self.wordsize)
             # Go over all input patterns
             for i in range(1 << vec_len_in):
-                i_wordarr = [int(d) for d in f'{i:0{vec_len_in}b}']
+                i_wordarr = [int(d) for d in f"{i:0{vec_len_in}b}"]
                 i_binarr = []
                 for j in i_wordarr:
                     i_binarr += all_vecs[j]
 
                 # Go over all output patterns
                 for o in range(1 << vec_len_out):
-                    o_wordarr = [int(d) for d in f'{o:0{vec_len_out}b}']
+                    o_wordarr = [int(d) for d in f"{o:0{vec_len_out}b}"]
                     o_binarr = []
                     for j in o_wordarr:
                         o_binarr += all_vecs[j]
 
-                    i_zero_inds, o_zero_inds = [], []
-                    for pos in range(len(i_binarr)):
-                        if i_binarr[pos] == 0:
-                            i_zero_inds.append(pos)
-                    for pos in range(len(o_binarr)):
-                        if o_binarr[pos] == 0:
-                            o_zero_inds.append(pos)
+                    i_zero_inds = [
+                        pos for pos in range(len(i_binarr)) if i_binarr[pos] == 0
+                    ]
+                    o_zero_inds = [
+                        pos for pos in range(len(o_binarr)) if o_binarr[pos] == 0
+                    ]
 
                     # matrix_to_be_solved is a submatrix of the linear layer,
                     # together with additional rows restricting the
                     # corresponding inputs to be zero
-                    if model_options.cryptanalysis == \
-                            CRYPTANALYSIS.DIFFERENTIAL:
+                    if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
                         matrix_to_be_solved = [
                             self.binary_matrix[j]
                             for j in range(self.binary_matrix.nrows())
@@ -1512,9 +1613,8 @@ class LinearLayer_CVL(Component):
                             if j in o_zero_inds
                         ]
                     else:
-                        raise InvalidModelOptionException(
-                            model_options.cryptanalysis,
-                            CRYPTANALYSIS
+                        raise InvalidModelOptionError(
+                            model_options.cryptanalysis, CRYPTANALYSIS
                         )
 
                     # Append the additional rows forcing the corresponding
@@ -1527,12 +1627,12 @@ class LinearLayer_CVL(Component):
                     vec_len_both = vec_len_in + vec_len_out
                     # Two special cases: [0,...,0], [1,...,1] are recognized
                     # as impossible (since the matrix is trivial then)
-                    exceptions = ([0]*(vec_len_both), [1]*(vec_len_both))
+                    exceptions = ([0] * (vec_len_both), [1] * (vec_len_both))
                     is_exc = i_wordarr + o_wordarr in exceptions
 
-                    current_dimension = matrix(
-                        GF(2), matrix_to_be_solved
-                    ).right_kernel().dimension()
+                    current_dimension = (
+                        matrix(GF(2), matrix_to_be_solved).right_kernel().dimension()
+                    )
                     dimensions.append(current_dimension)
 
                     # wordsize is set externally in
@@ -1546,24 +1646,25 @@ class LinearLayer_CVL(Component):
 
                     # Only a possible transition if the
                     # solution-space is **larger** than before
-                    if (current_dimension > 0 and all([
-                        current_dimension > dimensions[index_dim]
-                        for index_dim in predecessors
-                    ])) or is_exc:
+                    if (
+                        current_dimension > 0
+                        and all(
+                            current_dimension > dimensions[index_dim]
+                            for index_dim in predecessors
+                        )
+                    ) or is_exc:
                         posset.append(i_wordarr + o_wordarr)
             # --------------------------------------------------------------- #
 
             reduction_algorithm_ST17(self, posset, model_options)
 
-        elif model_options.linear_layer_modeling == \
-                LINEAR_LAYER_MODELING.BRANCH_NUMBER:
-
+        elif model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.BRANCH_NUMBER:
             if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
                 bn = self.branch_number_differential
             elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
                 bn = self.branch_number_linear
             else:
-                raise InvalidModelOptionException(
+                raise InvalidModelOptionError(
                     model_options.cryptanalysis, CRYPTANALYSIS
                 )
 
@@ -1598,9 +1699,8 @@ class LinearLayer_CVL(Component):
             )
 
         else:
-            raise InvalidModelOptionException(
-                model_options.linear_layer_modeling,
-                LINEAR_LAYER_MODELING
+            raise InvalidModelOptionError(
+                model_options.linear_layer_modeling, LINEAR_LAYER_MODELING
             )
         return self.milp
 
@@ -1673,61 +1773,57 @@ class LinearLayer_CVL(Component):
             SAT_IN = self.SAT_OUT
             SAT_OUT = self.SAT_IN
         else:
-            raise InvalidModelOptionException(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
-        if model_options.linear_layer_modeling == \
-                LINEAR_LAYER_MODELING.EXCLUDE_ODD:
+        if model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.EXCLUDE_ODD:
             for row_ind, row in enumerate(mat):
                 active_entries = [i for i, e in enumerate(row) if e == 1]
                 odd_hw_arr = []
                 k = len(active_entries)
                 # get all tuples with odd hamming weight
-                for hamm in range(0, k+1, 2):
-                    odd_hw_arr += hw_tau(k+1, hamm+1)
+                for hamm in range(0, k + 1, 2):
+                    odd_hw_arr += hw_tau(k + 1, hamm + 1)
 
-                VAR = [
-                    SAT_IN[active_entries[i]] for i in range(k)
-                ] + [SAT_OUT[row_ind]]
+                VAR = [SAT_IN[active_entries[i]] for i in range(k)] + [SAT_OUT[row_ind]]
                 for a in odd_hw_arr:
                     a_clause = (
-                        (-1)**int(e) * (i+1)
-                        for i, e in enumerate(f'{a:0{k+1}b}')
+                        (-1) ** int(e) * (i + 1) for i, e in enumerate(f"{a:0{k + 1}b}")
                     )
                     tup = translate_sat_clause(VAR, a_clause)
                     self.sat.add_clause(tup)
-        elif model_options.linear_layer_modeling == \
-                LINEAR_LAYER_MODELING.MORE_DUMMIES:
-
+        elif model_options.linear_layer_modeling == LINEAR_LAYER_MODELING.MORE_DUMMIES:
             # model each k-XOR as a sequence (k-1) of 2-XORs
             for row_ind, row in enumerate(mat):
                 active_entries = [i for i, e in enumerate(row) if e == 1]
                 if len(active_entries) == 0:
-                    self.sat.add_clause((-SAT_OUT[row_ind], ))
+                    self.sat.add_clause((-SAT_OUT[row_ind],))
                 elif len(active_entries) == 1:
-                    self.sat.add_clause((
-                        -SAT_IN[active_entries[0]], SAT_OUT[row_ind],
-                    ))
-                    self.sat.add_clause((
-                        SAT_IN[active_entries[0]], -SAT_OUT[row_ind],
-                    ))
+                    self.sat.add_clause(
+                        (
+                            -SAT_IN[active_entries[0]],
+                            SAT_OUT[row_ind],
+                        )
+                    )
+                    self.sat.add_clause(
+                        (
+                            SAT_IN[active_entries[0]],
+                            -SAT_OUT[row_ind],
+                        )
+                    )
                 else:
                     xor_model = XOR_CVL(1, name="xor")._model_sat(
                         model_options=model_options
                     )
 
                     current_node = SAT_IN[active_entries[0]]
-                    for i in range(1, len(active_entries)-1):
+                    for i in range(1, len(active_entries) - 1):
                         # xor current_node with active_entries[i]
                         alpha = current_node
                         beta = SAT_IN[active_entries[i]]
                         gamma = self.sat.var()
                         for clause in xor_model.clauses():
                             self.sat.add_clause(
-                                translate_sat_clause(
-                                    [alpha, beta, gamma], clause[0]
-                                )
+                                translate_sat_clause([alpha, beta, gamma], clause[0])
                             )
                             current_node = gamma
 
@@ -1736,13 +1832,11 @@ class LinearLayer_CVL(Component):
                     gamma = SAT_OUT[row_ind]
                     for clause in xor_model.clauses():
                         self.sat.add_clause(
-                            translate_sat_clause(
-                                [alpha, beta, gamma], clause[0]
-                            )
+                            translate_sat_clause([alpha, beta, gamma], clause[0])
                         )
 
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.linear_layer_modeling, LINEAR_LAYER_MODELING
             )
 
@@ -1784,6 +1878,7 @@ class PermuteLayer_CVL(LinearLayer_CVL):
         sage: vec_to_int(perm(int_to_vec(0x9, 4)))
         12
     """
+
     def __init__(self, perm, word_coarseness=1, name=None):
         # convert perm to binary_matrix
         arr = [[0 for _ in range(len(perm))] for _ in range(len(perm))]
@@ -1791,8 +1886,10 @@ class PermuteLayer_CVL(LinearLayer_CVL):
             arr[perm[i]][i] = identity_matrix(word_coarseness)
         binary_matrix = block_matrix(GF(2), arr, subdivide=False)
         super().__init__(
-            binary_matrix, branch_number_differential=2,
-            branch_number_linear=2, name=name
+            binary_matrix,
+            branch_number_differential=2,
+            branch_number_linear=2,
+            name=name,
         )
         self.__perm = perm
         self.__word_coarseness = word_coarseness
@@ -1841,16 +1938,12 @@ class PermuteLayer_CVL(LinearLayer_CVL):
 
         """
         return PermuteLayer_CVL(
-            perm=[
-                q-1 for q in Permutation([p+1 for p in self.perm]).inverse()
-            ],
+            perm=[q - 1 for q in Permutation([p + 1 for p in self.perm]).inverse()],
             word_coarseness=self.word_coarseness,
-            name=self.name
+            name=self.name,
         )
 
     def _model_milp(self, model_options):
-        r"""
-        """
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.WORDWISE:
             # wordsize is set externally in wordbasedcipher.add_subcipher
@@ -1871,9 +1964,7 @@ class PermuteLayer_CVL(LinearLayer_CVL):
                     )
             return self.milp
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _model_sat(self, model_options):
         r"""
@@ -1911,24 +2002,28 @@ class PermuteLayer_CVL(LinearLayer_CVL):
         if model_options.granularity == GRANULARITY.BITWISE:
             for i in range(self.input_length // self.word_coarseness):
                 for j in range(self.word_coarseness):
-                    self.sat.add_clause((
-                        self.SAT_OUT[self.word_coarseness * self.perm[i] + j],
-                        -self.SAT_IN[self.word_coarseness * i + j]
-                    ))
-                    self.sat.add_clause((
-                        -self.SAT_OUT[self.word_coarseness * self.perm[i] + j],
-                        self.SAT_IN[self.word_coarseness * i + j]
-                    ))
+                    self.sat.add_clause(
+                        (
+                            self.SAT_OUT[self.word_coarseness * self.perm[i] + j],
+                            -self.SAT_IN[self.word_coarseness * i + j],
+                        )
+                    )
+                    self.sat.add_clause(
+                        (
+                            -self.SAT_OUT[self.word_coarseness * self.perm[i] + j],
+                            self.SAT_IN[self.word_coarseness * i + j],
+                        )
+                    )
             return self.sat
         else:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
-                message="Wordwise modeling is not supported using SAT."
+                message="Wordwise modeling is not supported using SAT.",
             )
 
 
 class RotateLayer_CVL(PermuteLayer_CVL):
-    """
+    r"""
     The ``RotateLayer_CVL`` class, accepting a rotation amount and translating
     it into the corresponding permutation, such that most of the functionality
     is inherited by ``PermuteLayer_CVL``.
@@ -1951,7 +2046,7 @@ class RotateLayer_CVL(PermuteLayer_CVL):
     of the size ``word_coarseness``.
 
     .. NOTE::
-        This layer rotates to the **left**, i.e. :math:`\\lll`
+        This layer rotates to the **left**, i.e. :math:`\lll`
 
     EXAMPLES::
 
@@ -1966,11 +2061,13 @@ class RotateLayer_CVL(PermuteLayer_CVL):
         True
 
     """
+
     def __init__(self, input_length, r, word_coarseness=1, name=None):
         # convert r rotation to perm
         self.__r = r
-        perm = list(range((-r) % input_length, input_length)) + \
-            list(range((-r) % input_length))
+        perm = list(range((-r) % input_length, input_length)) + list(
+            range((-r) % input_length)
+        )
         super().__init__(perm, word_coarseness=word_coarseness, name=name)
 
     @property
@@ -1997,7 +2094,8 @@ class RotateLayer_CVL(PermuteLayer_CVL):
     @classmethod
     def _from_dict(cls, d):
         return cls(
-            d["input_length"], d["r"],
+            d["input_length"],
+            d["r"],
             word_coarseness=d["word_coarseness"],
             name=d.get("name"),
         )
@@ -2019,9 +2117,9 @@ class RotateLayer_CVL(PermuteLayer_CVL):
         """
         return RotateLayer_CVL(
             input_length=self.input_length,
-            r=(self.input_length//self.word_coarseness) - self.r,
+            r=(self.input_length // self.word_coarseness) - self.r,
             word_coarseness=self.word_coarseness,
-            name=self.name
+            name=self.name,
         )
 
 
@@ -2086,28 +2184,24 @@ class SBox_CVL(Component):
             for i in range(self.input_length // self.wordsize):
                 self.milp.add_constraint(self.milp.VAR_OUT[i] == self.milp.VAR_IN[i])
                 # self.sum_arr_milp += [(-1, f"IN[{i}]")]
-                self.sum_arr_milp += [(-1, self.milp.vars['IN'].get_index(i))]
+                self.sum_arr_milp += [(-1, self.milp.vars["IN"].get_index(i))]
             return self.milp
         elif model_options.granularity == GRANULARITY.BITWISE:
             return self._milp_bitwise(model_options)
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _model_sat(self, model_options):
         self._init_model(model_options)
         if model_options.granularity == GRANULARITY.BITWISE:
             return self._sat_bitwise(model_options)
         elif model_options.granularity == GRANULARITY.WORDWISE:
-            raise InvalidModelOptionException(
+            raise InvalidModelOptionError(
                 model_options.granularity,
-                message="Wordwise modeling is not supported using SAT."
+                message="Wordwise modeling is not supported using SAT.",
             )
         else:
-            raise InvalidModelOptionException(
-                model_options.granularity, GRANULARITY
-            )
+            raise InvalidModelOptionError(model_options.granularity, GRANULARITY)
 
     def _milp_bitwise(self, model_options):
         r"""
@@ -2220,17 +2314,17 @@ class SBox_CVL(Component):
         elif model_options.cryptanalysis == CRYPTANALYSIS.LINEAR:
             # use LAT instead of DDT. The naming is not right here,
             # but it doesn't change the functionality
-            ddt = matrix([
-                [abs(int(entry*len(self.S))) for entry in row]
-                for row in self.S.linear_approximation_table("correlation")
-            ])
-        else:
-            raise InvalidModelOptionException(
-                model_options.cryptanalysis, CRYPTANALYSIS
+            ddt = matrix(
+                [
+                    [abs(int(entry * len(self.S))) for entry in row]
+                    for row in self.S.linear_approximation_table("correlation")
+                ]
             )
+        else:
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         # Contains the possible entries of ddt.
-        set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+        set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
 
         PROB = self.milp.new_variable(name="PROB", binary=True)
 
@@ -2241,11 +2335,11 @@ class SBox_CVL(Component):
             # number of equations used for the final model of the s-box.
 
             # Path to file for caching the original set of inequations
-            s_file_name = ''.join([f'{s_entry:x}' for s_entry in self.S])
+            s_file_name = "".join([f"{s_entry:x}" for s_entry in self.S])
             s_file_ineq = model_options.path / (s_file_name + ".ineq.json")
             # Load inequations if we computed them already
-            if os.path.exists(s_file_ineq):
-                with open(s_file_ineq, "r") as ineq_file:
+            if s_file_ineq.exists():
+                with s_file_ineq.open() as ineq_file:
                     inequations_for_prob = json.load(ineq_file)
             else:  # Create inequations for s-box transitions
                 # Originally, this method does not take the probability
@@ -2253,24 +2347,23 @@ class SBox_CVL(Component):
                 # to do so is the iterate for every non-zero probability
                 # within the DDT and merge the resulting models while keeping
                 # track of the probability.
-                inequations_for_prob = dict()
+                inequations_for_prob = {}
                 for prob in set_ddt:
                     if prob == 0:
                         continue
                     # prob needs to be a string to comply with json format
-                    inequations_for_prob[str(prob)] = \
-                        distorted_balls.get_inequations(ddt, prob)
+                    inequations_for_prob[str(prob)] = distorted_balls.get_inequations(
+                        ddt, prob
+                    )
                 # Cache inequations
-                with open(s_file_ineq, "w") as ineq_file:
+                with s_file_ineq.open("w") as ineq_file:
                     json.dump(inequations_for_prob, ineq_file)
 
             # Compute all points that do not have a given probability.
-            impossible_points_for_prob = {
-                prob: [] for prob in inequations_for_prob.keys()
-            }
+            impossible_points_for_prob = {prob: [] for prob in inequations_for_prob}
             for a in range(1 << self.input_length):
                 for b in range(1 << self.output_length):
-                    for prob in impossible_points_for_prob.keys():
+                    for prob in impossible_points_for_prob:
                         if ddt[a][b] != int(prob):
                             impossible_points_for_prob[prob].append((a, b))
 
@@ -2291,21 +2384,18 @@ class SBox_CVL(Component):
                 lhs = 0
                 for i in range(self.input_length):
                     # the 0-th bit is the msb
-                    lhs += ((point[0] >> i) & 1) * \
-                        inequation[self.input_length - i - 1]
+                    lhs += ((point[0] >> i) & 1) * inequation[self.input_length - i - 1]
                 for i in range(self.output_length):
                     # the 0-th bit is the msb
-                    lhs += ((point[1] >> i) & 1) * \
-                        inequation[self.input_length + self.output_length - i - 1]
+                    lhs += ((point[1] >> i) & 1) * inequation[
+                        self.input_length + self.output_length - i - 1
+                    ]
                 # Compare with right-hand size
-                if lhs < inequation[-1]:
-                    return True
-                return False
+                return lhs < inequation[-1]
 
-            reduction_solution = dict()
+            reduction_solution = {}
             for prob, impossible_points in impossible_points_for_prob.items():
                 s_file_mps = model_options.path / f"{s_file_name}.p{prob}.mps"
-                
 
                 # Generate the reduction-MILP and write into an .mps file.
                 # We add equations to make sure that each impossible point is
@@ -2313,22 +2403,24 @@ class SBox_CVL(Component):
                 # that the probability does not match the desired one.
                 # The solver handles the "solution already on disk" cache
                 # check internally and (for an external solver) aborts via
-                # :class:`ExternalSolveRequired` when the user must solve.
+                # :class:`ExternalSolveRequiredError` when the user must solve.
                 milp_to_minimize_milp = MILP_CVL(maximization=False)  # Reduction MILP
-                Z = milp_to_minimize_milp.new_variable(
-                    name="Z", binary=True)
+                Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
                 for point in impossible_points:
                     # Add a reduction inequation ensuring that each
                     # impossible point is removed by at least one
                     # inequation
                     milp_to_minimize_milp.add_constraint(
-                        sum([
-                            Z[ineq_index]
-                            for ineq_index, inequation in enumerate(
-                                inequations_for_prob[prob]
-                            )
-                            if removes(inequation, point)
-                        ]) >= 1
+                        sum(
+                            [
+                                Z[ineq_index]
+                                for ineq_index, inequation in enumerate(
+                                    inequations_for_prob[prob]
+                                )
+                                if removes(inequation, point)
+                            ]
+                        )
+                        >= 1
                     )
 
                 milp_to_minimize_milp.set_objective(sum(Z))
@@ -2336,17 +2428,17 @@ class SBox_CVL(Component):
                     milp_to_minimize_milp.write_mps(str(s_file_mps))
                 reduction_solution[prob] = solver.solve(s_file_mps)["assignment"]
 
-            selected_inequations = {
-                prob: [] for prob in reduction_solution.keys()
-            }
+            selected_inequations = {prob: [] for prob in reduction_solution}
             for prob, results in reduction_solution.items():
-                assert 'Z' in results and len(results) == 1, (
+                assert "Z" in results and len(results) == 1, (
                     "ERROR: Unexpected variables in results. "
                     f"Found {results.keys()}, expected 'Z'"
                 )
-                for ineq_index, use in results['Z'].items():
+                for ineq_index, use in results["Z"].items():
                     if use:  # if Z[ineq_index] was determined to be 1
-                        selected_inequations[prob].append(inequations_for_prob[prob][ineq_index])
+                        selected_inequations[prob].append(
+                            inequations_for_prob[prob][ineq_index]
+                        )
 
             for prob_str, sel_ineq in selected_inequations.items():
                 prob_index = set_ddt.index(int(prob_str))
@@ -2365,8 +2457,12 @@ class SBox_CVL(Component):
                     # equation will therefore always be fulfilled if the
                     # probability variable is zero, and it will match the
                     # original inequation otherwise.
-                    lhs -= PROB[prob_index] * non_zero_coefficients * 128  # probability encoding bits
-                    self.milp.add_constraint(lhs >= inequation[-1] - non_zero_coefficients * 128)
+                    lhs -= (
+                        PROB[prob_index] * non_zero_coefficients * 128
+                    )  # probability encoding bits
+                    self.milp.add_constraint(
+                        lhs >= inequation[-1] - non_zero_coefficients * 128
+                    )
 
             # Add a constraint that at least one probability
             # variable needs to be one
@@ -2377,8 +2473,8 @@ class SBox_CVL(Component):
             for i in range(1 << self.input_length):
                 for o in range(1 << self.output_length):
                     if ddt[i][o] > 0:
-                        i_binarr = [int(bit) for bit in f'{i:0{self.input_length}b}']
-                        o_binarr = [int(bit) for bit in f'{o:0{self.output_length}b}']
+                        i_binarr = [int(bit) for bit in f"{i:0{self.input_length}b}"]
+                        o_binarr = [int(bit) for bit in f"{o:0{self.output_length}b}"]
 
                         # p_arr is appended to the possible transitions to encode probability.
                         p_arr = [0 for _ in range(len(set_ddt))]
@@ -2388,33 +2484,32 @@ class SBox_CVL(Component):
             if model_options.sbox_modeling == SBOX_MODELING.CONVEX_HULL:
                 # Convex Hull method by Sasaki and Todo
                 # ----------------------------------------------------------------
-                reduction_algorithm_ST17(
-                    self, posset, model_options, PROB=PROB
-                )
+                reduction_algorithm_ST17(self, posset, model_options, PROB=PROB)
                 # ----------------------------------------------------------------
             elif model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND:
-
-                imposset = []
                 clauses = []
                 # compute imposset = complement of posset
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 L = self.input_length + self.output_length + len(set_ddt)
-                for transition_int in range(1 << L):
-                    if transition_int not in posset:
-                        imposset.append(transition_int)
+                imposset = [
+                    transition_int
+                    for transition_int in range(1 << L)
+                    if transition_int not in posset
+                ]
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 for impossible_transition in imposset:
                     tup = (
-                        (-1)**((impossible_transition >> (L - i - 1)) & 1)
-                        * i
+                        (-1) ** ((impossible_transition >> (L - i - 1)) & 1) * i
                         for i in range(L)
                     )
                     clauses.append(tup)
 
                 n_in, n_out = self.input_length, self.output_length
-                VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
-                    + [self.milp.VAR_OUT[v] for v in range(n_out)] \
+                VAR = (
+                    [self.milp.VAR_IN[v] for v in range(n_in)]
+                    + [self.milp.VAR_OUT[v] for v in range(n_out)]
                     + [PROB[v] for v in range(len(set_ddt))]
+                )
 
                 # translate SAT clauses into MILP constraints
                 for clause in clauses:
@@ -2422,26 +2517,31 @@ class SBox_CVL(Component):
                     # the rhs computes the hammingweight of the currently
                     # processed transition vector
                     self.milp.add_constraint(
-                        sum(constr) >= 1 - sum(
-                            [1 if lit < 0 else 0 for lit in clause]
-                        )
+                        sum(constr) >= 1 - sum([1 if lit < 0 else 0 for lit in clause])
                     )
                 # ----------------------------------------------------------------
 
             elif model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND_ESPRESSO:
                 # Espresso minimization (logical conditioning)
                 # ----------------------------------------------------------------
-                esp_file_name = f"espresso-{zlib.crc32("".join([
-                    str(int("".join(map(str, pos)), 2))
-                    for pos in sorted(posset)
-                ]).encode("utf-8")):x}.pla"
+                esp_file_name = f"espresso-{
+                    zlib.crc32(
+                        ''.join(
+                            [
+                                str(int(''.join(map(str, pos)), 2))
+                                for pos in sorted(posset)
+                            ]
+                        ).encode('utf-8')
+                    ):x}.pla"
                 pla_file = model_options.path / esp_file_name
                 clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
                 n_in, n_out = self.input_length, self.output_length
-                VAR = [self.milp.VAR_IN[v] for v in range(n_in)] \
-                    + [self.milp.VAR_OUT[v] for v in range(n_out)] \
+                VAR = (
+                    [self.milp.VAR_IN[v] for v in range(n_in)]
+                    + [self.milp.VAR_OUT[v] for v in range(n_out)]
                     + [PROB[v] for v in range(len(set_ddt))]
+                )
 
                 # translate SAT clauses into MILP constraints
                 for clause in clauses:
@@ -2449,9 +2549,7 @@ class SBox_CVL(Component):
                     # the rhs computes the hammingweight of the currently
                     # processed transition vector
                     self.milp.add_constraint(
-                        sum(constr) >= 1 - sum(
-                            [1 if lit < 0 else 0 for lit in clause]
-                        )
+                        sum(constr) >= 1 - sum([1 if lit < 0 else 0 for lit in clause])
                     )
                 # ----------------------------------------------------------------
 
@@ -2514,24 +2612,22 @@ class SBox_CVL(Component):
             # use LAT instead of DDT. The naming is not right here,
             # but it doesn't change the functionality
             ddt = [
-                [abs(int(entry*len(self.S))) for entry in row]
+                [abs(int(entry * len(self.S))) for entry in row]
                 for row in self.S.linear_approximation_table("correlation")
             ]
         else:
-            raise InvalidModelOptionException(
-                model_options.cryptanalysis, CRYPTANALYSIS
-            )
+            raise InvalidModelOptionError(model_options.cryptanalysis, CRYPTANALYSIS)
 
         # Contains the possible entries of ddt.
-        set_ddt = sorted(list(set([d for dr in ddt for d in dr if d > 0])))
+        set_ddt = sorted({d for dr in ddt for d in dr if d > 0})
 
         posset = []
 
         for i in range(1 << self.input_length):
             for o in range(1 << self.output_length):
                 if ddt[i][o] > 0:
-                    i_binarr = [int(bit) for bit in f'{i:0{self.input_length}b}']
-                    o_binarr = [int(bit) for bit in f'{o:0{self.output_length}b}']
+                    i_binarr = [int(bit) for bit in f"{i:0{self.input_length}b}"]
+                    o_binarr = [int(bit) for bit in f"{o:0{self.output_length}b}"]
 
                     # p_arr is appended to the possible transitions to encode
                     # probability.
@@ -2547,10 +2643,12 @@ class SBox_CVL(Component):
         if model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND_ESPRESSO:
             # Espresso minimization (logical conditioning)
             # ----------------------------------------------------------------
-            esp_file_name = f"espresso-{zlib.crc32("".join([
-                str(int("".join(map(str, pos)), 2))
-                for pos in sorted(posset)
-            ]).encode("utf-8")):x}.pla"  # rule for espresso file names
+            esp_file_name = f"espresso-{
+                zlib.crc32(
+                    ''.join(
+                        [str(int(''.join(map(str, pos)), 2)) for pos in sorted(posset)]
+                    ).encode('utf-8')
+                ):x}.pla"  # rule for espresso file names
             pla_file = model_options.path / esp_file_name
             clauses = model_options.logic_minimizer.solve(pla_file, posset)
 
@@ -2561,33 +2659,30 @@ class SBox_CVL(Component):
         # No reduction
         # ------------------------------------------------------------
         elif model_options.sbox_modeling == SBOX_MODELING.LOGICAL_COND:
-            imposset = []
             # compute imposset = complement of posset
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             L = len(SAT_VARS)
-            for transition_int in range(1 << L):
-                if transition_int not in posset:
-                    imposset.append(transition_int)
+            imposset = [
+                transition_int
+                for transition_int in range(1 << L)
+                if transition_int not in posset
+            ]
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             for impossible_transition in imposset:
                 tup = (
-                    (-1)**((impossible_transition >> (L - i - 1)) & 1)
-                    * SAT_VARS[i]
+                    (-1) ** ((impossible_transition >> (L - i - 1)) & 1) * SAT_VARS[i]
                     for i in range(L)
                 )
                 self.sat.add_clause(tup)
         else:
-            raise InvalidModelOptionException(
-                model_options.sbox_modeling,
-                SBOX_MODELING
-            )
+            raise InvalidModelOptionError(model_options.sbox_modeling, SBOX_MODELING)
         # ------------------------------------------------------------
 
         self.sum_arr_sat += [
-            (-int(
-                10**model_options.sat_precision
-                * log2(set_ddt[i] / ddt[0][0])
-            ), PROB[i])
+            (
+                -int(10**model_options.sat_precision * log2(set_ddt[i] / ddt[0][0])),
+                PROB[i],
+            )
             for i in range(len(set_ddt))
         ]
 
@@ -2638,6 +2733,7 @@ class ROT_AND_CVL(Component):
 
 
     """
+
     def __init__(self, word_length, r, name=None):
         assert r % word_length != 0, f"{r} must be non-zero mod {word_length}!"
         super().__init__(word_length, word_length, name=name)
@@ -2655,7 +2751,9 @@ class ROT_AND_CVL(Component):
     def eval(self, x):
         # Accepts a vector of length n ``x``, and returns ``x & (x <<< r)``.
         A = vec_to_int(x)
-        B = vec_to_int(list(x[self.r % self.word_length:]) + list(x[:self.r % self.word_length]))
+        B = vec_to_int(
+            list(x[self.r % self.word_length :]) + list(x[: self.r % self.word_length])
+        )
         return int_to_vec(A & B, self.word_length)
 
     def __repr__(self):
@@ -2676,9 +2774,8 @@ class ROT_AND_CVL(Component):
         return cls(d["word_length"], d["r"], name=d.get("name"))
 
     def _model_milp(self, model_options) -> MILP_CVL:
-        raise InvalidModelOptionException(
-            model_options.optimization,
-            message="ROT_AND_CVL is not supported in MILP"
+        raise InvalidModelOptionError(
+            model_options.optimization, message="ROT_AND_CVL is not supported in MILP"
         )
 
     def _model_sat(self, model_options) -> DIMACS:
@@ -2706,13 +2803,13 @@ class ROT_AND_CVL(Component):
 
             for i in range(self.word_length):
                 # branching self.SAT_IN --> (rot_comp.SAT_IN, and_comp.SAT_IN)
-                assert rot_comp.SAT_IN[i] == i+1
-                assert and_comp.SAT_IN[i] == i+1
-                assert (rot_comp.SAT_OUT[i] == self.word_length + i+1), (
-                    f"{rot_comp.SAT_OUT[i]} != {self.word_length + i+1}"
+                assert rot_comp.SAT_IN[i] == i + 1
+                assert and_comp.SAT_IN[i] == i + 1
+                assert rot_comp.SAT_OUT[i] == self.word_length + i + 1, (
+                    f"{rot_comp.SAT_OUT[i]} != {self.word_length + i + 1}"
                 )
-                assert (and_comp.SAT_OUT[i] == 2*self.word_length + i+1), (
-                    f"{and_comp.SAT_OUT[i]} != {2*self.word_length + i+1}"
+                assert and_comp.SAT_OUT[i] == 2 * self.word_length + i + 1, (
+                    f"{and_comp.SAT_OUT[i]} != {2 * self.word_length + i + 1}"
                 )
 
                 self.sat.add_clause((self.SAT_IN[i], ROT_VAR[i], -AND_VAR[i]))
@@ -2721,28 +2818,34 @@ class ROT_AND_CVL(Component):
                 self.sat.add_clause((-self.SAT_IN[i], -ROT_VAR[i], -AND_VAR[i]))
 
                 # rot_comp.SAT_OUT --> and_comp.SAT_IN
-                self.sat.add_clause((-ROT_VAR[i + self.word_length], AND_VAR[i + self.word_length]))
-                self.sat.add_clause((ROT_VAR[i + self.word_length], -AND_VAR[i + self.word_length]))
+                self.sat.add_clause(
+                    (-ROT_VAR[i + self.word_length], AND_VAR[i + self.word_length])
+                )
+                self.sat.add_clause(
+                    (ROT_VAR[i + self.word_length], -AND_VAR[i + self.word_length])
+                )
 
                 # and_comp.SAT_OUT --> self.SAT_OUT
-                self.sat.add_clause((-AND_VAR[i + 2*self.word_length], self.SAT_OUT[i]))
-                self.sat.add_clause((AND_VAR[i + 2*self.word_length], -self.SAT_OUT[i]))
+                self.sat.add_clause(
+                    (-AND_VAR[i + 2 * self.word_length], self.SAT_OUT[i])
+                )
+                self.sat.add_clause(
+                    (AND_VAR[i + 2 * self.word_length], -self.SAT_OUT[i])
+                )
 
             self.sum_arr_sat += [
-                (i[0], AND_VAR[i[1]-1])
-                for i in and_comp.sum_arr_sat
+                (i[0], AND_VAR[i[1] - 1]) for i in and_comp.sum_arr_sat
             ]
 
             return self.sat
 
         elif model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
-
             gcd_result = gcd(self.r, self.word_length)
             if gcd_result > 1:  # If ``self.r`` divides ``self.word_length``
                 small_ra = ROT_AND_CVL(
-                    word_length=self.word_length//gcd_result,
-                    r=self.r//gcd_result,
-                    name="small_ra"
+                    word_length=self.word_length // gcd_result,
+                    r=self.r // gcd_result,
+                    name="small_ra",
                 )
                 small_sat = small_ra._model_sat(model_options=model_options)
                 VAR = [self.sat.var() for _ in range(gcd_result * small_sat.nvars())]
@@ -2750,20 +2853,48 @@ class ROT_AND_CVL(Component):
                 for i in range(gcd_result):
                     for clause in small_sat.clauses():
                         new_clause = translate_sat_clause(
-                            VAR[i*small_sat.nvars(): (i+1)*small_sat.nvars()],
-                            clause[0]
+                            VAR[i * small_sat.nvars() : (i + 1) * small_sat.nvars()],
+                            clause[0],
                         )
                         self.sat.add_clause(new_clause)
 
                     for input_index in range(small_ra.input_length):
-                        self.sat.add_clause((self.SAT_IN[gcd_result * input_index + i], -VAR[input_index + i * small_sat.nvars()]))
-                        self.sat.add_clause((-self.SAT_IN[gcd_result * input_index + i], VAR[input_index + i * small_sat.nvars()]))
+                        self.sat.add_clause(
+                            (
+                                self.SAT_IN[gcd_result * input_index + i],
+                                -VAR[input_index + i * small_sat.nvars()],
+                            )
+                        )
+                        self.sat.add_clause(
+                            (
+                                -self.SAT_IN[gcd_result * input_index + i],
+                                VAR[input_index + i * small_sat.nvars()],
+                            )
+                        )
                     for output_index in range(small_ra.output_length):
-                        self.sat.add_clause((self.SAT_OUT[gcd_result * output_index + i], -VAR[output_index + small_ra.input_length + i * small_sat.nvars()]))
-                        self.sat.add_clause((-self.SAT_OUT[gcd_result * output_index + i], VAR[output_index + small_ra.input_length + i * small_sat.nvars()]))
+                        self.sat.add_clause(
+                            (
+                                self.SAT_OUT[gcd_result * output_index + i],
+                                -VAR[
+                                    output_index
+                                    + small_ra.input_length
+                                    + i * small_sat.nvars()
+                                ],
+                            )
+                        )
+                        self.sat.add_clause(
+                            (
+                                -self.SAT_OUT[gcd_result * output_index + i],
+                                VAR[
+                                    output_index
+                                    + small_ra.input_length
+                                    + i * small_sat.nvars()
+                                ],
+                            )
+                        )
 
                     self.sum_arr_sat += [
-                        (factor, VAR[index-1 + i * small_sat.nvars()])
+                        (factor, VAR[index - 1 + i * small_sat.nvars()])
                         for factor, index in small_ra.sum_arr_sat
                     ]
 
@@ -2780,28 +2911,37 @@ class ROT_AND_CVL(Component):
             ALPHA_ALL_ONES = self.sat.var()
 
             # If alpha = (1, ..., 1), set dummy-variable to 1
-            self.sat.add_clause(
-                tuple([-alpha[i] for i in range(w)] + [ALPHA_ALL_ONES])
-            )
+            self.sat.add_clause(tuple([-alpha[i] for i in range(w)] + [ALPHA_ALL_ONES]))
 
             # NOTE: Forbid alpha = (1, ..., 1)
             # If the case alpha = (1, ..., 1) should be handled, remove the
-            # constraint below and add the appropiate ones
+            # constraint below and add the appropriate ones
             ###########################################
-            self.sat.add_clause((-ALPHA_ALL_ONES, ))  #
+            self.sat.add_clause((-ALPHA_ALL_ONES,))  #
             ###########################################
 
             for i in range(w):
                 # definition of varibits
-                self.sat.add_clause((-alpha[i],                           varibits[i]))
+                self.sat.add_clause((-alpha[i], varibits[i]))
                 self.sat.add_clause((-alpha[(i + self.r) % w], varibits[i]))
                 self.sat.add_clause((alpha[i], alpha[(i + self.r) % w], -varibits[i]))
 
                 # definition of doublebits
                 self.sat.add_clause((alpha[i], -doublebits[i]))  # ( a, -d)
-                self.sat.add_clause((-alpha[(i + self.r) % w], -doublebits[i]))  # (-b, -d)
-                self.sat.add_clause((alpha[(i + 2*self.r) % w], -doublebits[i]))  # ( c, -d)
-                self.sat.add_clause((-alpha[i], alpha[(i + self.r) % w], -alpha[(i + 2*self.r) % w], doublebits[i]))  # (-a, b, -c, d)
+                self.sat.add_clause(
+                    (-alpha[(i + self.r) % w], -doublebits[i])
+                )  # (-b, -d)
+                self.sat.add_clause(
+                    (alpha[(i + 2 * self.r) % w], -doublebits[i])
+                )  # ( c, -d)
+                self.sat.add_clause(
+                    (
+                        -alpha[i],
+                        alpha[(i + self.r) % w],
+                        -alpha[(i + 2 * self.r) % w],
+                        doublebits[i],
+                    )
+                )  # (-a, b, -c, d)
 
                 # constraint that must hold for non-zero prob
                 self.sat.add_clause((-beta[i], varibits[i]))
@@ -2814,8 +2954,6 @@ class ROT_AND_CVL(Component):
                 self.sat.add_clause((-varibits[i], doublebits[i], SUM_VAR[i]))
                 self.sat.add_clause((-varibits[i], -doublebits[i], -SUM_VAR[i]))
 
-                self.sum_arr_sat += [
-                    (1 * 10**model_options.sat_precision, SUM_VAR[i])
-                ]
+                self.sum_arr_sat += [(1 * 10**model_options.sat_precision, SUM_VAR[i])]
 
         return self.sat

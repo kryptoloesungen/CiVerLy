@@ -1,9 +1,11 @@
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
 from sage.crypto.sbox import SBox as SBox_sage
 
+from civerly.component import PermuteLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
+
+
 class RECTANGLE_CVL:
-    def __init__(self, R=25, key_schedule=False, rks=[], name="RECTANGLE"): 
+    def __init__(self, R=25, key_schedule=False, rks=None, name="RECTANGLE"):
         r"""
         CiVerly implementation of the Rectangle cipher (https://eprint.iacr.org/2014/084.pdf).
         It takes the following parameters:
@@ -26,7 +28,7 @@ class RECTANGLE_CVL:
 
         TESTS::
             sage: rks = [
-            ....:   0x0000000000000000, 0x000e000f00000000, 
+            ....:   0x0000000000000000, 0x000e000f00000000,
             ....:   0x000c0001000ff000, 0x0309000df00ccf00,
             ....:   0x0c0df006cf099cf3, 0xf311cf099cfddac3,
             ....:   0xd1fd9cf8dac221af, 0x642adac821aa5104,
@@ -47,7 +49,7 @@ class RECTANGLE_CVL:
             True
 
             sage: rks = [
-            ....:   0xffffffffffffffff, 0x0f01fff0fff0f000, 
+            ....:   0xffffffffffffffff, 0x0f01fff0fff0f000,
             ....:   0xfef3fffff000f0f0, 0x0f09f00cf0fff00e,
             ....:   0xf00ff0f5f003c1f0, 0xf914f00ac1f7731f,
             ....:   0xecf0c1f67315a738, 0x3c1b7316a73a536f,
@@ -102,7 +104,7 @@ class RECTANGLE_CVL:
             ....:   rectangle_cipher.analyse(model_options)
             7872 variables and 8641 constraints were written to ...
             10
-            
+
             sage: # optional - gurobi # optional - espresso
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.model_options import *
@@ -134,7 +136,7 @@ class RECTANGLE_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
@@ -157,7 +159,7 @@ class RECTANGLE_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
@@ -178,7 +180,7 @@ class RECTANGLE_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
@@ -197,7 +199,7 @@ class RECTANGLE_CVL:
             ....:     optimization=OPTIMIZATION.SAT,
             ....:     granularity=GRANULARITY.BITWISE,
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,            
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
@@ -230,19 +232,18 @@ class RECTANGLE_CVL:
             """
 
         # RECTANGLE necessites R+1 rks, which are sets by default to zeros
+        if rks is None:
+            rks = []
         if rks == []:
             rks = [0] * (R + 1)
         else:
             rks = list(rks)
-            assert len(rks) >= R + 1, f"RECTANGLE needs R+1={R+1} roundkeys"
-  
+            assert len(rks) >= R + 1, f"RECTANGLE needs R+1={R + 1} roundkeys"
+
         # RECTANGLE S-box specifications
         RECTANGLE_SBOX = (
-            0x6, 0x5, 0xC, 0xA,
-            0x1, 0xE, 0x7, 0x9,
-            0xB, 0x0, 0x3, 0xD,
-            0x8, 0xF, 0x4, 0x2
-        )
+            0x6, 0x5, 0xC, 0xA, 0x1, 0xE, 0x7, 0x9, 0xB, 0x0, 0x3, 0xD, 0x8, 0xF, 0x4, 0x2,
+        )  # fmt: skip
 
         # SubColumn
         # 16 parallel 4-bit S-boxes
@@ -257,7 +258,7 @@ class RECTANGLE_CVL:
         # CiVerLy assumes that each row of the internal state is a word/nibble
         # this function converts 4 rows with 16 columns into 16 nibbles each 4-bits
         # each 4-bit nibble is constructed from one bit of each column
-        # each column i is contructed as (row_0[i], row_1[i], row_2[i], row_3[i])
+        # each column i is constructed as (row_0[i], row_1[i], row_2[i], row_3[i])
         def bit_to_nibble():
             perm = [0] * 64
             for row in range(4):
@@ -268,16 +269,23 @@ class RECTANGLE_CVL:
                     dest_msb = 63 - dest_lsb
                     perm[src_msb] = dest_msb
             return perm
+
         tr = bit_to_nibble()
-        transpose = PermuteLayer_CVL(tr, word_coarseness=1, name="Transpose_bitslice_to_nibbles")
+        transpose = PermuteLayer_CVL(
+            tr, word_coarseness=1, name="Transpose_bitslice_to_nibbles"
+        )
+
         # this function computes the inverse of the permutation
         def invert_perm(p):
             inv = [0] * len(p)
             for src, dst in enumerate(p):
                 inv[dst] = src
             return inv
+
         tr_inv = invert_perm(tr)
-        transpose_inv = PermuteLayer_CVL(tr_inv, word_coarseness=1, name="Transpose_nibbles_to_bitslice")
+        transpose_inv = PermuteLayer_CVL(
+            tr_inv, word_coarseness=1, name="Transpose_nibbles_to_bitslice"
+        )
         # SubColumn as: T^{-1} . S . T
         # Transpose from bitslice layout to nibble layout
         # S applies the Sbox
@@ -308,7 +316,10 @@ class RECTANGLE_CVL:
                     dest_msb = 63 - dest_lsb
                     perm[src_msb] = dest_msb
             return perm
-        shiftrows = PermuteLayer_CVL(shiftrows_perm_msb(), word_coarseness=1, name="ShiftRows")
+
+        shiftrows = PermuteLayer_CVL(
+            shiftrows_perm_msb(), word_coarseness=1, name="ShiftRows"
+        )
 
         # AddRoundKey
         ark = RoundkeyXOR_CVL(64, 0x0, name="AddRoundKey")
@@ -316,7 +327,9 @@ class RECTANGLE_CVL:
         rectangle_round = WordSBoxCipher(4, 16, 16, name="RECTANGLE_round")
         st = rectangle_round.IN
         n_ark = rectangle_round.add_subcipher(ark, [(st, (i, i)) for i in range(16)])
-        st = rectangle_round.add_subcipher(subcolumn, [(n_ark, (i, i)) for i in range(16)])
+        st = rectangle_round.add_subcipher(
+            subcolumn, [(n_ark, (i, i)) for i in range(16)]
+        )
         st = rectangle_round.add_subcipher(shiftrows, [(st, (i, i)) for i in range(16)])
         rectangle_round.add_output([(st, (i, i)) for i in range(16)])
 
@@ -325,7 +338,9 @@ class RECTANGLE_CVL:
         st = rectangle.IN
         for r in range(R):
             rectangle_round.nodes[n_ark].const = rks[r]
-            st = rectangle.add_subcipher(rectangle_round, [(st, (i, i)) for i in range(16)])
+            st = rectangle.add_subcipher(
+                rectangle_round, [(st, (i, i)) for i in range(16)]
+            )
 
         # final AddRoundKey with K[25]
         ark.const = rks[R]

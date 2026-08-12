@@ -1,6 +1,7 @@
-from civerly.sboxcipher import SBoxCipher
-from civerly.component import SBox_CVL
 from sage.crypto.sboxes import GIFT as gift_S
+
+from civerly.component import SBox_CVL
+from civerly.sboxcipher import SBoxCipher
 
 
 # cipher using sboxes with transition of non-integer weight
@@ -60,6 +61,6 @@ class Toy9:
         self.cipher = cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(Toy9, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher

@@ -25,8 +25,8 @@ EXAMPLES::
     sage: node = addrx.add_subcipher(ModAdd_CVL(8), edges)
 """
 
+from civerly.component import AND_CVL, Component, SBox_CVL
 from civerly.wordbasedcipher import WordBasedCipher
-from civerly.component import Component, SBox_CVL, AND_CVL
 
 
 class AddRX(WordBasedCipher):

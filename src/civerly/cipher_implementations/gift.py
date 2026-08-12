@@ -1,22 +1,25 @@
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
 from sage.crypto.sboxes import GIFT as gift_S
+
+from civerly.component import PermuteLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
+
 
 class GIFT64_CVL:
     # Bit permutation specifications with LSB-indexing
-    Perm_LSB = [
-        0, 17, 34, 51, 48,  1, 18, 35, 32, 49,  2, 19, 16, 33, 50,  3,
-        4, 21, 38, 55, 52,  5, 22, 39, 36, 53,  6, 23, 20, 37, 54,  7,
-        8, 25, 42, 59, 56,  9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
-        12, 29, 46, 63, 60, 13, 30, 47, 44, 61, 14, 31, 28, 45, 62, 15
-    ]
+    Perm_LSB = (
+        0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
+        4, 21, 38, 55, 52, 5, 22, 39, 36, 53, 6, 23, 20, 37, 54, 7,
+        8, 25, 42, 59, 56, 9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
+        12, 29, 46, 63, 60, 13, 30, 47, 44, 61, 14, 31, 28, 45, 62, 15,
+    )  # fmt: skip
+
     @staticmethod
     def lsb_to_msb(permutation_lsb):
         """
-        Since this implementation is based on the C reference implementation, which uses LSB indexing, 
+        Since this implementation is based on the C reference implementation, which uses LSB indexing,
         we have to convert it to MSB indexing to be compatible with the original paper.
-        To this end, we reverse the indexing, where the bit index 0 would correspond 
-        to the MSB, instead of the LSB. 
+        To this end, we reverse the indexing, where the bit index 0 would correspond
+        to the MSB, instead of the LSB.
         """
         n = len(permutation_lsb)
         permutation_msb = [0] * n
@@ -24,7 +27,7 @@ class GIFT64_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-    def __init__(self, R=28, key_schedule=False, rks=[], name="GIFT-64"):
+    def __init__(self, R=28, key_schedule=False,rks=None, name="GIFT-64"):
         r"""
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
 
@@ -45,16 +48,16 @@ class GIFT64_CVL:
         EXAMPLES::
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift64 = GIFT64_CVL(R=28)  
+            sage: gift64 = GIFT64_CVL(R=28)
             sage: hex(vec_to_int(gift64(int_to_vec(0x0, 64))))
             '0x0'
 
 
         TESTS::
 
-        Using test vectors from the original implementation 
+        Using test vectors from the original implementation
         (see files 'GIFT64_test_vector_1.txt', 'GIFT64_test_vector_2.txt'
-        and 'GIFT64_test_vector_3.txt' in 
+        and 'GIFT64_test_vector_3.txt' in
         https://github.com/giftcipher/gift/blob/master/implementations/test%20vectors):
 
             sage: rks = [
@@ -114,7 +117,7 @@ class GIFT64_CVL:
             True
 
         Model the cipher with MILP:
-            
+
             sage: # optional - scip
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
@@ -129,10 +132,10 @@ class GIFT64_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
-            ....:   gift64_cipher.analyse(model_options) 
+            ....:   gift64_cipher.analyse(model_options)
             482 variables and 503 constraints were written to ...
             2
-            
+
             sage: # optional - scip
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
@@ -147,10 +150,10 @@ class GIFT64_CVL:
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
-            ....:   gift64_cipher.analyse(model_options) 
+            ....:   gift64_cipher.analyse(model_options)
             2048 variables and 2337 constraints were written to ...
             3.4150374993
-            
+
             sage: # optional - scip
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
@@ -166,11 +169,11 @@ class GIFT64_CVL:
             ....:     milp_solver=SOLVER.SCIP,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
-            ....:   gift64_cipher.analyse(model_options) 
+            ....:   gift64_cipher.analyse(model_options)
             2048 variables and 3649 constraints were written to ...
             3.4150374993
 
-            
+
             sage: # optional - gurobi
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
@@ -190,7 +193,7 @@ class GIFT64_CVL:
             11.4150374993
             Output file in: ...
 
-            
+
             sage: # optional - gurobi
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
@@ -210,8 +213,8 @@ class GIFT64_CVL:
             3712 variables and 6977 constraints were written to ...
             11.4150374993
             Output file in: ...
-            
-            
+
+
         Model the cipher with SAT using different values for ``sat_precision``:
 
             sage: # optional - cryptominisat espresso
@@ -342,21 +345,23 @@ class GIFT64_CVL:
             4464 variables and 10401 clauses were written to ...
             7
 
-            """
-        
+        """
+
         # The default values of the round keys rks are set to 0
+        if rks is None:
+            rks = []
         if rks == []:
             rks = [0] * R
         else:
             # If the rks are provided, then we check if the number of rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks 
-            # If len(rks) > R, then we consider only the needed number of rks 
+            # If len(rks) < R, then add zero rks
+            # If len(rks) > R, then we consider only the needed number of rks
             rks = list(rks)
             if len(rks) < R:
                 rks = rks + [0] * (R - len(rks))
             elif len(rks) > R:
                 rks = rks[:R]
-        
+
         # SubCells
         # 16 4-bits S-boxes in parallel
         sbox = SBox_CVL(gift_S, name="GIFT64_SBox")
@@ -373,7 +378,7 @@ class GIFT64_CVL:
         # Implementation of the GIFT64 cipher
         gift = WordSBoxCipher(4, 16, 16, name=name)
         state = gift.IN
-        
+
         for r in range(R):
             state = gift.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
             state = gift.add_subcipher(permbits, [(state, (i, i)) for i in range(16)])
@@ -384,31 +389,31 @@ class GIFT64_CVL:
         self.gift_cipher = gift
 
     def __new__(cls, *args, **kwargs):
-        instance = super(GIFT64_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.gift_cipher
 
 
 class GIFT128_CVL:
     # Bit permutation specifications with LSB-indexing
-    Perm_LSB = [
-          0,  33,  66,  99,  96,   1,  34,  67,  64,  97,   2,  35,  32,  65,  98,   3,
-          4,  37,  70, 103, 100,   5,  38,  71,  68, 101,   6,  39,  36,  69, 102,   7,
-          8,  41,  74, 107, 104,   9,  42,  75,  72, 105,  10,  43,  40,  73, 106,  11,
-         12,  45,  78, 111, 108,  13,  46,  79,  76, 109,  14,  47,  44,  77, 110,  15,
-         16,  49,  82, 115, 112,  17,  50,  83,  80, 113,  18,  51,  48,  81, 114,  19,
-         20,  53,  86, 119, 116,  21,  54,  87,  84, 117,  22,  55,  52,  85, 118,  23,
-         24,  57,  90, 123, 120,  25,  58,  91,  88, 121,  26,  59,  56,  89, 122,  27,
-         28,  61,  94, 127, 124,  29,  62,  95,  92, 125,  30,  63,  60,  93, 126,  31
-    ]
+    Perm_LSB = (
+        0, 33, 66, 99, 96, 1, 34, 67, 64, 97, 2, 35, 32, 65, 98, 3,
+        4, 37, 70, 103, 100, 5, 38, 71, 68, 101, 6, 39, 36, 69, 102, 7,
+        8, 41, 74, 107, 104, 9, 42, 75, 72, 105, 10, 43, 40, 73, 106, 11,
+        12, 45, 78, 111, 108, 13, 46, 79, 76, 109, 14, 47, 44, 77, 110, 15,
+        16, 49, 82, 115, 112, 17, 50, 83, 80, 113, 18, 51, 48, 81, 114, 19,
+        20, 53, 86, 119, 116, 21, 54, 87, 84, 117, 22, 55, 52, 85, 118, 23,
+        24, 57, 90, 123, 120, 25, 58, 91, 88, 121, 26, 59, 56, 89, 122, 27,
+        28, 61, 94, 127, 124, 29, 62, 95, 92, 125, 30, 63, 60, 93, 126, 31,
+    )  # fmt: skip
 
     @staticmethod
     def lsb_to_msb(permutation_lsb):
         """
-        Since this implementation is based on the C reference implementation, which uses LSB indexing, 
+        Since this implementation is based on the C reference implementation, which uses LSB indexing,
         we have to convert it to MSB indexing to be compatible with the original paper.
-        To this end, we reverse the indexing, where the bit index 0 would correspond 
-        to the MSB, instead of the LSB. 
+        To this end, we reverse the indexing, where the bit index 0 would correspond
+        to the MSB, instead of the LSB.
         """
         n = len(permutation_lsb)
         permutation_msb = [0] * n
@@ -416,8 +421,7 @@ class GIFT128_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-
-    def __init__(self, R=40, rks=[], name="GIFT-128"):
+    def __init__(self, R=40, rks=None, name="GIFT-128"):
         r"""
 
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
@@ -439,14 +443,14 @@ class GIFT128_CVL:
         EXAMPLES::
             sage: from civerly.cipher_implementations.gift import GIFT128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift128 = GIFT128_CVL(R=40) 
+            sage: gift128 = GIFT128_CVL(R=40)
             sage: hex(vec_to_int(gift128(int_to_vec(0x0, 128))))
             '0x99999999999999999999999999999999'
 
         TESTS::
 
-        Using test vectors from the original implementation 
-        (see files 'GIFT128_test_vector_2.txt' and 'GIFT128_test_vector_3.txt' in 
+        Using test vectors from the original implementation
+        (see files 'GIFT128_test_vector_2.txt' and 'GIFT128_test_vector_3.txt' in
         https://github.com/giftcipher/gift/blob/master/implementations/test%20vectors):
 
             sage: rks = [
@@ -524,7 +528,7 @@ class GIFT128_CVL:
             ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
-            ....:   gift128_cipher.analyse(model_options) 
+            ....:   gift128_cipher.analyse(model_options)
             1732 variables and 1837 constraints were written to ...
             4
 
@@ -542,11 +546,11 @@ class GIFT128_CVL:
             ....:     sbox_modeling=SBOX_MODELING.CONVEX_HULL,
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
-            ....:   gift128_cipher.analyse(model_options) 
+            ....:   gift128_cipher.analyse(model_options)
             4096 variables and 4673 constraints were written to ...
             3.4150374993
 
-            sage: # optional - scip                
+            sage: # optional - scip
             sage: from civerly.cipher_implementations.gift import GIFT128_CVL
             sage: from civerly.model_options import *
             sage: from pathlib import Path
@@ -561,7 +565,7 @@ class GIFT128_CVL:
             ....:     milp_solver=SOLVER.SCIP,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
-            ....:   gift128_cipher.analyse(model_options) 
+            ....:   gift128_cipher.analyse(model_options)
             4096 variables and 7297 constraints were written to ...
             3.4150374993
 
@@ -626,7 +630,7 @@ class GIFT128_CVL:
             4096 variables and 10753 clauses were written to ...
             3
 
-            
+
         Linear Cryptanalysis:
 
             sage: # optional - cryptominisat # optional - espresso
@@ -651,12 +655,14 @@ class GIFT128_CVL:
             """
 
         # The default values of the round keys rks are set to 0
+        if rks is None:
+            rks = []
         if rks == []:
             rks = [0] * R
         else:
             # If the rks are provided, then we check the number of rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks 
-            # If len(rks) > R, then we consider only the needed number of rks 
+            # If len(rks) < R, then add zero rks
+            # If len(rks) > R, then we consider only the needed number of rks
             rks = list(rks)
             if len(rks) < R:
                 rks = rks + [0] * (R - len(rks))
@@ -691,7 +697,6 @@ class GIFT128_CVL:
 
     def __new__(cls, *args, **kwargs):
         """Instantiate a GIFT cipher."""
-        instance = super(GIFT128_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.gift_cipher
-

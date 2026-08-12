@@ -40,22 +40,19 @@ TESTS:
 
 """
 
-import warnings
-
 import contextlib
-import random
-import shutil
-import zlib
-import sys
 import os
+import sys
+import warnings
+import zlib
+from pathlib import Path
 
-from sage.rings.integer_ring import ZZ
-from sage.rings.integer import Integer
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.modules.free_module_element import vector
-from sage.modules.free_module import VectorSpace
 from sage.geometry.polyhedron.constructor import Polyhedron
-
+from sage.modules.free_module import VectorSpace
+from sage.modules.free_module_element import vector
+from sage.rings.finite_rings.finite_field_constructor import GF
+from sage.rings.integer import Integer
+from sage.rings.integer_ring import ZZ
 
 # suppress LazyImport warnings from Polyhedron class
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -144,7 +141,7 @@ def hw(num):
 
     """
     if type(num) in (int, ZZ, Integer):
-        return bin(num).count('1')
+        return bin(num).count("1")
     else:
         raise ValueError(f"Wrong input type {type(num)}, must be int-like")
 
@@ -179,7 +176,7 @@ def hw_tau(n, tau):
 
 def list_of_predecessor_vector_indices(v, num_bits):
     r"""
-    Return a list of integers that encode binary vectors preceeding ``v``,
+    Return a list of integers that encode binary vectors preceding ``v``,
     with the partial order :math:`v \prec w \iff v_i \leq w_i \forall i`.
 
     TESTS::
@@ -195,10 +192,7 @@ def list_of_predecessor_vector_indices(v, num_bits):
 
     """
     assert num_bits <= len(v)
-    set_bit_indices = []
-    for i in range(num_bits):
-        if v[::-1][i] == 1:
-            set_bit_indices.append(i)
+    set_bit_indices = [i for i in range(num_bits) if v[::-1][i] == 1]
     out = []
     for vals in range(1 << len(set_bit_indices)):
         vals_vec = list(int_to_vec(vals, len(set_bit_indices)))
@@ -233,7 +227,7 @@ def translate_sat_clause(VAR, clause):
         (x_0, -1*x_1, x_2, -1*x_3, -1*x_4)
 
     """
-    return tuple((-1)**((i < 0) & 1) * VAR[abs(i)-1] for i in clause)
+    return tuple((-1) ** ((i < 0) & 1) * VAR[abs(i) - 1] for i in clause)
 
 
 def translate_milp_constraint(VAR, constr):
@@ -263,10 +257,7 @@ def translate_milp_constraint(VAR, constr):
 
     """
     # the current linear term in the MILP
-    summ = sum(
-        constr[1][1][j] * VAR[constr[1][0][j]]
-        for j in range(len(constr[1][0]))
-    )
+    summ = sum(constr[1][1][j] * VAR[constr[1][0][j]] for j in range(len(constr[1][0])))
     if constr[0] is None:
         new_constr = summ <= constr[2]
     elif constr[2] is None:
@@ -277,6 +268,7 @@ def translate_milp_constraint(VAR, constr):
         new_constr = constr[0] <= summ <= constr[2]
     return new_constr
 
+
 def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     r"""
     Implements Yosuke Todos and Yu Sasakis Reduction Algorithm
@@ -284,7 +276,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     which models the problem of choosing a minimal subset of
     MILP-constraints as a MILP itself. Intended to be used internally.
     """
-    from civerly.component import SBox_CVL, LinearLayer_CVL
+    from civerly.component import LinearLayer_CVL, SBox_CVL
     from civerly.milp import MILP_CVL
 
     assert isinstance(comp, (SBox_CVL, LinearLayer_CVL))
@@ -307,17 +299,17 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     # set name of the temporary file in which the reduction milp is stored
     # ------------------------------------------------------------------------
     if isinstance(comp, LinearLayer_CVL):
-        file_name = comp.name + str(
-            sum([ZZ(i) for i in comp.binary_matrix[0]])
-        ) + str(
-            sum([ZZ(j) for i in comp.binary_matrix for j in i])
-        ) + str(
-            sum([ZZ(i) for i in comp.binary_matrix[-1]])
+        file_name = (
+            comp.name
+            + str(sum([ZZ(i) for i in comp.binary_matrix[0]]))
+            + str(sum([ZZ(j) for i in comp.binary_matrix for j in i]))
+            + str(sum([ZZ(i) for i in comp.binary_matrix[-1]]))
         )
     elif isinstance(comp, SBox_CVL):
-        file_name = f"{zlib.crc32(
-            "".join([f'{s_entry:x}' for s_entry in comp.S]).encode("utf-8")
-        ):x}"
+        file_name = f"{
+            zlib.crc32(
+                ''.join([f'{s_entry:x}' for s_entry in comp.S]).encode('utf-8')
+            ):x}"
     else:
         raise ValueError(
             "reduction_algorithm_ST17 can only be applied to "
@@ -329,7 +321,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     # STEP 2.2:
     # Write the reduction MILP and solve it. The solver itself handles the
     # "solution already on disk" cache check and (for an external solver)
-    # aborts via :class:`ExternalSolveRequired` when the user must solve.
+    # aborts via :class:`ExternalSolveRequiredError` when the user must solve.
     for i_im, impossible_point in enumerate(imposset):
         for ic, constr in enumerate(convex_constraints):
             if constr.is_inequality():
@@ -342,9 +334,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
     for r_arr in R_bar:
         if len(r_arr) > 0:
-            milp_to_minimize_milp.add_constraint(
-                sum([Z[r] for r in r_arr]) >= 1
-            )
+            milp_to_minimize_milp.add_constraint(sum([Z[r] for r in r_arr]) >= 1)
     milp_to_minimize_milp.set_objective(sum(Z))
     # suppress_output in order to not make doctests fail
     with suppress_output():
@@ -355,9 +345,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     final_choices = []  # solution of reduction algorithm
 
     # STEP 3:
-    # use the found solution to generate a minimial MILP that models the
+    # use the found solution to generate a minimal MILP that models the
     # component
-    for Z_index, use in results['Z'].items():
+    for Z_index, use in results["Z"].items():
         if use != 0:
             final_choices.append(Z_index)
 
@@ -389,9 +379,9 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
                 if i < comp.binary_matrix.ncols() // comp.wordsize:
                     tmp_arr.append(ai * comp.milp.VAR_IN[i])
                 else:
-                    tmp_arr.append(ai * comp.milp.VAR_OUT[
-                        i - (comp.input_length // comp.wordsize)
-                    ])
+                    tmp_arr.append(
+                        ai * comp.milp.VAR_OUT[i - (comp.input_length // comp.wordsize)]
+                    )
 
         if ineq.is_inequality():
             comp.milp.add_constraint(sum(tmp_arr) + ineq.b() >= 0)
@@ -411,23 +401,25 @@ def _find_path(cipher, node, path=()):
         sage: node = ascon.nodes[3].nodes[2].nodes[1]
         sage: _find_path(ascon, node)
         (3, 2, 1)
-        
+
     """
     from civerly.cipher import Cipher
+
     if id(cipher) == id(node):
         return path
     if not isinstance(cipher, Cipher):
         return None
     for i in range(len(cipher.nodes)):
-        sub_path = _find_path(cipher.nodes[i], node, path + (i, ))
+        sub_path = _find_path(cipher.nodes[i], node, (*path, i))
         if sub_path is not None:
             return sub_path
+
 
 def translate_var(cipher, node, local_var):
     """
 
     TESTS::
-        
+
         sage: from civerly.cipher_implementations.craft import CRAFT_CVL
         sage: from civerly.model_options import *
         sage: import tempfile
@@ -457,7 +449,7 @@ def translate_var(cipher, node, local_var):
     # go backwards through the recursion tree
     for depth in range(1, len(index_path)):
         parent = cipher
-        for index in index_path[:len(index_path) - depth]:
+        for index in index_path[: len(index_path) - depth]:
             parent = parent.nodes[index]
         index = index_path[-depth]
         # distinguish between SAT and MILP variable
@@ -469,12 +461,10 @@ def translate_var(cipher, node, local_var):
     return var
 
 
-
-
 @contextlib.contextmanager
 def suppress_output():
     r"""
-    Util function that supresses any output on stdout and stderr.
+    Util function that suppresses any output on stdout and stderr.
     Exceptions will not be suppressed, however.
 
     TESTS::
@@ -493,7 +483,7 @@ def suppress_output():
     original_stdout_fd = sys.stdout.fileno()
     original_stderr_fd = sys.stderr.fileno()
 
-    with open(os.devnull, 'w') as devnull:
+    with Path(os.devnull).open("w") as devnull:
         new_stdout = os.dup(original_stdout_fd)
         new_stderr = os.dup(original_stderr_fd)
         try:

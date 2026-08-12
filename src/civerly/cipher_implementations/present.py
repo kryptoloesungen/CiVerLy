@@ -1,10 +1,11 @@
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
 from sage.crypto.sboxes import PRESENT as present_S
+
+from civerly.component import PermuteLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class PRESENT_CVL:
-    def __init__(self, R=31, key_schedule=False, rks=[], name="PRESENT"):
+    def __init__(self, R=31, key_schedule=False, rks=None, name="PRESENT"):
         r"""
         The CiVerLy implementation of PRESENT. It takes in the following
         arguments:
@@ -25,7 +26,7 @@ class PRESENT_CVL:
 
         EXAMPLES:
 
-        Encrypt a message (for verifying the implemenation)::
+        Encrypt a message (for verifying the implementation)::
 
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
@@ -55,7 +56,7 @@ class PRESENT_CVL:
             4
 
         Of course, since the branch number of any word-permutation is 2, this
-        result is not very interesting and unprecise, as the optimal solution
+        result is not very interesting and imprecise, as the optimal solution
         here would be one active word per round, which is specifically avoided
         to be possible in PRESENT. This indicates that generalized wordwise
         modeling might be a more reasonable approach. However, performing
@@ -288,15 +289,15 @@ class PRESENT_CVL:
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
             8
-        
-        Verify the well-known iterative linear trail for PRESENT: 
+
+        Verify the well-known iterative linear trail for PRESENT:
 
             sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir: 
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
             ....:   cipher = PRESENT_CVL(R=4)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -336,8 +337,8 @@ class PRESENT_CVL:
             sage: shutil.rmtree(model_options.path)
         """
 
-        if rks == []:
-            rks = [0 for _ in range(R+1)]  # set roundkeys = 0 as default
+        if not rks:
+            rks = [0 for _ in range(R + 1)]  # set roundkeys = 0 as default
         s = SBox_CVL(present_S, name="SBox")
 
         # sboxlayer is an SBoxCipher, containing the sbox components
@@ -353,10 +354,10 @@ class PRESENT_CVL:
             4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55,
             8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59,
             12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63
-        ], name="Permutation")
+        ], name="Permutation")  # fmt: skip
 
         # NOTE: This is an alternative component to the RK_CVL. Instead
-        # of seperating the key addition into a "factory" component that
+        # of separating the key addition into a "factory" component that
         # outputs the key, and an XOR addition, it makes more sense to combine
         # them to a component, which is the RoundkeyXOR_CVL component.
         # It eases the implementation in several aspects (such as modeling and
@@ -399,6 +400,6 @@ class PRESENT_CVL:
         self.present_cipher = present_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(PRESENT_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.present_cipher

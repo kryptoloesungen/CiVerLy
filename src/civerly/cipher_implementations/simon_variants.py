@@ -1,11 +1,18 @@
 from civerly.andrx import AndRX
-from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
-from civerly.component import ROT_AND_CVL
+from civerly.component import (
+    AND_CVL,
+    ROT_AND_CVL,
+    XOR_CVL,
+    RotateLayer_CVL,
+    RoundkeyXOR_CVL,
+)
 
 
 class SIMON_Variants_CVL:
-    def __init__(self, block_size, R, params=[8, 1, 2], key_schedule=False,
-                 rks=[], use_rotand=True, name="Simon"):
+    def __init__(
+        self, block_size, R, params=None, rks=None,
+        key_schedule=False, use_rotand=True, name="Simon"
+    ):
         r"""
         CiVerLy implementation of SIMON-like ciphers. It takes the following parameters:
 
@@ -18,7 +25,7 @@ class SIMON_Variants_CVL:
 
             - ``rks`` -- list[int]; the round keys (default: []).
 
-            - ``use_rotand`` -- bool; Indicates whether the ``ROT_AND_CVL`` component 
+            - ``use_rotand`` -- bool; Indicates whether the ``ROT_AND_CVL`` component
               and its more accurate model from (https://eprint.iacr.org/2015/145)
               should be used.
 
@@ -214,10 +221,11 @@ class SIMON_Variants_CVL:
 
         """
 
-
         n = int(block_size // 2)
-        if rks == []:
-            rks = [0 for _ in range(R+1)]
+        if params is None:
+            params = [8, 1, 2]
+        if not rks:
+            rks = [0 for _ in range(R + 1)]
 
         # SIMON is an AndRX cipher, since its non-linear component
         # is logical AND.
@@ -240,42 +248,28 @@ class SIMON_Variants_CVL:
         # ------------------------------------------------ #
         # insert RotateLayer_CVL + AND_CVL components
         if not use_rotand:
-            node_rot_2 = simon_round.add_subcipher(
-                rot_2, [(simon_round.IN, (0, 0))]
-            )
-            node_rot_1 = simon_round.add_subcipher(
-                rot_1, [(simon_round.IN, (0, 0))]
-            )
+            node_rot_2 = simon_round.add_subcipher(rot_2, [(simon_round.IN, (0, 0))])
+            node_rot_1 = simon_round.add_subcipher(rot_1, [(simon_round.IN, (0, 0))])
             node_and = simon_round.add_subcipher(
                 and1, [(node_rot_2, (0, 0)), (node_rot_1, (0, 1))]
             )
             node_xor1 = simon_round.add_subcipher(
-                xor,  [(node_and, (0, 0)), (simon_round.IN, (1, 1))]
+                xor, [(node_and, (0, 0)), (simon_round.IN, (1, 1))]
             )
         # insert ROT_AND_CVL component
         else:
-            node_rot_2 = simon_round.add_subcipher(
-                rot_2, [(simon_round.IN, (0, 0))]
-            )
-            node_rot_and = simon_round.add_subcipher(
-                ra1,  [(node_rot_2, (0, 0))]
-            )
+            node_rot_2 = simon_round.add_subcipher(rot_2, [(simon_round.IN, (0, 0))])
+            node_rot_and = simon_round.add_subcipher(ra1, [(node_rot_2, (0, 0))])
             node_xor1 = simon_round.add_subcipher(
-                xor,  [(node_rot_and, (0, 0)), (simon_round.IN, (1, 1))]
+                xor, [(node_rot_and, (0, 0)), (simon_round.IN, (1, 1))]
             )
 
-        node_rot_3 = simon_round.add_subcipher(
-            rot_3, [(simon_round.IN, (0, 0))]
-        )
+        node_rot_3 = simon_round.add_subcipher(rot_3, [(simon_round.IN, (0, 0))])
         node_xor2 = simon_round.add_subcipher(
-            xor,  [(node_xor1, (0, 0)), (node_rot_3, (0, 1))]
+            xor, [(node_xor1, (0, 0)), (node_rot_3, (0, 1))]
         )
-        node_keyxor = simon_round.add_subcipher(
-            key_add, [(node_xor2, (0, 0))]
-        )
-        simon_round.add_output(
-            [(node_keyxor, (0, 0)), (simon_round.IN, (0, 1))]
-        )
+        node_keyxor = simon_round.add_subcipher(key_add, [(node_xor2, (0, 0))])
+        simon_round.add_output([(node_keyxor, (0, 0)), (simon_round.IN, (0, 1))])
         # ------------------------------------------------ #
 
         # Adding SIMON rounds into the cipher
@@ -293,13 +287,13 @@ class SIMON_Variants_CVL:
         # ------------------------------------------------ #
 
         simon_cipher._rk_components = [
-            simon_cipher.nodes[r+1].nodes[node_keyxor] for r in range(R)
+            simon_cipher.nodes[r + 1].nodes[node_keyxor] for r in range(R)
         ]
         simon_cipher.key_schedule = None
 
         self.simon_cipher = simon_cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(SIMON_Variants_CVL, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.simon_cipher

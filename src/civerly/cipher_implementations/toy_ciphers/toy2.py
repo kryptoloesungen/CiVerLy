@@ -1,7 +1,8 @@
 from sage.matrix.constructor import Matrix as matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
-from civerly.sboxcipher import SBoxCipher
+
 from civerly.component import LinearLayer_CVL, PermuteLayer_CVL
+from civerly.sboxcipher import SBoxCipher
 
 
 # linear cipher using rounds with intentionally missing
@@ -83,7 +84,7 @@ class Toy2:
             [0, 1, 1, 1, 1, 0, 1, 0],
             [0, 0, 0, 1, 0, 0, 1, 0],
             [1, 0, 0, 1, 1, 0, 1, 0],
-            [0, 1, 0, 1, 0, 1, 0, 1]
+            [0, 1, 0, 1, 0, 1, 0, 1],
         ]
         mat = matrix(GF(2), 8, arr)
         L1 = LinearLayer_CVL(mat, name="L1(8)")
@@ -94,21 +95,29 @@ class Toy2:
 
         node_in = round.add_subcipher(P1, [(round.IN, (i, i)) for i in range(16)])
         node1 = round.add_subcipher(L1, [(node_in, (i, i)) for i in range(8)])
-        node2 = round.add_subcipher(L2, [(node_in, (i+8, i)) for i in range(8)])
-        node_mid = round.add_subcipher(P2, [(node1, (i, i+8)) for i in range(8)] + [(node2, (i, i)) for i in range(8)])
+        node2 = round.add_subcipher(L2, [(node_in, (i + 8, i)) for i in range(8)])
+        node_mid = round.add_subcipher(
+            P2,
+            [(node1, (i, i + 8)) for i in range(8)]
+            + [(node2, (i, i)) for i in range(8)],
+        )
         node3 = round.add_subcipher(L1, [(node_mid, (i, i)) for i in range(8)])
-        node4 = round.add_subcipher(L2, [(node_mid, (i+8, i)) for i in range(8)])
-        node_out = round.add_subcipher(P3, [(node3, (i, i)) for i in range(8)] + [(node4, (i, i+8)) for i in range(8)])
+        node4 = round.add_subcipher(L2, [(node_mid, (i + 8, i)) for i in range(8)])
+        node_out = round.add_subcipher(
+            P3,
+            [(node3, (i, i)) for i in range(8)]
+            + [(node4, (i, i + 8)) for i in range(8)],
+        )
         round.add_output([(node_out, (i, i)) for i in range(16)])
 
         node = cipher.IN
-        for r in range(4):
+        for _r in range(4):
             node = cipher.add_subcipher(round, [(node, (i, i)) for i in range(16)])
         cipher.add_output([(node, (i, i)) for i in range(16)])
 
         self.cipher = cipher
 
     def __new__(cls, *args, **kwargs):
-        instance = super(Toy2, cls).__new__(cls)
+        instance = super().__new__(cls)
         instance.__init__(*args, **kwargs)
         return instance.cipher
