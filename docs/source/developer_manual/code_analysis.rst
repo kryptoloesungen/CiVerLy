@@ -11,6 +11,7 @@ Run all checks at once with:
    $ make lint
 
 This runs the linter, checks formatting, scans for spelling mistakes, and verifies that all hyperlinks are alive.
+The same target runs in CI on every push and pull request.
 The individual tools and their targets are described below.
 
 Linting
