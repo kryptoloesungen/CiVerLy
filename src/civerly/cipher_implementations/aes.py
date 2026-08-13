@@ -621,9 +621,9 @@ class AES_CVL:
         # ------------------------------------------------ #
 
         if key_schedule:
-            aes_cipher._rk_components = [aes_cipher.nodes[2 * r + 1] for r in range(R)] + [
-                aes_cipher.nodes[2 * R + 2]
-            ]
+            aes_cipher._rk_components = [
+                aes_cipher.nodes[2 * r + 1] for r in range(R)
+            ] + [aes_cipher.nodes[2 * R + 2]]
             aes_cipher.key_schedule = AES_KeySchedule_CVL(R)
             if k is not None:
                 aes_cipher.set_round_keys(k)

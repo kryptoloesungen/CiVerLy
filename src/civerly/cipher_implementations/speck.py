@@ -216,7 +216,9 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
 
 class SPECK_CVL:
-    def __init__(self, block_size, key_size, R=None, key_schedule=False, rks=None, name=None):
+    def __init__(
+        self, block_size, key_size, R=None, key_schedule=False, rks=None, name=None
+    ):
         r"""
         The CiVerLy implementation of SPECK. It takes the following arguments:
 

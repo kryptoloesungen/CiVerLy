@@ -223,13 +223,25 @@ class TrailNode:
         # Filtering by grid ownership (rather than a running offset over the
         # row) keeps each component's bits correct even when a sibling at the
         # same depth has unassigned (None) grid slots that get dropped below.
-        grid_in  = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=True)
-        grid_out = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=False)
+        grid_in = self.cipher_instance._construct_grid(
+            divide_by=divide_by, input_side=True
+        )
+        grid_out = self.cipher_instance._construct_grid(
+            divide_by=divide_by, input_side=False
+        )
         self._node_results = {}
         for comp_num in range(len(nodes)):
             d = depths[comp_num]
-            comp_bits_in  = [bits_in[d][i]  for i, (n, _) in enumerate(grid_in[d])  if n == comp_num and bits_in[d][i]  is not None]
-            comp_bits_out = [bits_out[d][i] for i, (n, _) in enumerate(grid_out[d]) if n == comp_num and bits_out[d][i] is not None]
+            comp_bits_in = [
+                bits_in[d][i]
+                for i, (n, _) in enumerate(grid_in[d])
+                if n == comp_num and bits_in[d][i] is not None
+            ]
+            comp_bits_out = [
+                bits_out[d][i]
+                for i, (n, _) in enumerate(grid_out[d])
+                if n == comp_num and bits_out[d][i] is not None
+            ]
             self._node_results[comp_num] = {"in": comp_bits_in, "out": comp_bits_out}
 
         # realign bits_in, bits_out by removing any 'None' entries
@@ -309,7 +321,7 @@ class TrailNode:
                     comp,
                     model_options=model_options,
                     results_and_weight=(sub_results, sub_weight),
-                    _parent_depth=depths[comp_num]
+                    _parent_depth=depths[comp_num],
                 )
                 child._comp_num = comp_num
                 self.children.append(child)
@@ -543,11 +555,11 @@ class TrailNode:
         for child in self.children:
             d = child._parent_depth
 
-            node_result  = self._node_results[child._comp_num]
-            expected_in  = node_result["in"]
+            node_result = self._node_results[child._comp_num]
+            expected_in = node_result["in"]
             expected_out = node_result["out"]
-            actual_in    = child.bits_out[0]
-            actual_out   = child.bits_out[-1]
+            actual_in = child.bits_out[0]
+            actual_out = child.bits_out[-1]
 
             if expected_in and actual_in and expected_in != actual_in:
                 raise AssertionError(

@@ -3,7 +3,15 @@ from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
 
 
 class SIMECK_CVL:
-    def __init__(self, block_size=32, key_size=64, R=32, key_schedule=False, rks=None, name="Simeck"):
+    def __init__(
+        self,
+        block_size=32,
+        key_size=64,
+        R=32,
+        key_schedule=False,
+        rks=None,
+        name="Simeck",
+    ):
         r"""
         CiVerLy implementation of the Simeck cipher. It takes the following arguments:
 

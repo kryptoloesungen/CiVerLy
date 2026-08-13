@@ -1876,25 +1876,24 @@ class Cipher:
         if 0 < index < len(self.results):
             return (
                 self.results[index]["assignment"],
-                self.results[index]["objective_value"]
+                self.results[index]["objective_value"],
             )
         # otherwise read from file (assuming the right name)
         if model_options.optimization == OPTIMIZATION.MILP:
             if (model_options.path / f"{self.name}.sol").exists():
-                solution_file = (model_options.path / f"{self.name}.sol")
+                solution_file = model_options.path / f"{self.name}.sol"
             else:
                 try:
-                    solution_file = next(
-                        model_options.path.glob(f"{self.name}.*.sol")
-                    )
+                    solution_file = next(model_options.path.glob(f"{self.name}.*.sol"))
                 except StopIteration as e:
-                    raise FileNotFoundError(f"{model_options.path / f"{self.name}.*.sol"} does not exist") from e
+                    raise FileNotFoundError(
+                        f"{model_options.path / f'{self.name}.*.sol'} does not exist"
+                    ) from e
             objective_value, assignment = (
                 model_options.milp_solver._process_solution_file(solution_file)
             )
             return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
-
             solution_file = None
             # search for lowest weight which was solvable
             for w in range(*model_options.solve_range):
@@ -1912,7 +1911,7 @@ class Cipher:
 
             if solution_file is None:
                 raise FileNotFoundError(
-                    f"{model_options.path / f"{self.name}_obj{w}.*.sat"} does not exist"
+                    f"{model_options.path / f'{self.name}_obj{w}.*.sat'} does not exist"
                 )
             objective_value, assignment = (
                 model_options.sat_solver._process_solution_file(solution_file)
@@ -1997,7 +1996,7 @@ class Cipher:
         if model_options.number_of_solutions == 1:
             results_and_weight = (
                 self.results[0]["assignment"],
-                self.results[0]["objective_value"]
+                self.results[0]["objective_value"],
             )
             root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
