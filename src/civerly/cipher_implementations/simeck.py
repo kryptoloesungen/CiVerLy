@@ -3,13 +3,27 @@ from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
 
 
 class SIMECK_CVL:
-    def __init__(self, block_size=32, key_size=64, R=32, key_schedule=False, rks=[], name="Simeck"):
+    def __init__(
+        self,
+        block_size=32,
+        key_size=64,
+        R=32,
+        key_schedule=None,
+        rks=None,
+        name="Simeck",
+    ):
         r"""
         CiVerLy implementation of the Simeck cipher. It takes the following arguments:
 
             - ``block_size`` -- integer; The block size (default: 32).
 
             - ``key_size`` -- integer; The key size (default: 64).
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for Simeck; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list[int]; Round keys (default: []).
 
@@ -182,6 +196,7 @@ class SIMECK_CVL:
             )
 
         simeck_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
+        simeck_cipher.key_schedule = key_schedule
         self.simeck_cipher = simeck_cipher
 
     def __new__(cls, *args, **kwargs):

@@ -5,12 +5,18 @@ from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class PRESENT_CVL:
-    def __init__(self, R=31, key_schedule=False, rks=[], name="PRESENT"):
+    def __init__(self, R=31, key_schedule=None, rks=None, name="PRESENT"):
         r"""
         The CiVerLy implementation of PRESENT. It takes in the following
         arguments:
 
             - ``R`` -- integer; Number of rounds (default: 31)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for PRESENT; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list (default: []); Specifies the roundkey values of
               PRESENT, in order to being able to properly test the
@@ -396,6 +402,8 @@ class PRESENT_CVL:
         )
         present_cipher.add_output([(cipher_node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
+
+        present_cipher.key_schedule = key_schedule
 
         self.present_cipher = present_cipher
 

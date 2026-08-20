@@ -15,12 +15,19 @@ RC_FINAL = 0xD4
 
 
 class NOEKEON_CVL:
-    def __init__(self, R=16, key_schedule=False, k=0x0, name="Noekeon"):
+    def __init__(self, R=16, key_schedule=None, k=0x0, name="Noekeon"):
         r"""
         CiVerLy implementation of Noekeon (https://gro.noekeon.org/Noekeon-spec.pdf).
         It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 16)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys``.
+              Noekeon reuses the same master key ``k`` directly in every
+              round, so no key schedule is needed for correctness; this
+              parameter only exists for custom ``KeySchedule`` subclass
+              instances. Defaults to ``None`` (no key schedule).
 
             - ``k`` -- integer (128-bit); Master key (default: 0x0).  When given,
               the round keys are derived and injected immediately.
@@ -319,6 +326,7 @@ class NOEKEON_CVL:
             )
 
         cipher.add_output([(final_node, (i, i)) for i in range(4)])
+        cipher.key_schedule = key_schedule
         self.noekeon_cipher = cipher
 
     def __new__(cls, *args, **kwargs):

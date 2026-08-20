@@ -9,8 +9,16 @@ from civerly.component import (
 
 
 class SIMON_Variants_CVL:
-    def __init__(self, block_size, R, params=[8, 1, 2], key_schedule=False,
-                 rks=[], use_rotand=True, name="Simon"):
+    def __init__(
+        self,
+        block_size,
+        R,
+        params=None,
+        rks=None,
+        key_schedule=None,
+        use_rotand=True,
+        name="Simon",
+    ):
         r"""
         CiVerLy implementation of SIMON-like ciphers. It takes the following parameters:
 
@@ -22,6 +30,12 @@ class SIMON_Variants_CVL:
               the specific SIMON variant.
 
             - ``rks`` -- list[int]; the round keys (default: []).
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for SIMON variants; pass a custom ``KeySchedule``
+              subclass instance. Defaults to ``None`` (no key schedule).
 
             - ``use_rotand`` -- bool; Indicates whether the ``ROT_AND_CVL`` component
               and its more accurate model from (https://eprint.iacr.org/2015/145)
@@ -287,7 +301,7 @@ class SIMON_Variants_CVL:
         simon_cipher._rk_components = [
             simon_cipher.nodes[r + 1].nodes[node_keyxor] for r in range(R)
         ]
-        simon_cipher.key_schedule = None
+        simon_cipher.key_schedule = key_schedule
 
         self.simon_cipher = simon_cipher
 

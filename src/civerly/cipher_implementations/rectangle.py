@@ -5,12 +5,18 @@ from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class RECTANGLE_CVL:
-    def __init__(self, R=25, key_schedule=False, rks=[], name="RECTANGLE"): 
+    def __init__(self, R=25, key_schedule=None, rks=None, name="RECTANGLE"):
         r"""
         CiVerly implementation of the Rectangle cipher (https://eprint.iacr.org/2014/084.pdf).
         It takes the following parameters:
 
             - ``R`` -- integer; Number of rounds (default: 25)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for RECTANGLE; pass a custom ``KeySchedule``
+              subclass instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list[int]; Round keys (default: []).
 
@@ -347,6 +353,7 @@ class RECTANGLE_CVL:
         st = rectangle.add_subcipher(ark, [(st, (i, i)) for i in range(16)])
 
         rectangle.add_output([(st, (i, i)) for i in range(16)])
+        rectangle.key_schedule = key_schedule
         self.rectangle_cipher = rectangle
 
     def __new__(cls, *args, **kwargs):
