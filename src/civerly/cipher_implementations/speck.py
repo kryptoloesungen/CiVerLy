@@ -115,9 +115,11 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
         Verify end-to-end encryption via ``set_round_keys`` for SPECK-64/96::
 
-            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.cipher_implementations.speck import (
+            ....:   SPECK_CVL, SPECK_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: speck = SPECK_CVL(64, 96, key_schedule=True)
+            sage: speck = SPECK_CVL(
+            ....:   64, 96, key_schedule=SPECK_KeySchedule_CVL(64, 96))
             sage: speck.set_round_keys(0x131211100b0a090803020100)
             sage: vec_to_int(speck(int_to_vec(0x74614620736e6165, 64))) == \
             ....:   0x9f7952ec4175946c
@@ -138,9 +140,11 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
         SPECK-128/128 end-to-end test vector from the SPECK specification::
 
-            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.cipher_implementations.speck import (
+            ....:   SPECK_CVL, SPECK_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: speck = SPECK_CVL(128, 128, key_schedule=True)
+            sage: speck = SPECK_CVL(
+            ....:   128, 128, key_schedule=SPECK_KeySchedule_CVL(128, 128))
             sage: speck.set_round_keys(0x0f0e0d0c0b0a09080706050403020100)
             sage: pt = int_to_vec(0x6c617669757165207469206564616d20, 128)
             sage: vec_to_int(speck(pt)) == 0xa65d9851797832657860fedf5c570d18
@@ -217,7 +221,7 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
 class SPECK_CVL:
     def __init__(
-        self, block_size, key_size, R=None, key_schedule=False, rks=None, name=None
+        self, block_size, key_size, R=None, key_schedule=None, rks=None, name=None
     ):
         r"""
         The CiVerLy implementation of SPECK. It takes the following arguments:
@@ -229,6 +233,13 @@ class SPECK_CVL:
             - ``key_size``-- integer; Determines the key size of the SPECK
               instance. Together with ``block_size``, it determines the
               SPECK-2n-mn instance
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. Pass a
+              :class:`SPECK_KeySchedule_CVL` instance to use the real SPECK
+              key schedule, or a custom ``KeySchedule`` subclass instance.
+              Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list (optional); Specifies the roundkey values of
               SPECK, in order to being able to properly test the
@@ -437,14 +448,14 @@ class SPECK_CVL:
 
         # Collect references to all RoundkeyXOR_CVL components for key schedule
         # support. Each entry points to the KeyAdd component inside the
-        # corresponding round node. Set key_schedule to a callable returning
-        # R round keys to enable set_round_keys(k).
+        # corresponding round node. Pass a KeySchedule instance as
+        # key_schedule to enable set_round_keys(k).
         # -------------------------------------------------------- #
-        if key_schedule:
+        if key_schedule is not None:
             speck_cipher._rk_components = [
                 speck_cipher.nodes[r + 1].nodes[node_after_keyadd] for r in range(R)
             ]
-            speck_cipher.key_schedule = SPECK_KeySchedule_CVL(block_size, key_size, R)
+            speck_cipher.key_schedule = key_schedule
 
         self.speck_cipher = speck_cipher
 

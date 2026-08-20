@@ -11,15 +11,24 @@ class KeySchedule(Cipher):
     ``__init__``, and implement :meth:`eval` to convert a master key integer
     into the list of round-key integers.
 
-    To use a key schedule, pass the master key to
-    :meth:`civerly.cipher.Cipher.set_round_keys`::
+    To use a key schedule, pass an instance of it to a cipher implementation's
+    ``key_schedule`` argument, together with the master key::
 
-        sage: from civerly.cipher_implementations.aes import AES_CVL
+        sage: from civerly.cipher_implementations.aes import (
+        ....:   AES_CVL, AES_KeySchedule_CVL)
         sage: from civerly.util import int_to_vec, vec_to_int
-        sage: aes = AES_CVL(R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c, key_schedule=True)
+        sage: aes = AES_CVL(
+        ....:   R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c,
+        ....:   key_schedule=AES_KeySchedule_CVL(10))
         sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
         sage: hex(vec_to_int(aes(pt)))
         '0x3925841d02dc09fbdc118597196a0b32'
+        sage: aes = AES_CVL(
+        ....:   R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c,
+        ....:   key_schedule=None)
+        sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
+        sage: hex(vec_to_int(aes(pt)))
+        '0x663fabe27c3acc01248d244350519f89'
 
     The key schedule is only used for correctness testing and has no effect
     on the MILP or SAT model.

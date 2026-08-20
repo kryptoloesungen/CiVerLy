@@ -68,11 +68,17 @@ class MIDORI64_CVL:
         [1, 1, 1, 0],
     )
 
-    def __init__(self, R=16, key_schedule=False, rks=None, name="MIDORI-64"):
+    def __init__(self, R=16, key_schedule=None, rks=None, name="MIDORI-64"):
         r"""
         CiVerLy Implementation of MIDORI-64. It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 16)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for MIDORI; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list[int]; roundkeys (default: []).  When given,
                 the round keys are derived and injected immediately.
@@ -359,6 +365,7 @@ class MIDORI64_CVL:
         state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
 
         midori.add_output([(state, (i, i)) for i in range(16)])
+        midori.key_schedule = key_schedule
         self.midori_cipher = midori
 
     def __new__(cls, *args, **kwargs):
@@ -383,11 +390,17 @@ class MIDORI128_CVL:
         [1, 1, 1, 0],
     )
 
-    def __init__(self, R=20, key_schedule=False, rks=None, name="MIDORI-128"):
+    def __init__(self, R=20, key_schedule=None, rks=None, name="MIDORI-128"):
         r"""
         CiVerLy Implementation of MIDORI-128. It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 20)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for MIDORI; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list[int]; roundkeys (default: []).  When given,
                 the round keys are derived and injected immediately.
@@ -727,6 +740,7 @@ class MIDORI128_CVL:
         state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
 
         midori.add_output([(state, (i, i)) for i in range(16)])
+        midori.key_schedule = key_schedule
         self.midori_cipher = midori
 
     def __new__(cls, *args, **kwargs):

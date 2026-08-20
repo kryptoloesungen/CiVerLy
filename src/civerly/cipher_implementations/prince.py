@@ -91,12 +91,18 @@ Minv_ = build_matrix(m_inv_layer)
 
 
 class PRINCE_CVL:
-    def __init__(self, R=12, key_schedule=False, rks=None, name="PRINCE"):
+    def __init__(self, R=12, key_schedule=None, rks=None, name="PRINCE"):
         r"""
         CiVerLy implementation of PRINCE (https://eprint.iacr.org/2012/529.pdf).
         It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 12)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for PRINCE; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list[int]; Round keys (default: []).
 
@@ -334,6 +340,7 @@ class PRINCE_CVL:
             st = prince_core.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
 
         prince_core.add_output([(st, (i, i)) for i in range(16)])
+        prince_core.key_schedule = key_schedule
         self.prince_cipher = prince_core
 
     def __new__(cls, *args, **kwargs):

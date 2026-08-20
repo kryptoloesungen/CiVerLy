@@ -27,7 +27,7 @@ class GIFT64_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-    def __init__(self, R=28, key_schedule=False, rks=None, name="GIFT-64"):
+    def __init__(self, R=28, key_schedule=None, rks=None, name="GIFT-64"):
         r"""
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
 
@@ -39,6 +39,12 @@ class GIFT64_CVL:
         Takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default 28)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for GIFT-64; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list[int]; The round keys (default [])
 
@@ -386,6 +392,7 @@ class GIFT64_CVL:
             state = gift.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
 
         gift.add_output([(state, (i, i)) for i in range(16)])
+        gift.key_schedule = key_schedule
         self.gift_cipher = gift
 
     def __new__(cls, *args, **kwargs):

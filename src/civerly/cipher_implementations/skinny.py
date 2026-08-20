@@ -210,7 +210,7 @@ class SKINNY_CVL:
             return [tk1_schedule, tk2_schedule, tk3_schedule]
         raise ValueError(f"{z = } is an invalid parameter for create_tk_schedules.")
 
-    def __init__(self, n=64, t=64, R=None, key_schedule=False, key=None, name=None):
+    def __init__(self, n=64, t=64, R=None, key_schedule=None, key=None, name=None):
         r"""
         The civerly implementation of SKINNY. It takes the following
         arguments:
@@ -220,6 +220,13 @@ class SKINNY_CVL:
 
             - ``t`` -- integer; The tweakey size of SKINNY. Needs to fulfill
               :math:`t \in \{ n, 2n, 3n \}`.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys``.
+              The tweakey schedule of SKINNY is already applied directly in
+              Python via ``key``, so this parameter only exists for custom
+              ``KeySchedule`` subclass instances. Defaults to ``None`` (no
+              key schedule).
 
             - ``key`` -- integer (optional); The (tweak-)key value for SKINNY.
               If no key is specified, it is defaulted to 0.
@@ -739,6 +746,7 @@ class SKINNY_CVL:
 
         skinny_cipher.add_output([(node_cipher, (i, i)) for i in range(16)])
 
+        skinny_cipher.key_schedule = key_schedule
         self.skinny_cipher = skinny_cipher
 
     def __new__(cls, *args, **kwargs):

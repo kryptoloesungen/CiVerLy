@@ -369,21 +369,30 @@ class AES_KeySchedule_CVL(KeySchedule):
 class AES_CVL:
     """Implementation of the AES in CiVerLy."""
 
-    def __init__(self, R, key_schedule=False, k=None, name="AES") -> None:
+    def __init__(self, R, key_schedule=None, k=None, name="AES") -> None:
         r"""
         Implement AES-128 in CiVerLy.
 
         By default round keys are zero, which leaves correctness of the
-        data path verifiable without a key schedule.  Pass a 128-bit master
-        key ``k`` to inject the real AES-128 round keys via
-        :meth:`civerly.cipher.Cipher.set_round_keys`.
+        data path verifiable without a key schedule.  Pass a
+        :class:`AES_KeySchedule_CVL` instance (or a custom
+        :class:`civerly.keyschedule.KeySchedule`) as ``key_schedule``, together
+        with a 128-bit master key ``k``, to inject the real AES-128 round keys
+        via :meth:`civerly.cipher.Cipher.set_round_keys`.
 
         INPUT:
 
             - ``R`` -- integer; Number of rounds.
 
-            - ``k`` -- integer (128-bit); Master key (default: None).  When given,
-              the AES-128 round keys are derived and injected immediately.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k``. Pass an :class:`AES_KeySchedule_CVL` instance to use the
+              real AES-128 key schedule, or a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
+
+            - ``k`` -- integer (128-bit); Master key (default: None).  When given
+              together with ``key_schedule``, the AES-128 round keys are derived
+              and injected immediately.
 
             - ``name`` -- string; The name of the cipher (default: "AES").
               This will be used to name the cipher and the corresponding file
@@ -395,8 +404,10 @@ class AES_CVL:
         Encrypt using the NIST FIPS 197 Appendix B test vector::
 
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: from civerly.cipher_implementations.aes import AES_CVL
-            sage: aes = AES_CVL(R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c, key_schedule=True)
+            sage: from civerly.cipher_implementations.aes import AES_CVL, AES_KeySchedule_CVL
+            sage: aes = AES_CVL(
+            ....:   R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c,
+            ....:   key_schedule=AES_KeySchedule_CVL(10))
             sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
             sage: hex(vec_to_int(aes(pt)))
             '0x3925841d02dc09fbdc118597196a0b32'
@@ -620,11 +631,11 @@ class AES_CVL:
         aes_cipher.add_output([(node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
 
-        if key_schedule:
+        if key_schedule is not None:
             aes_cipher._rk_components = [
                 aes_cipher.nodes[2 * r + 1] for r in range(R)
             ] + [aes_cipher.nodes[2 * R + 2]]
-            aes_cipher.key_schedule = AES_KeySchedule_CVL(R)
+            aes_cipher.key_schedule = key_schedule
             if k is not None:
                 aes_cipher.set_round_keys(k)
 
