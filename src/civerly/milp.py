@@ -342,7 +342,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: # optional - scip
             sage: scip = SCIP_CVL()
             sage: result = scip.solve(model_options.path / "milp.mps")
-            sage: result['assignment'] == gift.result['assignment']
+            sage: result['assignment'] == gift.results[0]['assignment']
             True
             sage: import shutil
             sage: shutil.rmtree(model_options.path, ignore_errors=True)

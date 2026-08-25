@@ -153,16 +153,16 @@ def benchmark(CM):
             row.append(c)
             row.append(cipher.model_time)
             row.append(cipher.solve_time)
-            if cipher.result["status"] == SOLVING_STATUS.SUCCESS:
-                row.append(cipher.result["objective_value"])
-            elif cipher.result["status"] == SOLVING_STATUS.TIMEOUT:
-                lower = cipher.result["objective_bounds"][0]
-                upper = cipher.result["objective_bounds"][1]
+            if cipher.results[-1]["status"] == SOLVING_STATUS.SUCCESS:
+                row.append(cipher.results[-1]["objective_value"])
+            elif cipher.results[-1]["status"] == SOLVING_STATUS.TIMEOUT:
+                lower = cipher.results[-1]["objective_bounds"][0]
+                upper = cipher.results[-1]["objective_bounds"][1]
                 row.append(f"[{lower}, {upper}]")
             table.append(row)
 
             if model_options.optimization == OPTIMIZATION.SAT:
-                for weight, result in cipher.result["trace"].items():
+                for weight, result in cipher.results[-1]["trace"].items():
                     row = ["", weight]
                     row.append(result["model"].nvars())
                     row.append(len(result["model"].clauses()))

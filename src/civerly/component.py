@@ -2247,7 +2247,7 @@ class SBox_CVL(Component):
                 ....:     path=Path(tmpdir))
                 ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)
-                ....:   results = cipher.result["assignment"]
+                ....:   results = cipher.results[0]["assignment"]
                 ....:   in_diff  = vec_to_int(vector(
                 ....:     GF(2), 4,
                 ....:     [results['IN'][i] for i in range(4)]
@@ -2292,7 +2292,7 @@ class SBox_CVL(Component):
                 ....:     path=Path(tmpdir))
                 ....:   objective_value = cipher.analyse(model_options)
                 ....:   print(objective_value)
-                ....:   results = cipher.result["assignment"]
+                ....:   results = cipher.results[0]["assignment"]
                 ....:   in_diff  = vec_to_int(vector(
                 ....:     GF(2), 4, [results['IN'][i] for i in range(4)]
                 ....:   ))
@@ -2591,7 +2591,7 @@ class SBox_CVL(Component):
             ....:     path=Path(tmpdir))
             ....:   objective_value = cipher.analyse(model_options)
             ....:   print(objective_value)
-            ....:   results = cipher.result["assignment"]
+            ....:   results = cipher.results[0]["assignment"]
             ....:   in_diff  = vec_to_int(
             ....:     vector(GF(2), 4, [results[i+1] for i in range(4)])
             ....:   )
