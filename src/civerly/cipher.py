@@ -1871,7 +1871,7 @@ class Cipher:
             the weight. To re-read a SAT result, call :meth:`analyse` again.
         """
         # if the results are still stored, look there
-        if hasattr(self, "results") and index < len(self.results):
+        if -len(self.results) <= index < len(self.results):
             return (
                 self.results[index]["assignment"],
                 self.results[index]["objective_value"]
