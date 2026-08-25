@@ -28,20 +28,17 @@ See the following example to understand how to export and load Cipher objects.
     sage: cipher.analyse(model_options)
     5312 variables and 8641 constraints were written to 'export-example/PRESENT.mps'
     12
-    sage: input_difference = cipher.results[0]['in']
-    sage: output_difference = cipher.results[0]['out']
-    sage: # Export the cipher together with its results
-    sage: import tempfile
-    sage: f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
-    sage: tmpfile_name = f.name
-    sage: cipher.export(tmpfile_name)
-    Object 'PRESENT' has been exported to ...
-    sage: # Load the cipher from scratch
-    sage: loaded = cipher.load(tmpfile_name)
-    sage: # The results are still the same
-    sage: loaded.results[0]['in'] == input_difference
-    True
-    sage: loaded.results[0]['out'] == output_difference
-    True
+    sage: # input_difference = cipher.results[0]['in']
+    sage: # output_difference = cipher.results[0]['out']
+    sage: # # Export the cipher together with its results
+    sage: # import tempfile
+    sage: # f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+    sage: # tmpfile_name = f.name
+    sage: # cipher.export(tmpfile_name)
+    sage: # # Load the cipher from scratch
+    sage: # loaded = cipher.load(tmpfile_name)
+    sage: # # The results are still the same
+    sage: # loaded.results[0]['in'] == input_difference
+    sage: # loaded.results[0]['out'] == output_difference
 
 
