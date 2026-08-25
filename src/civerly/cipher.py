@@ -1652,9 +1652,7 @@ class Cipher:
                 )
                 self.results.append(result)
                 self._solve_time = result["solve_time"]
-                results_and_weight = (
-                    result["assignment"], result["objective_value"]
-                )
+                results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return result["objective_value"]
@@ -1712,9 +1710,7 @@ class Cipher:
                 )
                 self.results.append(result)
                 self._solve_time = result["solve_time"]
-                results_and_weight = (
-                    result["assignment"], result["objective_value"]
-                )
+                results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return result["objective_value"]
@@ -1874,7 +1870,7 @@ class Cipher:
         if -len(self.results) <= index < len(self.results):
             return (
                 self.results[index]["assignment"],
-                self.results[index]["objective_value"]
+                self.results[index]["objective_value"],
             )
         # otherwise read from file (assuming the right name)
         if model_options.optimization == OPTIMIZATION.MILP:
@@ -1963,7 +1959,8 @@ class Cipher:
 
         if model_options.number_of_solutions == 1:
             results_and_weight = (
-                self.results[0]["assignment"], self.results[0]["objective_value"]
+                self.results[0]["assignment"],
+                self.results[0]["objective_value"],
             )
             root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
