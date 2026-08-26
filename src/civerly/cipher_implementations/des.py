@@ -199,13 +199,19 @@ class DES_F_CVL:
 
 
 class DES_CVL:
-    def __init__(self, R, key_schedule=False, rks=[], name="DES") -> None:
+    def __init__(self, R, key_schedule=None, rks=None, name="DES") -> None:
         r"""
         The DES implementation.
         The test vectors are taken from https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.
         It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for DES; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``rks`` -- list[int]; The round keys (default [])
 
@@ -305,6 +311,8 @@ class DES_CVL:
         )
         des.add_output([(current, (i, i)) for i in range(64)])
         # ------------------------------------------------------------------- #
+
+        des.key_schedule = key_schedule
 
         self.des = des
 
