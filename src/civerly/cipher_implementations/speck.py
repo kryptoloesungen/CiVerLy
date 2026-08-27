@@ -453,7 +453,7 @@ class SPECK_CVL:
         # -------------------------------------------------------- #
         if key_schedule is not None:
             speck_cipher._rk_components = [
-                speck_cipher.nodes[r+1].nodes[node_after_keyadd] for r in range(R)
+                speck_cipher.nodes[r + 1].nodes[node_after_keyadd] for r in range(R)
             ]
             speck_cipher.key_schedule = key_schedule
 
