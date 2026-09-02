@@ -1651,6 +1651,7 @@ class Cipher:
                     time_limit=model_options.solve_time_limit,
                 )
                 self.results.append(result)
+                self.result = self.results[-1] # update .result
                 self._solve_time = result["solve_time"]
                 results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
@@ -1709,6 +1710,7 @@ class Cipher:
                     time_limit=model_options.solve_time_limit,
                 )
                 self.results.append(result)
+                self.result = self.results[-1] # update .result
                 self._solve_time = result["solve_time"]
                 results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
