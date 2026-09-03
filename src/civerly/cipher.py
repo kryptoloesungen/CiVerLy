@@ -580,6 +580,23 @@ class Cipher:
         assert isinstance(self.__is_valid, bool)
         return self.__is_valid
 
+    @property
+    def result(self):
+        r"""
+        Point to the last element of ``self.results``, i.e. the data coming from
+        the last call of :meth:``analysis``.
+        Return a dictionary with the following keys:
+            - 'status' -- SOLVING_STATUS; the return code of the solver (success, timeout, error).
+            - 'objective_value' -- int | float; the best found objective value
+            - 'objective_bounds'  -- tuple[int | float]; found upper and lower bounds for the objective value
+            - 'assignment' -- dict; the variable assignments of the feasible solution
+            - 'solve_time' -- float; time in seconds until result was found by solver.
+        If no results have been produced yet, return None.
+        """
+        if len(self.results) > 0:
+            return self.results[-1]
+        return None
+
     def set_round_keys(self, k: int):
         r"""
         Derive round keys from master key ``k`` and inject them into the
@@ -1651,7 +1668,6 @@ class Cipher:
                     time_limit=model_options.solve_time_limit,
                 )
                 self.results.append(result)
-                self.result = self.results[-1] # update .result
                 self._solve_time = result["solve_time"]
                 results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
@@ -1710,7 +1726,6 @@ class Cipher:
                     time_limit=model_options.solve_time_limit,
                 )
                 self.results.append(result)
-                self.result = self.results[-1] # update .result
                 self._solve_time = result["solve_time"]
                 results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
