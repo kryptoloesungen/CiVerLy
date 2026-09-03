@@ -81,3 +81,65 @@ class KeySchedule(Cipher):
 
         OUTPUT: list of integers, one per round key, in round order.
         """
+
+
+class DefaultKeySchedule_CVL(KeySchedule):
+    r"""
+    Trivial key schedule used by cipher implementations that have no real key
+    schedule implemented. It performs no expansion at all: the "master key"
+    passed to it is simply the round keys concatenated MSB-first, and
+    :meth:`eval` splits it back apart.
+
+    This makes it possible to pass explicit round keys to any cipher
+    implementation, in a way that is consistent with the ``key_schedule``/``k``
+    interface used everywhere else, without requiring a cipher-specific
+    ``KeySchedule`` subclass.
+
+    INPUT:
+
+        - ``rk_width`` -- integer; the number of bits in a single round key.
+
+        - ``rk_count`` -- integer; the number of round keys.
+
+        - ``name`` -- string (optional); the name of the key schedule.
+
+    EXAMPLES::
+
+        sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+        sage: ks = DefaultKeySchedule_CVL(16, 2)
+        sage: ks(0x00010002)
+        [1, 2]
+
+    Pass an instance together with ``k`` to any cipher implementation to
+    inject explicit round keys::
+
+        sage: from civerly.cipher_implementations.gift import GIFT64_CVL
+        sage: rks = [0x1111111111111111, 0x2222222222222222]
+        sage: k = (rks[0] << 64) | rks[1]
+        sage: gift64 = GIFT64_CVL(R=2, k=k, key_schedule=DefaultKeySchedule_CVL(64, 2))
+        sage: gift64.key_schedule(k) == rks
+        True
+    """
+
+    def __init__(self, rk_width, rk_count, name="DefaultKeySchedule"):
+        super().__init__(rk_width * rk_count, rk_width * rk_count, name=name)
+        self._rk_width = rk_width
+        self._rk_count = rk_count
+
+    def eval(self, master_key):
+        r"""
+        Split ``master_key`` into ``self._rk_count`` round keys of
+        ``self._rk_width`` bits each (MSB-first).
+
+        INPUT:
+
+            - ``master_key`` -- integer; the round keys concatenated
+              MSB-first.
+
+        OUTPUT: list of ``self._rk_count`` integers, in round order.
+        """
+        mask = (1 << self._rk_width) - 1
+        return [
+            (master_key >> (self._rk_width * (self._rk_count - 1 - i))) & mask
+            for i in range(self._rk_count)
+        ]
