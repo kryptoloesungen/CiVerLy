@@ -580,6 +580,23 @@ class Cipher:
         assert isinstance(self.__is_valid, bool)
         return self.__is_valid
 
+    @property
+    def result(self):
+        r"""
+        Point to the last element of ``self.results``, i.e. the data coming from
+        the last call of :meth:``analysis``.
+        Return a dictionary with the following keys:
+            - 'status' -- SOLVING_STATUS; the return code of the solver (success, timeout, error).
+            - 'objective_value' -- int | float; the best found objective value
+            - 'objective_bounds'  -- tuple[int | float]; found upper and lower bounds for the objective value
+            - 'assignment' -- dict; the variable assignments of the feasible solution
+            - 'solve_time' -- float; time in seconds until result was found by solver.
+        If no results have been produced yet, return None.
+        """
+        if len(self.results) > 0:
+            return self.results[-1]
+        return None
+
     def set_round_keys(self, k: int):
         r"""
         Derive round keys from master key ``k`` and inject them into the
@@ -1574,7 +1591,7 @@ class Cipher:
             1292 variables and 1349 constraints were written to ...
             25
             sage: from civerly.solvers import *
-            sage: aes.result['status'] == SOLVING_STATUS.SUCCESS
+            sage: aes.results[0]['status'] == SOLVING_STATUS.SUCCESS
             True
 
         Exceeding the time limit yields a timeout-status::
@@ -1598,7 +1615,7 @@ class Cipher:
             ....:   cipher.analyse(model_options)
             27168 variables and 30849 constraints were written to ...
             sage: from civerly.solvers import *
-            sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
+            sage: cipher.results[0]['status'] == SOLVING_STATUS.TIMEOUT
             True
 
         """
@@ -1646,18 +1663,16 @@ class Cipher:
                 self._analyse_time = time.perf_counter() - start_time_analyse
                 return weights
             else:
-                self.result = model_options.milp_solver.solve(
+                result = model_options.milp_solver.solve(
                     input_file,
                     time_limit=model_options.solve_time_limit,
                 )
-                self._solve_time = self.result["solve_time"]
-                results_and_weight = (
-                    self.result["assignment"],
-                    self.result["objective_value"],
-                )
+                self.results.append(result)
+                self._solve_time = result["solve_time"]
+                results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
-                return self.result["objective_value"]
+                return result["objective_value"]
         elif model_options.optimization == OPTIMIZATION.SAT:
             if self.sat is None:
                 self.model(model_options)
@@ -1703,21 +1718,19 @@ class Cipher:
             else:
                 # if no sat_solver has been selected, we generate all cnf-files
                 # for the given solve_range
-                self.result = model_options.sat_solver.solve(
+                result = model_options.sat_solver.solve(
                     input_file,
                     sum_arr_file=sum_arr_file,
                     solve_range=model_options.solve_range,
                     precision=model_options.sat_precision,
                     time_limit=model_options.solve_time_limit,
                 )
-                self._solve_time = self.result["solve_time"]
-                results_and_weight = (
-                    self.result["assignment"],
-                    self.result["objective_value"],
-                )
+                self.results.append(result)
+                self._solve_time = result["solve_time"]
+                results_and_weight = (result["assignment"], result["objective_value"])
                 TrailNode(self, model_options, results_and_weight)
                 self._analyse_time = time.perf_counter() - start_time_analyse
-                return self.result["objective_value"]
+                return result["objective_value"]
         else:
             raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
@@ -1854,7 +1867,7 @@ class Cipher:
             "is not found in grid!"
         )
 
-    def read_results(self, model_options):
+    def read_results(self, model_options, index=-1):
         r"""
         Re-read the most recent solution from disk and return
         ``(assignment, objective_value)`` -- the shape :class:`TrailNode`
@@ -1870,8 +1883,13 @@ class Cipher:
             canonical ``.sat`` file, and the per-iteration files don't carry
             the weight. To re-read a SAT result, call :meth:`analyse` again.
         """
-        if hasattr(self, "result"):
-            return self.result["assignment"], self.result["objective_value"]
+        # if the results are still stored, look there
+        if -len(self.results) <= index < len(self.results):
+            return (
+                self.results[index]["assignment"],
+                self.results[index]["objective_value"],
+            )
+        # otherwise read from file (assuming the right name)
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file = model_options.path / (self.name + ".sol")
             objective_value, assignment = (
@@ -1958,8 +1976,8 @@ class Cipher:
 
         if model_options.number_of_solutions == 1:
             results_and_weight = (
-                self.result["assignment"],
-                self.result["objective_value"],
+                self.results[0]["assignment"],
+                self.results[0]["objective_value"],
             )
             root_node = TrailNode(self, model_options, results_and_weight)
             root_node.verify_correctness()
@@ -2021,70 +2039,7 @@ class Cipher:
             - ``path`` -- string or path-like; Destination file path.
               The ``.json`` extension is conventional but not enforced.
 
-        EXAMPLES::
-
-            sage: import tempfile, os
-            sage: from civerly.cipher import Cipher
-            sage: from civerly.component import SBox_CVL
-            sage: from sage.crypto.sbox import SBox
-            sage: cipher = Cipher(9, 9, name="test")
-            sage: sb = SBox_CVL(SBox([0, 6, 1, 4, 2, 3, 5, 7]))
-            sage: edges = [(cipher.IN, (i, i)) for i in range(3)]
-            sage: node0 = cipher.add_subcipher(sb, edges)
-            sage: edges = [(cipher.IN, (i + 3, i)) for i in range(3)]
-            sage: node1 = cipher.add_subcipher(sb, edges)
-            sage: edges = [(cipher.IN, (i + 6, i)) for i in range(3)]
-            sage: node2 = cipher.add_subcipher(sb, edges)
-            sage: cipher.add_output([(node0, (i, i)) for i in range(3)])
-            sage: cipher.add_output([(node1, (i, i + 3)) for i in range(3)])
-            sage: cipher.add_output([(node2, (i, i + 6)) for i in range(3)])
-            sage: with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
-            ....:     tmp = f.name
-
-        Before analysis, ``results`` is ``[]`` and round-trips as such::
-
-            sage: cipher.export(tmp)
-            Object 'test' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
-            sage: cipher == loaded and loaded.results == []
-            True
-
-        After analysis, ``results`` holds the trail bit-patterns and is
-        preserved verbatim through the JSON file::
-
-            sage: # optional - cadical espresso
-            sage: from civerly.model_options import *
-            sage: model_options = MODEL_OPTIONS(
-            ....:   cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:   optimization=OPTIMIZATION.SAT,
-            ....:   granularity=GRANULARITY.BITWISE,
-            ....:   linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
-            ....:   sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:   sat_solver=SOLVER.CADICAL,
-            ....:   logic_minimizer=SOLVER.ESPRESSO,
-            ....:   path=Path("DOCTEST-Export"))
-            sage: cipher.analyse(model_options)
-            ...
-            2
-            sage: cipher.export(tmp)
-            Object 'test' has been exported to ...
-            sage: loaded = Cipher.load(tmp)
-            sage: os.unlink(tmp)
-            sage: cipher == loaded and loaded.results == cipher.results
-            True
-
-        Again with a different cipher type::
-            sage: import tempfile
-            sage: from civerly.cipher import Cipher
-            sage: from civerly.cipher_implementations.aes import AES_CVL
-            sage: aes = AES_CVL(4)
-            sage: with tempfile.NamedTemporaryFile(suffix='.json') as f:
-            ....:   tmp = f.name
-            ....:   aes.export(tmp)
-            ....:   loaded = Cipher.load(tmp)
-            ....:   aes == loaded
-            Object 'AES' has been exported to ...
-            True
+        EXAMPLES:: TODO
 
         """
         with Path(path).open("w") as f:

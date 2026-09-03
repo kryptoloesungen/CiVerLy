@@ -51,7 +51,7 @@ class TrailNode:
             ....:   cipher.analyse(model_options)
             ....:   cipher.results[0]
             1792 variables and 4581 clauses were written to ...
-            {'in': [...], 'out': [...], 'weight': ...}
+            {'assignment': ...}
         """
         self.children: list[TrailNode] = []
         self.right = None
@@ -249,14 +249,9 @@ class TrailNode:
         self.input = bits_out[0]
         self.output = bits_out[-1]
 
-        # Set .results on this cipher and each of its direct nodes
-        self.cipher_instance.results.append(
-            {"in": self.input, "out": self.output, "weight": self.weight}
-        )
-        # for comp_num, comp in enumerate(nodes):
-        #     comp.results.append(_node_results[comp_num])
         ################################################
 
+        break_out = False
         # Iterate through each subcipher
         for comp_num, comp in enumerate(nodes):
             if model_options.optimization == OPTIMIZATION.MILP:
