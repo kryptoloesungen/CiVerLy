@@ -386,13 +386,17 @@ class AES_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k``. Pass an :class:`AES_KeySchedule_CVL` instance to use the
-              real AES-128 key schedule, or a custom ``KeySchedule`` subclass
-              instance. Defaults to ``None`` (no key schedule).
+              ``k`` via ``set_round_keys``. Pass an
+              :class:`AES_KeySchedule_CVL` instance to use the real AES-128
+              key schedule, a custom ``KeySchedule`` subclass instance, or
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
+              explicit round keys (``R + 1`` of them, 128 bits each). Defaults
+              to ``None`` (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer (128-bit); Master key (default: None).  When given
-              together with ``key_schedule``, the AES-128 round keys are derived
-              and injected immediately.
+            - ``k`` -- integer (optional); The 128-bit master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string; The name of the cipher (default: "AES").
               This will be used to name the cipher and the corresponding file
@@ -603,20 +607,22 @@ class AES_CVL:
         # Adding round functions (and the last non-full round) into the
         # aes_cipher
         # ------------------------------------------------ #
+        rks = [0] * (R + 1)
+
         aes_cipher = AESlike(8, 4, 4, name=name)
 
         node = aes_cipher.IN
         edges = [(node, (i, i)) for i in range(16)]
         node = aes_cipher.add_subcipher(
-            RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges
+            RoundkeyXOR_CVL(128, rks[0], name="AddRoundKey"), edges
         )
 
-        for _r in range(R - 1):
+        for r in range(R - 1):
             edges = [(node, (i, i)) for i in range(16)]
             node = aes_cipher.add_subcipher(aes_round, edges)
             edges = [(node, (i, i)) for i in range(16)]
             node = aes_cipher.add_subcipher(
-                RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges
+                RoundkeyXOR_CVL(128, rks[r + 1], name="AddRoundKey"), edges
             )
 
         edges = [(node, (i, i)) for i in range(16)]
@@ -625,7 +631,7 @@ class AES_CVL:
         node = aes_cipher.add_subcipher(shiftrow, edges)
         edges = [(node, (i, i)) for i in range(16)]
         node = aes_cipher.add_subcipher(
-            RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges
+            RoundkeyXOR_CVL(128, rks[R], name="AddRoundKey"), edges
         )
 
         aes_cipher.add_output([(node, (i, i)) for i in range(16)])

@@ -14,8 +14,8 @@ class SIMON_Variants_CVL:
         block_size,
         R,
         params=None,
-        rks=None,
         key_schedule=None,
+        k=None,
         use_rotand=True,
         name="Simon",
     ):
@@ -29,13 +29,20 @@ class SIMON_Variants_CVL:
             - ``params`` -- [int, int, int]; the rotation constants a, b, c, specifying
               the specific SIMON variant.
 
-            - ``rks`` -- list[int]; the round keys (default: []).
-
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
-              (optional); Key schedule instance used by ``set_round_keys`` to
-              derive round keys from a master key. No built-in key schedule is
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. No built-in key schedule is
               implemented for SIMON variants; pass a custom ``KeySchedule``
-              subclass instance. Defaults to ``None`` (no key schedule).
+              subclass instance, or
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
+              explicit round keys (``R`` of them, ``n = block_size//2`` bits
+              each). Defaults to ``None`` (no key schedule, all-zero round
+              keys).
+
+            - ``k`` -- integer (optional); The master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``use_rotand`` -- bool; Indicates whether the ``ROT_AND_CVL`` component
               and its more accurate model from (https://eprint.iacr.org/2015/145)
@@ -236,8 +243,7 @@ class SIMON_Variants_CVL:
         n = int(block_size // 2)
         if params is None:
             params = [8, 1, 2]
-        if not rks:
-            rks = [0 for _ in range(R + 1)]
+        rks = [0] * R
 
         # SIMON is an AndRX cipher, since its non-linear component
         # is logical AND.
@@ -302,6 +308,8 @@ class SIMON_Variants_CVL:
             simon_cipher.nodes[r + 1].nodes[node_keyxor] for r in range(R)
         ]
         simon_cipher.key_schedule = key_schedule
+        if key_schedule is not None and k is not None:
+            simon_cipher.set_round_keys(k)
 
         self.simon_cipher = simon_cipher
 

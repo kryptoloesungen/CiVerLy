@@ -25,7 +25,14 @@ dictionary = {
 
 class SIMON_CVL:
     def __init__(
-        self, block_size, key_size, R=None, rks=None, use_rotand=True, name=None
+        self,
+        block_size,
+        key_size,
+        R=None,
+        key_schedule=None,
+        k=None,
+        use_rotand=True,
+        name=None,
     ):
         r"""
         The CiVerLy implementation of SIMON. It takes the following arguments:
@@ -38,10 +45,19 @@ class SIMON_CVL:
               instance. Together with ``block_size``, it determines the
               SIMON-2n-mn instance.
 
-            - ``rks`` -- list (optional); Specifies the roundkey values of
-              SIMON, in order to being able to properly test the
-              implementation. Is required to have length ``R+1``, and defaults
-              to ``[0, ..., 0]``.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. No built-in key schedule is
+              implemented for SIMON; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (``R`` of them, ``n = block_size//2``
+              bits each). Defaults to ``None`` (no key schedule, all-zero
+              round keys).
+
+            - ``k`` -- integer (optional); The master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string (optional); The name of the cipher.
               Will be used to name the cipher and the corresponding files
@@ -68,20 +84,12 @@ class SIMON_CVL:
 
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: P = 0x6f7220676e696c63
-            sage: rks = [
-            ....:   0x03020100, 0x0b0a0908, 0x13121110, 0xffae9dce, 0xc4facc91,
-            ....:   0xc83d1bb6, 0xb5d510ff, 0x36e2c07c, 0x72709043, 0x1343f40e,
-            ....:   0xea417e40, 0x9e635793, 0xa6965478, 0x8b052e75, 0x884c5f47,
-            ....:   0xd0e4e598, 0xe3e80363, 0x35f020e1, 0x1afa1c76, 0xbee71ed6,
-            ....:   0x763d4d2a, 0x0ca19efc, 0x0046cb1b, 0x59ce0704, 0x3dfb4191,
-            ....:   0xcbd9e8cc, 0xf3f75b6d, 0xa34520b7, 0xba7ae12d, 0x60e056a6,
-            ....:   0xf6a8d0f4, 0x943a89c1, 0xb4db50fe, 0x3481f018, 0xee1d573f,
-            ....:   0x4806d097, 0x56feb8ff, 0x0e529452, 0xd6d654a4, 0x7eb6e8dd,
-            ....:   0x8990d838,0xb082bddc]
+            sage: k = 0x30201000b0a090813121110ffae9dcec4facc91c83d1bb6b5d510ff36e2c07c727090431343f40eea417e409e635793a69654788b052e75884c5f47d0e4e598e3e8036335f020e11afa1c76bee71ed6763d4d2a0ca19efc0046cb1b59ce07043dfb4191cbd9e8ccf3f75b6da34520b7ba7ae12d60e056a6f6a8d0f4943a89c1b4db50fe3481f018ee1d573f4806d09756feb8ff0e529452d6d654a47eb6e8dd8990d838b082bddc
             sage: C = 0x5ca2e27f111a8fc8
             sage: V, W = 64, 96
-            sage: simon_cipher = SIMON_CVL(V, W, rks=rks)
+            sage: simon_cipher = SIMON_CVL(V, W, k=k, key_schedule=DefaultKeySchedule_CVL(32, 42))
             sage: vec_to_int(simon_cipher(int_to_vec(P, V))) == C
             True
 
@@ -241,8 +249,7 @@ class SIMON_CVL:
         n = int(block_size // 2)
         if R is None:
             R = dictionary[(block_size, key_size)]
-        if not rks:
-            rks = [0 for _ in range(R + 1)]
+        rks = [0] * R
 
         # SIMON is an AndRX cipher, since its non-linear component
         # is logical AND.
@@ -298,6 +305,13 @@ class SIMON_CVL:
             )
         simon_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
         # ------------------------------------------------ #
+
+        simon_cipher._rk_components = [
+            simon_cipher.nodes[r + 1].nodes[node_keyxor] for r in range(R)
+        ]
+        simon_cipher.key_schedule = key_schedule
+        if key_schedule is not None and k is not None:
+            simon_cipher.set_round_keys(k)
 
         self.simon_cipher = simon_cipher
 

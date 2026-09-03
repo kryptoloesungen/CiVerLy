@@ -222,14 +222,17 @@ class HURDLE_CVL:
 
             - ``key_schedule`` -- callable or
               :class:`civerly.keyschedule.KeySchedule` (optional); Key
-              schedule used to derive round keys from ``k``. Pass
-              ``hurdle_key_schedule`` to use the real HURDLE key schedule, or
-              a custom callable/``KeySchedule`` subclass instance. Defaults to
-              ``None`` (no key schedule).
+              schedule used to derive round keys from ``k`` via
+              ``set_round_keys``. Pass ``hurdle_key_schedule`` to use the real
+              HURDLE key schedule, a custom callable/``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (``R`` of them, 96 bits each).
+              Defaults to ``None`` (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer (128-bit); Master key (default: None).  When given
-              together with ``key_schedule``, the round keys are derived and
-              injected immediately.
+            - ``k`` -- integer (optional); The 128-bit master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string; The name of the cipher (default: "HURDLE-II").
               This will be used to name the cipher and the corresponding file
@@ -316,11 +319,13 @@ class HURDLE_CVL:
 
         """
 
+        rks = [0] * R
+
         cipher = WordBasedCipher(4, 16, 16, name=name)
 
         round_node = cipher.IN
-        for _r in range(R):
-            hurdle_f = HURDLE_F_CVL(rk=0)
+        for r in range(R):
+            hurdle_f = HURDLE_F_CVL(rk=rks[r])
 
             # build feistel round
             hurdle_round = WordBasedCipher(4, 16, 16, name="round")
