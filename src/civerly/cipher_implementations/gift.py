@@ -27,7 +27,7 @@ class GIFT64_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-    def __init__(self, R=28, rks=None, name="GIFT-64"):
+    def __init__(self, R=28, key_schedule=None, k=None, name="GIFT-64"):
         r"""
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
 
@@ -40,7 +40,18 @@ class GIFT64_CVL:
 
             - ``R`` -- integer; Number of rounds (default 28)
 
-            - ``rks`` -- list[int]; The round keys (default [])
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. No built-in key schedule is
+              implemented for GIFT-64; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``k``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``k`` -- integer (optional); The master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string; The object's name (default "GIFT-64")
 
@@ -60,59 +71,27 @@ class GIFT64_CVL:
         and 'GIFT64_test_vector_3.txt' in
         https://github.com/giftcipher/gift/blob/master/implementations/test%20vectors):
 
-            sage: rks = [
-            ....:   0x8000000000000008, 0x8000000000000088, 0x8000000000000888,
-            ....:   0x8000000000008888, 0x8000000000088888, 0x8000000000888880,
-            ....:   0x8000000000888808, 0x8000000000888088, 0x8000000000880888,
-            ....:   0x8000000000808888, 0x8000000000088880, 0x8000000000888800,
-            ....:   0x8000000000888008, 0x8000000000880088, 0x8000000000800888,
-            ....:   0x8000000000008880, 0x8000000000088808, 0x8000000000888080,
-            ....:   0x8000000000880808, 0x8000000000808088, 0x8000000000080880,
-            ....:   0x8000000000808800, 0x8000000000088000, 0x8000000000880000,
-            ....:   0x8000000000800008, 0x8000000000000080, 0x8000000000000808,
-            ....:   0x8000000000008088
-            ....: ]
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: k = 0x8000000000000008800000000000008880000000000008888000000000008888800000000008888880000000008888808000000000888808800000000088808880000000008808888000000000808888800000000008888080000000008888008000000000888008800000000088008880000000008008888000000000008880800000000008880880000000008880808000000000880808800000000080808880000000000808808000000000808800800000000008800080000000008800008000000000800008800000000000008080000000000008088000000000008088
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift64 = GIFT64_CVL(R=28, rks=rks)
+            sage: gift64 = GIFT64_CVL(R=28, k=k, key_schedule=DefaultKeySchedule_CVL(64, 28))
             sage: vec_to_int(gift64(int_to_vec(0x0, 64))) == 0xf62bc3ef34f775ac
             True
 
 
-            sage: rks = [
-            ....:   0x8233023002030208, 0xb233323032033288, 0x8233023002030a88,
-            ....:   0xb23332303203ba88, 0x80122203200a8a9b, 0x9032322330aa9ab3,
-            ....:   0x80122203208a8a1b, 0x9032322330aa92bb, 0x8201022202b90a9a,
-            ....:   0xb201322232b1ba9a, 0x8201022202398a92, 0xb201322232b9ba12,
-            ....:   0x82020013229aa00b, 0x9222103332ba30ab, 0x820200132292288b,
-            ....:   0x922210333232b8a3, 0x82130210022b8a28, 0xb213321032abb2a0,
-            ....:   0x8213021002ab0a28, 0xb213321032a3b2a8, 0xa0120203000a2a93,
-            ....:   0xb032122310a2ba33, 0xa0120203000aa213, 0xb032122310aa3233,
-            ....:   0x822102020291023a, 0xb2213202321132b2, 0x8221020202110a3a,
-            ....:   0xb22132023211b2ba
-            ....: ]
+            sage: k = 0x8233023002030208b2333230320332888233023002030a88b23332303203ba8880122203200a8a9b9032322330aa9ab380122203208a8a1b9032322330aa92bb8201022202b90a9ab201322232b1ba9a8201022202398a92b201322232b9ba1282020013229aa00b9222103332ba30ab820200132292288b922210333232b8a382130210022b8a28b213321032abb2a08213021002ab0a28b213321032a3b2a8a0120203000a2a93b032122310a2ba33a0120203000aa213b032122310aa3233822102020291023ab2213202321132b28221020202110a3ab22132023211b2ba
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift64 = GIFT64_CVL(R=28, rks=rks)
+            sage: gift64 = GIFT64_CVL(R=28, k=k, key_schedule=DefaultKeySchedule_CVL(64, 28))
             sage: vec_to_int(gift64(int_to_vec(0xfedcba9876543210, 64))) == 0xc1b71f66160ff587
             True
 
 
-            sage: rks = [
-            ....:   0xa300032213120119, 0xb13101123333319b, 0xa032033120232a99,
-            ....:   0xa13322132003999a, 0x81221112231b8b88, 0x8330311113bbbbb1,
-            ....:   0x8131220320b9aa3a, 0x8231222313b88399, 0x9110231103aa0b8a,
-            ....:   0xb11331311193abba, 0xa20120330238a9b3, 0x80033132239ba813,
-            ....:   0x83110122018ab31a, 0xb3311331219813bb, 0xa2330030239328a9,
-            ....:   0x9310033122338aa1, 0x8302010033188b3b, 0xb333211231b99193,
-            ....:   0xa032231120ab0a39, 0xa113001320a3b39a, 0xa3021310013b0982,
-            ....:   0x8332333113b1b911, 0xa13122230039a212, 0x8231020113b82333,
-            ....:   0x9332031301802308, 0x91133333311321b0, 0x822120332210293b,
-            ....:   0xa20331120113a0bb
-            ....: ]
+            sage: k = 0xa300032213120119b13101123333319ba032033120232a99a13322132003999a81221112231b8b888330311113bbbbb18131220320b9aa3a8231222313b883999110231103aa0b8ab11331311193abbaa20120330238a9b380033132239ba81383110122018ab31ab3311331219813bba2330030239328a99310033122338aa18302010033188b3bb333211231b99193a032231120ab0a39a113001320a3b39aa3021310013b09828332333113b1b911a13122230039a2128231020113b82333933203130180230891133333311321b0822120332210293ba20331120113a0bb
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift64 = GIFT64_CVL(R=28, rks=rks)
+            sage: gift64 = GIFT64_CVL(R=28, k=k, key_schedule=DefaultKeySchedule_CVL(64, 28))
             sage: vec_to_int(gift64(int_to_vec(0xc450c7727a9b8a7d, 64))) == 0xe3272885fa94ba8b
             True
 
@@ -347,20 +326,7 @@ class GIFT64_CVL:
 
         """
 
-        # The default values of the round keys rks are set to 0
-        if rks is None:
-            rks = []
-        if rks == []:
-            rks = [0] * R
-        else:
-            # If the rks are provided, then we check if the number of rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks
-            # If len(rks) > R, then we consider only the needed number of rks
-            rks = list(rks)
-            if len(rks) < R:
-                rks = rks + [0] * (R - len(rks))
-            elif len(rks) > R:
-                rks = rks[:R]
+        rks = [0] * R
 
         # SubCells
         # 16 4-bits S-boxes in parallel
@@ -379,13 +345,19 @@ class GIFT64_CVL:
         gift = WordSBoxCipher(4, 16, 16, name=name)
         state = gift.IN
 
+        rk_components = []
         for r in range(R):
             state = gift.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
             state = gift.add_subcipher(permbits, [(state, (i, i)) for i in range(16)])
             ark = RoundkeyXOR_CVL(64, const=rks[r], name=f"AddRoundKey_{r}")
             state = gift.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
+            rk_components.append(state)
 
         gift.add_output([(state, (i, i)) for i in range(16)])
+        gift._rk_components = [gift.nodes[n] for n in rk_components]
+        gift.key_schedule = key_schedule
+        if key_schedule is not None and k is not None:
+            gift.set_round_keys(k)
         self.gift_cipher = gift
 
     def __new__(cls, *args, **kwargs):
@@ -421,7 +393,7 @@ class GIFT128_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-    def __init__(self, R=40, rks=None, name="GIFT-128"):
+    def __init__(self, R=40, key_schedule=None, k=None, name="GIFT-128"):
         r"""
 
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
@@ -435,7 +407,18 @@ class GIFT128_CVL:
 
             - ``R`` -- integer; Number of rounds (default 40)
 
-            - ``rks`` -- list[int]; The round keys (default [])
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. No built-in key schedule is
+              implemented for GIFT-128; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``k``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``k`` -- integer (optional); The master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string; The object's name (default "GIFT-128")
 
@@ -453,61 +436,20 @@ class GIFT128_CVL:
         (see files 'GIFT128_test_vector_2.txt' and 'GIFT128_test_vector_3.txt' in
         https://github.com/giftcipher/gift/blob/master/implementations/test%20vectors):
 
-            sage: rks = [
-            ....:   0x86660660060606000066006000060008, 0xe6666660660666006066606060066088,
-            ....:   0x822646244206060400620024000208cc, 0xa266666462462644606260246002e8cc,
-            ....:   0x800666066006060600600006000888ee, 0x8066666660660666606060066088e8e6,
-            ....:   0x84022646244206060024000200cc886a, 0xc4226666646246266024600260cce0ea,
-            ....:   0x86000666066006060006000000ee08e8, 0xe6006666666066066006600060e6e8e8,
-            ....:   0x860402264624420600020044006a88a4, 0xa6442266666462466002604460eae824,
-            ....:   0x86060006660660060000006600e8800e, 0x86660066666660666000606660e8608e,
-            ....:   0x86060402264624420044006200a4088a, 0xc626442266666462604460626024e882,
-            ....:   0x860606000666066000660060000e8808, 0xe60666006666666060666060608ee080,
-            ....:   0xc20606040226462400620024008a084c, 0xe246264422666664606260246082e0cc,
-            ....:   0xe00606060006660600600006000808e6, 0xe066066600666666606060066080e866,
-            ....:   0xa44206060402264600240002004c8062, 0xe4624626442266666024600260cc6062,
-            ....:   0x86600606060006660006000000e60068, 0xe66066066600666660066000606660e0,
-            ....:   0xc624420606040226000200440062082c, 0xe664624626442266600260446062e0ac,
-            ....:   0xe606600606060006000000660068088e, 0xe6666066066600666000606660e0e886,
-            ....:   0xa64624420606040200440062002c8802, 0xe6666462462644226044606260ace002,
-            ....:   0x866606600606060000660060008e0008, 0xe6666660660666006066606060866088,
-            ....:   0x822646244206060400620024000208c4, 0xa266666462462644606260246002e84c,
-            ....:   0x800666066006060600600006000880ee, 0x806666666066066660606006608868e6,
-            ....:   0x84022646244206060024000200c4886a, 0xc42266666462462660246002604ce0e2
-            ....: ]
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: k = 0x86660660060606000066006000060008e6666660660666006066606060066088822646244206060400620024000208cca266666462462644606260246002e8cc800666066006060600600006000888ee8066666660660666606060066088e8e684022646244206060024000200cc886ac4226666646246266024600260cce0ea86000666066006060006000000ee08e8e6006666666066066006600060e6e8e8860402264624420600020044006a88a4a6442266666462466002604460eae82486060006660660060000006600e8800e86660066666660666000606660e8608e86060402264624420044006200a4088ac626442266666462604460626024e882860606000666066000660060000e8808e60666006666666060666060608ee080c20606040226462400620024008a084ce246264422666664606260246082e0cce00606060006660600600006000808e6e066066600666666606060066080e866a44206060402264600240002004c8062e4624626442266666024600260cc606286600606060006660006000000e60068e66066066600666660066000606660e0c624420606040226000200440062082ce664624626442266600260446062e0ace606600606060006000000660068088ee6666066066600666000606660e0e886a64624420606040200440062002c8802e6666462462644226044606260ace002866606600606060000660060008e0008e6666660660666006066606060866088822646244206060400620024000208c4a266666462462644606260246002e84c800666066006060600600006000880ee806666666066066660606006608868e684022646244206060024000200c4886ac42266666462462660246002604ce0e2
             sage: from civerly.cipher_implementations.gift import GIFT128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift128 = GIFT128_CVL(R=40, rks=rks)
+            sage: gift128 = GIFT128_CVL(R=40, k=k, key_schedule=DefaultKeySchedule_CVL(128, 40))
             sage: vec_to_int(gift128(int_to_vec(0xfedcba9876543210fedcba9876543210, 128))) \
             ....:   == 0x8422241a6dbf5a9346af468409ee0152
             True
 
 
-            sage: rks = [
-            ....:   0xa666244600002020660620444462066e, 0xe40620024444042464002626602460ca,
-            ....:   0xc2664662040000406202006626644eae, 0xe242044026220202664442426006e8a8,
-            ....:   0xa02666244600002020444462066eee8e, 0xa4640620024444042626602460caec80,
-            ....:   0xc0426646620400000066266446aeea0a, 0x82624204402622024242600660a8e6cc,
-            ....:   0xa02026662446000044620666668e28cc, 0x8424640620024444602460426480aeae,
-            ....:   0x804042664662040026644626620a88e6, 0x82026242044026226006602066ccca42,
-            ....:   0x80202026662446000666660620ccc46a, 0xc4042464062002446042640026ae60ac,
-            ....:   0x80004042664662044626620200e62eec, 0xa202026242044026602066444242e886,
-            ....:   0x800020202666244666062044446a8e6e, 0xc4440424640620026400262660ace0c2,
-            ....:   0x84000040426646626202006626ec4e2e, 0xa622020262420440664442426086e0a8,
-            ....:   0xc60000202026662420444462066e6e86, 0x82444404246406202626602460c2ec00,
-            ....:   0xe20400004042664600662664462ee202, 0xc0262202026242044242600660a86644,
-            ....:   0xa446000020202666446206666686204c, 0xa00244440424640660246042640026a6,
-            ....:   0xc662040000404266266446266202086e, 0x8440262202026242600660206644c2ca,
-            ....:   0xe62446000020202606666606204c4cea, 0x86200244440424646042640026a6e8a4,
-            ....:   0xe64662040000404246266202006eae64, 0xc2044026220202626020664442cae006,
-            ....:   0xa6662446000020206606204444ea066e, 0xe4062002444404246400262660a460ca,
-            ....:   0xc2664662040000406202006626644ea6, 0xe242044026220202664442426006e828,
-            ....:   0xa02666244600002020444462066ee68e, 0xa4640620024444042626602460ca6c80,
-            ....:   0xc0426646620400000066266446a6ea0a, 0x8262420440262202424260066028e6c4
-            ....:   ]
+            sage: k = 0xa666244600002020660620444462066ee40620024444042464002626602460cac2664662040000406202006626644eaee242044026220202664442426006e8a8a02666244600002020444462066eee8ea4640620024444042626602460caec80c0426646620400000066266446aeea0a82624204402622024242600660a8e6cca02026662446000044620666668e28cc8424640620024444602460426480aeae804042664662040026644626620a88e682026242044026226006602066ccca4280202026662446000666660620ccc46ac4042464062002446042640026ae60ac80004042664662044626620200e62eeca202026242044026602066444242e886800020202666244666062044446a8e6ec4440424640620026400262660ace0c284000040426646626202006626ec4e2ea622020262420440664442426086e0a8c60000202026662420444462066e6e8682444404246406202626602460c2ec00e20400004042664600662664462ee202c0262202026242044242600660a86644a446000020202666446206666686204ca00244440424640660246042640026a6c662040000404266266446266202086e8440262202026242600660206644c2cae62446000020202606666606204c4cea86200244440424646042640026a6e8a4e64662040000404246266202006eae64c2044026220202626020664442cae006a6662446000020206606204444ea066ee4062002444404246400262660a460cac2664662040000406202006626644ea6e242044026220202664442426006e828a02666244600002020444462066ee68ea4640620024444042626602460ca6c80c0426646620400000066266446a6ea0a8262420440262202424260066028e6c4
             sage: from civerly.cipher_implementations.gift import GIFT128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift128 = GIFT128_CVL(R=40, rks=rks)
+            sage: gift128 = GIFT128_CVL(R=40, k=k, key_schedule=DefaultKeySchedule_CVL(128, 40))
             sage: vec_to_int(gift128(int_to_vec(0xe39c141fa57dba43f08a85b6a91f86c1, 128))) == 0x13ede67cbdcc3dbf400a62d6977265ea
             True
 
@@ -654,20 +596,7 @@ class GIFT128_CVL:
 
             """
 
-        # The default values of the round keys rks are set to 0
-        if rks is None:
-            rks = []
-        if rks == []:
-            rks = [0] * R
-        else:
-            # If the rks are provided, then we check the number of rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks
-            # If len(rks) > R, then we consider only the needed number of rks
-            rks = list(rks)
-            if len(rks) < R:
-                rks = rks + [0] * (R - len(rks))
-            elif len(rks) > R:
-                rks = rks[:R]
+        rks = [0] * R
 
         # SubCells
         # 32 4-bits S-boxes in parallel
@@ -686,13 +615,19 @@ class GIFT128_CVL:
         gift = WordSBoxCipher(4, 32, 32, name=name)
         state = gift.IN
 
+        rk_components = []
         for r in range(R):
             state = gift.add_subcipher(subcells, [(state, (i, i)) for i in range(32)])
             state = gift.add_subcipher(permbits, [(state, (i, i)) for i in range(32)])
             ark = RoundkeyXOR_CVL(128, const=rks[r], name=f"AddRoundKey_{r}")
             state = gift.add_subcipher(ark, [(state, (i, i)) for i in range(32)])
+            rk_components.append(state)
 
         gift.add_output([(state, (i, i)) for i in range(32)])
+        gift._rk_components = [gift.nodes[n] for n in rk_components]
+        gift.key_schedule = key_schedule
+        if key_schedule is not None and k is not None:
+            gift.set_round_keys(k)
         self.gift_cipher = gift
 
     def __new__(cls, *args, **kwargs):

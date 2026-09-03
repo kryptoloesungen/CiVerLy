@@ -11,7 +11,7 @@ from civerly.sboxcipher import SBoxCipher
 
 
 class ABC_CVL:
-    def __init__(self, R=16, rks=None, name="ABC"):
+    def __init__(self, R=16, key_schedule=None, k=None, name="ABC"):
         r"""
         The ABC cipher, a 128 bit block size Feistel cipher patented by Apple
         and first analysed in
@@ -22,7 +22,18 @@ class ABC_CVL:
 
             - ``R`` -- integer; Number of rounds (default 16)
 
-            - ``rks`` -- list[int]; The round keys (default [])
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. No built-in key schedule is
+              implemented for ABC; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``k``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``k`` -- integer (optional); The master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string; The object's name (default "ABC")
 
@@ -30,15 +41,11 @@ class ABC_CVL:
         TESTS:
 
             sage: from civerly.cipher_implementations.abc import ABC_CVL
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: # rks from master key = 0
-            sage: rks = [
-            ....:   0x0,
-            ....:   0xffffffffffffffff, 0x9999999999999999, 0xffffffffffffffff,
-            ....:   0x6666666666666666, 0xffffffffffffffff, 0xffffffffffffffff,
-            ....:   0x3434343434343434
-            ....: ]
-            sage: abc = ABC_CVL(R=1, rks=rks)
+            sage: # round keys (derived from master key = 0), concatenated
+            sage: k = 0x0
+            sage: abc = ABC_CVL(R=1, k=k, key_schedule=DefaultKeySchedule_CVL(64, 1))
             sage: hex(vec_to_int(abc(int_to_vec(0x0, 128))))
             '0x6733ce016733ce01'
             sage: hex(vec_to_int(abc(int_to_vec(
@@ -46,7 +53,8 @@ class ABC_CVL:
             ....: 128))))
             '0x80512957fea0c1179a06f273f61a9cb1'
 
-            sage: abc = ABC_CVL(R=8, rks=rks)
+            sage: k = 0xffffffffffffffff9999999999999999ffffffffffffffff6666666666666666ffffffffffffffffffffffffffffffff3434343434343434
+            sage: abc = ABC_CVL(R=8, k=k, key_schedule=DefaultKeySchedule_CVL(64, 8))
             sage: arr = [(
             ....:   0xeb9b8dbebfc68d8c9c7e91ce2836fa7f,
             ....:   0x54b692ebe6e8198d215a24b81f291e82
@@ -109,8 +117,7 @@ class ABC_CVL:
             3
 
         """
-        if not rks:
-            rks = [0x0 for _ in range(R)]
+        rks = [0x0 for _ in range(R)]
 
         cipher = SBoxCipher(128, 128, name=name)
         abc_round = SBoxCipher(128, 128, name="ABC-round")
@@ -196,10 +203,17 @@ class ABC_CVL:
         abc_round.add_output([(abc_round.IN, (i + 64, i)) for i in range(64)])
 
         node = cipher.IN
+        rk_nodes = []
         for r in range(R):
             abc_round.nodes[node_rk].const = rks[r]
             node = cipher.add_subcipher(abc_round, [(node, (i, i)) for i in range(128)])
+            rk_nodes.append(node)
         cipher.add_output([(node, (i, i)) for i in range(128)])
+
+        cipher._rk_components = [cipher.nodes[n].nodes[node_rk] for n in rk_nodes]
+        cipher.key_schedule = key_schedule
+        if key_schedule is not None and k is not None:
+            cipher.set_round_keys(k)
 
         self.cipher = cipher
 

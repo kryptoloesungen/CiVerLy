@@ -115,9 +115,11 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
         Verify end-to-end encryption via ``set_round_keys`` for SPECK-64/96::
 
-            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.cipher_implementations.speck import (
+            ....:   SPECK_CVL, SPECK_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: speck = SPECK_CVL(64, 96)
+            sage: speck = SPECK_CVL(
+            ....:   64, 96, key_schedule=SPECK_KeySchedule_CVL(64, 96))
             sage: speck.set_round_keys(0x131211100b0a090803020100)
             sage: vec_to_int(speck(int_to_vec(0x74614620736e6165, 64))) == \
             ....:   0x9f7952ec4175946c
@@ -138,9 +140,11 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
         SPECK-128/128 end-to-end test vector from the SPECK specification::
 
-            sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.cipher_implementations.speck import (
+            ....:   SPECK_CVL, SPECK_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: speck = SPECK_CVL(128, 128)
+            sage: speck = SPECK_CVL(
+            ....:   128, 128, key_schedule=SPECK_KeySchedule_CVL(128, 128))
             sage: speck.set_round_keys(0x0f0e0d0c0b0a09080706050403020100)
             sage: pt = int_to_vec(0x6c617669757165207469206564616d20, 128)
             sage: vec_to_int(speck(pt)) == 0xa65d9851797832657860fedf5c570d18
@@ -216,7 +220,9 @@ class SPECK_KeySchedule_CVL(KeySchedule):
 
 
 class SPECK_CVL:
-    def __init__(self, block_size, key_size, R=None, rks=None, name=None):
+    def __init__(
+        self, block_size, key_size, R=None, key_schedule=None, k=None, name=None
+    ):
         r"""
         The CiVerLy implementation of SPECK. It takes the following arguments:
 
@@ -228,10 +234,20 @@ class SPECK_CVL:
               instance. Together with ``block_size``, it determines the
               SPECK-2n-mn instance
 
-            - ``rks`` -- list (optional); Specifies the roundkey values of
-              SPECK, in order to being able to properly test the
-              implementation. Is required to have length ``R+1``, and defaults
-              to [0, ..., 0].
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. Pass a
+              :class:`SPECK_KeySchedule_CVL` instance to use the real SPECK
+              key schedule, a custom ``KeySchedule`` subclass instance, or
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
+              explicit round keys (``R`` of them, ``n = block_size//2`` bits
+              each). Defaults to ``None`` (no key schedule, all-zero round
+              keys).
+
+            - ``k`` -- integer (optional); The master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string (optional); The name of the cipher.
               Will be used to name the cipher and the corresponding files
@@ -253,18 +269,12 @@ class SPECK_CVL:
 
             sage: from civerly.util import vec_to_int, int_to_vec
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: P = 0x74614620736e6165
-            sage: rks = [
-            ....:   0x03020100, 0x131d0309, 0xbbd80d53, 0x1a2370c1, 0xe45d26dd,
-            ....:   0x63cb3f1c, 0x27597d5a, 0x205175b4, 0xdb01db9f, 0x9812aac8,
-            ....:   0x16796373, 0xff72647b, 0xccda7364, 0xd6f4b7c9, 0x2589bf5a,
-            ....:   0x39741c59, 0x85a6aa9c, 0x208eb076, 0x71a9351e, 0x8eff59e3,
-            ....:   0x498ff996, 0x15ec7c21, 0x0f49104a, 0xd8ea21bc, 0xdcdb415c,
-            ....:   0x2fa7e901
-            ....: ]
+            sage: k = 0x3020100131d0309bbd80d531a2370c1e45d26dd63cb3f1c27597d5a205175b4db01db9f9812aac816796373ff72647bccda7364d6f4b7c92589bf5a39741c5985a6aa9c208eb07671a9351e8eff59e3498ff99615ec7c210f49104ad8ea21bcdcdb415c2fa7e901
             sage: C = 0x9f7952ec4175946c
             sage: V, W = 64, 96
-            sage: speck_cipher = SPECK_CVL(V, W, rks=rks)
+            sage: speck_cipher = SPECK_CVL(V, W, k=k, key_schedule=DefaultKeySchedule_CVL(32, 26))
             sage: vec_to_int(speck_cipher(int_to_vec(P, V))) == C
             True
 
@@ -386,8 +396,7 @@ class SPECK_CVL:
             R = dictionary[(block_size, key_size)]
         # -------------------------------------------------------- #
         # roundkeys are defaulted to 0
-        if not rks:
-            rks = [0 for _ in range(R + 1)]
+        rks = [0] * R
 
         # Initialization of the components
         # -------------------------------------------------------- #
@@ -435,13 +444,16 @@ class SPECK_CVL:
 
         # Collect references to all RoundkeyXOR_CVL components for key schedule
         # support. Each entry points to the KeyAdd component inside the
-        # corresponding round node. Set key_schedule to a callable returning
-        # R round keys to enable set_round_keys(k).
+        # corresponding round node. Pass a KeySchedule instance as
+        # key_schedule to enable set_round_keys(k).
         # -------------------------------------------------------- #
-        speck_cipher._rk_components = [
-            speck_cipher.nodes[r + 1].nodes[node_after_keyadd] for r in range(R)
-        ]
-        speck_cipher.key_schedule = SPECK_KeySchedule_CVL(block_size, key_size, R)
+        if key_schedule is not None:
+            speck_cipher._rk_components = [
+                speck_cipher.nodes[r + 1].nodes[node_after_keyadd] for r in range(R)
+            ]
+            speck_cipher.key_schedule = key_schedule
+            if k is not None:
+                speck_cipher.set_round_keys(k)
 
         self.speck_cipher = speck_cipher
 
