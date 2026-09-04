@@ -2605,6 +2605,26 @@ class SBox_CVL(Component):
             1
             8
             True
+
+        Model PRESENT with LOGICAL_COND without reduction::
+
+            sage: from civerly.cipher_implementations.present \
+            ....:   import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical
+            ....:   present_cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     path=Path(tmpdir))
+            ....:   present_cipher.analyse(model_options)
+            5312 variables and 134465 clauses were written to ...
+            12
         """
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             ddt = self.S.difference_distribution_table()
