@@ -2665,7 +2665,7 @@ class SBox_CVL(Component):
             imposset = [
                 transition_int
                 for transition_int in range(1 << L)
-                if transition_int not in posset
+                if tuple(int_to_vec(transition_int, L)) not in posset
             ]
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             for impossible_transition in imposset:
