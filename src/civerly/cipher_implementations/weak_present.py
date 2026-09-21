@@ -122,7 +122,7 @@ class WEAK_PRESENT_CVL:
             Using existing MILP model, make sure it is up to date!
             3648 variables and 6529 constraints were written to ...
             61.8300749986
-            sage: list(cipher.results[0]['assignment']['IN'].values()) \
+            sage: list(cipher.result['assignment']['IN'].values()) \
             ....:   == [1]*64
             True
 

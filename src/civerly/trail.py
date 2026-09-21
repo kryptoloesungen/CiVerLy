@@ -49,7 +49,7 @@ class TrailNode:
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
-            ....:   cipher.results[0]
+            ....:   cipher.result
             1792 variables and 4581 clauses were written to ...
             {'assignment': ...}
         """
