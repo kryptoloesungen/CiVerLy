@@ -333,8 +333,6 @@ class PRESENT_CVL:
             sage: shutil.rmtree(model_options.path)
         """
 
-        rks = [0] * (R + 1)
-
         s = SBox_CVL(present_S, name="SBox")
 
         # sboxlayer is an SBoxCipher, containing the sbox components
@@ -379,13 +377,10 @@ class PRESENT_CVL:
         # ------------------------------------------------ #
         present_cipher = WordSBoxCipher(4, 16, 16, name=name)
         cipher_node = present_cipher.IN
-        for r in range(R):
-            present_round.nodes[node_rk].const = rks[r]
+        for _ in range(R):
             cipher_node = present_cipher.add_subcipher(
                 present_round, [(cipher_node, (i, i)) for i in range(16)]
             )
-
-        key_add.const = rks[R]
 
         cipher_node = present_cipher.add_subcipher(
             key_add, [(cipher_node, (i, i)) for i in range(16)]

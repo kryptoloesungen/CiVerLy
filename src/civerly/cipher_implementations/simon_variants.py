@@ -243,7 +243,6 @@ class SIMON_Variants_CVL:
         n = int(block_size // 2)
         if params is None:
             params = [8, 1, 2]
-        rks = [0] * R
 
         # SIMON is an AndRX cipher, since its non-linear component
         # is logical AND.
@@ -296,8 +295,7 @@ class SIMON_Variants_CVL:
         simon_cipher = AndRX(n, 2, 2, name=name)
 
         node = simon_cipher.IN
-        for r in range(R):
-            simon_round.nodes[node_keyxor].const = rks[r]
+        for _ in range(R):
             node = simon_cipher.add_subcipher(
                 simon_round, [(node, (0, 0)), (node, (1, 1))]
             )

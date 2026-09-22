@@ -395,8 +395,6 @@ class SPECK_CVL:
             # use default no. of rounds
             R = dictionary[(block_size, key_size)]
         # -------------------------------------------------------- #
-        # roundkeys are defaulted to 0
-        rks = [0] * R
 
         # Initialization of the components
         # -------------------------------------------------------- #
@@ -434,8 +432,7 @@ class SPECK_CVL:
         speck_cipher = AddRX(n, 2, 2, name=name)
 
         node = speck_cipher.IN
-        for r in range(R):
-            speck_round.nodes[node_after_keyadd].const = rks[r]
+        for _ in range(R):
             node = speck_cipher.add_subcipher(
                 speck_round, [(node, (0, 0)), (node, (1, 1))]
             )

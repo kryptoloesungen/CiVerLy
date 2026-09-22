@@ -214,9 +214,6 @@ class RECTANGLE_CVL:
 
             """
 
-        # RECTANGLE necessites R+1 round keys, which default to zeros
-        rks = [0] * (R + 1)
-
         # RECTANGLE S-box specifications
         RECTANGLE_SBOX = (
             0x6, 0x5, 0xC, 0xA, 0x1, 0xE, 0x7, 0x9, 0xB, 0x0, 0x3, 0xD, 0x8, 0xF, 0x4, 0x2,
@@ -313,14 +310,12 @@ class RECTANGLE_CVL:
         # Full RECTANGLE cipher
         rectangle = WordSBoxCipher(4, 16, 16, name=name)
         st = rectangle.IN
-        for r in range(R):
-            rectangle_round.nodes[n_ark].const = rks[r]
+        for _ in range(R):
             st = rectangle.add_subcipher(
                 rectangle_round, [(st, (i, i)) for i in range(16)]
             )
 
         # final AddRoundKey with K[25]
-        ark.const = rks[R]
         st = rectangle.add_subcipher(ark, [(st, (i, i)) for i in range(16)])
 
         rectangle.add_output([(st, (i, i)) for i in range(16)])

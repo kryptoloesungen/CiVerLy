@@ -146,8 +146,6 @@ class SIMECK_CVL:
             "As of now, only Simeck32/64 is supported"
         )
 
-        rks = [0 for _ in range(R)]
-
         simeck_round = AndRX(16, 2, 2, name="simeck_round")
         # rotate operations
         rot1 = RotateLayer_CVL(16, 1, name="rotate1")
@@ -187,8 +185,7 @@ class SIMECK_CVL:
         simeck_cipher = AndRX(16, 2, 2, name=name)
         node = simeck_cipher.IN
         rk_nodes = []
-        for r in range(R):
-            simeck_round.nodes[node_keyxor].const = rks[r]
+        for _ in range(R):
             node = simeck_cipher.add_subcipher(
                 simeck_round, [(node, (0, 0)), (node, (1, 1))]
             )

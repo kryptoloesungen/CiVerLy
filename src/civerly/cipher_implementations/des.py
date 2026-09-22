@@ -263,8 +263,6 @@ class DES_CVL:
             4
 
         """
-        rks = [0 for _ in range(R)]
-
         des = SBoxCipher(64, 64, name=name)
         xor = XOR_CVL(32, name="XOR")
         round_function = SBoxCipher(64, 64, name="Round")
@@ -300,8 +298,7 @@ class DES_CVL:
         # ----------------------------- DES --------------------------------- #
         current = des.add_subcipher(ip, [(des.IN, (i, i)) for i in range(64)])
         rk_nodes = []
-        for r in range(R):
-            round_function.nodes[f_node].nodes[2].const = rks[r]
+        for _ in range(R):
             current = des.add_subcipher(
                 round_function, [(current, (i, i)) for i in range(64)]
             )

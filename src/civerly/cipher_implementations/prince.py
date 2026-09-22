@@ -246,8 +246,6 @@ class PRINCE_CVL:
 
         """
 
-        rks = [0] * 12
-
         # S-layer and the inverse S-layer
         sb = SBox_CVL(prince_S, name="SBox")
         sb_inv = SBox_CVL(prince_S.inverse(), name="SBoxInv")
@@ -301,13 +299,11 @@ class PRINCE_CVL:
 
         # initial add rks[0]
         if R >= 1:
-            xor_mask.const = rks[0]
             st = prince_core.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
             _rk_components.append(prince_core.nodes[st])
 
         # forward rounds r=1..5
-        for r in range(1, min(R, 6)):
-            fwd_round.nodes[n_xor_fwd].const = rks[r]
+        for _ in range(1, min(R, 6)):
             st = prince_core.add_subcipher(fwd_round, [(st, (i, i)) for i in range(16)])
             _rk_components.append(prince_core.nodes[st].nodes[n_xor_fwd])
 
@@ -316,14 +312,12 @@ class PRINCE_CVL:
             st = prince_core.add_subcipher(mid_round, [(st, (i, i)) for i in range(16)])
 
         # backward rounds r=6..10
-        for r in range(6, min(R, 11)):
-            bwd_round.nodes[n_xor_bwd].const = rks[r]
+        for _ in range(6, min(R, 11)):
             st = prince_core.add_subcipher(bwd_round, [(st, (i, i)) for i in range(16)])
             _rk_components.append(prince_core.nodes[st].nodes[n_xor_bwd])
 
         # final add rks[11]
         if R >= 12:
-            xor_mask.const = rks[11]
             st = prince_core.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
             _rk_components.append(prince_core.nodes[st])
 

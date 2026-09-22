@@ -117,8 +117,6 @@ class ABC_CVL:
             3
 
         """
-        rks = [0x0 for _ in range(R)]
-
         cipher = SBoxCipher(128, 128, name=name)
         abc_round = SBoxCipher(128, 128, name="ABC-round")
 
@@ -204,8 +202,7 @@ class ABC_CVL:
 
         node = cipher.IN
         rk_nodes = []
-        for r in range(R):
-            abc_round.nodes[node_rk].const = rks[r]
+        for _ in range(R):
             node = cipher.add_subcipher(abc_round, [(node, (i, i)) for i in range(128)])
             rk_nodes.append(node)
         cipher.add_output([(node, (i, i)) for i in range(128)])
