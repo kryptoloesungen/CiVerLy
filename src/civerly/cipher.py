@@ -35,6 +35,7 @@ EXAMPLES::
 """
 
 import json
+import logging
 import subprocess
 import time
 from collections.abc import Iterable
@@ -57,6 +58,8 @@ from civerly.model_options import (
 )
 from civerly.trail import TrailNode
 from civerly.util import suppress_output, translate_sat_clause
+
+logger = logging.getLogger(__name__)
 
 
 class CipherNotValidError(Exception):
@@ -1522,7 +1525,7 @@ class Cipher:
 
         if model_options.write_to_file:
             sat.write()
-            print(
+            logger.warning(
                 f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
                 "were written to "
                 f"'{model_options.path / (self.name + '.cnf')!s}'"
@@ -1611,7 +1614,7 @@ class Cipher:
             if self.milp is None:
                 self.model(model_options)
             else:
-                print("Using existing MILP model, make sure it is up to date!")
+                logger.warning("Using existing MILP model, make sure it is up to date!")
                 self._finish_milp(model_options, self.milp)
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
@@ -1662,7 +1665,7 @@ class Cipher:
             if self.sat is None:
                 self.model(model_options)
             else:
-                print("Using existing SAT model, make sure it is up to date!")
+                logger.warning("Using existing SAT model, make sure it is up to date!")
                 self._finish_sat(model_options, self.sat)
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
@@ -2089,7 +2092,7 @@ class Cipher:
         """
         with Path(path).open("w") as f:
             json.dump(self._to_dict(), f, default=lambda obj: int(obj))
-        print(f"Object '{self.name}' has been exported to {path}.")
+        logger.warning(f"Object '{self.name}' has been exported to {path}.")
 
     @classmethod
     def _init_from_dict(cls, d):
@@ -2303,7 +2306,7 @@ class Cipher:
                 for f in model_options.path.glob(pattern):
                     subprocess.Popen(["rm", "-f", f]).wait()
 
-        print(f"Output file in: {pdf_file_name}")
+        logger.warning(f"Output file in: {pdf_file_name}")
 
     def _latex_section(self, trail_node, model_options) -> str:
         r"""

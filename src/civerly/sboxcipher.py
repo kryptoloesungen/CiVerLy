@@ -13,6 +13,7 @@ supported for ciphers containing different non-linear components than
 """
 
 import json
+import logging
 from dataclasses import replace
 
 from civerly.cipher import Cipher
@@ -34,6 +35,8 @@ from civerly.model_options import (
     InvalidModelOptionError,
 )
 from civerly.util import suppress_output, translate_milp_constraint, translate_var
+
+logger = logging.getLogger(__name__)
 
 
 class SBoxCipher(Cipher):
@@ -469,7 +472,7 @@ class SBoxCipher(Cipher):
             f.close()
 
         if model_options.write_to_file:
-            print(
+            logger.warning(
                 f"{milp.number_of_variables()} variables and "
                 f"{milp.number_of_constraints()} constraints were written to "
                 f"'{model_options.path / (self.name + '.mps')!s}'"
