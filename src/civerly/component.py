@@ -2491,15 +2491,16 @@ class SBox_CVL(Component):
                 # compute imposset = complement of posset
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 L = self.input_length + self.output_length + len(set_ddt)
+                posset_ints = {vec_to_int(p) for p in posset}
                 imposset = [
                     transition_int
                     for transition_int in range(1 << L)
-                    if transition_int not in posset
+                    if transition_int not in posset_ints
                 ]
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 for impossible_transition in imposset:
-                    tup = (
-                        (-1) ** ((impossible_transition >> (L - i - 1)) & 1) * i
+                    tup = tuple(
+                        (-1) ** ((impossible_transition >> (L - i - 1)) & 1) * (i + 1)
                         for i in range(L)
                     )
                     clauses.append(tup)
@@ -2682,10 +2683,11 @@ class SBox_CVL(Component):
             # compute imposset = complement of posset
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             L = len(SAT_VARS)
+            posset_ints = {vec_to_int(p) for p in posset}
             imposset = [
                 transition_int
                 for transition_int in range(1 << L)
-                if tuple(int_to_vec(transition_int, L)) not in posset
+                if transition_int not in posset_ints
             ]
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             for impossible_transition in imposset:
