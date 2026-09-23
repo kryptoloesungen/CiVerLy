@@ -4,6 +4,7 @@ Utils for interacting with MILP and SAT solvers.
 
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
@@ -16,6 +17,8 @@ from pathlib import Path
 from sage.sat.solvers.dimacs import DIMACS
 
 from civerly.util import suppress_output
+
+logger = logging.getLogger(__name__)
 
 
 def _float_or_int(value):
@@ -246,7 +249,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
 
         if solution_file.exists():
-            print(f"Using existing file {solution_file}, make sure it is up to date!")
+            logger.warning(f"Using existing file {solution_file}, make sure it is up to date!")
             objective_value, assignment = self._process_solution_file(solution_file)
             return {
                 "status": SOLVING_STATUS.SUCCESS,
@@ -532,7 +535,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
 
         if solution_file.exists():
-            print(f"Using existing file {solution_file}, make sure it is up to date!")
+            logger.warning(f"Using existing file {solution_file}, make sure it is up to date!")
             satisfiability, assignment = self._process_solution_file(solution_file)
             return {
                 "status": SOLVING_STATUS.SUCCESS,
@@ -2190,7 +2193,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         """
         self._check_can_invoke()
         if solution_file.exists():
-            print(f"Using existing file {solution_file}, make sure it is up to date!")
+            logger.warning(f"Using existing file {solution_file}, make sure it is up to date!")
         else:
             command = ["espresso", "-epos", str(input_file)]
             with solution_file.open("a") as redirect:
