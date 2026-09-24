@@ -244,10 +244,12 @@ class SPECK_CVL:
               each). Defaults to ``None`` (no key schedule, all-zero round
               keys).
 
-            - ``k`` -- integer (optional); The master key passed to
-              ``key_schedule``, immediately expanded and injected via
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string (optional); The name of the cipher.
               Will be used to name the cipher and the corresponding files
@@ -271,7 +273,13 @@ class SPECK_CVL:
             sage: from civerly.cipher_implementations.speck import SPECK_CVL
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: P = 0x74614620736e6165
-            sage: k = 0x3020100131d0309bbd80d531a2370c1e45d26dd63cb3f1c27597d5a205175b4db01db9f9812aac816796373ff72647bccda7364d6f4b7c92589bf5a39741c5985a6aa9c208eb07671a9351e8eff59e3498ff99615ec7c210f49104ad8ea21bcdcdb415c2fa7e901
+            sage: k = [
+            ....:   0x03020100, 0x131d0309, 0xbbd80d53, 0x1a2370c1, 0xe45d26dd, 0x63cb3f1c,
+            ....:   0x27597d5a, 0x205175b4, 0xdb01db9f, 0x9812aac8, 0x16796373, 0xff72647b,
+            ....:   0xccda7364, 0xd6f4b7c9, 0x2589bf5a, 0x39741c59, 0x85a6aa9c, 0x208eb076,
+            ....:   0x71a9351e, 0x8eff59e3, 0x498ff996, 0x15ec7c21, 0x0f49104a, 0xd8ea21bc,
+            ....:   0xdcdb415c, 0x2fa7e901
+            ....: ]
             sage: C = 0x9f7952ec4175946c
             sage: V, W = 64, 96
             sage: speck_cipher = SPECK_CVL(V, W, k=k, key_schedule=DefaultKeySchedule_CVL(32, 26))

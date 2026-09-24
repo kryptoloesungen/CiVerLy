@@ -54,10 +54,12 @@ class SIMON_CVL:
               bits each). Defaults to ``None`` (no key schedule, all-zero
               round keys).
 
-            - ``k`` -- integer (optional); The master key passed to
-              ``key_schedule``, immediately expanded and injected via
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string (optional); The name of the cipher.
               Will be used to name the cipher and the corresponding files
@@ -86,7 +88,15 @@ class SIMON_CVL:
             sage: from civerly.cipher_implementations.simon import SIMON_CVL
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: P = 0x6f7220676e696c63
-            sage: k = 0x30201000b0a090813121110ffae9dcec4facc91c83d1bb6b5d510ff36e2c07c727090431343f40eea417e409e635793a69654788b052e75884c5f47d0e4e598e3e8036335f020e11afa1c76bee71ed6763d4d2a0ca19efc0046cb1b59ce07043dfb4191cbd9e8ccf3f75b6da34520b7ba7ae12d60e056a6f6a8d0f4943a89c1b4db50fe3481f018ee1d573f4806d09756feb8ff0e529452d6d654a47eb6e8dd8990d838b082bddc
+            sage: k = [
+            ....:   0x03020100, 0x0b0a0908, 0x13121110, 0xffae9dce, 0xc4facc91, 0xc83d1bb6,
+            ....:   0xb5d510ff, 0x36e2c07c, 0x72709043, 0x1343f40e, 0xea417e40, 0x9e635793,
+            ....:   0xa6965478, 0x8b052e75, 0x884c5f47, 0xd0e4e598, 0xe3e80363, 0x35f020e1,
+            ....:   0x1afa1c76, 0xbee71ed6, 0x763d4d2a, 0x0ca19efc, 0x0046cb1b, 0x59ce0704,
+            ....:   0x3dfb4191, 0xcbd9e8cc, 0xf3f75b6d, 0xa34520b7, 0xba7ae12d, 0x60e056a6,
+            ....:   0xf6a8d0f4, 0x943a89c1, 0xb4db50fe, 0x3481f018, 0xee1d573f, 0x4806d097,
+            ....:   0x56feb8ff, 0x0e529452, 0xd6d654a4, 0x7eb6e8dd, 0x8990d838, 0xb082bddc
+            ....: ]
             sage: C = 0x5ca2e27f111a8fc8
             sage: V, W = 64, 96
             sage: simon_cipher = SIMON_CVL(V, W, k=k, key_schedule=DefaultKeySchedule_CVL(32, 42))

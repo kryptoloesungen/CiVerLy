@@ -87,8 +87,8 @@ class DefaultKeySchedule_CVL(KeySchedule):
     r"""
     Trivial key schedule used by cipher implementations that have no real key
     schedule implemented. It performs no expansion at all: the "master key"
-    passed to it is simply the round keys concatenated MSB-first, and
-    :meth:`eval` splits it back apart.
+    passed to it is already the list of round keys, and :meth:`eval` returns
+    it unchanged (the identity).
 
     This makes it possible to pass explicit round keys to any cipher
     implementation, in a way that is consistent with the ``key_schedule``/``k``
@@ -107,17 +107,24 @@ class DefaultKeySchedule_CVL(KeySchedule):
 
         sage: from civerly.keyschedule import DefaultKeySchedule_CVL
         sage: ks = DefaultKeySchedule_CVL(16, 2)
-        sage: ks(0x00010002)
+        sage: ks([0x0001, 0x0002])
         [1, 2]
+        sage: ks([0x0001])
+        Traceback (most recent call last):
+        ...
+        ValueError: expected 2 round keys, got 1
+        sage: ks([0x0001, 0x10000])
+        Traceback (most recent call last):
+        ...
+        ValueError: round key 1 (0x10000) does not fit into 16 bits
 
-    Pass an instance together with ``k`` to any cipher implementation to
-    inject explicit round keys::
+    Pass an instance together with the list of round keys as ``k`` to any
+    cipher implementation to inject explicit round keys::
 
         sage: from civerly.cipher_implementations.gift import GIFT64_CVL
         sage: rks = [0x1111111111111111, 0x2222222222222222]
-        sage: k = (rks[0] << 64) | rks[1]
-        sage: gift64 = GIFT64_CVL(R=2, k=k, key_schedule=DefaultKeySchedule_CVL(64, 2))
-        sage: gift64.key_schedule(k) == rks
+        sage: gift64 = GIFT64_CVL(R=2, k=rks, key_schedule=DefaultKeySchedule_CVL(64, 2))
+        sage: gift64.key_schedule(rks) == rks
         True
     """
 
@@ -128,18 +135,31 @@ class DefaultKeySchedule_CVL(KeySchedule):
 
     def eval(self, master_key):
         r"""
-        Split ``master_key`` into ``self._rk_count`` round keys of
-        ``self._rk_width`` bits each (MSB-first).
+        Return the round keys ``master_key`` unchanged (identity), after
+        checking that there are ``self._rk_count`` of them and that each fits
+        into ``self._rk_width`` bits.
 
         INPUT:
 
-            - ``master_key`` -- integer; the round keys concatenated
-              MSB-first.
+            - ``master_key`` -- list of integers; the round keys, in round
+              order (round key 0 first).
 
         OUTPUT: list of ``self._rk_count`` integers, in round order.
         """
-        mask = (1 << self._rk_width) - 1
-        return [
-            (master_key >> (self._rk_width * (self._rk_count - 1 - i))) & mask
-            for i in range(self._rk_count)
-        ]
+        if not hasattr(master_key, "__iter__"):
+            raise TypeError(
+                f"{self.name} expects the list of round keys as master key, "
+                f"got {type(master_key).__name__}"
+            )
+        round_keys = list(master_key)
+        if len(round_keys) != self._rk_count:
+            raise ValueError(
+                f"expected {self._rk_count} round keys, got {len(round_keys)}"
+            )
+        for i, rk in enumerate(round_keys):
+            if not 0 <= rk < (1 << self._rk_width):
+                raise ValueError(
+                    f"round key {i} ({hex(rk)}) does not fit into "
+                    f"{self._rk_width} bits"
+                )
+        return round_keys

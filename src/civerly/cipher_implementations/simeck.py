@@ -27,10 +27,12 @@ class SIMECK_CVL:
               to pass explicit round keys (see ``k``). Defaults to ``None``
               (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer (optional); The master key passed to
-              ``key_schedule``, immediately expanded and injected via
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``R`` -- integer; Number of rounds (default: 32)
 
@@ -51,7 +53,12 @@ class SIMECK_CVL:
             sage: from civerly.cipher_implementations.simeck import SIMECK_CVL
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: P = 0x65656877
-            sage: k = 0x100090811101918ededd4d5dddd90932b2b090b13141818c7c1d2dedcd8a866cf5b0c8a7bad027529b37580829b8ece0d4f8d5be83b62ed6155a2e892b17fbe
+            sage: k = [
+            ....:   0x0100, 0x0908, 0x1110, 0x1918, 0xeded, 0xd4d5, 0xdddd, 0x9093, 0x2b2b,
+            ....:   0x090b, 0x1314, 0x1818, 0xc7c1, 0xd2de, 0xdcd8, 0xa866, 0xcf5b, 0x0c8a,
+            ....:   0x7bad, 0x0275, 0x29b3, 0x7580, 0x829b, 0x8ece, 0x0d4f, 0x8d5b, 0xe83b,
+            ....:   0x62ed, 0x6155, 0xa2e8, 0x92b1, 0x7fbe
+            ....: ]
             sage: C = 0x770d2c76
             sage: simeck_cipher = SIMECK_CVL(k=k, key_schedule=DefaultKeySchedule_CVL(16, 32))
             sage: vec_to_int(simeck_cipher(int_to_vec(P, 32))) == C

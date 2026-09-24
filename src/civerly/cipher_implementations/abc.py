@@ -30,10 +30,12 @@ class ABC_CVL:
               to pass explicit round keys (see ``k``). Defaults to ``None``
               (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer (optional); The master key passed to
-              ``key_schedule``, immediately expanded and injected via
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string; The object's name (default "ABC")
 
@@ -43,8 +45,8 @@ class ABC_CVL:
             sage: from civerly.cipher_implementations.abc import ABC_CVL
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: # round keys (derived from master key = 0), concatenated
-            sage: k = 0x0
+            sage: # round keys (derived from master key = 0)
+            sage: k = [0x0000000000000000]
             sage: abc = ABC_CVL(R=1, k=k, key_schedule=DefaultKeySchedule_CVL(64, 1))
             sage: hex(vec_to_int(abc(int_to_vec(0x0, 128))))
             '0x6733ce016733ce01'
@@ -53,7 +55,11 @@ class ABC_CVL:
             ....: 128))))
             '0x80512957fea0c1179a06f273f61a9cb1'
 
-            sage: k = 0xffffffffffffffff9999999999999999ffffffffffffffff6666666666666666ffffffffffffffffffffffffffffffff3434343434343434
+            sage: k = [
+            ....:   0x0000000000000000, 0xffffffffffffffff, 0x9999999999999999,
+            ....:   0xffffffffffffffff, 0x6666666666666666, 0xffffffffffffffff,
+            ....:   0xffffffffffffffff, 0x3434343434343434
+            ....: ]
             sage: abc = ABC_CVL(R=8, k=k, key_schedule=DefaultKeySchedule_CVL(64, 8))
             sage: arr = [(
             ....:   0xeb9b8dbebfc68d8c9c7e91ce2836fa7f,

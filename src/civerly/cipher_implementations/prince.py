@@ -110,10 +110,12 @@ class PRINCE_CVL:
               for the given ``R``. Defaults to ``None`` (no key schedule,
               all-zero round keys).
 
-            - ``k`` -- integer (optional); The master key passed to
-              ``key_schedule``, immediately expanded and injected via
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string; The name of the cipher (default: "PRINCE").
               This will be used to name the cipher and the corresponding file
@@ -130,7 +132,12 @@ class PRINCE_CVL:
 
         TESTS::
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
-            sage: k = 0x0000000000000000_13198a2e03707344_a4093822299f31d0_082efa98ec4e6c89_452821e638d01377_be5466cf34e90c6c_7ef84f78fd955cb1_85840851f1ac43aa_c882d32f25323c54_64a51195e0e3610d_d3b5a399ca0c2399_c0ac29b7c97c50dd
+            sage: k = [
+            ....:   0x0000000000000000, 0x13198a2e03707344, 0xa4093822299f31d0,
+            ....:   0x082efa98ec4e6c89, 0x452821e638d01377, 0xbe5466cf34e90c6c,
+            ....:   0x7ef84f78fd955cb1, 0x85840851f1ac43aa, 0xc882d32f25323c54,
+            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd
+            ....: ]
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: prince_cipher = PRINCE_CVL(R=12, k=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
@@ -138,7 +145,12 @@ class PRINCE_CVL:
             sage: print(hex(C))
             0x818665aa0d02dfda
 
-            sage: k = 0x0000000000000000_13198a2e03707344_a4093822299f31d0_082efa98ec4e6c89_452821e638d01377_be5466cf34e90c6c_7ef84f78fd955cb1_85840851f1ac43aa_c882d32f25323c54_64a51195e0e3610d_d3b5a399ca0c2399_c0ac29b7c97c50dd
+            sage: k = [
+            ....:   0x0000000000000000, 0x13198a2e03707344, 0xa4093822299f31d0,
+            ....:   0x082efa98ec4e6c89, 0x452821e638d01377, 0xbe5466cf34e90c6c,
+            ....:   0x7ef84f78fd955cb1, 0x85840851f1ac43aa, 0xc882d32f25323c54,
+            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd
+            ....: ]
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
@@ -148,7 +160,12 @@ class PRINCE_CVL:
             0x604ae6ca03c20ada
 
             # k = rks ^^ k1 (k1 in this test is 0x0), so rks = RC
-            sage: k = 0x0000000000000000_13198a2e03707344_a4093822299f31d0_082efa98ec4e6c89_452821e638d01377_be5466cf34e90c6c_7ef84f78fd955cb1_85840851f1ac43aa_c882d32f25323c54_64a51195e0e3610d_d3b5a399ca0c2399_c0ac29b7c97c50dd
+            sage: k = [
+            ....:   0x0000000000000000, 0x13198a2e03707344, 0xa4093822299f31d0,
+            ....:   0x082efa98ec4e6c89, 0x452821e638d01377, 0xbe5466cf34e90c6c,
+            ....:   0x7ef84f78fd955cb1, 0x85840851f1ac43aa, 0xc882d32f25323c54,
+            ....:   0x64a51195e0e3610d, 0xd3b5a399ca0c2399, 0xc0ac29b7c97c50dd
+            ....: ]
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
@@ -163,7 +180,12 @@ class PRINCE_CVL:
 
             # k = rks ^^ k1 (k1 in this test is 0xFFFFFFFFFFFFFFFF)
             # neglect k0 since k0=0x0
-            sage: k = 0xFFFFFFFFFFFFFFFF_ece675d1fc8f8cbb_5bf6c7ddd660ce2f_f7d1056713b19376_bad7de19c72fec88_41ab9930cb16f393_8107b087026aa34e_7a7bf7ae0e53bc55_377d2cd0dacdc3ab_9b5aee6a1f1c9ef2_2c4a5c6635f3dc66_3f53d6483683af22
+            sage: k = [
+            ....:   0xffffffffffffffff, 0xece675d1fc8f8cbb, 0x5bf6c7ddd660ce2f,
+            ....:   0xf7d1056713b19376, 0xbad7de19c72fec88, 0x41ab9930cb16f393,
+            ....:   0x8107b087026aa34e, 0x7a7bf7ae0e53bc55, 0x377d2cd0dacdc3ab,
+            ....:   0x9b5aee6a1f1c9ef2, 0x2c4a5c6635f3dc66, 0x3f53d6483683af22
+            ....: ]
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
@@ -175,7 +197,12 @@ class PRINCE_CVL:
 
             # k = rks ^^ k1 (k1 in this test is 0xfedcba9876543210)
             # neglect k0 since k0=0x0
-            sage: k = 0xfedcba9876543210_edc530b675244154_5ad582ba5fcb03c0_f6f240009a1a5e99_bbf49b7e4e842167_4088dc5742bd3e7c_8024f5e08bc16ea1_7b58b2c987f871ba_365e69b753660e44_9a79ab0d96b7531d_2d691901bc581189_3e70932fbf2862cd
+            sage: k = [
+            ....:   0xfedcba9876543210, 0xedc530b675244154, 0x5ad582ba5fcb03c0,
+            ....:   0xf6f240009a1a5e99, 0xbbf49b7e4e842167, 0x4088dc5742bd3e7c,
+            ....:   0x8024f5e08bc16ea1, 0x7b58b2c987f871ba, 0x365e69b753660e44,
+            ....:   0x9a79ab0d96b7531d, 0x2d691901bc581189, 0x3e70932fbf2862cd
+            ....: ]
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int

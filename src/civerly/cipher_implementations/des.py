@@ -215,10 +215,12 @@ class DES_CVL:
               to pass explicit round keys (see ``k``). Defaults to ``None``
               (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer (optional); The master key passed to
-              ``key_schedule``, immediately expanded and injected via
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string; The name of the cipher (default: "DES").
               Will be used to name the cipher and the corresponding files
@@ -229,7 +231,12 @@ class DES_CVL:
             sage: from civerly.cipher_implementations.des import DES_CVL
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: k = 0xb02679b49a569a659256a2645d48ab428d27289d2a582573ce80317a6c223251e3c85456c04950ae4c65788386ce581c0c9e926b83991e307631d72211f830d893a7130e5455c5491c4d04980fc5443b681dc8db691050a16b5ca3d03b87032
+            sage: k = [
+            ....:   0x0b02679b49a5, 0x69a659256a26, 0x45d48ab428d2, 0x7289d2a58257,
+            ....:   0x3ce80317a6c2, 0x23251e3c8545, 0x6c04950ae4c6, 0x5788386ce581,
+            ....:   0xc0c9e926b839, 0x91e307631d72, 0x211f830d893a, 0x7130e5455c54,
+            ....:   0x91c4d04980fc, 0x5443b681dc8d, 0xb691050a16b5, 0xca3d03b87032
+            ....: ]
             sage: des = DES_CVL(R=16, k=k, key_schedule=DefaultKeySchedule_CVL(48, 16))
             sage: vec_to_int(des(int_to_vec(0x4E6F772069732074, 64))) \
             ....:   == 0x3FA40E8A984D4815

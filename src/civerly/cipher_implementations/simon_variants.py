@@ -39,10 +39,12 @@ class SIMON_Variants_CVL:
               each). Defaults to ``None`` (no key schedule, all-zero round
               keys).
 
-            - ``k`` -- integer (optional); The master key passed to
-              ``key_schedule``, immediately expanded and injected via
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``use_rotand`` -- bool; Indicates whether the ``ROT_AND_CVL`` component
               and its more accurate model from (https://eprint.iacr.org/2015/145)
