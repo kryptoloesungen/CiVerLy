@@ -19,12 +19,18 @@ class CRAFT_CVL:
         0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85,
     )  # fmt: skip
 
-    def __init__(self, R, name="CRAFT") -> None:
+    def __init__(self, R, key_schedule=None, name="CRAFT") -> None:
         r"""
         The CiVerLy implementation of CRAFT. It takes the following arguments:
 
             - ``R`` -- integer; Specifies the number of rounds that are
               performed.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for CRAFT; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
 
             - ``name`` -- string; The name of the cipher (default: "CRAFT").
               Will be used to name the cipher and the corresponding files
@@ -289,6 +295,8 @@ class CRAFT_CVL:
             )
         craft_cipher.add_output([(node_cipher, (i, i)) for i in range(16)])
         # ------------------------------------------------------------------- #
+
+        craft_cipher.key_schedule = key_schedule
 
         self.craft_cipher = craft_cipher
 

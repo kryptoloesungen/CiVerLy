@@ -369,21 +369,34 @@ class AES_KeySchedule_CVL(KeySchedule):
 class AES_CVL:
     """Implementation of the AES in CiVerLy."""
 
-    def __init__(self, R, k=None, name="AES") -> None:
+    def __init__(self, R, key_schedule=None, k=None, name="AES") -> None:
         r"""
         Implement AES-128 in CiVerLy.
 
         By default round keys are zero, which leaves correctness of the
-        data path verifiable without a key schedule.  Pass a 128-bit master
-        key ``k`` to inject the real AES-128 round keys via
-        :meth:`civerly.cipher.Cipher.set_round_keys`.
+        data path verifiable without a key schedule.  Pass a
+        :class:`AES_KeySchedule_CVL` instance (or a custom
+        :class:`civerly.keyschedule.KeySchedule`) as ``key_schedule``, together
+        with a 128-bit master key ``k``, to inject the real AES-128 round keys
+        via :meth:`civerly.cipher.Cipher.set_round_keys`.
 
         INPUT:
 
             - ``R`` -- integer; Number of rounds.
 
-            - ``k`` -- integer (128-bit); Master key (default: None).  When given,
-              the AES-128 round keys are derived and injected immediately.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. Pass an
+              :class:`AES_KeySchedule_CVL` instance to use the real AES-128
+              key schedule, a custom ``KeySchedule`` subclass instance, or
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
+              explicit round keys (``R + 1`` of them, 128 bits each). Defaults
+              to ``None`` (no key schedule, all-zero round keys).
+
+            - ``k`` -- integer (optional); The 128-bit master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string; The name of the cipher (default: "AES").
               This will be used to name the cipher and the corresponding file
@@ -395,8 +408,10 @@ class AES_CVL:
         Encrypt using the NIST FIPS 197 Appendix B test vector::
 
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: from civerly.cipher_implementations.aes import AES_CVL
-            sage: aes = AES_CVL(R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c)
+            sage: from civerly.cipher_implementations.aes import AES_CVL, AES_KeySchedule_CVL
+            sage: aes = AES_CVL(
+            ....:   R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c,
+            ....:   key_schedule=AES_KeySchedule_CVL(10))
             sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
             sage: hex(vec_to_int(aes(pt)))
             '0x3925841d02dc09fbdc118597196a0b32'
@@ -592,20 +607,22 @@ class AES_CVL:
         # Adding round functions (and the last non-full round) into the
         # aes_cipher
         # ------------------------------------------------ #
+        rks = [0] * (R + 1)
+
         aes_cipher = AESlike(8, 4, 4, name=name)
 
         node = aes_cipher.IN
         edges = [(node, (i, i)) for i in range(16)]
         node = aes_cipher.add_subcipher(
-            RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges
+            RoundkeyXOR_CVL(128, rks[0], name="AddRoundKey"), edges
         )
 
-        for _r in range(R - 1):
+        for r in range(R - 1):
             edges = [(node, (i, i)) for i in range(16)]
             node = aes_cipher.add_subcipher(aes_round, edges)
             edges = [(node, (i, i)) for i in range(16)]
             node = aes_cipher.add_subcipher(
-                RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges
+                RoundkeyXOR_CVL(128, rks[r + 1], name="AddRoundKey"), edges
             )
 
         edges = [(node, (i, i)) for i in range(16)]
@@ -614,21 +631,21 @@ class AES_CVL:
         node = aes_cipher.add_subcipher(shiftrow, edges)
         edges = [(node, (i, i)) for i in range(16)]
         node = aes_cipher.add_subcipher(
-            RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges
+            RoundkeyXOR_CVL(128, rks[R], name="AddRoundKey"), edges
         )
 
         aes_cipher.add_output([(node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
 
-        aes_cipher._rk_components = [aes_cipher.nodes[2 * r + 1] for r in range(R)] + [
-            aes_cipher.nodes[2 * R + 2]
-        ]
-        aes_cipher.key_schedule = AES_KeySchedule_CVL(R)
+        if key_schedule is not None:
+            aes_cipher._rk_components = [
+                aes_cipher.nodes[2 * r + 1] for r in range(R)
+            ] + [aes_cipher.nodes[2 * R + 2]]
+            aes_cipher.key_schedule = key_schedule
+            if k is not None:
+                aes_cipher.set_round_keys(k)
 
         self.aes_cipher = aes_cipher
-
-        if k is not None:
-            aes_cipher.set_round_keys(k)
 
     def __new__(cls, *args, **kwargs):
         """Instantiate the AES."""

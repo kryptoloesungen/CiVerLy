@@ -599,9 +599,10 @@ class Cipher:
 
         EXAMPLES::
 
-            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.cipher_implementations.hurdle import (
+            ....:   HURDLE_CVL, hurdle_key_schedule)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: hurdle = HURDLE_CVL(R=1)
+            sage: hurdle = HURDLE_CVL(R=1, key_schedule=hurdle_key_schedule)
             sage: hurdle.set_round_keys(0x99990099991188992277993366994455)
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0x09cc2a7e2222eeee

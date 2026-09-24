@@ -68,14 +68,26 @@ class MIDORI64_CVL:
         [1, 1, 1, 0],
     )
 
-    def __init__(self, R=16, rks=None, name="MIDORI-64"):
+    def __init__(self, R=16, key_schedule=None, k=None, name="MIDORI-64"):
         r"""
         CiVerLy Implementation of MIDORI-64. It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 16)
 
-            - ``rks`` -- list[int]; roundkeys (default: []).  When given,
-                the round keys are derived and injected immediately.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. No built-in key schedule is
+              implemented for MIDORI; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``k``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string; The name of the cipher (default: "MIDORI-64").
                 This will be used to name the cipher and the corresponding file
@@ -94,7 +106,8 @@ class MIDORI64_CVL:
         Using test vectors from the original specification (see Appendix A
         in https://eprint.iacr.org/2015/1142.pdf):
 
-            sage: rks = [
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: k = [
             ....:   0x0000000000000000, 0x0001010110110011, 0x0111100011000000,
             ....:   0x1010010000110101, 0x0110001000010011, 0x0001000001001111,
             ....:   0x1101000101110000, 0x0000001001100110, 0x0000101111001100,
@@ -104,13 +117,13 @@ class MIDORI64_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori64_cipher = MIDORI64_CVL(R=16,rks=rks)
+            sage: midori64_cipher = MIDORI64_CVL(R=16, k=k, key_schedule=DefaultKeySchedule_CVL(64, 17))
             sage: vec_to_int(midori64_cipher(int_to_vec(0x0000000000000000, 64))) \
             ....:   == 0x3c9cceda2bbd449a
             True
 
 
-            sage: rks = [
+            sage: k = [
             ....:   0x336de4bd02af3f4c, 0x687cec3a2c94b3e2, 0x5a0119862f2a8cbf,
             ....:   0x786dec3b3c94b2f2, 0x5a0009963e2b8cae, 0x687ced3b3d85a2e2,
             ....:   0x4a1109873f3b8cbf, 0x687ded2b3d95b2e3, 0x5b1019972f2a9dbf,
@@ -120,7 +133,7 @@ class MIDORI64_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori64_cipher = MIDORI64_CVL(R=16,rks=rks)
+            sage: midori64_cipher = MIDORI64_CVL(R=16, k=k, key_schedule=DefaultKeySchedule_CVL(64, 17))
             sage: vec_to_int(midori64_cipher(int_to_vec(0x42c20fd3b586879e, 64))) \
             ....:   == 0x66bcdc6270d901cd
             True
@@ -273,20 +286,7 @@ class MIDORI64_CVL:
 
         """
 
-        if rks is None:
-            rks = []
-        if rks == []:
-            rks = [0] * (R + 1)
-        else:
-            # If the rks are provided, then we check if the number of
-            # rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks
-            # If len(rks) > R, then we consider only the needed number of rks
-            rks = list(rks)
-            if len(rks) < (R + 1):
-                rks = rks + [0] * ((R + 1) - len(rks))
-            elif len(rks) > (R + 1):
-                rks = rks[: (R + 1)]
+        rks = [0] * (R + 1)
 
         # SubCell
         sb0 = SBox_CVL(SBox_sage(MIDORI64_CVL.SB0), name="Sb0")
@@ -338,6 +338,7 @@ class MIDORI64_CVL:
         # Initial keyAdd 0
         ark0 = RoundkeyXOR_CVL(64, const=rks[0], name="KeyAdd_0")
         state = midori.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
+        rk_nodes = [state]
 
         # Rounds 0..R-2
         for r in range(R - 1):
@@ -350,6 +351,7 @@ class MIDORI64_CVL:
             )
             ark = RoundkeyXOR_CVL(64, const=rks[r + 1], name=f"KeyAdd_RK{r}")
             state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
+            rk_nodes.append(state)
 
         # Final SubCell
         state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
@@ -357,8 +359,13 @@ class MIDORI64_CVL:
         # Final keyAdd 15
         arkf = RoundkeyXOR_CVL(64, const=rks[R], name="KeyAdd_15")
         state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
+        rk_nodes.append(state)
 
         midori.add_output([(state, (i, i)) for i in range(16)])
+        midori._rk_components = [midori.nodes[idx] for idx in rk_nodes]
+        midori.key_schedule = key_schedule
+        if key_schedule is not None and k is not None:
+            midori.set_round_keys(k)
         self.midori_cipher = midori
 
     def __new__(cls, *args, **kwargs):
@@ -383,14 +390,26 @@ class MIDORI128_CVL:
         [1, 1, 1, 0],
     )
 
-    def __init__(self, R=20, rks=None, name="MIDORI-128"):
+    def __init__(self, R=20, key_schedule=None, k=None, name="MIDORI-128"):
         r"""
         CiVerLy Implementation of MIDORI-128. It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 20)
 
-            - ``rks`` -- list[int]; roundkeys (default: []).  When given,
-                the round keys are derived and injected immediately.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``k`` via ``set_round_keys``. No built-in key schedule is
+              implemented for MIDORI; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``k``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``k`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string; The name of the cipher (default: "MIDORI-128").
                 This will be used to name the cipher and the corresponding file
@@ -409,7 +428,8 @@ class MIDORI128_CVL:
         Using test vectors from the original specification (see Appendix A
         in https://eprint.iacr.org/2015/1142.pdf):
 
-            sage: rks = [
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: k = [
             ....:   0x00000000000000000000000000000000, 0x00000001000100010100010100000101,
             ....:   0x00010101010000000101000000000000, 0x01000100000100000000010100010001,
             ....:   0x00010100000001000000000100000101, 0x00000001000000000001000001010101,
@@ -424,12 +444,12 @@ class MIDORI128_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori128_cipher = MIDORI128_CVL(R=20,rks=rks)
+            sage: midori128_cipher = MIDORI128_CVL(R=20, k=k, key_schedule=DefaultKeySchedule_CVL(128, 21))
             sage: vec_to_int(midori128_cipher(int_to_vec(0x00000000000000000000000000000000, 128))) \
             ....:   == 0xc055cbb95996d14902b60574d5e728d6
             True
 
-            sage: rks = [
+            sage: k = [
             ....:   0x687ded3b3c85b3f35b1009863e2a8cbf, 0x687ded3a3c84b3f25a1008873e2a8dbe,
             ....:   0x687cec3a3d85b3f35a1109863e2a8cbf, 0x697dec3b3c84b3f35b1008873e2b8cbe,
             ....:   0x687cec3b3c85b2f35b1009873e2a8dbe, 0x687ded3a3c85b3f35b1109863f2b8dbe,
@@ -444,7 +464,7 @@ class MIDORI128_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori128_cipher = MIDORI128_CVL(R=20,rks=rks)
+            sage: midori128_cipher = MIDORI128_CVL(R=20, k=k, key_schedule=DefaultKeySchedule_CVL(128, 21))
             sage: vec_to_int(midori128_cipher(int_to_vec(0x51084ce6e73a5ca2ec87d7babc297543, 128))) \
             ....:   == 0x1e0ac4fddff71b4c1801b73ee4afc83d
             True
@@ -538,12 +558,7 @@ class MIDORI128_CVL:
 
         """
 
-        if rks is None:
-            rks = []
-        if rks == []:
-            rks = [0] * (R + 1)
-        if len(rks) != R + 1:
-            raise ValueError("Midori128 expects rks of length R+1")
+        rks = [0] * (R + 1)
 
         # SubCell
         sb1 = self.SB1
@@ -708,6 +723,7 @@ class MIDORI128_CVL:
         # Initial keyAdd 0
         ark0 = RoundkeyXOR_CVL(128, const=rks[0], name="KeyAdd_0")
         state = midori.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
+        rk_nodes = [state]
 
         # Rounds 0..R-2
         for r in range(R - 1):
@@ -718,6 +734,7 @@ class MIDORI128_CVL:
             )
             ark = RoundkeyXOR_CVL(128, const=rks[r + 1], name=f"KeyAdd_RK{r}")
             state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
+            rk_nodes.append(state)
 
         # Final SubCell
         state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
@@ -725,8 +742,13 @@ class MIDORI128_CVL:
         # Final keyAdd 19
         arkf = RoundkeyXOR_CVL(128, const=rks[R], name="KeyAdd_19")
         state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
+        rk_nodes.append(state)
 
         midori.add_output([(state, (i, i)) for i in range(16)])
+        midori._rk_components = [midori.nodes[idx] for idx in rk_nodes]
+        midori.key_schedule = key_schedule
+        if key_schedule is not None and k is not None:
+            midori.set_round_keys(k)
         self.midori_cipher = midori
 
     def __new__(cls, *args, **kwargs):
