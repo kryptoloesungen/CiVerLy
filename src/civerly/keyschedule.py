@@ -159,7 +159,6 @@ class DefaultKeySchedule_CVL(KeySchedule):
         for i, rk in enumerate(round_keys):
             if not 0 <= rk < (1 << self._rk_width):
                 raise ValueError(
-                    f"round key {i} ({hex(rk)}) does not fit into "
-                    f"{self._rk_width} bits"
+                    f"round key {i} ({hex(rk)}) does not fit into {self._rk_width} bits"
                 )
         return round_keys
