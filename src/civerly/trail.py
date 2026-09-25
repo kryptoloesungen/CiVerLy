@@ -270,16 +270,19 @@ class TrailNode:
                     local_index = dictionaries[comp_num][
                         cipher_instance.milp.vars[var_name].get_index(s_ind)
                     ]
+                    break_out = False
                     for name, _var in comp.milp.vars.items():
                         for ind in _var.keys():  # noqa: SIM118
                             if local_index == _var.get_index(ind):
                                 tr_ind, tr_name = ind, name
                                 break_out = True
-                            if break_out:
                                 break
                         if break_out:
                             break
-                    break_out = False
+                    if not break_out:
+                        raise AssertionError(
+                            f"index {local_index} not found in node {comp_num}"
+                        )
                     if tr_name not in sub_results:
                         sub_results[tr_name] = {}
                     sub_results[tr_name][tr_ind] = solution_bit_value
