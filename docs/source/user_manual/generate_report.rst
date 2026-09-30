@@ -83,7 +83,7 @@ First, we analyse the toy cipher:
    ....:   milp_solver=SOLVER.SCIP,
    ....:   path=Path("./CVL-Example"))
    sage: cipher.analyse(model_options) # optional: scip
-   206 variables and 1711 constraints were written to 'CVL-Example/cipher.mps'
+   206 variables and 1637 constraints were written to 'CVL-Example/cipher.mps'
    0
 
 As we have thereby also modeled the cipher, we see below that (next to the ``.mps``, ``.sol`` and ``.log`` files) CiVerLy generated json files containing the corresponding dictionaries.

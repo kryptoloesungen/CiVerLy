@@ -2491,15 +2491,16 @@ class SBox_CVL(Component):
                 # compute imposset = complement of posset
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 L = self.input_length + self.output_length + len(set_ddt)
+                posset_ints = {vec_to_int(p) for p in posset}
                 imposset = [
                     transition_int
                     for transition_int in range(1 << L)
-                    if transition_int not in posset
+                    if transition_int not in posset_ints
                 ]
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
                 for impossible_transition in imposset:
-                    tup = (
-                        (-1) ** ((impossible_transition >> (L - i - 1)) & 1) * i
+                    tup = tuple(
+                        (-1) ** ((impossible_transition >> (L - i - 1)) & 1) * (i + 1)
                         for i in range(L)
                     )
                     clauses.append(tup)
@@ -2605,6 +2606,26 @@ class SBox_CVL(Component):
             1
             8
             True
+
+        Model PRESENT with LOGICAL_COND without reduction::
+
+            sage: from civerly.cipher_implementations.present \
+            ....:   import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - cadical
+            ....:   present_cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND,
+            ....:     sat_solver=SOLVER.CADICAL,
+            ....:     path=Path(tmpdir))
+            ....:   present_cipher.analyse(model_options)
+            5312 variables and 134465 clauses were written to ...
+            12
         """
         if model_options.cryptanalysis == CRYPTANALYSIS.DIFFERENTIAL:
             ddt = self.S.difference_distribution_table()
@@ -2662,10 +2683,11 @@ class SBox_CVL(Component):
             # compute imposset = complement of posset
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             L = len(SAT_VARS)
+            posset_ints = {vec_to_int(p) for p in posset}
             imposset = [
                 transition_int
                 for transition_int in range(1 << L)
-                if transition_int not in posset
+                if transition_int not in posset_ints
             ]
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
             for impossible_transition in imposset:
