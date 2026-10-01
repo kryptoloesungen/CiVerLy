@@ -8,6 +8,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 
 from civerly.aeslike import AESlike
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     C_CVL,
     XOR_CVL,
@@ -19,8 +20,8 @@ from civerly.component import (
 from civerly.sboxcipher import SBoxCipher
 
 
-class HALFLOOP_CVL:
-    def __init__(self, R, k=None, name="HALFLOOP-24") -> None:
+class HALFLOOP_CVL(CipherImplementation_CVL, SBoxCipher):
+    def __init__(self, R, key_schedule=None, key=None, name="HALFLOOP-24") -> None:
         r"""
         Implementation of HALFLOOP-24 in CiVerLy, together with its key schedule.
 
@@ -28,8 +29,12 @@ class HALFLOOP_CVL:
 
             - ``R`` -- integer; Number of rounds (must be <= 10)
 
-            - ``k`` -- integer (128-bit); Master key (default: None).  When given,
-              the round keys are derived and injected immediately.
+            - ``key_schedule`` -- Unused, since HALFLOOP-24 implements its
+              key schedule as part of the cipher graph (default: None).
+
+            - ``key`` -- integer (128-bit); Master key (default: None, which
+              is treated as the all-zero key). It is fed into the built-in key
+              schedule when building the cipher.
 
             - ``name`` -- string; The name of the cipher (default: "HALFLOOP-24").
               This will be used to name the cipher and the corresponding file
@@ -75,14 +80,14 @@ class HALFLOOP_CVL:
             sage: from civerly.cipher_implementations.halfloop import \
             ....:   HALFLOOP_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: vec_to_int(HALFLOOP_CVL(1, k=masterkey)(
+            sage: vec_to_int(HALFLOOP_CVL(1, key=masterkey)(
             ....:   int_to_vec((0x010203 << 64), 88))
             ....: ) == 0xff1e03
             True
             sage: from civerly.cipher_implementations.halfloop import \
             ....:   HALFLOOP_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: vec_to_int(HALFLOOP_CVL(2, k=masterkey)(
+            sage: vec_to_int(HALFLOOP_CVL(2, key=masterkey)(
             ....:   int_to_vec((0x010203 << 64), 88))
             ....: ) == 0xe87de6
             True
@@ -99,7 +104,7 @@ class HALFLOOP_CVL:
             sage: masterkey = 0x2b7e151628aed2a6abf7158809cf4f3c
             sage: tweak = 0x543bd88000017550
             sage: all([
-            ....:   vec_to_int(HALFLOOP_CVL(R, k=masterkey)(int_to_vec(
+            ....:   vec_to_int(HALFLOOP_CVL(R, key=masterkey)(int_to_vec(
             ....:     (0x010203 << 64) | tweak, 24 + 64))
             ....:   ) == test_vecs[R+1]
             ....:   for R in range(1, 10)
@@ -107,12 +112,15 @@ class HALFLOOP_CVL:
             True
 
         """
+        super().__init__(
+            24 + 64, 24, R=R, key_schedule=key_schedule, key=key, name=name
+        )
+
         RCs = [0x01, 0x02]  # AES key schedule is only applied for 2 rounds
 
-        assert R <= 10
+        assert self.R <= 10
 
-        if k is None:
-            k = 0x0
+        k = 0x0 if self.key is None else self.key
 
         sboxlayer = AESlike(8, 3, 1, name="SBoxLayer")
         sb = SBox_CVL(AES_S, name="SBox")
@@ -166,7 +174,7 @@ class HALFLOOP_CVL:
         edges = [(node_xor, (i, i)) for i in range(24)]
         halfloop_round.add_output(edges)
 
-        key_schedule = SBoxCipher(128, 264, "Key Schedule")
+        ks = SBoxCipher(128, 264, "Key Schedule")
         G = AESlike(8, 4, 1, "G")
         for i in range(4):
             node = G.add_subcipher(sb, [(G.IN, (i, 0))])
@@ -180,65 +188,56 @@ class HALFLOOP_CVL:
         XOR8 = XOR_CVL(8, name="XOR-8")
         rc2 = ConstXOR_CVL(8, RCs[1])
 
-        edges = [(key_schedule.IN, (i + 96, i)) for i in range(32)]
-        node_g = key_schedule.add_subcipher(G, edges)
-        edges = [(key_schedule.IN, (i, i)) for i in range(32)]
+        edges = [(ks.IN, (i + 96, i)) for i in range(32)]
+        node_g = ks.add_subcipher(G, edges)
+        edges = [(ks.IN, (i, i)) for i in range(32)]
         edges += [(node_g, (i, i + 32)) for i in range(32)]
-        node_XOR1 = key_schedule.add_subcipher(XOR32, edges)
-        edges = [(key_schedule.IN, (32 + i, i)) for i in range(32)]
+        node_XOR1 = ks.add_subcipher(XOR32, edges)
+        edges = [(ks.IN, (32 + i, i)) for i in range(32)]
         edges += [(node_XOR1, (i, i + 32)) for i in range(32)]
-        node_XOR2 = key_schedule.add_subcipher(XOR32, edges)
-        edges = [(key_schedule.IN, (64 + i, i)) for i in range(32)]
+        node_XOR2 = ks.add_subcipher(XOR32, edges)
+        edges = [(ks.IN, (64 + i, i)) for i in range(32)]
         edges += [(node_XOR2, (i, i + 32)) for i in range(32)]
-        node_XOR3 = key_schedule.add_subcipher(XOR32, edges)
-        edges = [(key_schedule.IN, (96 + i, i)) for i in range(32)]
+        node_XOR3 = ks.add_subcipher(XOR32, edges)
+        edges = [(ks.IN, (96 + i, i)) for i in range(32)]
         edges += [(node_XOR3, (i, i + 32)) for i in range(32)]
-        node_XOR4 = key_schedule.add_subcipher(XOR32, edges)
+        node_XOR4 = ks.add_subcipher(XOR32, edges)
         edges = [(node_XOR4, (8 + i, i)) for i in range(8)]
-        node_S = key_schedule.add_subcipher(sb, edges)
+        node_S = ks.add_subcipher(sb, edges)
         edges = [(node_S, (i, i)) for i in range(8)]
-        node_rc2 = key_schedule.add_subcipher(rc2, edges)
+        node_rc2 = ks.add_subcipher(rc2, edges)
         edges = [(node_rc2, (i, i)) for i in range(8)]
         edges += [(node_XOR1, (i, i + 8)) for i in range(8)]
-        node_XOR5 = key_schedule.add_subcipher(XOR8, edges)
+        node_XOR5 = ks.add_subcipher(XOR8, edges)
 
-        edges = [(key_schedule.IN, (i, i)) for i in range(128)]
+        edges = [(ks.IN, (i, i)) for i in range(128)]
         edges += [(node_XOR1, (i, 128 + i)) for i in range(32)]
         edges += [(node_XOR2, (i, 160 + i)) for i in range(32)]
         edges += [(node_XOR3, (i, 192 + i)) for i in range(32)]
         edges += [(node_XOR4, (i, 224 + i)) for i in range(32)]
         edges += [(node_XOR5, (i, 256 + i)) for i in range(8)]
-        key_schedule.add_output(edges)
+        ks.add_output(edges)
 
-        halfloop_cipher = SBoxCipher(24 + 64, 24, name=name)
         K = C_CVL(64, k % (1 << 64), "k2")  # k2, second half of key
-        K = halfloop_cipher.add_subcipher(K, [])
+        K = self.add_subcipher(K, [])
 
         # add k1 to tweak
         node_addkey1 = ConstXOR_CVL(64, const=((k >> 64) % (1 << 64)), name="t+k1")
-        edges = [(halfloop_cipher.IN, (i + 24, i)) for i in range(64)]
-        node_afteraddkey1 = halfloop_cipher.add_subcipher(node_addkey1, edges)
+        edges = [(self.IN, (i + 24, i)) for i in range(64)]
+        node_afteraddkey1 = self.add_subcipher(node_addkey1, edges)
         # send (k1 + t) || k2 into key schedule
         edges = [(node_afteraddkey1, (i, i)) for i in range(64)]
         edges += [(K, (i, i + 64)) for i in range(64)]
-        node_ks = halfloop_cipher.add_subcipher(key_schedule, edges)
+        node_ks = self.add_subcipher(ks, edges)
 
         # initial key add
-        edges = [(halfloop_cipher.IN, (i, i)) for i in range(24)]
+        edges = [(self.IN, (i, i)) for i in range(24)]
         edges += [(node_ks, (i, i + 24)) for i in range(24)]
-        node_XOR = halfloop_cipher.add_subcipher(XOR, edges)
-        for r in range(R):
+        node_XOR = self.add_subcipher(XOR, edges)
+        for r in range(self.R):
             edges = [(node_XOR, (i, i)) for i in range(24)]
             edges += [(node_ks, (i + (r + 1) * 24, i + 24)) for i in range(24)]
-            node_XOR = halfloop_cipher.add_subcipher(halfloop_round, edges)
+            node_XOR = self.add_subcipher(halfloop_round, edges)
 
         edges = [(node_XOR, (i, i)) for i in range(24)]
-        halfloop_cipher.add_output(edges)
-
-        self.halfloop_cipher = halfloop_cipher
-
-    def __new__(cls, *args, **kwargs):
-        """Instantiate HALFLOOP."""
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.halfloop_cipher
+        self.add_output(edges)

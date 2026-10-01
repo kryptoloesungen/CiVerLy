@@ -3,6 +3,7 @@ from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.aeslike import AESlike
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     I_CVL,
     LinearLayer_CVL,
@@ -12,19 +13,30 @@ from civerly.component import (
 )
 
 
-class CRAFT_CVL:
+class CRAFT_CVL(CipherImplementation_CVL, AESlike):
     RC = (
         0x11, 0x84, 0x42, 0x25, 0x96, 0xc7, 0x63, 0xb1, 0x54, 0xa2, 0xd5,
         0xe6, 0xf7, 0x73, 0x31, 0x14, 0x82, 0x45, 0x26, 0x97, 0xc3, 0x61,
         0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85,
     )  # fmt: skip
 
-    def __init__(self, R, name="CRAFT") -> None:
+    def __init__(self, R, key_schedule=None, key=None, name="CRAFT") -> None:
         r"""
         The CiVerLy implementation of CRAFT. It takes the following arguments:
 
             - ``R`` -- integer; Specifies the number of rounds that are
               performed.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for CRAFT; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
+
+            - ``key`` -- integer (optional); The master key passed to
+              ``key_schedule``, injected via ``set_round_keys`` when both are
+              given. Note that CRAFT currently has no round key components,
+              so ``set_round_keys`` is not supported.
 
             - ``name`` -- string; The name of the cipher (default: "CRAFT").
               Will be used to name the cipher and the corresponding files
@@ -192,6 +204,7 @@ class CRAFT_CVL:
             sage: c14 == R14
             True
         """
+        super().__init__(4, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name)
 
         # SBox layer
         # ------------------------------------------------------------------- #
@@ -278,21 +291,13 @@ class CRAFT_CVL:
 
         # Add the round function into the CRAFT cipher
         # ------------------------------------------------------------------- #
-        craft_cipher = AESlike(4, 4, 4, name=name)
-        node_cipher = craft_cipher.IN
+        node_cipher = self.IN
 
-        for r in range(R):
+        for r in range(self.R):
             craft_round.nodes[node_arclayer].nodes[node_arc].const = CRAFT_CVL.RC[r]
 
-            node_cipher = craft_cipher.add_subcipher(
+            node_cipher = self.add_subcipher(
                 craft_round, [(node_cipher, (i, i)) for i in range(16)]
             )
-        craft_cipher.add_output([(node_cipher, (i, i)) for i in range(16)])
+        self.add_output([(node_cipher, (i, i)) for i in range(16)])
         # ------------------------------------------------------------------- #
-
-        self.craft_cipher = craft_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.craft_cipher

@@ -1,13 +1,14 @@
 from sage.crypto.sbox import SBox
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import PermuteLayer_CVL, SBox_CVL
 from civerly.wordsboxcipher import WordSBoxCipher
 
 
-class WEAK_PRESENT_CVL:
+class WEAK_PRESENT_CVL(CipherImplementation_CVL, WordSBoxCipher):
     """Rudimentary implementation of WEAK_PRESENT."""
 
-    def __init__(self, R=31, name="WEAK_PRESENT"):
+    def __init__(self, R=31, key_schedule=None, key=None, name="WEAK_PRESENT"):
         r"""
         The CiVerly implementation of a weakened version of PRESENT.
 
@@ -16,6 +17,13 @@ class WEAK_PRESENT_CVL:
         non-integer weight. It takes the following parameters:
 
             - ``R`` -- integer; Number of rounds (default: 31)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Unused, since WEAK_PRESENT has no round key
+              additions. Defaults to ``None``.
+
+            - ``key`` -- integer (optional); Unused, since WEAK_PRESENT has
+              no round key additions. Defaults to ``None``.
 
             - ``name`` -- string; The name of the cipher (default: "WEAK_PRESENT").
               Will be used to name the cipher and the corresponding files
@@ -134,6 +142,8 @@ class WEAK_PRESENT_CVL:
 
 
         """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
+
         S = SBox([7, 9, 11, 6, 2, 3, 1, 12, 4, 5, 15, 13, 8, 10, 14, 0])
         S = SBox_CVL(S, name="S")
 
@@ -167,19 +177,10 @@ class WEAK_PRESENT_CVL:
 
         # Implementation of the WEAK_PRESENT cipher.
         # ------------------------------------------------ #
-        weak_cipher = WordSBoxCipher(4, 16, 16, name=name)
-        cipher_node = weak_cipher.IN
-        for _ in range(R):
+        cipher_node = self.IN
+        for _ in range(self.R):
             edges = [(cipher_node, (i, i)) for i in range(16)]
-            cipher_node = weak_cipher.add_subcipher(weak_round, edges)
+            cipher_node = self.add_subcipher(weak_round, edges)
 
-        weak_cipher.add_output([(cipher_node, (i, i)) for i in range(16)])
+        self.add_output([(cipher_node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
-
-        self.weak_cipher = weak_cipher
-
-    def __new__(cls, *args, **kwargs):
-        """Instantiate a WEAK_PRESENT cipher."""
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.weak_cipher

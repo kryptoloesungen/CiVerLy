@@ -34,6 +34,7 @@ from civerly.model_options import (
     InvalidModelOptionError,
 )
 from civerly.util import suppress_output, translate_milp_constraint, translate_var
+from civerly.wordbasedcipher import WordBasedCipher
 
 
 class SBoxCipher(Cipher):
@@ -188,9 +189,8 @@ class SBoxCipher(Cipher):
                 sage: import shutil
                 sage: shutil.rmtree(tmpdir) # optional - scip
         """
-        if (
-            model_options.granularity == GRANULARITY.WORDWISE
-            and type(self) is SBoxCipher
+        if model_options.granularity == GRANULARITY.WORDWISE and not isinstance(
+            self, WordBasedCipher
         ):
             raise InvalidModelOptionError(
                 model_options.granularity,
