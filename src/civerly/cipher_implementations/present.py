@@ -1,11 +1,12 @@
 from sage.crypto.sboxes import PRESENT as present_S
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import PermuteLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
 from civerly.wordsboxcipher import WordSBoxCipher
 
 
-class PRESENT_CVL:
-    def __init__(self, R=31, key_schedule=None, k=None, name="PRESENT"):
+class PRESENT_CVL(CipherImplementation_CVL, WordSBoxCipher):
+    def __init__(self, R=31, key_schedule=None, key=None, name="PRESENT"):
         r"""
         The CiVerLy implementation of PRESENT. It takes in the following
         arguments:
@@ -14,12 +15,12 @@ class PRESENT_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via ``set_round_keys``. Pass
+              ``key`` via ``set_round_keys``. Pass
               :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
-              explicit round keys (see ``k``). Defaults to ``None`` (no key
+              explicit round keys (see ``key``). Defaults to ``None`` (no key
               schedule, all-zero round keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -128,7 +129,7 @@ class PRESENT_CVL:
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: present_cipher = PRESENT_CVL(R=31, k=k, key_schedule=DefaultKeySchedule_CVL(64, 32))
+            sage: present_cipher = PRESENT_CVL(R=31, key=k, key_schedule=DefaultKeySchedule_CVL(64, 32))
             sage: vec_to_int(present_cipher(int_to_vec(0x0, 64))) \
             ....:   == 0x5579C138_7B228445
             True
@@ -346,6 +347,7 @@ class PRESENT_CVL:
             sage: import shutil
             sage: shutil.rmtree(model_options.path)
         """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
         s = SBox_CVL(present_S, name="SBox")
 
@@ -389,29 +391,21 @@ class PRESENT_CVL:
 
         # Implementation of the PRESENT cipher.
         # ------------------------------------------------ #
-        present_cipher = WordSBoxCipher(4, 16, 16, name=name)
-        cipher_node = present_cipher.IN
-        for _ in range(R):
-            cipher_node = present_cipher.add_subcipher(
+        cipher_node = self.IN
+        for _ in range(self.R):
+            cipher_node = self.add_subcipher(
                 present_round, [(cipher_node, (i, i)) for i in range(16)]
             )
 
-        cipher_node = present_cipher.add_subcipher(
+        cipher_node = self.add_subcipher(
             key_add, [(cipher_node, (i, i)) for i in range(16)]
         )
-        present_cipher.add_output([(cipher_node, (i, i)) for i in range(16)])
+        self.add_output([(cipher_node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
 
-        present_cipher._rk_components = [
-            present_cipher.nodes[r + 1].nodes[node_rk] for r in range(R)
-        ] + [present_cipher.nodes[R + 1]]
-        present_cipher.key_schedule = key_schedule
-        if key_schedule is not None and k is not None:
-            present_cipher.set_round_keys(k)
+        self._rk_components = [
+            self.nodes[r + 1].nodes[node_rk] for r in range(self.R)
+        ] + [self.nodes[self.R + 1]]
 
-        self.present_cipher = present_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.present_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

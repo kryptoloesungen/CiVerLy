@@ -1,4 +1,5 @@
 from civerly.addrx import AddRX
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     XOR_CVL,
     ConstXOR_CVL,
@@ -219,9 +220,9 @@ class SPECK_KeySchedule_CVL(KeySchedule):
         return [vec_to_int(bits[i * n : (i + 1) * n]) for i in range(self._R)]
 
 
-class SPECK_CVL:
+class SPECK_CVL(CipherImplementation_CVL, AddRX):
     def __init__(
-        self, block_size, key_size, R=None, key_schedule=None, k=None, name=None
+        self, block_size, key_size, R=None, key_schedule=None, key=None, name=None
     ):
         r"""
         The CiVerLy implementation of SPECK. It takes the following arguments:
@@ -236,7 +237,7 @@ class SPECK_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via ``set_round_keys``. Pass a
+              ``key`` via ``set_round_keys``. Pass a
               :class:`SPECK_KeySchedule_CVL` instance to use the real SPECK
               key schedule, a custom ``KeySchedule`` subclass instance, or
               :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
@@ -244,7 +245,7 @@ class SPECK_CVL:
               each). Defaults to ``None`` (no key schedule, all-zero round
               keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -282,7 +283,7 @@ class SPECK_CVL:
             ....: ]
             sage: C = 0x9f7952ec4175946c
             sage: V, W = 64, 96
-            sage: speck_cipher = SPECK_CVL(V, W, k=k, key_schedule=DefaultKeySchedule_CVL(32, 26))
+            sage: speck_cipher = SPECK_CVL(V, W, key=k, key_schedule=DefaultKeySchedule_CVL(32, 26))
             sage: vec_to_int(speck_cipher(int_to_vec(P, V))) == C
             True
 
@@ -392,17 +393,23 @@ class SPECK_CVL:
         # Determine the cipher parameters alpha, beta, n, R
         # -------------------------------------------------------- #
         if (block_size, key_size) == (32, 64):
-            alpha = 7
-            beta = 2
+            self.alpha = 7
+            self.beta = 2
         else:
-            alpha = 8
-            beta = 3
+            self.alpha = 8
+            self.beta = 3
 
         n = int(block_size // 2)
         if R is None:
             # use default no. of rounds
             R = dictionary[(block_size, key_size)]
         # -------------------------------------------------------- #
+
+        super().__init__(n, 2, 2, R=R, key_schedule=key_schedule, key=key, name=name)
+
+        n = self.wordsize
+        alpha = self.alpha
+        beta = self.beta
 
         # Initialization of the components
         # -------------------------------------------------------- #
@@ -437,32 +444,20 @@ class SPECK_CVL:
 
         # Adding SPECK rounds into the cipher
         # -------------------------------------------------------- #
-        speck_cipher = AddRX(n, 2, 2, name=name)
-
-        node = speck_cipher.IN
-        for _ in range(R):
-            node = speck_cipher.add_subcipher(
-                speck_round, [(node, (0, 0)), (node, (1, 1))]
-            )
-        speck_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
+        node = self.IN
+        for _ in range(self.R):
+            node = self.add_subcipher(speck_round, [(node, (0, 0)), (node, (1, 1))])
+        self.add_output([(node, (0, 0)), (node, (1, 1))])
         # -------------------------------------------------------- #
 
         # Collect references to all RoundkeyXOR_CVL components for key schedule
         # support. Each entry points to the KeyAdd component inside the
         # corresponding round node. Pass a KeySchedule instance as
-        # key_schedule to enable set_round_keys(k).
+        # key_schedule to enable set_round_keys(key).
         # -------------------------------------------------------- #
-        if key_schedule is not None:
-            speck_cipher._rk_components = [
-                speck_cipher.nodes[r + 1].nodes[node_after_keyadd] for r in range(R)
-            ]
-            speck_cipher.key_schedule = key_schedule
-            if k is not None:
-                speck_cipher.set_round_keys(k)
+        self._rk_components = [
+            self.nodes[r + 1].nodes[node_after_keyadd] for r in range(self.R)
+        ]
 
-        self.speck_cipher = speck_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.speck_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

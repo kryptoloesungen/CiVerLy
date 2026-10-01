@@ -44,6 +44,7 @@ from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.aeslike import AESlike
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     LinearLayer_CVL,
     PermuteLayer_CVL,
@@ -53,7 +54,7 @@ from civerly.component import (
 from civerly.wordsboxcipher import WordSBoxCipher
 
 
-class MIDORI64_CVL:
+class MIDORI64_CVL(CipherImplementation_CVL, WordSBoxCipher):
     # Sb_0 specifications
     SB0 = (
         0xC, 0xA, 0xD, 0x3, 0xE, 0xB, 0xF, 0x7, 0x8, 0x9, 0x1, 0x5, 0x0, 0x2, 0x4, 0x6,
@@ -68,7 +69,7 @@ class MIDORI64_CVL:
         [1, 1, 1, 0],
     )
 
-    def __init__(self, R=16, key_schedule=None, k=None, name="MIDORI-64"):
+    def __init__(self, R=16, key_schedule=None, key=None, name="MIDORI-64"):
         r"""
         CiVerLy Implementation of MIDORI-64. It takes the following arguments:
 
@@ -76,13 +77,13 @@ class MIDORI64_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via ``set_round_keys``. No built-in key schedule is
+              ``key`` via ``set_round_keys``. No built-in key schedule is
               implemented for MIDORI; pass a custom ``KeySchedule`` subclass
               instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
-              to pass explicit round keys (see ``k``). Defaults to ``None``
+              to pass explicit round keys (see ``key``). Defaults to ``None``
               (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -117,7 +118,7 @@ class MIDORI64_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori64_cipher = MIDORI64_CVL(R=16, k=k, key_schedule=DefaultKeySchedule_CVL(64, 17))
+            sage: midori64_cipher = MIDORI64_CVL(R=16, key=k, key_schedule=DefaultKeySchedule_CVL(64, 17))
             sage: vec_to_int(midori64_cipher(int_to_vec(0x0000000000000000, 64))) \
             ....:   == 0x3c9cceda2bbd449a
             True
@@ -133,7 +134,7 @@ class MIDORI64_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori64_cipher = MIDORI64_CVL(R=16, k=k, key_schedule=DefaultKeySchedule_CVL(64, 17))
+            sage: midori64_cipher = MIDORI64_CVL(R=16, key=k, key_schedule=DefaultKeySchedule_CVL(64, 17))
             sage: vec_to_int(midori64_cipher(int_to_vec(0x42c20fd3b586879e, 64))) \
             ....:   == 0x66bcdc6270d901cd
             True
@@ -285,8 +286,9 @@ class MIDORI64_CVL:
             48
 
         """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        rks = [0] * (R + 1)
+        rks = [0] * (self.R + 1)
 
         # SubCell
         sb0 = SBox_CVL(SBox_sage(MIDORI64_CVL.SB0), name="Sb0")
@@ -332,49 +334,40 @@ class MIDORI64_CVL:
             mc_layers.add_output([(node, (k, 4 * rows + k)) for k in range(4)])
 
         # Full cipher
-        midori = WordSBoxCipher(4, 16, 16, name=name)
-        state = midori.IN
+        state = self.IN
 
         # Initial keyAdd 0
         ark0 = RoundkeyXOR_CVL(64, const=rks[0], name="KeyAdd_0")
-        state = midori.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
+        state = self.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
         rk_nodes = [state]
 
         # Rounds 0..R-2
-        for r in range(R - 1):
-            state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
-            state = midori.add_subcipher(
+        for r in range(self.R - 1):
+            state = self.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
+            state = self.add_subcipher(
                 shuffle_cell, [(state, (i, i)) for i in range(16)]
             )
-            state = midori.add_subcipher(
-                mc_layers, [(state, (i, i)) for i in range(16)]
-            )
+            state = self.add_subcipher(mc_layers, [(state, (i, i)) for i in range(16)])
             ark = RoundkeyXOR_CVL(64, const=rks[r + 1], name=f"KeyAdd_RK{r}")
-            state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
+            state = self.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
             rk_nodes.append(state)
 
         # Final SubCell
-        state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
+        state = self.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
 
         # Final keyAdd 15
-        arkf = RoundkeyXOR_CVL(64, const=rks[R], name="KeyAdd_15")
-        state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
+        arkf = RoundkeyXOR_CVL(64, const=rks[self.R], name="KeyAdd_15")
+        state = self.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
         rk_nodes.append(state)
 
-        midori.add_output([(state, (i, i)) for i in range(16)])
-        midori._rk_components = [midori.nodes[idx] for idx in rk_nodes]
-        midori.key_schedule = key_schedule
-        if key_schedule is not None and k is not None:
-            midori.set_round_keys(k)
-        self.midori_cipher = midori
+        self.add_output([(state, (i, i)) for i in range(16)])
+        self._rk_components = [self.nodes[idx] for idx in rk_nodes]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.midori_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)
 
 
-class MIDORI128_CVL:
+class MIDORI128_CVL(CipherImplementation_CVL, WordSBoxCipher):
     # Sb1 to construct SSb0, SSb1, SSb2 and SSb3
     SB1 = (
         0x1, 0x0, 0x5, 0x3, 0xE, 0x2, 0xF, 0x7, 0xD, 0xA, 0x9, 0xB, 0xC, 0x8, 0x4, 0x6,
@@ -390,7 +383,7 @@ class MIDORI128_CVL:
         [1, 1, 1, 0],
     )
 
-    def __init__(self, R=20, key_schedule=None, k=None, name="MIDORI-128"):
+    def __init__(self, R=20, key_schedule=None, key=None, name="MIDORI-128"):
         r"""
         CiVerLy Implementation of MIDORI-128. It takes the following arguments:
 
@@ -398,13 +391,13 @@ class MIDORI128_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via ``set_round_keys``. No built-in key schedule is
+              ``key`` via ``set_round_keys``. No built-in key schedule is
               implemented for MIDORI; pass a custom ``KeySchedule`` subclass
               instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
-              to pass explicit round keys (see ``k``). Defaults to ``None``
+              to pass explicit round keys (see ``key``). Defaults to ``None``
               (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -444,7 +437,7 @@ class MIDORI128_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori128_cipher = MIDORI128_CVL(R=20, k=k, key_schedule=DefaultKeySchedule_CVL(128, 21))
+            sage: midori128_cipher = MIDORI128_CVL(R=20, key=k, key_schedule=DefaultKeySchedule_CVL(128, 21))
             sage: vec_to_int(midori128_cipher(int_to_vec(0x00000000000000000000000000000000, 128))) \
             ....:   == 0xc055cbb95996d14902b60574d5e728d6
             True
@@ -464,7 +457,7 @@ class MIDORI128_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.midori import MIDORI128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: midori128_cipher = MIDORI128_CVL(R=20, k=k, key_schedule=DefaultKeySchedule_CVL(128, 21))
+            sage: midori128_cipher = MIDORI128_CVL(R=20, key=k, key_schedule=DefaultKeySchedule_CVL(128, 21))
             sage: vec_to_int(midori128_cipher(int_to_vec(0x51084ce6e73a5ca2ec87d7babc297543, 128))) \
             ....:   == 0x1e0ac4fddff71b4c1801b73ee4afc83d
             True
@@ -557,8 +550,9 @@ class MIDORI128_CVL:
             7
 
         """
+        super().__init__(8, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        rks = [0] * (R + 1)
+        rks = [0] * (self.R + 1)
 
         # SubCell
         sb1 = self.SB1
@@ -717,41 +711,32 @@ class MIDORI128_CVL:
             mc_layers.add_output([(node, (k, 4 * row + k)) for k in range(4)])
 
         # Full cipher
-        midori = WordSBoxCipher(8, 16, 16, name=name)
-        state = midori.IN
+        state = self.IN
 
         # Initial keyAdd 0
         ark0 = RoundkeyXOR_CVL(128, const=rks[0], name="KeyAdd_0")
-        state = midori.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
+        state = self.add_subcipher(ark0, [(state, (i, i)) for i in range(16)])
         rk_nodes = [state]
 
         # Rounds 0..R-2
-        for r in range(R - 1):
-            state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
-            state = midori.add_subcipher(shuffle, [(state, (i, i)) for i in range(16)])
-            state = midori.add_subcipher(
-                mc_layers, [(state, (i, i)) for i in range(16)]
-            )
+        for r in range(self.R - 1):
+            state = self.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
+            state = self.add_subcipher(shuffle, [(state, (i, i)) for i in range(16)])
+            state = self.add_subcipher(mc_layers, [(state, (i, i)) for i in range(16)])
             ark = RoundkeyXOR_CVL(128, const=rks[r + 1], name=f"KeyAdd_RK{r}")
-            state = midori.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
+            state = self.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
             rk_nodes.append(state)
 
         # Final SubCell
-        state = midori.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
+        state = self.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
 
         # Final keyAdd 19
-        arkf = RoundkeyXOR_CVL(128, const=rks[R], name="KeyAdd_19")
-        state = midori.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
+        arkf = RoundkeyXOR_CVL(128, const=rks[self.R], name="KeyAdd_19")
+        state = self.add_subcipher(arkf, [(state, (i, i)) for i in range(16)])
         rk_nodes.append(state)
 
-        midori.add_output([(state, (i, i)) for i in range(16)])
-        midori._rk_components = [midori.nodes[idx] for idx in rk_nodes]
-        midori.key_schedule = key_schedule
-        if key_schedule is not None and k is not None:
-            midori.set_round_keys(k)
-        self.midori_cipher = midori
+        self.add_output([(state, (i, i)) for i in range(16)])
+        self._rk_components = [self.nodes[idx] for idx in rk_nodes]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.midori_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

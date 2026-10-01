@@ -11,7 +11,7 @@ from civerly.sboxcipher import SBoxCipher
 #   - Either, when a normal 6 -> 6 linear layer is used
 #   - or when that linear layer is separately defined by its coordinate
 #     functions which are 6 -> 1 and therefore non-bijective.
-class Toy10:
+class Toy10(SBoxCipher):
     def __init__(self, split=False):
         r"""
 
@@ -102,9 +102,9 @@ class Toy10:
             1
 
         """
+        super().__init__(6, 4, name="toy10")
 
         round = SBoxCipher(6, 6, name="toy10-round")
-        cipher = SBoxCipher(6, 4, name="toy10")
         round._wrd = 6
         arr = [
             [1, 0, 0, 0, 0, 0],
@@ -129,7 +129,7 @@ class Toy10:
                 node = round.add_subcipher(ll, [(round.IN, (i, i)) for i in range(6)])
                 round.add_output([(node, (0, j))])
 
-        node1 = cipher.add_subcipher(round, [(cipher.IN, (i, i)) for i in range(6)])
+        node1 = self.add_subcipher(round, [(self.IN, (i, i)) for i in range(6)])
 
         S = SBox((
             14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
@@ -138,14 +138,7 @@ class Toy10:
             15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13,
         ))  # fmt: skip
 
-        node2 = cipher.add_subcipher(
+        node2 = self.add_subcipher(
             SBox_CVL(S, name="S"), [(node1, (i, i)) for i in range(6)]
         )
-        cipher.add_output([(node2, (i, i)) for i in range(4)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        self.add_output([(node2, (i, i)) for i in range(4)])

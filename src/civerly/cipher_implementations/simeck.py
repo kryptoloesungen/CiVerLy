@@ -1,15 +1,16 @@
 from civerly.andrx import AndRX
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
 
 
-class SIMECK_CVL:
+class SIMECK_CVL(CipherImplementation_CVL, AndRX):
     def __init__(
         self,
         block_size=32,
         key_size=64,
         R=32,
         key_schedule=None,
-        k=None,
+        key=None,
         name="Simeck",
     ):
         r"""
@@ -21,13 +22,13 @@ class SIMECK_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via ``set_round_keys``. No built-in key schedule is
+              ``key`` via ``set_round_keys``. No built-in key schedule is
               implemented for Simeck; pass a custom ``KeySchedule`` subclass
               instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
-              to pass explicit round keys (see ``k``). Defaults to ``None``
+              to pass explicit round keys (see ``key``). Defaults to ``None``
               (no key schedule, all-zero round keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -60,7 +61,7 @@ class SIMECK_CVL:
             ....:   0x62ed, 0x6155, 0xa2e8, 0x92b1, 0x7fbe
             ....: ]
             sage: C = 0x770d2c76
-            sage: simeck_cipher = SIMECK_CVL(k=k, key_schedule=DefaultKeySchedule_CVL(16, 32))
+            sage: simeck_cipher = SIMECK_CVL(key=k, key_schedule=DefaultKeySchedule_CVL(16, 32))
             sage: vec_to_int(simeck_cipher(int_to_vec(P, 32))) == C
             True
 
@@ -148,10 +149,12 @@ class SIMECK_CVL:
             sage: import shutil
             sage: shutil.rmtree("./DOCTEST-Simeck-Models/", ignore_errors=True)
         """
-
         assert (block_size, key_size) == (32, 64), (
             "As of now, only Simeck32/64 is supported"
         )
+        self.block_size = block_size
+        self.key_size = key_size
+        super().__init__(16, 2, 2, R=R, key_schedule=key_schedule, key=key, name=name)
 
         simeck_round = AndRX(16, 2, 2, name="simeck_round")
         # rotate operations
@@ -189,25 +192,14 @@ class SIMECK_CVL:
         simeck_round.add_output([(node_keyxor, (0, 0)), (simeck_round.IN, (0, 1))])
 
         # apply the feistel round function 32 times, each round using a different round key
-        simeck_cipher = AndRX(16, 2, 2, name=name)
-        node = simeck_cipher.IN
+        node = self.IN
         rk_nodes = []
-        for _ in range(R):
-            node = simeck_cipher.add_subcipher(
-                simeck_round, [(node, (0, 0)), (node, (1, 1))]
-            )
+        for _ in range(self.R):
+            node = self.add_subcipher(simeck_round, [(node, (0, 0)), (node, (1, 1))])
             rk_nodes.append(node)
 
-        simeck_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
-        simeck_cipher._rk_components = [
-            simeck_cipher.nodes[n].nodes[node_keyxor] for n in rk_nodes
-        ]
-        simeck_cipher.key_schedule = key_schedule
-        if key_schedule is not None and k is not None:
-            simeck_cipher.set_round_keys(k)
-        self.simeck_cipher = simeck_cipher
+        self.add_output([(node, (0, 0)), (node, (1, 1))])
+        self._rk_components = [self.nodes[n].nodes[node_keyxor] for n in rk_nodes]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.simeck_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

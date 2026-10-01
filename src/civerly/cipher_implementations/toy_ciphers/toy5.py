@@ -4,7 +4,7 @@ from civerly.sboxcipher import SBoxCipher
 
 
 # cipher using cascade of toy3 and toy4
-class Toy5:
+class Toy5(SBoxCipher):
     def __init__(self):
         r"""
 
@@ -76,44 +76,35 @@ class Toy5:
             Output file in: ...
 
         """
-        cipher = SBoxCipher(48, 16, name="Toy5")
+        super().__init__(48, 16, name="Toy5")
 
         toy3 = Toy3()
         toy4 = Toy4()
 
-        node1 = cipher.add_subcipher(
-            toy3, [(cipher.IN, (i, 31 - i)) for i in range(32)]
+        node1 = self.add_subcipher(toy3, [(self.IN, (i, 31 - i)) for i in range(32)])
+        node2 = self.add_subcipher(
+            toy3, [(self.IN, (i + 16, 31 - i)) for i in range(32)]
         )
-        node2 = cipher.add_subcipher(
-            toy3, [(cipher.IN, (i + 16, 31 - i)) for i in range(32)]
-        )
-        node3 = cipher.add_subcipher(
+        node3 = self.add_subcipher(
             toy4,
             [(node1, (i, i)) for i in range(16)]
             + [(node2, (i, i + 16)) for i in range(16)],
         )
-        node4 = cipher.add_subcipher(
+        node4 = self.add_subcipher(
             toy4,
             [(node1, (i + 16, i)) for i in range(16)]
             + [(node2, (i + 16, i + 16)) for i in range(16)],
         )
-        node5 = cipher.add_subcipher(
+        node5 = self.add_subcipher(
             toy4,
             [(node3, (i, (3 * i) % 16)) for i in range(16)]
-            + [(cipher.IN, (i + 32, ((5 * i) % 16) + 16)) for i in range(16)],
+            + [(self.IN, (i + 32, ((5 * i) % 16) + 16)) for i in range(16)],
         )
 
-        node = cipher.add_subcipher(
+        node = self.add_subcipher(
             toy4,
             [(node4, (i, (i + 3) % 16)) for i in range(16)]
             + [(node5, (i, i + 16)) for i in range(16)],
         )
 
-        cipher.add_output([(node, (i, i)) for i in range(16)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        self.add_output([(node, (i, i)) for i in range(16)])

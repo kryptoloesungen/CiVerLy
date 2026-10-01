@@ -4,6 +4,7 @@ from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.aeslike import AESlike
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     I_CVL,
     LinearLayer_CVL,
@@ -15,7 +16,7 @@ from civerly.util import int_to_vec, vec_to_int
 from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
 
 
-class SKINNY_CVL:
+class SKINNY_CVL(CipherImplementation_CVL, AESlike):
     consts = (
         0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3E, 0x3D, 0x3B, 0x37, 0x2F, 0x1E,
         0x3C, 0x39, 0x33, 0x27, 0x0E, 0x1D, 0x3A, 0x35, 0x2B, 0x16, 0x2C,
@@ -210,7 +211,7 @@ class SKINNY_CVL:
             return [tk1_schedule, tk2_schedule, tk3_schedule]
         raise ValueError(f"{z = } is an invalid parameter for create_tk_schedules.")
 
-    def __init__(self, n=64, t=64, R=None, key_schedule=None, k=None, name=None):
+    def __init__(self, n=64, t=64, R=None, key_schedule=None, key=None, name=None):
         r"""
         The civerly implementation of SKINNY. It takes the following
         arguments:
@@ -224,11 +225,11 @@ class SKINNY_CVL:
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used by ``set_round_keys``.
               The tweakey schedule of SKINNY is already applied directly in
-              Python via ``k``, so this parameter only exists for custom
+              Python via ``key``, so this parameter only exists for custom
               ``KeySchedule`` subclass instances. Defaults to ``None`` (no
               key schedule).
 
-            - ``k`` -- integer (optional); The (tweak-)key value for SKINNY.
+            - ``key`` -- integer (optional); The (tweak-)key value for SKINNY.
               If no key is specified, it is defaulted to 0.
 
             - ``name`` -- string (optional); The name of the SKINNY cipher.
@@ -240,38 +241,38 @@ class SKINNY_CVL:
         sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
         sage: from civerly.util import int_to_vec, vec_to_int
         sage: skinny = SKINNY_CVL(
-        ....:   64, 64, k=0xf5269826fc681238, name="SKINNY-64-64")
+        ....:   64, 64, key=0xf5269826fc681238, name="SKINNY-64-64")
         sage: vec_to_int(skinny(int_to_vec(0x06034f957724d19d, 64))) == \
         ....:   0xbb39dfb2429b8ac7
         True
         sage: skinny = SKINNY_CVL(
-        ....:   64, 128, k=0x9eb93640d088da63_76a39d1c8bea71e1,
+        ....:   64, 128, key=0x9eb93640d088da63_76a39d1c8bea71e1,
         ....:   name="SKINNY-64-128")
         sage: vec_to_int(skinny(int_to_vec(0xcf16cfe8fd0f98aa, 64))) == \
         ....:   0x6ceda1f43de92b9e
         True
         sage: skinny = SKINNY_CVL(
         ....:    64, 192,
-        ....:   k=0xed00c85b120d6861_8753e24bfd908f60_b2dbb41b422dfcd0,
+        ....:   key=0xed00c85b120d6861_8753e24bfd908f60_b2dbb41b422dfcd0,
         ....:   name="SKINNY-64-192")
         sage: vec_to_int(skinny(int_to_vec(0x530c61d35e8663c3, 64))) == \
         ....:   0xdd2cf1a8f330303c
         True
         sage: skinny = SKINNY_CVL(128, 128,
-        ....:   k=0x4f55cfb0520cac52fd92c15f37073e93, name="SKINNY-128-128")
+        ....:   key=0x4f55cfb0520cac52fd92c15f37073e93, name="SKINNY-128-128")
         sage: vec_to_int(skinny(int_to_vec(
         ....:   0xf20adb0eb08b648a3b2eeed1f0adda14, 128))) == \
         ....:   0x22ff30d498ea62d7e45b476e33675b74
         True
         sage: skinny = SKINNY_CVL(128, 256,
-        ....:   k=0x009cec81605d4ac1d2ae9e3085d7a1f3_1ac123ebfc00fddcf01046ceeddfcab3,
+        ....:   key=0x009cec81605d4ac1d2ae9e3085d7a1f3_1ac123ebfc00fddcf01046ceeddfcab3,
         ....:   name="SKINNY-128-256")
         sage: vec_to_int(skinny(int_to_vec(
         ....:   0x3a0c47767a26a68dd382a695e7022e25, 128))) == \
         ....:   0xb731d98a4bde147a7ed4a6f16b9b587f
         True
         sage: skinny = SKINNY_CVL(128, 384,
-        ....:   k=0xdf889548cfc7ea52d296339301797449_ab588a34a47f1ab2dfe9c8293fbea9a5_ab1afac2611012cd8cef952618c3ebe8,
+        ....:   key=0xdf889548cfc7ea52d296339301797449_ab588a34a47f1ab2dfe9c8293fbea9a5_ab1afac2611012cd8cef952618c3ebe8,
         ....:   name="SKINNY-128-384")
         sage: vec_to_int(skinny(int_to_vec(
         ....:   0xa3994b66ad85a3459f44e92b08f550cb, 128))) == \
@@ -519,10 +520,9 @@ class SKINNY_CVL:
             f"but not {t}!"
         )
 
-        z = t // n
+        self.n = n
+        self.t = t
 
-        if k is None:
-            k = 0
         if name is None:
             name = "SKINNY"
 
@@ -537,6 +537,15 @@ class SKINNY_CVL:
 
         if R is None:
             R = round_dict[(n, t)]  # For full-round versions
+
+        super().__init__(
+            n // 16, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name
+        )
+
+        n = self.n
+        R = self.R
+        z = self.t // n
+        k = 0 if self.key is None else self.key
 
         s = n // 16  # wordsize
 
@@ -699,8 +708,6 @@ class SKINNY_CVL:
 
         skinny_round.add_output([(node_round, (i, i)) for i in range(16)])
 
-        skinny_cipher = AESlike(s, rows=4, cols=4, name=name)
-
         # array of tk-schedule ciphers
         tk_schedules = SKINNY_CVL.create_tk_schedules(s, z)
 
@@ -715,7 +722,7 @@ class SKINNY_CVL:
                 for w in range(z)
             ]  # Update tweakeys with the respective tk-schedule
 
-        node_cipher = skinny_cipher.IN
+        node_cipher = self.IN
         for r in range(R):
             # Set roundconstant values
             # ---------------------------------------------
@@ -740,16 +747,8 @@ class SKINNY_CVL:
             ) & ((1 << (4 * s)) - 1)
             # ---------------------------------------------
 
-            node_cipher = skinny_cipher.add_subcipher(
+            node_cipher = self.add_subcipher(
                 skinny_round, [(node_cipher, (i, i)) for i in range(16)]
             )
 
-        skinny_cipher.add_output([(node_cipher, (i, i)) for i in range(16)])
-
-        skinny_cipher.key_schedule = key_schedule
-        self.skinny_cipher = skinny_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.skinny_cipher
+        self.add_output([(node_cipher, (i, i)) for i in range(16)])

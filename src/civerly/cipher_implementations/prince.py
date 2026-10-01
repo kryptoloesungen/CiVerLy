@@ -2,6 +2,7 @@ from sage.crypto.sboxes import PRINCE as prince_S
 from sage.matrix.special import zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import LinearLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
 from civerly.wordsboxcipher import WordSBoxCipher
 
@@ -90,8 +91,8 @@ M_layer = build_matrix(m_layer)
 Minv_ = build_matrix(m_inv_layer)
 
 
-class PRINCE_CVL:
-    def __init__(self, R=12, key_schedule=None, k=None, name="PRINCE"):
+class PRINCE_CVL(CipherImplementation_CVL, WordSBoxCipher):
+    def __init__(self, R=12, key_schedule=None, key=None, name="PRINCE"):
         r"""
         CiVerLy implementation of PRINCE (https://eprint.iacr.org/2012/529.pdf).
         It takes the following arguments:
@@ -100,17 +101,17 @@ class PRINCE_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via :meth:`civerly.cipher.Cipher.set_round_keys`. No
+              ``key`` via :meth:`civerly.cipher.Cipher.set_round_keys`. No
               built-in key schedule is implemented for PRINCE; pass a custom
               ``KeySchedule`` subclass instance, or
               :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
-              explicit round keys (see ``k``). The 12 round-key slots are, in
+              explicit round keys (see ``key``). The 12 round-key slots are, in
               order: the initial xor, the 5 forward rounds, the 5 backward
               rounds, and the final xor; only as many are consumed as needed
               for the given ``R``. Defaults to ``None`` (no key schedule,
               all-zero round keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -140,7 +141,7 @@ class PRINCE_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: prince_cipher = PRINCE_CVL(R=12, k=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
+            sage: prince_cipher = PRINCE_CVL(R=12, key=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
             sage: C = vec_to_int(prince_cipher(int_to_vec(0x0000000000000000, 64)))
             sage: print(hex(C))
             0x818665aa0d02dfda
@@ -154,7 +155,7 @@ class PRINCE_CVL:
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: prince_cipher = PRINCE_CVL(R=12, k=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
+            sage: prince_cipher = PRINCE_CVL(R=12, key=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
             sage: C = vec_to_int(prince_cipher(int_to_vec(0xFFFFFFFFFFFFFFFF, 64)))
             sage: print(hex(C))
             0x604ae6ca03c20ada
@@ -169,7 +170,7 @@ class PRINCE_CVL:
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: prince_cipher = PRINCE_CVL(R=12, k=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
+            sage: prince_cipher = PRINCE_CVL(R=12, key=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
             sage: P  = 0x0000000000000000
             sage: k0 = 0xFFFFFFFFFFFFFFFF
             sage: k0_ = 0xFFFFFFFFFFFFFFFE
@@ -189,7 +190,7 @@ class PRINCE_CVL:
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: prince_cipher = PRINCE_CVL(R=12, k=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
+            sage: prince_cipher = PRINCE_CVL(R=12, key=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
             sage: P  = 0x0000000000000000
             sage: C = vec_to_int(prince_cipher(int_to_vec(P, 64)))
             sage: print(hex(C))
@@ -206,7 +207,7 @@ class PRINCE_CVL:
             sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: prince_cipher = PRINCE_CVL(R=12, k=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
+            sage: prince_cipher = PRINCE_CVL(R=12, key=k, key_schedule=DefaultKeySchedule_CVL(64, 12))
             sage: P  = 0x0123456789abcdef
             sage: C = vec_to_int(prince_cipher(int_to_vec(P, 64)))
             sage: print(hex(C))
@@ -272,6 +273,7 @@ class PRINCE_CVL:
             1
 
         """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
         # S-layer and the inverse S-layer
         sb = SBox_CVL(prince_S, name="SBox")
@@ -320,42 +322,35 @@ class PRINCE_CVL:
         bwd_round.add_output([(x, (i, i)) for i in range(16)])
 
         # PRINCE core
-        prince_core = WordSBoxCipher(4, 16, 16, name=name)
-        st = prince_core.IN
+        st = self.IN
         _rk_components = []
 
         # initial add rks[0]
-        if R >= 1:
-            st = prince_core.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
-            _rk_components.append(prince_core.nodes[st])
+        if self.R >= 1:
+            st = self.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
+            _rk_components.append(self.nodes[st])
 
         # forward rounds r=1..5
-        for _ in range(1, min(R, 6)):
-            st = prince_core.add_subcipher(fwd_round, [(st, (i, i)) for i in range(16)])
-            _rk_components.append(prince_core.nodes[st].nodes[n_xor_fwd])
+        for _ in range(1, min(self.R, 6)):
+            st = self.add_subcipher(fwd_round, [(st, (i, i)) for i in range(16)])
+            _rk_components.append(self.nodes[st].nodes[n_xor_fwd])
 
         # middle round
-        if R >= 6:
-            st = prince_core.add_subcipher(mid_round, [(st, (i, i)) for i in range(16)])
+        if self.R >= 6:
+            st = self.add_subcipher(mid_round, [(st, (i, i)) for i in range(16)])
 
         # backward rounds r=6..10
-        for _ in range(6, min(R, 11)):
-            st = prince_core.add_subcipher(bwd_round, [(st, (i, i)) for i in range(16)])
-            _rk_components.append(prince_core.nodes[st].nodes[n_xor_bwd])
+        for _ in range(6, min(self.R, 11)):
+            st = self.add_subcipher(bwd_round, [(st, (i, i)) for i in range(16)])
+            _rk_components.append(self.nodes[st].nodes[n_xor_bwd])
 
         # final add rks[11]
-        if R >= 12:
-            st = prince_core.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
-            _rk_components.append(prince_core.nodes[st])
+        if self.R >= 12:
+            st = self.add_subcipher(xor_mask, [(st, (i, i)) for i in range(16)])
+            _rk_components.append(self.nodes[st])
 
-        prince_core.add_output([(st, (i, i)) for i in range(16)])
-        prince_core._rk_components = _rk_components
-        prince_core.key_schedule = key_schedule
-        if key_schedule is not None and k is not None:
-            prince_core.set_round_keys(k)
-        self.prince_cipher = prince_core
+        self.add_output([(st, (i, i)) for i in range(16)])
+        self._rk_components = _rk_components
 
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.prince_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

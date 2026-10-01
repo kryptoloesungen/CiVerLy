@@ -1,8 +1,9 @@
 from civerly.addrx import AddRX
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import XOR_CVL, ModAdd_CVL, RotateLayer_CVL
 
 
-class SalsaQRF_CVL:
+class SalsaQRF_CVL(AddRX):
     # Salsa quarter round function
     def __init__(self, name=None):
         r"""
@@ -81,7 +82,7 @@ class SalsaQRF_CVL:
         """
         if name is None:
             name = "Salsa-QRF"
-        salsa_qr = AddRX(32, 4, 4, name=name)
+        super().__init__(32, 4, 4, name=name)
         # modular addition operation
         add = ModAdd_CVL(32, name="add")
         # xor operation
@@ -93,39 +94,39 @@ class SalsaQRF_CVL:
         rot18 = RotateLayer_CVL(32, 18, name="rot18")
 
         # Step 1: b ^= rotl(a + d, 7)
-        t0 = salsa_qr.add_subcipher(add, [(salsa_qr.IN, (0, 0)), (salsa_qr.IN, (3, 1))])
-        t1 = salsa_qr.add_subcipher(rot7, [(t0, (0, 0))])
-        b1 = salsa_qr.add_subcipher(xor, [(salsa_qr.IN, (1, 0)), (t1, (0, 1))])
+        t0 = self.add_subcipher(add, [(self.IN, (0, 0)), (self.IN, (3, 1))])
+        t1 = self.add_subcipher(rot7, [(t0, (0, 0))])
+        b1 = self.add_subcipher(xor, [(self.IN, (1, 0)), (t1, (0, 1))])
         # Step 2: c ^= rotl(b1 + a, 9)
-        t2 = salsa_qr.add_subcipher(add, [(b1, (0, 0)), (salsa_qr.IN, (0, 1))])
-        t3 = salsa_qr.add_subcipher(rot9, [(t2, (0, 0))])
-        c1 = salsa_qr.add_subcipher(xor, [(salsa_qr.IN, (2, 0)), (t3, (0, 1))])
+        t2 = self.add_subcipher(add, [(b1, (0, 0)), (self.IN, (0, 1))])
+        t3 = self.add_subcipher(rot9, [(t2, (0, 0))])
+        c1 = self.add_subcipher(xor, [(self.IN, (2, 0)), (t3, (0, 1))])
         # Step 3: d ^= rotl(c1 + b1, 13)
-        t4 = salsa_qr.add_subcipher(add, [(c1, (0, 0)), (b1, (0, 1))])
-        t5 = salsa_qr.add_subcipher(rot13, [(t4, (0, 0))])
-        d1 = salsa_qr.add_subcipher(xor, [(salsa_qr.IN, (3, 0)), (t5, (0, 1))])
+        t4 = self.add_subcipher(add, [(c1, (0, 0)), (b1, (0, 1))])
+        t5 = self.add_subcipher(rot13, [(t4, (0, 0))])
+        d1 = self.add_subcipher(xor, [(self.IN, (3, 0)), (t5, (0, 1))])
         # Step 4: a ^= rotl(d1 + c1, 18)
-        t6 = salsa_qr.add_subcipher(add, [(d1, (0, 0)), (c1, (0, 1))])
-        t7 = salsa_qr.add_subcipher(rot18, [(t6, (0, 0))])
-        a1 = salsa_qr.add_subcipher(xor, [(salsa_qr.IN, (0, 0)), (t7, (0, 1))])
+        t6 = self.add_subcipher(add, [(d1, (0, 0)), (c1, (0, 1))])
+        t7 = self.add_subcipher(rot18, [(t6, (0, 0))])
+        a1 = self.add_subcipher(xor, [(self.IN, (0, 0)), (t7, (0, 1))])
 
-        salsa_qr.add_output([(a1, (0, 0)), (b1, (0, 1)), (c1, (0, 2)), (d1, (0, 3))])
-
-        self.salsa_qr = salsa_qr
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.salsa_qr
+        self.add_output([(a1, (0, 0)), (b1, (0, 1)), (c1, (0, 2)), (d1, (0, 3))])
 
 
-class Salsa_CVL:
+class Salsa_CVL(CipherImplementation_CVL, AddRX):
     # Salsa stream generator
-    def __init__(self, R=8, name="Salsa"):
+    def __init__(self, R=8, key_schedule=None, key=None, name="Salsa"):
         r"""
         The CiVerLy implementation of the Salsa stream cipher. It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 8)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Unused, since Salsa has no round key components
+              (default: ``None``).
+
+            - ``key`` -- integer (optional); Unused, since Salsa has no
+              round key components (default: ``None``).
 
             - ``name`` -- string; The name of the cipher (default: "Salsa").
               Will be used to name the cipher and the corresponding files
@@ -180,11 +181,11 @@ class Salsa_CVL:
             1
 
         """
+        super().__init__(32, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
         salsa_qr = SalsaQRF_CVL()
 
-        salsa_cipher = AddRX(32, 16, 16, name=name)
-        state = salsa_cipher.IN
+        state = self.IN
 
         # apply the round function 4 times
         def apply_round(round_name, tuples, in_node):
@@ -206,9 +207,7 @@ class Salsa_CVL:
                 out[d] = (out_node, 3)
 
             rounds.add_output([(out[i][0], (out[i][1], i)) for i in range(16)])
-            return salsa_cipher.add_subcipher(
-                rounds, [(in_node, (i, i)) for i in range(16)]
-            )
+            return self.add_subcipher(rounds, [(in_node, (i, i)) for i in range(16)])
 
         column_tuples = [
             (0, 4, 8, 12),
@@ -225,16 +224,10 @@ class Salsa_CVL:
         # apply the function in each round either row-wise or column-wise
         # for odd rounds, the round function is applied column-wise
         # otherwise, the round function is applied row-wise
-        for r in range(R):
+        for r in range(self.R):
             if r % 2 == 0:
                 state = apply_round(f"column_round_{r + 1}", column_tuples, state)
             else:
                 state = apply_round(f"row_round_{r + 1}", row_tuples, state)
 
-        salsa_cipher.add_output([(state, (i, i)) for i in range(16)])
-        self.salsa_cipher = salsa_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.salsa_cipher
+        self.add_output([(state, (i, i)) for i in range(16)])

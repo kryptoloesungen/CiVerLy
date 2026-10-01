@@ -1,4 +1,5 @@
 from civerly.addrx import AddRX
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     C_CVL,
     XOR_CVL,
@@ -12,7 +13,7 @@ from civerly.component import (
 # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~- #
 
 
-class ChachaQRF_CVL:
+class ChachaQRF_CVL(AddRX):
     def __init__(self, name="Chacha-QRF"):
         r"""
         The CiVerLy implementation of the Chacha QRF. Since there is nothing
@@ -93,7 +94,7 @@ class ChachaQRF_CVL:
             0
 
         """
-        chacha_qr = AddRX(32, 4, 4, name=name)
+        super().__init__(32, 4, 4, name=name)
 
         add = ModAdd_CVL(32, name="add")
         rot16 = RotateLayer_CVL(32, 16, name="rot16")
@@ -103,38 +104,36 @@ class ChachaQRF_CVL:
         xor = XOR_CVL(32, name="xor")
 
         # Components of QRF
-        a0 = chacha_qr.add_subcipher(
-            add, [(chacha_qr.IN, (0, 0)), (chacha_qr.IN, (1, 1))]
-        )
-        d1 = chacha_qr.add_subcipher(xor, [(a0, (0, 0)), (chacha_qr.IN, (3, 1))])
-        d2 = chacha_qr.add_subcipher(rot16, [(d1, (0, 0))])
-        c3 = chacha_qr.add_subcipher(add, [(chacha_qr.IN, (2, 0)), (d2, (0, 1))])
-        b4 = chacha_qr.add_subcipher(xor, [(chacha_qr.IN, (1, 0)), (c3, (0, 1))])
-        b5 = chacha_qr.add_subcipher(rot12, [(b4, (0, 0))])
-        a6 = chacha_qr.add_subcipher(add, [(a0, (0, 0)), (b5, (0, 1))])
-        d7 = chacha_qr.add_subcipher(xor, [(a6, (0, 0)), (d2, (0, 1))])
-        d8 = chacha_qr.add_subcipher(rot8, [(d7, (0, 0))])
-        c9 = chacha_qr.add_subcipher(add, [(d8, (0, 0)), (c3, (0, 1))])
-        ba = chacha_qr.add_subcipher(xor, [(c9, (0, 0)), (b5, (0, 1))])
-        bb = chacha_qr.add_subcipher(rot7, [(ba, (0, 0))])
+        a0 = self.add_subcipher(add, [(self.IN, (0, 0)), (self.IN, (1, 1))])
+        d1 = self.add_subcipher(xor, [(a0, (0, 0)), (self.IN, (3, 1))])
+        d2 = self.add_subcipher(rot16, [(d1, (0, 0))])
+        c3 = self.add_subcipher(add, [(self.IN, (2, 0)), (d2, (0, 1))])
+        b4 = self.add_subcipher(xor, [(self.IN, (1, 0)), (c3, (0, 1))])
+        b5 = self.add_subcipher(rot12, [(b4, (0, 0))])
+        a6 = self.add_subcipher(add, [(a0, (0, 0)), (b5, (0, 1))])
+        d7 = self.add_subcipher(xor, [(a6, (0, 0)), (d2, (0, 1))])
+        d8 = self.add_subcipher(rot8, [(d7, (0, 0))])
+        c9 = self.add_subcipher(add, [(d8, (0, 0)), (c3, (0, 1))])
+        ba = self.add_subcipher(xor, [(c9, (0, 0)), (b5, (0, 1))])
+        bb = self.add_subcipher(rot7, [(ba, (0, 0))])
 
-        chacha_qr.add_output([(a6, (0, 0)), (bb, (0, 1)), (c9, (0, 2)), (d8, (0, 3))])
-
-        self.chacha_qr = chacha_qr
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.chacha_qr
+        self.add_output([(a6, (0, 0)), (bb, (0, 1)), (c9, (0, 2)), (d8, (0, 3))])
 
 
-class Chacha_CVL:
-    def __init__(self, R=20, name="Chacha"):
+class Chacha_CVL(CipherImplementation_CVL, AddRX):
+    def __init__(self, R=20, key_schedule=None, key=None, name="Chacha"):
         r"""
         The CiVerLy implementation of the Chacha Cipher. It takes the
         following arguments:
 
             - ``R`` -- integer; Number of rounds (default 20)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Unused, since Chacha has no round key components
+              (default: ``None``).
+
+            - ``key`` -- integer (optional); Unused, since Chacha has no
+              round key components (default: ``None``).
 
             - ``name`` -- string; The name of the cipher (default: "Chacha").
               Will be used to name the cipher and the corresponding files
@@ -175,6 +174,8 @@ class Chacha_CVL:
 
 
         """
+        super().__init__(32, 12, 16, R=R, key_schedule=key_schedule, key=key, name=name)
+
         chacha_qr = ChachaQRF_CVL()
 
         # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
@@ -185,7 +186,6 @@ class Chacha_CVL:
         # Chacha accepts a 256-bit key + 128-bit IV, which is
         # 12 words x 32 bits. It further outputs a 512-bit state,
         # which is 16 words x 32 bits.
-        chacha_cipher = AddRX(32, 12, 16, name=name)
         # ------------------------------------------------------------------- #
 
         # permute_..._round is used for switching between columns and diagonals
@@ -233,46 +233,39 @@ class Chacha_CVL:
         # ------------------------------------------------------------------- #
 
         # ------------------------------------------------------------------- #
-        current_node = chacha_cipher.add_subcipher(constants, [])
-        current_node = chacha_cipher.add_subcipher(
+        current_node = self.add_subcipher(constants, [])
+        current_node = self.add_subcipher(
             initial_perm,
             [(current_node, (i, i)) for i in range(4)]
-            + [(chacha_cipher.IN, (i, i + 4)) for i in range(12)],
+            + [(self.IN, (i, i + 4)) for i in range(12)],
         )
         initial_node = current_node
-        for r in range(1, R + 1):
+        for r in range(1, self.R + 1):
             if r & 1 == 0:
-                current_node = chacha_cipher.add_subcipher(
+                current_node = self.add_subcipher(
                     permute_even_round, [(current_node, (i, i)) for i in range(16)]
                 )
             elif r != 1:
-                current_node = chacha_cipher.add_subcipher(
+                current_node = self.add_subcipher(
                     permute_odd_round, [(current_node, (i, i)) for i in range(16)]
                 )
-            current_node = chacha_cipher.add_subcipher(
+            current_node = self.add_subcipher(
                 fourtimes_qr, [(current_node, (i, i)) for i in range(16)]
             )
 
         # Fix the alignment at the end (from diagonal to columns)
-        if R & 1 == 0 and R > 0:
-            current_node = chacha_cipher.add_subcipher(
+        if self.R & 1 == 0 and self.R > 0:
+            current_node = self.add_subcipher(
                 permute_odd_round, [(current_node, (i, i)) for i in range(16)]
             )
 
-        current_node = chacha_cipher.add_subcipher(
+        current_node = self.add_subcipher(
             final_add,
             [(initial_node, (i, i)) for i in range(16)]
             + [(current_node, (i, i + 16)) for i in range(16)],
         )
-        current_node = chacha_cipher.add_subcipher(
+        current_node = self.add_subcipher(
             initial_perm, [(current_node, (i, i)) for i in range(16)]
         )
-        chacha_cipher.add_output([(current_node, (i, i)) for i in range(16)])
+        self.add_output([(current_node, (i, i)) for i in range(16)])
         # ------------------------------------------------------------------- #
-
-        self.chacha_cipher = chacha_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.chacha_cipher

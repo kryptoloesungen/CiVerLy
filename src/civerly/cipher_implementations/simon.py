@@ -1,4 +1,5 @@
 from civerly.andrx import AndRX
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     AND_CVL,
     ROT_AND_CVL,
@@ -23,14 +24,14 @@ dictionary = {
 }
 
 
-class SIMON_CVL:
+class SIMON_CVL(CipherImplementation_CVL, AndRX):
     def __init__(
         self,
         block_size,
         key_size,
         R=None,
         key_schedule=None,
-        k=None,
+        key=None,
         use_rotand=True,
         name=None,
     ):
@@ -47,14 +48,14 @@ class SIMON_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via ``set_round_keys``. No built-in key schedule is
+              ``key`` via ``set_round_keys``. No built-in key schedule is
               implemented for SIMON; pass a custom ``KeySchedule`` subclass
               instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
               to pass explicit round keys (``R`` of them, ``n = block_size//2``
               bits each). Defaults to ``None`` (no key schedule, all-zero
               round keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -99,7 +100,7 @@ class SIMON_CVL:
             ....: ]
             sage: C = 0x5ca2e27f111a8fc8
             sage: V, W = 64, 96
-            sage: simon_cipher = SIMON_CVL(V, W, k=k, key_schedule=DefaultKeySchedule_CVL(32, 42))
+            sage: simon_cipher = SIMON_CVL(V, W, key=k, key_schedule=DefaultKeySchedule_CVL(32, 42))
             sage: vec_to_int(simon_cipher(int_to_vec(P, V))) == C
             True
 
@@ -260,6 +261,13 @@ class SIMON_CVL:
         if R is None:
             R = dictionary[(block_size, key_size)]
 
+        self.block_size = block_size
+        self.key_size = key_size
+        self.use_rotand = use_rotand
+        super().__init__(n, 2, 2, R=R, key_schedule=key_schedule, key=key, name=name)
+
+        n = self.wordsize
+
         # SIMON is an AndRX cipher, since its non-linear component
         # is logical AND.
         simon_round = AndRX(n, 2, 2, name="simon_round")
@@ -277,7 +285,7 @@ class SIMON_CVL:
 
         # Implementation of SIMON round
         # ------------------------------------------------ #
-        if not use_rotand:  # insert RotateLayer_CVL + AND_CVL components
+        if not self.use_rotand:  # insert RotateLayer_CVL + AND_CVL components
             node_rot1 = simon_round.add_subcipher(rot1, [(simon_round.IN, (0, 0))])
             node_rot8 = simon_round.add_subcipher(rot8, [(simon_round.IN, (0, 0))])
             node_and = simon_round.add_subcipher(
@@ -304,26 +312,15 @@ class SIMON_CVL:
         # Adding SIMON rounds into the cipher
         # ------------------------------------------------ #
         # SIMON operates on two words of size n.
-        simon_cipher = AndRX(n, 2, 2, name=name)
-
-        node = simon_cipher.IN
-        for _ in range(R):
-            node = simon_cipher.add_subcipher(
-                simon_round, [(node, (0, 0)), (node, (1, 1))]
-            )
-        simon_cipher.add_output([(node, (0, 0)), (node, (1, 1))])
+        node = self.IN
+        for _ in range(self.R):
+            node = self.add_subcipher(simon_round, [(node, (0, 0)), (node, (1, 1))])
+        self.add_output([(node, (0, 0)), (node, (1, 1))])
         # ------------------------------------------------ #
 
-        simon_cipher._rk_components = [
-            simon_cipher.nodes[r + 1].nodes[node_keyxor] for r in range(R)
+        self._rk_components = [
+            self.nodes[r + 1].nodes[node_keyxor] for r in range(self.R)
         ]
-        simon_cipher.key_schedule = key_schedule
-        if key_schedule is not None and k is not None:
-            simon_cipher.set_round_keys(k)
 
-        self.simon_cipher = simon_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.simon_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

@@ -1,11 +1,12 @@
 from sage.crypto.sbox import SBox as SBox_sage
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import PermuteLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
 from civerly.wordsboxcipher import WordSBoxCipher
 
 
-class RECTANGLE_CVL:
-    def __init__(self, R=25, key_schedule=None, k=None, name="RECTANGLE"):
+class RECTANGLE_CVL(CipherImplementation_CVL, WordSBoxCipher):
+    def __init__(self, R=25, key_schedule=None, key=None, name="RECTANGLE"):
         r"""
         CiVerly implementation of the Rectangle cipher (https://eprint.iacr.org/2014/084.pdf).
         It takes the following parameters:
@@ -14,12 +15,12 @@ class RECTANGLE_CVL:
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from
-              ``k`` via ``set_round_keys``. Pass
+              ``key`` via ``set_round_keys``. Pass
               :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
-              explicit round keys (see ``k``). Defaults to ``None`` (no key
+              explicit round keys (see ``key``). Defaults to ``None`` (no key
               schedule, all-zero round keys).
 
-            - ``k`` -- integer or list of integers (optional); The master
+            - ``key`` -- integer or list of integers (optional); The master
               key passed to ``key_schedule``, immediately expanded and injected via
               ``set_round_keys`` when both are given. Has no effect when
               ``key_schedule`` is ``None``.
@@ -53,7 +54,7 @@ class RECTANGLE_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: rectangle_cipher = RECTANGLE_CVL(R=25, k=k, key_schedule=DefaultKeySchedule_CVL(64, 26))
+            sage: rectangle_cipher = RECTANGLE_CVL(R=25, key=k, key_schedule=DefaultKeySchedule_CVL(64, 26))
             sage: vec_to_int(rectangle_cipher(int_to_vec(0x0, 64))) == 0x2D96E354E8B10874
             True
 
@@ -70,7 +71,7 @@ class RECTANGLE_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.rectangle import RECTANGLE_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: rectangle_cipher = RECTANGLE_CVL(R=25, k=k, key_schedule=DefaultKeySchedule_CVL(64, 26))
+            sage: rectangle_cipher = RECTANGLE_CVL(R=25, key=k, key_schedule=DefaultKeySchedule_CVL(64, 26))
             sage: vec_to_int(rectangle_cipher(int_to_vec(0xFFFFFFFFFFFFFFFF, 64))) == 0x9945AA34AE3D0112
             True
 
@@ -234,7 +235,8 @@ class RECTANGLE_CVL:
             9712 variables and 21617 clauses were written to ...
             14
 
-            """
+        """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
         # RECTANGLE S-box specifications
         RECTANGLE_SBOX = (
@@ -330,26 +332,17 @@ class RECTANGLE_CVL:
         rectangle_round.add_output([(st, (i, i)) for i in range(16)])
 
         # Full RECTANGLE cipher
-        rectangle = WordSBoxCipher(4, 16, 16, name=name)
-        st = rectangle.IN
-        for _ in range(R):
-            st = rectangle.add_subcipher(
-                rectangle_round, [(st, (i, i)) for i in range(16)]
-            )
+        st = self.IN
+        for _ in range(self.R):
+            st = self.add_subcipher(rectangle_round, [(st, (i, i)) for i in range(16)])
 
         # final AddRoundKey with K[25]
-        st = rectangle.add_subcipher(ark, [(st, (i, i)) for i in range(16)])
+        st = self.add_subcipher(ark, [(st, (i, i)) for i in range(16)])
 
-        rectangle.add_output([(st, (i, i)) for i in range(16)])
-        rectangle._rk_components = [
-            rectangle.nodes[r + 1].nodes[n_ark] for r in range(R)
-        ] + [rectangle.nodes[R + 1]]
-        rectangle.key_schedule = key_schedule
-        if key_schedule is not None and k is not None:
-            rectangle.set_round_keys(k)
-        self.rectangle_cipher = rectangle
+        self.add_output([(st, (i, i)) for i in range(16)])
+        self._rk_components = [
+            self.nodes[r + 1].nodes[n_ark] for r in range(self.R)
+        ] + [self.nodes[self.R + 1]]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.rectangle_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

@@ -18,13 +18,13 @@ class KeySchedule(Cipher):
         ....:   AES_CVL, AES_KeySchedule_CVL)
         sage: from civerly.util import int_to_vec, vec_to_int
         sage: aes = AES_CVL(
-        ....:   R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c,
+        ....:   R=10, key=0x2b7e151628aed2a6abf7158809cf4f3c,
         ....:   key_schedule=AES_KeySchedule_CVL(10))
         sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
         sage: hex(vec_to_int(aes(pt)))
         '0x3925841d02dc09fbdc118597196a0b32'
         sage: aes = AES_CVL(
-        ....:   R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c,
+        ....:   R=10, key=0x2b7e151628aed2a6abf7158809cf4f3c,
         ....:   key_schedule=None)
         sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
         sage: hex(vec_to_int(aes(pt)))
@@ -91,7 +91,7 @@ class DefaultKeySchedule_CVL(KeySchedule):
     it unchanged (the identity).
 
     This makes it possible to pass explicit round keys to any cipher
-    implementation, in a way that is consistent with the ``key_schedule``/``k``
+    implementation, in a way that is consistent with the ``key_schedule``/``key``
     interface used everywhere else, without requiring a cipher-specific
     ``KeySchedule`` subclass.
 
@@ -118,12 +118,12 @@ class DefaultKeySchedule_CVL(KeySchedule):
         ...
         ValueError: round key 1 (0x10000) does not fit into 16 bits
 
-    Pass an instance together with the list of round keys as ``k`` to any
+    Pass an instance together with the list of round keys as ``key`` to any
     cipher implementation to inject explicit round keys::
 
         sage: from civerly.cipher_implementations.gift import GIFT64_CVL
         sage: rks = [0x1111111111111111, 0x2222222222222222]
-        sage: gift64 = GIFT64_CVL(R=2, k=rks, key_schedule=DefaultKeySchedule_CVL(64, 2))
+        sage: gift64 = GIFT64_CVL(R=2, key=rks, key_schedule=DefaultKeySchedule_CVL(64, 2))
         sage: gift64.key_schedule(rks) == rks
         True
     """
