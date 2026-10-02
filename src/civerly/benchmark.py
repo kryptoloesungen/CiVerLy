@@ -139,18 +139,11 @@ def benchmark(CM):
 
             row = [cipher.name]
 
-            if model_options.optimization == OPTIMIZATION.MILP:
-                v = cipher._model.number_of_variables()
-                c = cipher._model.number_of_constraints()
-            elif model_options.optimization == OPTIMIZATION.SAT:
-                v = cipher._model.nvars()
-                c = len(cipher._model.clauses())
+            if model_options.optimization == OPTIMIZATION.SAT:
                 row.append("")  # empty weight bound
-            else:
-                raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
-            row.append(v)
-            row.append(c)
+            row.append(cipher._model.number_of_variables())
+            row.append(cipher._model.number_of_constraints())
             row.append(cipher.model_time)
             row.append(cipher.solve_time)
             if cipher.result["status"] == SOLVING_STATUS.SUCCESS:

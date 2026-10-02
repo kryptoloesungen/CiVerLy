@@ -24,11 +24,9 @@ from sage.modules.free_module_element import vector
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
 from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.rings.integer_ring import ZZ
-from sage.sat.solvers.dimacs import DIMACS
 from sage.structure.element import Matrix as matrix_type
 
 from civerly.distorted_balls import distorted_balls
-from civerly.milp import MILP_CVL
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
@@ -37,6 +35,7 @@ from civerly.model_options import (
     SBOX_MODELING,
     InvalidModelOptionError,
 )
+from civerly.problem import MILP_CVL, SAT_CVL, Problem_CVL
 from civerly.util import (
     hw,
     hw_tau,
@@ -176,11 +175,13 @@ class Component(ABC):
                 )
             if model_options.path is not None:
                 fn = model_options.path / f"{self.name.replace(' ', '_')}.cnf"
-                self.sat = DIMACS(filename=fn)
+                self.sat = SAT_CVL(filename=fn)
             else:
-                self.sat = DIMACS()
-            self.SAT_IN = [self.sat.var() for _ in range(self.input_length)]
-            self.SAT_OUT = [self.sat.var() for _ in range(self.output_length)]
+                self.sat = SAT_CVL()
+            # create the in- and output variables first, so that they occupy
+            # the first indices
+            self.SAT_IN = [self.sat.VAR_IN[i] for i in range(self.input_length)]
+            self.SAT_OUT = [self.sat.VAR_OUT[i] for i in range(self.output_length)]
         else:
             raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
 
@@ -219,7 +220,7 @@ class Component(ABC):
         r"""Compute the hash of this component."""
         liste = []
         for key, value in self.__dict__.items():
-            if isinstance(value, (bool, str, MILP_CVL, DIMACS)) or any(
+            if isinstance(value, (bool, str, Problem_CVL)) or any(
                 word in key
                 for word in ["wordsize", "milp", "sat", "MILP", "SAT", "_model_time"]
             ):
@@ -1975,7 +1976,7 @@ class PermuteLayer_CVL(LinearLayer_CVL):
             - ``model_options`` -- see
               :class:`civerly.model_options.MODEL_OPTIONS`
 
-        OUTPUT: An object ``DIMACS``, describing ``self`` as a SAT.
+        OUTPUT: An object ``SAT_CVL``, describing ``self`` as a SAT.
 
         TESTS::
 
@@ -2800,7 +2801,7 @@ class ROT_AND_CVL(Component):
             model_options.optimization, message="ROT_AND_CVL is not supported in MILP"
         )
 
-    def _model_sat(self, model_options) -> DIMACS:
+    def _model_sat(self, model_options) -> SAT_CVL:
         r"""
         Important NOTE: The case alpha = (1, ..., 1) is neglected!
 
@@ -2814,49 +2815,37 @@ class ROT_AND_CVL(Component):
             rot_sat = rot_comp._model_sat(model_options)
             and_sat = and_comp._model_sat(model_options)
 
-            # create the variables
-            ROT_VAR = [self.sat.var() for _ in range(rot_sat.nvars())]
-            AND_VAR = [self.sat.var() for _ in range(and_sat.nvars())]
+            # copy both sub-SATs, ROT[v] (AND[v]) is the copy of variable v
+            # of rot_sat (and_sat)
+            ROT = self.sat.new_variable(name="ROT")
+            AND = self.sat.new_variable(name="AND")
+            self.sat.append(rot_sat, ROT)
+            self.sat.append(and_sat, AND)
 
-            for clause in rot_sat.clauses():
-                self.sat.add_clause(translate_sat_clause(ROT_VAR, clause[0]))
-            for clause in and_sat.clauses():
-                self.sat.add_clause(translate_sat_clause(AND_VAR, clause[0]))
+            w = self.word_length
+            for i in range(w):
+                rot_in = ROT[rot_comp.SAT_IN[i]]
+                rot_out = ROT[rot_comp.SAT_OUT[i]]
+                and_in = AND[and_comp.SAT_IN[i]]
+                and_in_rot = AND[and_comp.SAT_IN[i + w]]
+                and_out = AND[and_comp.SAT_OUT[i]]
 
-            for i in range(self.word_length):
                 # branching self.SAT_IN --> (rot_comp.SAT_IN, and_comp.SAT_IN)
-                assert rot_comp.SAT_IN[i] == i + 1
-                assert and_comp.SAT_IN[i] == i + 1
-                assert rot_comp.SAT_OUT[i] == self.word_length + i + 1, (
-                    f"{rot_comp.SAT_OUT[i]} != {self.word_length + i + 1}"
-                )
-                assert and_comp.SAT_OUT[i] == 2 * self.word_length + i + 1, (
-                    f"{and_comp.SAT_OUT[i]} != {2 * self.word_length + i + 1}"
-                )
-
-                self.sat.add_clause((self.SAT_IN[i], ROT_VAR[i], -AND_VAR[i]))
-                self.sat.add_clause((self.SAT_IN[i], -ROT_VAR[i], AND_VAR[i]))
-                self.sat.add_clause((-self.SAT_IN[i], ROT_VAR[i], AND_VAR[i]))
-                self.sat.add_clause((-self.SAT_IN[i], -ROT_VAR[i], -AND_VAR[i]))
+                self.sat.add_clause((self.SAT_IN[i], rot_in, -and_in))
+                self.sat.add_clause((self.SAT_IN[i], -rot_in, and_in))
+                self.sat.add_clause((-self.SAT_IN[i], rot_in, and_in))
+                self.sat.add_clause((-self.SAT_IN[i], -rot_in, -and_in))
 
                 # rot_comp.SAT_OUT --> and_comp.SAT_IN
-                self.sat.add_clause(
-                    (-ROT_VAR[i + self.word_length], AND_VAR[i + self.word_length])
-                )
-                self.sat.add_clause(
-                    (ROT_VAR[i + self.word_length], -AND_VAR[i + self.word_length])
-                )
+                self.sat.add_clause((-rot_out, and_in_rot))
+                self.sat.add_clause((rot_out, -and_in_rot))
 
                 # and_comp.SAT_OUT --> self.SAT_OUT
-                self.sat.add_clause(
-                    (-AND_VAR[i + 2 * self.word_length], self.SAT_OUT[i])
-                )
-                self.sat.add_clause(
-                    (AND_VAR[i + 2 * self.word_length], -self.SAT_OUT[i])
-                )
+                self.sat.add_clause((-and_out, self.SAT_OUT[i]))
+                self.sat.add_clause((and_out, -self.SAT_OUT[i]))
 
             self.sum_arr_sat += [
-                (i[0], AND_VAR[i[1] - 1]) for i in and_comp.sum_arr_sat
+                (factor, AND[entry]) for factor, entry in and_comp.sum_arr_sat
             ]
 
             return self.sat
@@ -2870,54 +2859,31 @@ class ROT_AND_CVL(Component):
                     name="small_ra",
                 )
                 small_sat = small_ra._model_sat(model_options=model_options)
-                VAR = [self.sat.var() for _ in range(gcd_result * small_sat.nvars())]
 
                 for i in range(gcd_result):
-                    for clause in small_sat.clauses():
-                        new_clause = translate_sat_clause(
-                            VAR[i * small_sat.nvars() : (i + 1) * small_sat.nvars()],
-                            clause[0],
-                        )
-                        self.sat.add_clause(new_clause)
+                    # SMALL[v] is the i'th copy of variable v of small_sat
+                    SMALL = self.sat.new_variable(name=f"SMALL{i}")
+                    self.sat.append(small_sat, SMALL)
 
                     for input_index in range(small_ra.input_length):
+                        small_in = SMALL[small_ra.SAT_IN[input_index]]
                         self.sat.add_clause(
-                            (
-                                self.SAT_IN[gcd_result * input_index + i],
-                                -VAR[input_index + i * small_sat.nvars()],
-                            )
+                            (self.SAT_IN[gcd_result * input_index + i], -small_in)
                         )
                         self.sat.add_clause(
-                            (
-                                -self.SAT_IN[gcd_result * input_index + i],
-                                VAR[input_index + i * small_sat.nvars()],
-                            )
+                            (-self.SAT_IN[gcd_result * input_index + i], small_in)
                         )
                     for output_index in range(small_ra.output_length):
+                        small_out = SMALL[small_ra.SAT_OUT[output_index]]
                         self.sat.add_clause(
-                            (
-                                self.SAT_OUT[gcd_result * output_index + i],
-                                -VAR[
-                                    output_index
-                                    + small_ra.input_length
-                                    + i * small_sat.nvars()
-                                ],
-                            )
+                            (self.SAT_OUT[gcd_result * output_index + i], -small_out)
                         )
                         self.sat.add_clause(
-                            (
-                                -self.SAT_OUT[gcd_result * output_index + i],
-                                VAR[
-                                    output_index
-                                    + small_ra.input_length
-                                    + i * small_sat.nvars()
-                                ],
-                            )
+                            (-self.SAT_OUT[gcd_result * output_index + i], small_out)
                         )
 
                     self.sum_arr_sat += [
-                        (factor, VAR[index - 1 + i * small_sat.nvars()])
-                        for factor, index in small_ra.sum_arr_sat
+                        (factor, SMALL[entry]) for factor, entry in small_ra.sum_arr_sat
                     ]
 
                 return self.sat

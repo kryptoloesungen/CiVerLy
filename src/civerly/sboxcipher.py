@@ -26,13 +26,13 @@ from civerly.component import (
     RoundkeyXOR_CVL,
     SBox_CVL,
 )
-from civerly.milp import MILP_CVL
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
     OPTIMIZATION,
     InvalidModelOptionError,
 )
+from civerly.problem import MILP_CVL
 from civerly.util import suppress_output, translate_milp_constraint, translate_var
 
 
@@ -91,7 +91,7 @@ class SBoxCipher(Cipher):
             - ``index`` -- integer; the (wordwise) number of the port variable
 
         .. SEEALSO::
-            - :meth:`civerly.milp.MILP_CVL.append`, which builds the
+            - :meth:`civerly.problem.MILP_CVL.append`, which builds the
               ``self.inv_dictionaries_milp`` entry used for the translation.
         """
         local_index = self.nodes[node].milp.vars[port].get_index(index)
