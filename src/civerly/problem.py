@@ -822,6 +822,29 @@ class SAT_CVL(Problem_CVL, DIMACS):
             True
             sage: sat2.vars["x"][3]
             2
+            
+        A more complicated example::
+            
+            sage: # optional - cryptominisat espresso
+            sage: from civerly.problem import SAT_CVL
+            sage: from civerly.cipher_implementations.prince import PRINCE_CVL
+            sage: from civerly.model_options import *
+            sage: prince_cipher = PRINCE_CVL(R=4)
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.EXCLUDE_ODD,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            ....:   sat = prince_cipher.model(model_options)
+            sage: sat2 = SAT_CVL.from_dict(sat.to_dict())
+            sage: sat2 == sat
+            True
         """
         sat = cls()
         sat.VAR_MODEL = []
