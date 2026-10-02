@@ -26,13 +26,13 @@ from civerly.component import (
     RoundkeyXOR_CVL,
     SBox_CVL,
 )
-from civerly.problem import MILP_CVL
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
     OPTIMIZATION,
     InvalidModelOptionError,
 )
+from civerly.problem import MILP_CVL
 from civerly.util import suppress_output, translate_milp_constraint, translate_var
 
 
