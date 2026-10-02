@@ -13,8 +13,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from civerly.util import suppress_output
 from civerly.problem import SAT_CVL
+from civerly.util import suppress_output
 
 
 def _float_or_int(value):

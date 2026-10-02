@@ -788,7 +788,7 @@ class SAT_CVL(Problem_CVL, DIMACS):
                 for name, var in list(self.vars.items())
                 for index, backend_index in var.items()
             ],
-            "clauses": [list(map(int, lits)) for lits, _, _ in self.clauses()],
+            "clauses": [list(map(int, literals)) for literals, _, _ in self.clauses()],
         }
 
     @classmethod
@@ -822,9 +822,9 @@ class SAT_CVL(Problem_CVL, DIMACS):
             True
             sage: sat2.vars["x"][3]
             2
-            
+
         A more complicated example::
-            
+
             sage: # optional - cryptominisat espresso
             sage: from civerly.problem import SAT_CVL
             sage: from civerly.cipher_implementations.prince import PRINCE_CVL
@@ -931,7 +931,9 @@ class SAT_CVL(Problem_CVL, DIMACS):
             for other_index in range(1, other.nvars() + 1)
         }
 
-        for lits, _, _ in other.clauses():
-            self.add_clause(tuple(var[lit] if lit > 0 else -var[-lit] for lit in lits))
+        for literals, _, _ in other.clauses():
+            self.add_clause(
+                tuple(var[lit] if lit > 0 else -var[-lit] for lit in literals)
+            )
 
         return translation
