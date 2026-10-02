@@ -28,7 +28,7 @@ from sage.sat.solvers.dimacs import DIMACS
 from sage.structure.element import Matrix as matrix_type
 
 from civerly.distorted_balls import distorted_balls
-from civerly.milp import MILP_CVL
+from civerly.problem import MILP_CVL
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,

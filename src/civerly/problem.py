@@ -1,12 +1,174 @@
 import json
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from sage.numerical.mip import MixedIntegerLinearProgram
+from sage.sat.solvers.dimacs import DIMACS
 
 from civerly.util import translate_milp_constraint
 
 
-class MILP_CVL(MixedIntegerLinearProgram):
+class Problem_CVL(ABC):
+    r"""
+    Abstract parent class of :class:`MILP_CVL` and :class:`SAT_CVL`, holding
+    everything both kinds of problems have in common:
+
+    - the variable bookkeeping (``vars``, ``VAR_IN``, ``VAR_OUT``,
+      ``VAR_MODEL``, :meth:`get_var`),
+
+    - the JSON serialization (:meth:`dump`, :meth:`load`) and the comparison
+      of problems, both built upon :meth:`to_dict` and :meth:`from_dict`.
+
+    Subclasses inherit from ``Problem_CVL`` *first* and from the SageMath
+    class they wrap second, so that :meth:`__init__` is passed on to the
+    latter. They have to implement :meth:`_new_variable`, :meth:`to_dict`,
+    :meth:`from_dict` and :meth:`append`.
+
+    A variable returned by :meth:`new_variable` behaves like a dictionary
+    whose components are created lazily on first access, and has to provide
+    the method ``get_index(key)``, returning the backend index of the
+    component ``key``.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize the wrapped SageMath class with ``args`` and ``kwargs``,
+        and set up the attributes shared by all problems:
+
+        - ``vars`` -- dict[str -> variable]; Stores all variables created by :meth:``self.new_variable``.
+
+        - ``VAR_IN``, ``VAR_OUT`` -- variable; The input and output variables.
+
+        - ``VAR_MODEL`` -- list[variable]; The standard variable to be used for modeling.
+        """
+        super().__init__(*args, **kwargs)
+        self._vars = {}
+        self._var_by_index = {}
+
+        self.VAR_IN = self.new_variable(name="IN", binary=True)
+        self.VAR_OUT = self.new_variable(name="OUT", binary=True)
+        self.VAR_MODEL = None
+
+    def __eq__(self, other):
+        """
+        Compare two problems of the same type with each other by considering
+        the corresponding dictionaries (see :meth:``to_dict``).
+        Comparing the wrapped SageMath objects considers the objects
+        themselves, not whether the problems they represent are actually
+        equal, which is done here.
+        """
+        if type(other) is not type(self):
+            return False
+        return self.to_dict() == other.to_dict()
+
+    @property
+    def vars(self):
+        """
+        A dictionary containing all the variables added via :meth:``new_variable``.
+        """
+        return self._vars
+
+    def get_var(self, index):
+        """
+        Return the variable whose backend index is ``index``.
+
+        The lookup is served from a cache mapping backend indices to variables,
+        which is (re)built whenever ``index`` is missing from it. Rebuilding is
+        the only way to pick up variables that were created in the meantime, as
+        the components of a variable are created lazily. A cached entry never
+        goes stale, since the backend index of a variable never changes.
+
+        TESTS:
+
+        Variables created after the cache was built are still found::
+
+            sage: from civerly.problem import MILP_CVL
+            sage: milp = MILP_CVL()
+            sage: x = milp.new_variable(name="x", binary=True)
+            sage: x[0], x[1]
+            (x_0, x_1)
+            sage: milp.get_var(0) is x[0]
+            True
+            sage: x[2]
+            x_2
+            sage: milp.get_var(2) is x[2]
+            True
+            sage: milp.get_var(3)
+            Traceback (most recent call last):
+            ...
+            AssertionError: var not found
+        """
+        if index not in self._var_by_index:
+            for var in self.vars.values():
+                for i, b_var in var.items():
+                    self._var_by_index[var.get_index(i)] = b_var
+        if index not in self._var_by_index:
+            raise AssertionError("var not found")
+        return self._var_by_index[index]
+
+    def new_variable(self, *args, **kwargs):
+        """
+        Create a new variable via :meth:`_new_variable` and store it inside
+        ``self.vars`` under its name, given as keyword argument ``name``.
+        """
+        var = self._new_variable(*args, **kwargs)
+        self._vars[kwargs.get("name")] = var
+        return var
+
+    @abstractmethod
+    def _new_variable(self, *args, **kwargs):
+        """
+        Create and return a new variable, see :meth:`new_variable`.
+        """
+
+    def dump(self, filename):
+        """
+        Serialize ``self`` into a dictionary using :meth:`to_dict`,
+        and write to ``filename`` afterwards. Takes the parameter:
+
+        - filename -- str; The json filename to dump ``self`` into.
+        """
+        with Path(filename).open("w") as f:
+            json.dump(self.to_dict(), fp=f)
+        return
+
+    @classmethod
+    def load(cls, filename):
+        """
+        Load the problem from a json file, using :meth:``from_dict``.
+        """
+        with Path(filename).open() as f:
+            data = json.load(f)
+        return cls.from_dict(data)
+
+    @abstractmethod
+    def to_dict(self):
+        """
+        Return a json-serializable dictionary describing ``self`` completely.
+        """
+
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, data):
+        """
+        Reconstruct a problem from the output of :meth:``to_dict``.
+        """
+
+    @abstractmethod
+    def append(self, other, var):
+        """
+        Incorporate the problem ``other`` into ``self``, by copying every
+        variable of ``other`` into the namespace of the variable ``var`` and
+        adding all constraints of ``other`` in terms of these new variables.
+
+        OUTPUT:
+
+        A dict mapping the backend index of each variable created in ``self``
+        to the backend index of its counterpart in ``other``.
+        """
+
+
+class MILP_CVL(Problem_CVL, MixedIntegerLinearProgram):
     r"""
     Wrapper for SageMath's :class:``MixedIntegerLinearProgram``, supporting JSON
     serialization.
@@ -15,7 +177,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
     ``MILP_CVL`` can be instantiated exactly like ``MixedIntegerLinearProgram``.
 
-        sage: from civerly.milp import MILP_CVL
+        sage: from civerly.problem import MILP_CVL
         sage: milp = MILP_CVL()
         sage: x = milp.new_variable(name="x")
         sage: milp.add_constraint(6*x[0] + 4*x[1] <= 1)
@@ -38,7 +200,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         - the solver argument is always set to "GLPK", as CiVerLy doesn't use it anyway.
           Instead, the external solvers specified by the model options are used (see ``solvers.py``).
 
-        - New attributes, to make them easier to access:
+        - New attributes, to make them easier to access (see :class:`Problem_CVL`):
             - ``vars`` -- dict[str -> MIPVariable]; Stores all MIPVariables created by :meth:``self.new_variable``.
 
             - ``VAR_IN``, ``VAR_OUT`` -- MIPVariable; The input and output variables.
@@ -49,12 +211,6 @@ class MILP_CVL(MixedIntegerLinearProgram):
         kwargs.pop("solver", None)
         super().__init__(*args, solver="GLPK", **kwargs)
         self.backend = self.get_backend()
-        self.__vars = {}
-        self.__var_by_index = {}
-
-        self.VAR_IN = self.new_variable(name="IN", binary=True)
-        self.VAR_OUT = self.new_variable(name="OUT", binary=True)
-        self.VAR_MODEL = None
 
     def __eq__(self, other):
         """
@@ -67,7 +223,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         TESTS:
 
             sage: import tempfile
-            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.problem import MILP_CVL
             sage: milp = MILP_CVL()
             sage: x = milp.new_variable(name="x")
             sage: milp.add_constraint(6*x[0] + 4*x[1] <= 1)
@@ -82,7 +238,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
         Again with an actual ``MILP_CVL`` coming from a CiVerLy modeling:
 
-            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.problem import MILP_CVL
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.model_options import *
@@ -108,60 +264,12 @@ class MILP_CVL(MixedIntegerLinearProgram):
             ....:   milp == milp2
             True
         """
-        if not isinstance(other, MILP_CVL):
-            return False
-        return self.to_dict() == other.to_dict()
+        return super().__eq__(other)
 
-    @property
-    def vars(self):
+    def _new_variable(self, *args, **kwargs):
         """
-        A dictionary containing all the variables added via :meth:``new_variable``.
-        """
-        return self.__vars
-
-    def get_var(self, index):
-        """
-        Return the variable whose backend index is ``index``.
-
-        The lookup is served from a cache mapping backend indices to variables,
-        which is (re)built whenever ``index`` is missing from it. Rebuilding is
-        the only way to pick up variables that were created in the meantime, as
-        the components of a MIPVariable are created lazily. A cached entry never
-        goes stale, since the backend index of a variable never changes.
-
-        TESTS:
-
-        Variables created after the cache was built are still found::
-
-            sage: from civerly.milp import MILP_CVL
-            sage: milp = MILP_CVL()
-            sage: x = milp.new_variable(name="x", binary=True)
-            sage: x[0], x[1]
-            (x_0, x_1)
-            sage: milp.get_var(0) is x[0]
-            True
-            sage: x[2]
-            x_2
-            sage: milp.get_var(2) is x[2]
-            True
-            sage: milp.get_var(3)
-            Traceback (most recent call last):
-            ...
-            AssertionError: var not found
-        """
-        if index not in self.__var_by_index:
-            for var in self.vars.values():
-                for i, b_var in var.items():
-                    self.__var_by_index[var.get_index(i)] = b_var
-        if index not in self.__var_by_index:
-            raise AssertionError("var not found")
-        return self.__var_by_index[index]
-
-    def new_variable(self, *args, **kwargs):
-        """
-        Override :meth:``MixedIntegerLinearProgram.new_variable`` to
-        also store this variable inside ``self.vars``, and store the
-        MIPVariable type as its attribute, so that we can recover it
+        Create a MIPVariable via :meth:``MixedIntegerLinearProgram.new_variable``
+        and store the MIPVariable type as its attribute, so that we can recover it
         when reconstructing it inside `from_dict`.
 
         There are four variable types:
@@ -169,7 +277,6 @@ class MILP_CVL(MixedIntegerLinearProgram):
         Setting them appropriately is crucial, as it would otherwise
         change the underlying MILP and its solution space completely.
         """
-        name = kwargs.get("name")
         var_types = [
             kwargs.get("real"),
             kwargs.get("binary"),
@@ -179,24 +286,12 @@ class MILP_CVL(MixedIntegerLinearProgram):
         # 'real' is the default
         var_type = var_types.index(True) if any(var_types) else 0
 
-        var = super().new_variable(*args, **kwargs)
+        # not super(), as that would resolve to Problem_CVL.new_variable
+        var = MixedIntegerLinearProgram.new_variable(self, *args, **kwargs)
         # add new attributes + methods
         var.type = var_type
         var.get_index = lambda i: next(iter(var[i].dict().keys()))
-
-        self.__vars[name] = var
         return var
-
-    def dump(self, filename):
-        """
-        Serialize ``self`` into a dictionary using :meth:`to_dict`,
-        and write to ``filename`` afterwards. Takes the parameter:
-
-        - filename -- str; The json filename to dump ``self`` into.
-        """
-        with Path(filename).open("w") as f:
-            json.dump(self.to_dict(), fp=f)
-        return
 
     def to_dict(self):
         r"""
@@ -314,7 +409,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         shall result in the exact same solution (when solving process
         is deterministic):
 
-            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.problem import MILP_CVL
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
@@ -333,7 +428,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             2880 variables and 5313 constraints were written to...
             7
             sage: gift.milp.dump(model_options.path / "milp.json")
-            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.problem import MILP_CVL
             sage: from civerly.solvers import SCIP_CVL
             sage: milp = MILP_CVL.load(model_options.path / "milp.json")
             sage: milp.write_mps(str(model_options.path / "milp.mps"))
@@ -347,9 +442,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             sage: import shutil
             sage: shutil.rmtree(model_options.path, ignore_errors=True)
         """
-        with Path(filename).open() as f:
-            data = json.load(f)
-        return cls.from_dict(data)
+        return super().load(filename)
 
     @classmethod
     def from_dict(cls, data):
@@ -383,7 +476,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
             ....:   cipher.model(model_options)
             10176 variables and 12929 constraints were written to...
             sage: data = cipher.milp.to_dict()
-            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.problem import MILP_CVL
             sage: milp = MILP_CVL.from_dict(data)
             sage: milp == cipher.milp
             True
@@ -474,7 +567,7 @@ class MILP_CVL(MixedIntegerLinearProgram):
         Append a small milp to one that already holds a variable, so that the
         indices of the two differ::
 
-            sage: from civerly.milp import MILP_CVL
+            sage: from civerly.problem import MILP_CVL
             sage: other = MILP_CVL()
             sage: x = other.new_variable(name="x", binary=True)
             sage: other.add_constraint(x[0] + 2*x[1] <= 1)
@@ -513,5 +606,309 @@ class MILP_CVL(MixedIntegerLinearProgram):
 
         for constraint in other.constraints():
             self.add_constraint(translate_milp_constraint(var, constraint))
+
+        return translation
+
+
+class SATVariable(dict):
+    r"""
+    The SAT counterpart of SageMath's ``MIPVariable``: a dictionary mapping
+    keys to DIMACS variables (positive integers) of the :class:`SAT_CVL`
+    ``sat``, where a variable is created via ``sat.var()`` the first time
+    its key is accessed.
+
+    EXAMPLE::
+
+        sage: from civerly.problem import SAT_CVL
+        sage: sat = SAT_CVL()
+        sage: x = sat.new_variable(name="x")
+        sage: x[5], x[0], x[5]
+        (1, 2, 1)
+        sage: -x[0]
+        -2
+        sage: x.get_index(0)
+        2
+    """
+
+    def __init__(self, sat, name=None):
+        super().__init__()
+        self._sat = sat
+        self.name = name
+
+    def __missing__(self, key):
+        self[key] = self._sat.var()
+        return self[key]
+
+    def get_index(self, key):
+        """
+        Return the backend index of the component ``key``, which, for SAT, is
+        the DIMACS variable itself.
+        """
+        return self[key]
+
+    def __repr__(self):
+        return f"SATVariable {self.name!r} of dimension 1"
+
+
+class SAT_CVL(Problem_CVL, DIMACS):
+    r"""
+    Wrapper for SageMath's :class:``DIMACS``, supporting JSON
+    serialization.
+
+    EXAMPLE:
+
+    ``SAT_CVL`` can be instantiated exactly like ``DIMACS``.
+
+        sage: from civerly.problem import SAT_CVL
+        sage: sat = SAT_CVL()
+        sage: x = sat.new_variable(name="x")
+        sage: sat.add_clause((x[0], -x[1]))
+        sage: sat.add_clause((-x[0], x[2]))
+        sage: sat.add_clause((x[1], -x[2]))
+        sage: sat.clauses()
+        [((1, -2), False, None), ((-1, 3), False, None), ((2, -3), False, None)]
+        sage: (sat.number_of_variables(), sat.number_of_constraints())
+        (3, 3)
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize :class:``SAT_CVL``. The process is identical to the initialization
+        of SageMath's :class:``DIMACS``. As for :class:``MILP_CVL``, the ``command``
+        argument is not used by CiVerLy. Instead, the external solvers specified by
+        the model options are used (see ``solvers.py``).
+
+        - New attributes, to make them easier to access (see :class:`Problem_CVL`):
+            - ``vars`` -- dict[str -> SATVariable]; Stores all SATVariables created by :meth:``self.new_variable``.
+
+            - ``VAR_IN``, ``VAR_OUT`` -- SATVariable; The input and output variables.
+
+            - ``VAR_MODEL`` -- list[SATVariable]; The standard variable to be used for modeling.
+        """
+        super().__init__(*args, **kwargs)
+
+    def __eq__(self, other):
+        """
+        Compares two SAT_CVL instances with each other by considering
+        the corresponding dictionaries (see :meth:``to_dict``).
+        Comparing two :class:``DIMACS`` objects considers the
+        objects themselves, not whether the SATs they represent are actually equal,
+        which is done here.
+
+        TESTS:
+
+            sage: import tempfile
+            sage: from civerly.problem import SAT_CVL
+            sage: sat = SAT_CVL()
+            sage: x = sat.new_variable(name="x")
+            sage: sat.add_clause((x[0], -x[1]))
+            sage: sat.add_clause((-x[0], x[2]))
+            sage: with tempfile.NamedTemporaryFile() as f:
+            ....:   sat.dump(f.name)
+            ....:   sat2 = SAT_CVL.load(f.name)
+            ....:   sat == sat2
+            True
+            sage: sat.add_clause((x[1], x[2]))
+            sage: sat == sat2
+            False
+        """
+        return super().__eq__(other)
+
+    def _new_variable(self, *args, **kwargs):
+        """
+        Create a new :class:`SATVariable`. Since all SAT variables are boolean,
+        the type keywords of :meth:``MixedIntegerLinearProgram.new_variable``
+        (real, binary, integer, nonnegative) are accepted for compatibility with
+        :class:``MILP_CVL``, but ignored.
+        """
+        return SATVariable(self, name=kwargs.get("name"))
+
+    def number_of_variables(self):
+        """
+        Return the number of variables, see :meth:``DIMACS.nvars``.
+        """
+        return self.nvars()
+
+    def number_of_constraints(self):
+        """
+        Return the number of clauses.
+
+        EXAMPLE:
+
+            sage: import tempfile
+            sage: from civerly.problem import SAT_CVL
+            sage: sat = SAT_CVL()
+            sage: x = sat.new_variable(name="x")
+            sage: sat.add_clause((x[0], -x[1]))
+            sage: sat.add_clause((-x[0], x[2]))
+            sage: sat.number_of_constraints()
+            2
+
+        """
+        return self._lit
+
+    def to_dict(self):
+        r"""
+        Make ``SAT_CVL`` json-serializable by creating a dictionary with
+        the following information:
+
+        - nvars -- int; The number of DIMACS variables. This also counts
+          variables which do not belong to any SATVariable, e.g. those created
+          by :meth:``var`` directly.
+
+        - variables -- list of the form ``[(name, index, backend_index)]``, where:
+            - ``name`` -- string; The name of the SATVariable object.
+            - ``index`` -- int; The index of this variable inside the SATVariable object
+              (recall, SATVariables are dictionaries)
+            - ``backend_index`` -- int; The corresponding DIMACS variable.
+
+        - clauses -- list of lists of ints; the clauses in DIMACS notation,
+          e.g. ``[1, -2, 3]`` translates to the clause
+          :math:``v_1 \\lor \\neg v_2 \\lor v_3``.
+
+        EXAMPLE::
+
+            sage: from civerly.problem import SAT_CVL
+            sage: sat = SAT_CVL()
+            sage: sat.add_clause((sat.VAR_IN[0], -sat.VAR_OUT[0]))
+            sage: _ = sat.var()
+            sage: x = sat.new_variable(name="x")
+            sage: sat.add_clause((x[3], -x[1], sat.VAR_IN[1]))
+            sage: sat.to_dict()['nvars']
+            6
+            sage: sat.to_dict()['variables']
+            [('IN', 0, 1), ('IN', 1, 6), ('OUT', 0, 2), ('x', 3, 4), ('x', 1, 5)]
+            sage: sat.to_dict()['clauses']
+            [[1, -2], [4, -5, 6]]
+        """
+        return {
+            "nvars": int(self.nvars()),
+            "variables": [
+                (name, int(index), int(backend_index))
+                for name, var in list(self.vars.items())
+                for index, backend_index in var.items()
+            ],
+            "clauses": [list(map(int, lits)) for lits, _, _ in self.clauses()],
+        }
+
+    @classmethod
+    def load(cls, filename):
+        """
+        Load the SAT_CVL object from a json file, using :meth:``from_dict``.
+        """
+        return super().load(filename)
+
+    @classmethod
+    def from_dict(cls, data):
+        """
+        Reconstruct a ``SAT_CVL`` from the output of :meth:``to_dict``,
+        by building the variables and clauses from the given dictionary ``data``.
+
+        INPUT:
+        - ``data`` -- dict; output of :meth:``to_dict``
+
+        OUTPUT: A ``SAT_CVL`` object corresponding to ``data``
+
+        EXAMPLE:
+
+            sage: from civerly.problem import SAT_CVL
+            sage: sat = SAT_CVL()
+            sage: _ = sat.var()
+            sage: x = sat.new_variable(name="x")
+            sage: sat.add_clause((x[3], -x[1], sat.VAR_IN[0]))
+            sage: sat.add_clause((7, -x[1]))
+            sage: sat2 = SAT_CVL.from_dict(sat.to_dict())
+            sage: sat2 == sat
+            True
+            sage: sat2.vars["x"][3]
+            2
+        """
+        sat = cls()
+        sat.VAR_MODEL = []
+
+        sat_vars = {}
+
+        # sort for var_id (the DIMACS variable), so that sat.var
+        # implicitly reconstructs them
+        for var_name, key, var_id in sorted(data["variables"], key=lambda x: x[2]):
+            if var_name not in sat_vars:
+                sat_vars[var_name] = sat.new_variable(name=var_name)
+                if var_name == "IN":
+                    sat.VAR_IN = sat_vars[var_name]
+                elif var_name == "OUT":
+                    sat.VAR_OUT = sat_vars[var_name]
+                else:
+                    sat.VAR_MODEL.append(sat_vars[var_name])
+
+            # skip the variables not belonging to any SATVariable
+            while sat.nvars() < var_id - 1:
+                sat.var()
+            sat_vars[var_name][key]
+        while sat.nvars() < data["nvars"]:
+            sat.var()
+
+        for clause in data["clauses"]:
+            sat.add_clause(tuple(clause))
+
+        return sat
+
+    def append(self, other, var):
+        r"""
+        Incorporate ``other`` into ``self``, by copying every variable of
+        ``other`` into the namespace of the SATVariable ``var`` and adding all
+        clauses of ``other`` in terms of these new variables.
+
+        The DIMACS variable in ``other`` is used as the *key* under which its
+        counterpart is created in ``var``. Hence, translating the clauses of
+        ``other`` is a mere lookup in ``var``.
+
+        INPUT:
+
+          - ``other`` -- ``SAT_CVL``; the sat to append
+
+          - ``var`` -- SATVariable of ``self``, as returned by
+            :meth:`new_variable`; the namespace the variables of ``other`` are
+            copied into. It must not be used for anything else, as its keys are
+            dictated by ``other``.
+
+        OUTPUT:
+
+        A dict mapping the DIMACS variable of each variable created in ``self``
+        to the DIMACS variable of its counterpart in ``other``.
+
+        EXAMPLE:
+
+        Append a small sat to one that already holds a variable, so that the
+        indices of the two differ::
+
+            sage: from civerly.problem import SAT_CVL
+            sage: other = SAT_CVL()
+            sage: x = other.new_variable(name="x")
+            sage: other.add_clause((x[0], -x[1]))
+            sage: sat = SAT_CVL()
+            sage: sat.add_clause((sat.VAR_IN[0],))
+            sage: X0 = sat.new_variable(name="X0")
+            sage: sat.append(other, X0)
+            {2: 1, 3: 2}
+            sage: sat.clauses()
+            [((1,), False, None), ((2, -3), False, None)]
+
+        Appending the same sat twice under different namespaces duplicates it::
+
+            sage: X1 = sat.new_variable(name="X1")
+            sage: sat.append(other, X1)
+            {4: 1, 5: 2}
+            sage: sat.number_of_constraints()
+            3
+        """
+        # iterate over all DIMACS variables of ``other``, not only over those
+        # belonging to a SATVariable, as clauses may contain both
+        translation = {
+            var.get_index(other_index): other_index
+            for other_index in range(1, other.nvars() + 1)
+        }
+
+        for lits, _, _ in other.clauses():
+            self.add_clause(tuple(var[lit] if lit > 0 else -var[-lit] for lit in lits))
 
         return translation
