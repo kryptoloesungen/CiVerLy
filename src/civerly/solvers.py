@@ -16,7 +16,6 @@ from pathlib import Path
 
 from sage.sat.solvers.dimacs import DIMACS
 
-from civerly.log import CiverlyError
 from civerly.util import suppress_output
 
 logger = logging.getLogger(__name__)
@@ -92,7 +91,7 @@ class SOLVING_STATUS(Enum):
     ERROR = 3
 
 
-class ExternalSolveRequiredError(CiverlyError):
+class ExternalSolveRequiredError(Exception):
     """
     Raised when an external solver is invoked but the solution file is not
     yet present. Provide a solution at the path shown in the message and

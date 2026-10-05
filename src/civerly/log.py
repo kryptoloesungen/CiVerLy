@@ -3,13 +3,12 @@ Logging setup of CiVerLy.
 
 All modules of CiVerLy log to child loggers of the package logger
 ``civerly``. Messages of level ``INFO`` and above are printed to the console
-(message only, without any prefix), unless they stem from a
-:class:`CiverlyError`, since raised exceptions are already reported by their
-traceback.
+(message only, without any prefix).
 
 In addition, :meth:`civerly.cipher.Cipher.analyse` appends all messages of an
-analysis run, including the exceptions, to a log file in
-``model_options.path``, see :func:`analysis_log`.
+analysis run to a log file in ``model_options.path``, see
+:func:`analysis_log`. Raised exceptions are not logged, as they are already
+reported by their traceback.
 
 The console output can be silenced via the standard ``logging`` interface::
 
@@ -46,10 +45,6 @@ class _ConsoleHandler(logging.StreamHandler):
         pass
 
 
-def _is_not_exception(record):
-    return not getattr(record, "civerly_exception", False)
-
-
 def _setup_package_logger():
     package_logger = logging.getLogger(PACKAGE_LOGGER_NAME)
     if any(isinstance(h, _ConsoleHandler) for h in package_logger.handlers):
@@ -57,7 +52,6 @@ def _setup_package_logger():
     console = _ConsoleHandler()
     console.setLevel(logging.INFO)
     console.setFormatter(logging.Formatter("%(message)s"))
-    console.addFilter(_is_not_exception)
     package_logger.addHandler(console)
     package_logger.setLevel(logging.INFO)
     # Avoid duplicate console output if the root logger is configured.
@@ -111,9 +105,9 @@ def analysis_log(log_file):
         ...
         civerly.model_options.InvalidModelOptionError: Invalid linear layer modeling option None!
 
-    The exception is not printed by the console handler, but it is written to
-    the log file. After correcting the model options, the analysis succeeds.
-    As the log file is extended by each run, it contains the messages of both runs::
+    The exception is not written to the log file. After correcting the model
+    options, the analysis succeeds. As the log file is extended by each run,
+    it contains the messages of both successful runs::
 
         sage: # optional - glpk
         sage: model_options.linear_layer_modeling = LINEAR_LAYER_MODELING.BRANCH_NUMBER
@@ -128,7 +122,6 @@ def analysis_log(log_file):
         sage: log_file = Path(tmpdir) / f"{aes.name}_civerly.log"
         sage: with open(log_file, "r") as f:
         ....:    print(f.read()[:-1])
-        ... [ERROR] civerly.model_options: InvalidModelOptionError: Invalid linear layer modeling option None!
         ... [INFO] civerly.sboxcipher: 644 variables and 653 constraints were written to ...
         ... [INFO] civerly.cipher: Using existing MILP model, make sure it is up to date!
         ... [INFO] civerly.sboxcipher: 644 variables and 653 constraints were written to ...
@@ -151,26 +144,3 @@ def analysis_log(log_file):
     finally:
         package_logger.removeHandler(handler)
         handler.close()
-
-
-class CiverlyError(Exception):
-    r"""
-    Base class of all custom exceptions of CiVerLy. Creating such an exception
-    logs its message with level ``ERROR``, so that it shows up in the log file
-    of the analysis run (see :func:`analysis_log`). It is not printed to the
-    console, as the traceback already shows it.
-
-    TESTS::
-
-        sage: from civerly.log import CiverlyError
-        sage: raise CiverlyError("Something went wrong")
-        Traceback (most recent call last):
-        ...
-        civerly.log.CiverlyError: Something went wrong
-    """
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        logging.getLogger(type(self).__module__).error(
-            f"{type(self).__name__}: {self}", extra={"civerly_exception": True}
-        )

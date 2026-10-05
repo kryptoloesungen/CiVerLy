@@ -50,7 +50,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.sat.solvers.dimacs import DIMACS
 
 from civerly.component import Component
-from civerly.log import CiverlyError, analysis_log
+from civerly.log import analysis_log
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
@@ -63,7 +63,7 @@ from civerly.util import suppress_output, translate_sat_clause
 logger = logging.getLogger(__name__)
 
 
-class CipherNotValidError(CiverlyError):
+class CipherNotValidError(Exception):
     def __init__(self):
         r"""
         Exception which is thrown whenever the cipher is not finished, i.e.
