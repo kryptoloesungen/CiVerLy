@@ -18,4 +18,5 @@ accept = [
 
 exclude = [
     "^https://scipopt\\.org/",
+    "^https://www.gnu.org/software/glpk/",
 ]
