@@ -64,6 +64,41 @@ class CipherImplementation_CVL(Cipher):
             True
             sage: present.R, present.key_schedule, present.key, present.name
             (3, None, None, 'PRESENT')
+
+        A new cipher implementation has to pass ``R`` and ``name`` as
+        keyword arguments, next to the positional arguments of its
+        structural parent class::
+
+            sage: from civerly.wordsboxcipher import WordSBoxCipher
+            sage: class Toy_CVL(CipherImplementation_CVL, WordSBoxCipher):
+            ....:     def __init__(self, R=2, key_schedule=None, key=None):
+            ....:         super().__init__(4, 2, 2, R=R,
+            ....:             key_schedule=key_schedule, key=key, name="Toy")
+            sage: toy = Toy_CVL(R=5, key=0x2a)
+            sage: toy.R, toy.key_schedule, toy.key, toy.name
+            (5, None, 42, 'Toy')
+
+        Building an implementation with differently specified parameters
+        fails. Omitting ``R`` and ``name``::
+
+            sage: class Toy_CVL(CipherImplementation_CVL, WordSBoxCipher):
+            ....:     def __init__(self):
+            ....:         super().__init__(4, 2, 2)
+            sage: Toy_CVL()
+            Traceback (most recent call last):
+            ...
+            TypeError: CipherImplementation_CVL.__init__() missing 2 required keyword-only arguments: 'R' and 'name'
+
+        Inheriting from the structural parent class first::
+
+            sage: class Toy_CVL(WordSBoxCipher, CipherImplementation_CVL):
+            ....:     def __init__(self, R=2):
+            ....:         super().__init__(4, 2, 2, R=R, name="Toy")
+            sage: Toy_CVL()
+            Traceback (most recent call last):
+            ...
+            TypeError: WordBasedCipher.__init__() got an unexpected keyword argument 'R'
+
         """
         self.R = R
         self.key = key
