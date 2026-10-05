@@ -16,6 +16,7 @@ from pathlib import Path
 
 from sage.sat.solvers.dimacs import DIMACS
 
+from civerly.log import CiverlyError
 from civerly.util import suppress_output
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ class SOLVING_STATUS(Enum):
     ERROR = 3
 
 
-class ExternalSolveRequiredError(Exception):
+class ExternalSolveRequiredError(CiverlyError):
     """
     Raised when an external solver is invoked but the solution file is not
     yet present. Provide a solution at the path shown in the message and
@@ -249,7 +250,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
 
         if solution_file.exists():
-            logger.warning(
+            logger.info(
                 f"Using existing file {solution_file}, make sure it is up to date!"
             )
             objective_value, assignment = self._process_solution_file(solution_file)
@@ -537,7 +538,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
 
         if solution_file.exists():
-            logger.warning(
+            logger.info(
                 f"Using existing file {solution_file}, make sure it is up to date!"
             )
             satisfiability, assignment = self._process_solution_file(solution_file)
@@ -2197,7 +2198,7 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         """
         self._check_can_invoke()
         if solution_file.exists():
-            logger.warning(
+            logger.info(
                 f"Using existing file {solution_file}, make sure it is up to date!"
             )
         else:

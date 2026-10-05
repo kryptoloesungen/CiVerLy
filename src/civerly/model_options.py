@@ -8,6 +8,8 @@ from pathlib import Path
 
 from sage.rings.integer import Integer
 
+from civerly.log import CiverlyError
+
 # Import all solvers, even though they are unused here.
 # This way, the user has access to ALL model options
 # when importing `civerly.model_options`.
@@ -538,7 +540,7 @@ class MODEL_OPTIONS:
         return
 
 
-class InvalidModelOptionError(Exception):
+class InvalidModelOptionError(CiverlyError):
     r"""
     Exception which will be thrown whenever an invalid model option is given
     by the user.

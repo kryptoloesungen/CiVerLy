@@ -50,6 +50,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.sat.solvers.dimacs import DIMACS
 
 from civerly.component import Component
+from civerly.log import CiverlyError, analysis_log
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
@@ -62,7 +63,7 @@ from civerly.util import suppress_output, translate_sat_clause
 logger = logging.getLogger(__name__)
 
 
-class CipherNotValidError(Exception):
+class CipherNotValidError(CiverlyError):
     def __init__(self):
         r"""
         Exception which is thrown whenever the cipher is not finished, i.e.
@@ -1525,7 +1526,7 @@ class Cipher:
 
         if model_options.write_to_file:
             sat.write()
-            logger.warning(
+            logger.info(
                 f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
                 "were written to "
                 f"'{model_options.path / (self.name + '.cnf')!s}'"
@@ -1604,6 +1605,36 @@ class Cipher:
             sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
             True
 
+        All messages of the analysis run are appended to
+        ``<name>_civerly.log`` in ``model_options.path``::
+
+            sage: # optional - glpk
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   aes = AES_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.GLPK,
+            ....:       path=Path(tmpdir))
+            ....:   aes.analyse(model_options)
+            ....:   print((Path(tmpdir) / "AES_civerly.log").read_text(), end="")
+            644 variables and 653 constraints were written to '...'
+            5
+            ... [INFO] civerly.sboxcipher: 644 variables and 653 constraints were written to '...'
+
+        """
+        log_file = None
+        if model_options.write_to_file:
+            model_options.path.mkdir(parents=True, exist_ok=True)
+            log_file = model_options.path / f"{self.name}_civerly.log"
+        with analysis_log(log_file):
+            return self._analyse(model_options)
+
+    def _analyse(self, model_options):
+        r"""
+        Implementation of :meth:`analyse`, see there.
         """
         start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
@@ -1614,7 +1645,7 @@ class Cipher:
             if self.milp is None:
                 self.model(model_options)
             else:
-                logger.warning("Using existing MILP model, make sure it is up to date!")
+                logger.info("Using existing MILP model, make sure it is up to date!")
                 self._finish_milp(model_options, self.milp)
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
@@ -1665,7 +1696,7 @@ class Cipher:
             if self.sat is None:
                 self.model(model_options)
             else:
-                logger.warning("Using existing SAT model, make sure it is up to date!")
+                logger.info("Using existing SAT model, make sure it is up to date!")
                 self._finish_sat(model_options, self.sat)
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
@@ -2092,7 +2123,7 @@ class Cipher:
         """
         with Path(path).open("w") as f:
             json.dump(self._to_dict(), f, default=lambda obj: int(obj))
-        logger.warning(f"Object '{self.name}' has been exported to {path}.")
+        logger.info(f"Object '{self.name}' has been exported to {path}.")
 
     @classmethod
     def _init_from_dict(cls, d):
@@ -2306,7 +2337,7 @@ class Cipher:
                 for f in model_options.path.glob(pattern):
                     subprocess.Popen(["rm", "-f", f]).wait()
 
-        logger.warning(f"Output file in: {pdf_file_name}")
+        logger.info(f"Output file in: {pdf_file_name}")
 
     def _latex_section(self, trail_node, model_options) -> str:
         r"""
