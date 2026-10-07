@@ -842,6 +842,7 @@ class SAT_CVL(Problem_CVL, DIMACS):
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   sat = prince_cipher.model(model_options)
+            4112 variables and 12081 clauses were written to ...
             sage: sat2 = SAT_CVL.from_dict(sat.to_dict())
             sage: sat2 == sat
             True
