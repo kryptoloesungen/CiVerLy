@@ -4,6 +4,7 @@ from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.aeslike import AESlike
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     I_CVL,
     LinearLayer_CVL,
@@ -15,7 +16,7 @@ from civerly.util import int_to_vec, vec_to_int
 from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
 
 
-class SKINNY_CVL:
+class SKINNY_CVL(CipherImplementation_CVL, AESlike):
     consts = (
         0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3E, 0x3D, 0x3B, 0x37, 0x2F, 0x1E,
         0x3C, 0x39, 0x33, 0x27, 0x0E, 0x1D, 0x3A, 0x35, 0x2B, 0x16, 0x2C,
@@ -210,7 +211,7 @@ class SKINNY_CVL:
             return [tk1_schedule, tk2_schedule, tk3_schedule]
         raise ValueError(f"{z = } is an invalid parameter for create_tk_schedules.")
 
-    def __init__(self, n=64, t=64, R=None, key=None, name=None):
+    def __init__(self, n=64, t=64, R=None, key_schedule=None, key=None, name=None):
         r"""
         The civerly implementation of SKINNY. It takes the following
         arguments:
@@ -220,6 +221,13 @@ class SKINNY_CVL:
 
             - ``t`` -- integer; The tweakey size of SKINNY. Needs to fulfill
               :math:`t \in \{ n, 2n, 3n \}`.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys``.
+              The tweakey schedule of SKINNY is already applied directly in
+              Python via ``key``, so this parameter only exists for custom
+              ``KeySchedule`` subclass instances. Defaults to ``None`` (no
+              key schedule).
 
             - ``key`` -- integer (optional); The (tweak-)key value for SKINNY.
               If no key is specified, it is defaulted to 0.
@@ -512,10 +520,9 @@ class SKINNY_CVL:
             f"but not {t}!"
         )
 
-        z = t // n
+        self.n = n
+        self.t = t
 
-        if key is None:
-            key = 0
         if name is None:
             name = "SKINNY"
 
@@ -530,6 +537,15 @@ class SKINNY_CVL:
 
         if R is None:
             R = round_dict[(n, t)]  # For full-round versions
+
+        super().__init__(
+            n // 16, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name
+        )
+
+        n = self.n
+        R = self.R
+        z = self.t // n
+        k = 0 if self.key is None else self.key
 
         s = n // 16  # wordsize
 
@@ -692,13 +708,11 @@ class SKINNY_CVL:
 
         skinny_round.add_output([(node_round, (i, i)) for i in range(16)])
 
-        skinny_cipher = AESlike(s, rows=4, cols=4, name=name)
-
         # array of tk-schedule ciphers
         tk_schedules = SKINNY_CVL.create_tk_schedules(s, z)
 
         # divide up the key into [TK1, TK2, TK3]
-        current_tweakeys = [(key >> (y * n)) & ((1 << n) - 1) for y in range(z)][::-1]
+        current_tweakeys = [(k >> (y * n)) & ((1 << n) - 1) for y in range(z)][::-1]
         final_tweakeys = [0 for _ in range(R)]
         for r in range(R):
             for w in range(z):
@@ -708,7 +722,7 @@ class SKINNY_CVL:
                 for w in range(z)
             ]  # Update tweakeys with the respective tk-schedule
 
-        node_cipher = skinny_cipher.IN
+        node_cipher = self.IN
         for r in range(R):
             # Set roundconstant values
             # ---------------------------------------------
@@ -733,15 +747,8 @@ class SKINNY_CVL:
             ) & ((1 << (4 * s)) - 1)
             # ---------------------------------------------
 
-            node_cipher = skinny_cipher.add_subcipher(
+            node_cipher = self.add_subcipher(
                 skinny_round, [(node_cipher, (i, i)) for i in range(16)]
             )
 
-        skinny_cipher.add_output([(node_cipher, (i, i)) for i in range(16)])
-
-        self.skinny_cipher = skinny_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.skinny_cipher
+        self.add_output([(node_cipher, (i, i)) for i in range(16)])

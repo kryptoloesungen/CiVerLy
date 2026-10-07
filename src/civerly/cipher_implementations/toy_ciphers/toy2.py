@@ -7,7 +7,7 @@ from civerly.sboxcipher import SBoxCipher
 
 # linear cipher using rounds with intentionally missing
 # structure of each layer
-class Toy2:
+class Toy2(SBoxCipher):
     def __init__(self):
         r"""
 
@@ -73,7 +73,7 @@ class Toy2:
             0
             Output file in: ...
         """
-        cipher = SBoxCipher(16, 16, name="Toy2")
+        super().__init__(16, 16, name="Toy2")
 
         round = SBoxCipher(16, 16, name="Toy2-round")
         arr = [
@@ -110,14 +110,7 @@ class Toy2:
         )
         round.add_output([(node_out, (i, i)) for i in range(16)])
 
-        node = cipher.IN
+        node = self.IN
         for _r in range(4):
-            node = cipher.add_subcipher(round, [(node, (i, i)) for i in range(16)])
-        cipher.add_output([(node, (i, i)) for i in range(16)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+            node = self.add_subcipher(round, [(node, (i, i)) for i in range(16)])
+        self.add_output([(node, (i, i)) for i in range(16)])

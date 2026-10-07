@@ -7,7 +7,7 @@ from civerly.sboxcipher import SBoxCipher
 
 # linear cipher with non-bijective LinearLayer_CVL's, different intermediate
 # state sizes and direct in- out- connection
-class Toy1:
+class Toy1(SBoxCipher):
     def __init__(self):
         r"""
 
@@ -125,7 +125,7 @@ class Toy1:
             0
 
         """
-        cipher = SBoxCipher(37, 37, name="Toy1")
+        super().__init__(37, 37, name="Toy1")
 
         P = PermuteLayer_CVL(perm=[1, 3, 0, 2], word_coarseness=4, name="P(16)")
 
@@ -150,26 +150,19 @@ class Toy1:
         mat = matrix(GF(2), 8, 4, arr)
         L2 = LinearLayer_CVL(mat, name="L(4->8)")
 
-        node1 = cipher.add_subcipher(P, [(cipher.IN, (i, i)) for i in range(16)])
-        node2 = cipher.add_subcipher(P, [(cipher.IN, (i + 16, i)) for i in range(16)])
+        node1 = self.add_subcipher(P, [(self.IN, (i, i)) for i in range(16)])
+        node2 = self.add_subcipher(P, [(self.IN, (i + 16, i)) for i in range(16)])
 
         node_new = [None for _ in range(4)]
         for j in range(4):
-            node_new[j] = cipher.add_subcipher(
+            node_new[j] = self.add_subcipher(
                 L1,
                 [(node1, (i + 4 * j, i)) for i in range(4)]
                 + [(node2, (i + 4 * j, i + 4)) for i in range(4)],
             )
-            node_new[j] = cipher.add_subcipher(
+            node_new[j] = self.add_subcipher(
                 L2, [(node_new[j], (i, i)) for i in range(4)]
             )
-            cipher.add_output([(node_new[j], (i, i + 8 * j)) for i in range(8)])
+            self.add_output([(node_new[j], (i, i + 8 * j)) for i in range(8)])
 
-        cipher.add_output([(cipher.IN, (i, i)) for i in range(32, 37)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        self.add_output([(self.IN, (i, i)) for i in range(32, 37)])

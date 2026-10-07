@@ -1,10 +1,11 @@
 from sage.crypto.sboxes import GIFT as gift_S
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import PermuteLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
 from civerly.wordsboxcipher import WordSBoxCipher
 
 
-class GIFT64_CVL:
+class GIFT64_CVL(CipherImplementation_CVL, WordSBoxCipher):
     # Bit permutation specifications with LSB-indexing
     Perm_LSB = (
         0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
@@ -27,7 +28,7 @@ class GIFT64_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-    def __init__(self, R=28, rks=None, name="GIFT-64"):
+    def __init__(self, R=28, key_schedule=None, key=None, name="GIFT-64"):
         r"""
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
 
@@ -40,7 +41,20 @@ class GIFT64_CVL:
 
             - ``R`` -- integer; Number of rounds (default 28)
 
-            - ``rks`` -- list[int]; The round keys (default [])
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``key`` via ``set_round_keys``. No built-in key schedule is
+              implemented for GIFT-64; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``key``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``key`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string; The object's name (default "GIFT-64")
 
@@ -60,7 +74,8 @@ class GIFT64_CVL:
         and 'GIFT64_test_vector_3.txt' in
         https://github.com/giftcipher/gift/blob/master/implementations/test%20vectors):
 
-            sage: rks = [
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: k = [
             ....:   0x8000000000000008, 0x8000000000000088, 0x8000000000000888,
             ....:   0x8000000000008888, 0x8000000000088888, 0x8000000000888880,
             ....:   0x8000000000888808, 0x8000000000888088, 0x8000000000880888,
@@ -74,12 +89,12 @@ class GIFT64_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift64 = GIFT64_CVL(R=28, rks=rks)
+            sage: gift64 = GIFT64_CVL(R=28, key=k, key_schedule=DefaultKeySchedule_CVL(64, 28))
             sage: vec_to_int(gift64(int_to_vec(0x0, 64))) == 0xf62bc3ef34f775ac
             True
 
 
-            sage: rks = [
+            sage: k = [
             ....:   0x8233023002030208, 0xb233323032033288, 0x8233023002030a88,
             ....:   0xb23332303203ba88, 0x80122203200a8a9b, 0x9032322330aa9ab3,
             ....:   0x80122203208a8a1b, 0x9032322330aa92bb, 0x8201022202b90a9a,
@@ -93,12 +108,12 @@ class GIFT64_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift64 = GIFT64_CVL(R=28, rks=rks)
+            sage: gift64 = GIFT64_CVL(R=28, key=k, key_schedule=DefaultKeySchedule_CVL(64, 28))
             sage: vec_to_int(gift64(int_to_vec(0xfedcba9876543210, 64))) == 0xc1b71f66160ff587
             True
 
 
-            sage: rks = [
+            sage: k = [
             ....:   0xa300032213120119, 0xb13101123333319b, 0xa032033120232a99,
             ....:   0xa13322132003999a, 0x81221112231b8b88, 0x8330311113bbbbb1,
             ....:   0x8131220320b9aa3a, 0x8231222313b88399, 0x9110231103aa0b8a,
@@ -112,7 +127,7 @@ class GIFT64_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.gift import GIFT64_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift64 = GIFT64_CVL(R=28, rks=rks)
+            sage: gift64 = GIFT64_CVL(R=28, key=k, key_schedule=DefaultKeySchedule_CVL(64, 28))
             sage: vec_to_int(gift64(int_to_vec(0xc450c7727a9b8a7d, 64))) == 0xe3272885fa94ba8b
             True
 
@@ -346,21 +361,9 @@ class GIFT64_CVL:
             7
 
         """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        # The default values of the round keys rks are set to 0
-        if rks is None:
-            rks = []
-        if rks == []:
-            rks = [0] * R
-        else:
-            # If the rks are provided, then we check if the number of rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks
-            # If len(rks) > R, then we consider only the needed number of rks
-            rks = list(rks)
-            if len(rks) < R:
-                rks = rks + [0] * (R - len(rks))
-            elif len(rks) > R:
-                rks = rks[:R]
+        rks = [0] * self.R
 
         # SubCells
         # 16 4-bits S-boxes in parallel
@@ -376,25 +379,24 @@ class GIFT64_CVL:
         permbits = PermuteLayer_CVL(perm_msb, word_coarseness=1, name="PermBits64")
 
         # Implementation of the GIFT64 cipher
-        gift = WordSBoxCipher(4, 16, 16, name=name)
-        state = gift.IN
+        state = self.IN
 
-        for r in range(R):
-            state = gift.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
-            state = gift.add_subcipher(permbits, [(state, (i, i)) for i in range(16)])
+        rk_components = []
+        for r in range(self.R):
+            state = self.add_subcipher(subcells, [(state, (i, i)) for i in range(16)])
+            state = self.add_subcipher(permbits, [(state, (i, i)) for i in range(16)])
             ark = RoundkeyXOR_CVL(64, const=rks[r], name=f"AddRoundKey_{r}")
-            state = gift.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
+            state = self.add_subcipher(ark, [(state, (i, i)) for i in range(16)])
+            rk_components.append(state)
 
-        gift.add_output([(state, (i, i)) for i in range(16)])
-        self.gift_cipher = gift
+        self.add_output([(state, (i, i)) for i in range(16)])
+        self._rk_components = [self.nodes[n] for n in rk_components]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.gift_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)
 
 
-class GIFT128_CVL:
+class GIFT128_CVL(CipherImplementation_CVL, WordSBoxCipher):
     # Bit permutation specifications with LSB-indexing
     Perm_LSB = (
         0, 33, 66, 99, 96, 1, 34, 67, 64, 97, 2, 35, 32, 65, 98, 3,
@@ -421,7 +423,7 @@ class GIFT128_CVL:
             permutation_msb[n - 1 - i] = (n - 1) - permutation_lsb[i]
         return permutation_msb
 
-    def __init__(self, R=40, rks=None, name="GIFT-128"):
+    def __init__(self, R=40, key_schedule=None, key=None, name="GIFT-128"):
         r"""
 
         Lightweight CiVerLy implementation of the GIFT-64 block cipher.
@@ -435,7 +437,20 @@ class GIFT128_CVL:
 
             - ``R`` -- integer; Number of rounds (default 40)
 
-            - ``rks`` -- list[int]; The round keys (default [])
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``key`` via ``set_round_keys``. No built-in key schedule is
+              implemented for GIFT-128; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``key``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``key`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
 
             - ``name`` -- string; The object's name (default "GIFT-128")
 
@@ -453,7 +468,8 @@ class GIFT128_CVL:
         (see files 'GIFT128_test_vector_2.txt' and 'GIFT128_test_vector_3.txt' in
         https://github.com/giftcipher/gift/blob/master/implementations/test%20vectors):
 
-            sage: rks = [
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: k = [
             ....:   0x86660660060606000066006000060008, 0xe6666660660666006066606060066088,
             ....:   0x822646244206060400620024000208cc, 0xa266666462462644606260246002e8cc,
             ....:   0x800666066006060600600006000888ee, 0x8066666660660666606060066088e8e6,
@@ -477,13 +493,13 @@ class GIFT128_CVL:
             ....: ]
             sage: from civerly.cipher_implementations.gift import GIFT128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift128 = GIFT128_CVL(R=40, rks=rks)
+            sage: gift128 = GIFT128_CVL(R=40, key=k, key_schedule=DefaultKeySchedule_CVL(128, 40))
             sage: vec_to_int(gift128(int_to_vec(0xfedcba9876543210fedcba9876543210, 128))) \
             ....:   == 0x8422241a6dbf5a9346af468409ee0152
             True
 
 
-            sage: rks = [
+            sage: k = [
             ....:   0xa666244600002020660620444462066e, 0xe40620024444042464002626602460ca,
             ....:   0xc2664662040000406202006626644eae, 0xe242044026220202664442426006e8a8,
             ....:   0xa02666244600002020444462066eee8e, 0xa4640620024444042626602460caec80,
@@ -504,10 +520,10 @@ class GIFT128_CVL:
             ....:   0xc2664662040000406202006626644ea6, 0xe242044026220202664442426006e828,
             ....:   0xa02666244600002020444462066ee68e, 0xa4640620024444042626602460ca6c80,
             ....:   0xc0426646620400000066266446a6ea0a, 0x8262420440262202424260066028e6c4
-            ....:   ]
+            ....: ]
             sage: from civerly.cipher_implementations.gift import GIFT128_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: gift128 = GIFT128_CVL(R=40, rks=rks)
+            sage: gift128 = GIFT128_CVL(R=40, key=k, key_schedule=DefaultKeySchedule_CVL(128, 40))
             sage: vec_to_int(gift128(int_to_vec(0xe39c141fa57dba43f08a85b6a91f86c1, 128))) == 0x13ede67cbdcc3dbf400a62d6977265ea
             True
 
@@ -652,22 +668,10 @@ class GIFT128_CVL:
             4032 variables and 9089 clauses were written to ...
             2
 
-            """
+        """
+        super().__init__(4, 32, 32, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        # The default values of the round keys rks are set to 0
-        if rks is None:
-            rks = []
-        if rks == []:
-            rks = [0] * R
-        else:
-            # If the rks are provided, then we check the number of rks are compatible with the number of rounds
-            # If len(rks) < R, then add zero rks
-            # If len(rks) > R, then we consider only the needed number of rks
-            rks = list(rks)
-            if len(rks) < R:
-                rks = rks + [0] * (R - len(rks))
-            elif len(rks) > R:
-                rks = rks[:R]
+        rks = [0] * self.R
 
         # SubCells
         # 32 4-bits S-boxes in parallel
@@ -683,20 +687,18 @@ class GIFT128_CVL:
         permbits = PermuteLayer_CVL(perm_msb, word_coarseness=1, name="PermBits128")
 
         # Implementation of the GIFT128 cipher
-        gift = WordSBoxCipher(4, 32, 32, name=name)
-        state = gift.IN
+        state = self.IN
 
-        for r in range(R):
-            state = gift.add_subcipher(subcells, [(state, (i, i)) for i in range(32)])
-            state = gift.add_subcipher(permbits, [(state, (i, i)) for i in range(32)])
+        rk_components = []
+        for r in range(self.R):
+            state = self.add_subcipher(subcells, [(state, (i, i)) for i in range(32)])
+            state = self.add_subcipher(permbits, [(state, (i, i)) for i in range(32)])
             ark = RoundkeyXOR_CVL(128, const=rks[r], name=f"AddRoundKey_{r}")
-            state = gift.add_subcipher(ark, [(state, (i, i)) for i in range(32)])
+            state = self.add_subcipher(ark, [(state, (i, i)) for i in range(32)])
+            rk_components.append(state)
 
-        gift.add_output([(state, (i, i)) for i in range(32)])
-        self.gift_cipher = gift
+        self.add_output([(state, (i, i)) for i in range(32)])
+        self._rk_components = [self.nodes[n] for n in rk_components]
 
-    def __new__(cls, *args, **kwargs):
-        """Instantiate a GIFT cipher."""
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.gift_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

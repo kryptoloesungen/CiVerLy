@@ -1,4 +1,5 @@
 from civerly.andrx import AndRX
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
 
 # Round: Add round constant -> theta(key, state) -> pi1 -> gamma -> pi2
@@ -14,16 +15,24 @@ rc1 = [
 RC_FINAL = 0xD4
 
 
-class NOEKEON_CVL:
-    def __init__(self, R=16, k=0x0, name="Noekeon"):
+class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
+    def __init__(self, R=16, key_schedule=None, key=None, name="Noekeon"):
         r"""
         CiVerLy implementation of Noekeon (https://gro.noekeon.org/Noekeon-spec.pdf).
         It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 16)
 
-            - ``k`` -- integer (128-bit); Master key (default: 0x0).  When given,
-              the round keys are derived and injected immediately.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys``.
+              Noekeon reuses the same master key ``key`` directly in every
+              round, so no key schedule is needed for correctness; this
+              parameter only exists for custom ``KeySchedule`` subclass
+              instances. Defaults to ``None`` (no key schedule).
+
+            - ``key`` -- integer (128-bit, optional); Master key. ``None``
+              (default) is treated as ``0x0``. When given, the round keys are
+              derived and injected immediately.
 
             - ``name`` -- string; The name of the cipher (default: "Noekeon").
               This will be used to name the cipher and the corresponding file
@@ -43,7 +52,7 @@ class NOEKEON_CVL:
             sage: P = 0x00000000000000000000000000000000
             sage: K = 0x00000000000000000000000000000000
             sage: C = 0xb1656851699e29fa24b70148503d2dfc
-            sage: cipher = NOEKEON_CVL(k=K)
+            sage: cipher = NOEKEON_CVL(key=K)
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
@@ -52,7 +61,7 @@ class NOEKEON_CVL:
             sage: K = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             sage: P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             sage: C = 0x2a78421b87c7d0924f26113f1d1349b2
-            sage: cipher = NOEKEON_CVL(k=K)
+            sage: cipher = NOEKEON_CVL(key=K)
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
@@ -61,7 +70,7 @@ class NOEKEON_CVL:
             sage: K = 0xb1656851699e29fa24b70148503d2dfc
             sage: P = 0x2a78421b87c7d0924f26113f1d1349b2
             sage: C = 0xe2f687e07b75660ffc372233bc47532c
-            sage: cipher = NOEKEON_CVL(k=K)
+            sage: cipher = NOEKEON_CVL(key=K)
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
@@ -151,9 +160,11 @@ class NOEKEON_CVL:
             10
 
         """
+        super().__init__(32, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name)
 
+        k = 0x0 if self.key is None else self.key
         assert 0 <= k < (1 << 128)
-        assert 0 <= R <= 16
+        assert 0 <= self.R <= 16
 
         # computing the subkeys based on the paper's specifications
         K0 = (k >> 96) & 0xFFFFFFFF
@@ -299,29 +310,20 @@ class NOEKEON_CVL:
         self._round_template = round_cipher
         self._node_rc = node_rc
 
-        cipher = AndRX(32, 4, 4, name=name)
-        node = cipher.IN
-        for r in range(R):
+        node = self.IN
+        for r in range(self.R):
             rc_word = int(rc1[r]) & 0xFF
             round_cipher.nodes[node_rc].const = rc_word
-            node = cipher.add_subcipher(
-                round_cipher, [(node, (i, i)) for i in range(4)]
-            )
+            node = self.add_subcipher(round_cipher, [(node, (i, i)) for i in range(4)])
 
         # finalization: a0 ^= (RC_FINAL<<24), then theta(key,state)
         final_node = node
-        if R == 16:
+        if self.R == 16:
             rc_final_xor = RoundkeyXOR_CVL(32, int(RC_FINAL) & 0xFF, name="rc_final")
-            node_rcf = cipher.add_subcipher(rc_final_xor, [(node, (0, 0))])
-            final_node = cipher.add_subcipher(
+            node_rcf = self.add_subcipher(rc_final_xor, [(node, (0, 0))])
+            final_node = self.add_subcipher(
                 theta,
                 [(node_rcf, (0, 0)), (node, (1, 1)), (node, (2, 2)), (node, (3, 3))],
             )
 
-        cipher.add_output([(final_node, (i, i)) for i in range(4)])
-        self.noekeon_cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.noekeon_cipher
+        self.add_output([(final_node, (i, i)) for i in range(4)])
