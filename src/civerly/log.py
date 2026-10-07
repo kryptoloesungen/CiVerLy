@@ -116,6 +116,7 @@ def analysis_log(log_file):
 
     Remove files::
 
+        sage: # optional - glpk
         sage: import shutil
         sage: shutil.rmtree(tmpdir, ignore_errors=True)
     """
