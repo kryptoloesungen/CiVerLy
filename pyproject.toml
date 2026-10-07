@@ -41,6 +41,7 @@ select = [
   "D419", # pydocstyle - docstring should not be empty
   "D301", # pydocstyle - use r""" if the docstring contains backslashes
   "PERF401", # perflint - use list comprehension/extend instead of append-in-loop
+  "T201", # flake8-print - no print, use logging instead
 ]
 ignore = [
   "E501", # line length - let the formatter handle this
