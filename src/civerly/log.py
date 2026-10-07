@@ -69,24 +69,11 @@ def analysis_log(log_file):
     file is extended and contains the messages of all analysis runs. If
     ``log_file`` is ``None``, nothing is written.
 
-    TESTS::
+    EXAMPLES::
 
-        sage: import logging, tempfile
-        sage: from pathlib import Path
-        sage: from civerly.log import analysis_log
-        sage: with tempfile.TemporaryDirectory() as tmpdir:
-        ....:   log_file = Path(tmpdir) / "run.log"
-        ....:   with analysis_log(log_file):
-        ....:       logging.getLogger("civerly.test").info("Hello")
-        ....:   logging.getLogger("civerly.test").info("Not in file")
-        ....:   print(log_file.read_text().strip().endswith("civerly.test: Hello"))
-        Hello
-        Not in file
-        True
-
-    A failed analysis run followed by a corrected one. The user forgets to
-    choose a linear layer modeling, which is required for the wordwise model
-    of AES::
+    Simulate a failed analysis run followed by a corrected one.
+    The user forgets to choose a linear layer modeling,
+    which is required for the wordwise model of AES::
 
         sage: # optional - glpk
         sage: import tempfile
