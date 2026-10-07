@@ -1623,7 +1623,6 @@ class Cipher:
             644 variables and 653 constraints were written to '...'
             5
             ... [INFO] civerly.sboxcipher: 644 variables and 653 constraints were written to '...'
-
         """
         log_file = None
         if model_options.write_to_file:
