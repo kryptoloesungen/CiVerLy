@@ -14,8 +14,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from sage.sat.solvers.dimacs import DIMACS
-
+from civerly.problem import SAT_CVL
 from civerly.util import suppress_output
 
 logger = logging.getLogger(__name__)
@@ -499,7 +498,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
     def __init__(self):
         """Initizialize the SAT solver interface."""
         super().__init__()
-        # 10 = SAT, 20 = UNSAT are standard DIMACS exit codes.
+        # 10 = SAT, 20 = UNSAT are standard exit codes of SAT solvers.
         self.errno_map = {
             0: SOLVING_STATUS.SUCCESS,
             10: SOLVING_STATUS.SUCCESS,
@@ -658,7 +657,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             }
 
         def _decide_at(w) -> dict:
-            sat = DIMACS()
+            sat = SAT_CVL()
             sat.read(str(input_file))
             start_time_model = time.perf_counter()
             constrained = self._generate_constraints_sum_leq_int_LS24(
@@ -833,7 +832,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         variables whose CNF index is in ``trail_vars`` participate in the
         clause; helpers are ignored.
         """
-        sat = DIMACS()
+        sat = SAT_CVL()
         sat.read(str(input_file))
         if trail_vars is not None:
             trail_vars = set(trail_vars)
@@ -851,7 +850,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
     def _parse_assignment_line(self, line):
         """
-        Parse a DIMACS-style assignment line into a ``{var: 0/1}`` dictionary.
+        Parse an assignment line into a ``{var: 0/1}`` dictionary.
 
         The line is expected to be a space-separated list of signed integers
         terminated by a ``0`` sentinel (the standard SAT solver output format).
@@ -900,7 +899,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
         INPUT:
 
-            - ``sat``-- sat model as ``DIMACS`` instance
+            - ``sat``-- sat model as ``SAT_CVL`` instance
 
             - ``sum_arr_file`` -- path to the JSON file containing the sum
               array, i.e. a list of ``(weight, var)`` pairs
@@ -924,14 +923,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         TESTS::
 
             sage: # optional - cryptominisat
-            sage: from sage.sat.solvers.dimacs import DIMACS
+            sage: from civerly.problem import SAT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: from pathlib import Path
             sage: tmpdir = tempfile.mkdtemp()
             sage: path = Path(tmpdir)
             sage: for NUM_CLAUSES in range(1, 20):
-            ....:   sat = DIMACS()
+            ....:   sat = SAT_CVL()
             ....:   for i in range(1, NUM_CLAUSES + 1): sat.add_clause((i,))
             ....:   for bound in range(NUM_CLAUSES + 4):
             ....:       new_sat = SOLVER.CRYPTOMINISAT._generate_constraints_sum_leq_int_LS24(
@@ -954,7 +953,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
         """
-        new_sat = DIMACS()
+        new_sat = SAT_CVL()
         for _ in range(sat.nvars()):
             new_sat.var()  # set counter to ``sat.nvars()``
         assert sat.nvars() == new_sat.nvars()

@@ -47,7 +47,6 @@ from pathlib import Path
 from sage.modules.free_module_element import vector
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
 from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.sat.solvers.dimacs import DIMACS
 
 from civerly.component import Component
 from civerly.log import analysis_log
@@ -57,6 +56,7 @@ from civerly.model_options import (
     OPTIMIZATION,
     InvalidModelOptionError,
 )
+from civerly.problem import SAT_CVL
 from civerly.trail import TrailNode
 from civerly.util import suppress_output, translate_sat_clause
 
@@ -1291,10 +1291,11 @@ class Cipher:
 
         We first generate a ``master_sat``, recursively iterate over
         ``self.nodes`` (and its subciphers) and collect the sub-SATs in
-        order to relabel and connect them correctly to one big SAT formula. To
-        avoid redundancy, a caching-mechanism is implemented which checks if
-        the currently modeled component was modeled before. If yes, the SAT
-        will be copied over instead of being generated from scratch again.
+        order to relabel and connect them correctly to one big SAT formula
+        (see :meth:`civerly.problem.SAT_CVL.append`). To avoid redundancy, a
+        caching-mechanism is implemented which checks if the currently
+        modeled component was modeled before. If yes, the SAT will be copied
+        over instead of being generated from scratch again.
 
         .. WARNING::
 
@@ -1318,17 +1319,22 @@ class Cipher:
         # ------------------------------------------------------------------------
         cnf_file_name = model_options.path / (f"{self.name.replace(' ', '_')}.cnf")
         if model_options.path is not None:
-            master_sat = DIMACS(filename=cnf_file_name)
+            master_sat = SAT_CVL(filename=cnf_file_name)
         else:
-            master_sat = DIMACS()
-        self.SAT_IN = [master_sat.var() for _ in range(self.input_length)]
-        self.SAT_OUT = [master_sat.var() for _ in range(self.output_length)]
+            master_sat = SAT_CVL()
+        # create the in- and output variables first, so that they occupy the
+        # first indices
+        self.SAT_IN = [master_sat.VAR_IN[i] for i in range(self.input_length)]
+        self.SAT_OUT = [master_sat.VAR_OUT[i] for i in range(self.output_length)]
 
-        sats = []
+        # VAR_MODEL[i] is the namespace the SAT of self.nodes[i] is copied into
+        VAR_MODEL = [
+            master_sat.new_variable(name=f"X{i}") for i in range(len(self.nodes))
+        ]
         self.sum_arr_sat = []
         # ------------------------------------------------------------------------
 
-        # dictionaries for translating variables in sage and the mps file
+        # dictionaries for translating variables in sage and the cnf file
         self.dictionaries_sat = [{} for _ in range(len(self.nodes))]
         self.inv_dictionaries_sat = [{} for _ in range(len(self.nodes))]
 
@@ -1340,75 +1346,29 @@ class Cipher:
                     comp = prev
                     self.nodes[i_comp] = self.nodes[i_prev]
 
-                    # copy the component sat programs
-                    sats.append(comp.sat)
-
-                    # copy the dictionaries
-                    self.dictionaries_sat[i_comp] = {
-                        master_sat.var(): val
-                        for _, val in sorted(
-                            self.dictionaries_sat[i_prev].items(),
-                            key=lambda _tup: _tup[0],
-                        )
-                    }
-                    self.inv_dictionaries_sat[i_comp] = {
-                        v: k for k, v in self.dictionaries_sat[i_comp].items()
-                    }
-
                     # recursively copy component dictionaries
                     comp._copy_over_dictionaries_recursively(prev, model_options)
-                    # copy the objective variables
-                    self.sum_arr_sat += [
-                        (factor, self.inv_dictionaries_sat[i_comp][entry])
-                        for factor, entry in prev.sum_arr_sat
-                    ]
-
-                    for asg in sats[i_comp].clauses():
-                        # copy the (translated) clauses
-                        clause = []
-                        for variable in asg[0]:
-                            assert variable != 0, (
-                                "During translation, a variable appears tohave value 0!"
-                            )
-                            clause.append(
-                                (-1) ** (variable < 0)
-                                * self.inv_dictionaries_sat[i_comp][abs(variable)]
-                            )
-                        master_sat.add_clause(tuple(clause))
+                    comp_sat = comp.sat
                     break
             else:
                 # model the components that have not been modeled before
                 comp_sat = comp.model(model_options, _first_iter=False)
-                sats.append(comp_sat)
 
-                ##############################################################
-                # parse the component SAT and adopt it into the master sat   #
-                ##############################################################
-                for variable in range(1, comp_sat.nvars() + 1):
-                    new_index = master_sat.var()
-                    self.dictionaries_sat[i_comp][new_index] = variable
-                self.inv_dictionaries_sat[i_comp] = {
-                    v: k for k, v in self.dictionaries_sat[i_comp].items()
-                }
+            ##############################################################
+            # parse the component SAT and adopt it into the master sat   #
+            ##############################################################
+            self.dictionaries_sat[i_comp] = master_sat.append(
+                comp_sat, VAR_MODEL[i_comp]
+            )
+            self.inv_dictionaries_sat[i_comp] = {
+                v: k for k, v in self.dictionaries_sat[i_comp].items()
+            }
 
-                for asg in comp_sat.clauses():
-                    # copy the (translated) clauses
-                    clause = []
-                    for variable in asg[0]:
-                        assert variable != 0, (
-                            "During translation, a variable appears tohave value 0!"
-                        )
-                        clause.append(
-                            (-1) ** (variable < 0)
-                            * self.inv_dictionaries_sat[i_comp][abs(variable)]
-                        )
-                    master_sat.add_clause(tuple(clause))
-
-                # copy over sum_arr_sat
-                self.sum_arr_sat += [
-                    (factor, self.inv_dictionaries_sat[i_comp][entry])
-                    for factor, entry in comp.sum_arr_sat
-                ]
+            # translate the objective variables
+            self.sum_arr_sat += [
+                (factor, self.inv_dictionaries_sat[i_comp][entry])
+                for factor, entry in comp.sum_arr_sat
+            ]
 
         # Connect the SATs with each other
         # --------------- set SAT_IN and SAT_OUT variables ---------------- #
@@ -1504,6 +1464,8 @@ class Cipher:
 
         model_options, model_options_ = model_options_, model_options
 
+        master_sat.VAR_MODEL = VAR_MODEL
+
         return self._finish_sat(model_options, master_sat, _first_iter=_first_iter)
 
     def _finish_sat(self, model_options, sat, _first_iter=False):
@@ -1514,7 +1476,7 @@ class Cipher:
         given probability, then the CNF model is UNSAT, if there exists at
         least one such trail, then it is SAT.
         """
-        assert isinstance(sat, DIMACS)
+        assert isinstance(sat, SAT_CVL)
         assert isinstance(_first_iter, bool)
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
@@ -2611,7 +2573,7 @@ class Cipher:
             (-v if results.get(v, 0) == 1 else v) for v in blocking_var_list
         )
 
-        sat = DIMACS()
+        sat = SAT_CVL()
         sat.read(str(input_file))
         sat.add_clause(blocking_clause)
         sat.write(input_file)
