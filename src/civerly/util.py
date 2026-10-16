@@ -338,7 +338,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     milp_to_minimize_milp.set_objective(sum(Z))
     # suppress_output in order to not make doctests fail
     with suppress_output():
-        milp_to_minimize_milp.write_mps(str(file_mps))
+        milp_to_minimize_milp.write(file_mps)
 
     result = model_options.milp_solver.solve(file_mps)
     results = result["assignment"]

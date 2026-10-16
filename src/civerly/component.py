@@ -2426,7 +2426,7 @@ class SBox_CVL(Component):
 
                 milp_to_minimize_milp.set_objective(sum(Z))
                 with suppress_output():  # to avoid doctest failure
-                    milp_to_minimize_milp.write_mps(str(s_file_mps))
+                    milp_to_minimize_milp.write(s_file_mps)
                 reduction_solution[prob] = solver.solve(s_file_mps)["assignment"]
 
             selected_inequations = {prob: [] for prob in reduction_solution}

@@ -1502,7 +1502,8 @@ class Cipher:
         if model_options.write_to_file:
             sat.write()
             print(
-                f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
+                f"{sat.number_of_variables()} variables and "
+                f"{sat.number_of_constraints()} clauses "
                 "were written to "
                 f"'{model_options.path / (self.name + '.cnf')!s}'"
             )

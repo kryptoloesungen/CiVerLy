@@ -157,8 +157,8 @@ def benchmark(CM):
             if model_options.optimization == OPTIMIZATION.SAT:
                 for weight, result in cipher.result["trace"].items():
                     row = ["", weight]
-                    row.append(result["model"].nvars())
-                    row.append(len(result["model"].clauses()))
+                    row.append(result["model"].number_of_variables())
+                    row.append(result["model"].number_of_constraints())
                     row.append(result["model_time"])
                     row.append(result["solve_time"])
                     if result["status"] == SOLVING_STATUS.SUCCESS:

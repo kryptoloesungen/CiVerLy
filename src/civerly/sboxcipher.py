@@ -475,7 +475,7 @@ class SBoxCipher(Cipher):
                 f"'{model_options.path / (self.name + '.mps')!s}'"
             )
             with suppress_output():
-                milp.write_mps(str(model_options.path / (self.name + ".mps")))
+                milp.write(model_options.path / (self.name + ".mps"))
 
         self.milp = milp
         return milp

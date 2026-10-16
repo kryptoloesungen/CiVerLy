@@ -425,7 +425,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
                 break
             self._exclude_assignment(milp, r["assignment"], trail_vars=trail_vars)
             with suppress_output():
-                milp.write_mps(str(input_file))
+                milp.write(input_file)
         return results
 
     def _exclude_assignment(self, milp, assignment, trail_vars=None):
