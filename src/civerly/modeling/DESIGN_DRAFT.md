@@ -1,3 +1,9 @@
+# On Model Options
+
+- How many options are required once we implement the separate encoders?
+  - Balance between the number of functions vs. dead-weight parameters / non-homogenity
+    in function definitions because of parameter variety?
+
 # Implementing encoders
 
 ## Simple encoding registry

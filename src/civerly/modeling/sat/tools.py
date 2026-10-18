@@ -192,6 +192,25 @@ def _encode_abg_helper(ctx: SATContext, width: int):
 # [ Encoding "Parity" Equations; Relevant for XOR / LinearLayer ]--- *)
 
 
+def _parity_three_xor(width: int):
+    # fmt: off
+    return tuple(
+        ParityEquation((i, i + width, i + 2 * width)) 
+        for i in range(width)
+    )
+    # fmt: on
+
+
+def _parity_equality(width: int):
+    # fmt: off
+    return tuple(
+        ParityEquation(vars) 
+        for i in range(width) 
+        for vars in ((i, i + width), (i, i + 2 * width))
+    )
+    # fmt: on
+
+
 def _encode_parity_equation_direct_sat(
     variables: tuple[SATVar, ...], rhs: int, ctx: SATContext
 ) -> None:

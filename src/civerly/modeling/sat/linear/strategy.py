@@ -20,6 +20,7 @@ from ...core import EncodingStrategy
 from ..core import SATContext, SATVar
 from ..tools import (
     _encode_xor,
+    _parity_equality,
     ParityEquation,
     _encode_abg_helper,
     _AND_LINEAR_TABLE,
@@ -35,6 +36,8 @@ from ..tools import (
 # )
 from ..strategy import encode_const_xor, encode_id, encode_permute_layer
 
+# [ Utils ]--------------------------------------------------------- *)
+
 
 # [ Const ]--------------------------------------------------------- *)
 
@@ -49,14 +52,4 @@ def encode_const(component: C_CVL, ctx: SATContext) -> None:
 
 
 def encode_xor(component: XOR_CVL, ctx: SATContext) -> None:
-
-    def _parity_equality(width: int):
-        # fmt: off
-        return tuple(
-            ParityEquation(vars) 
-            for i in range(width) 
-            for vars in ((i, i + width), (i, i + 2 * width))
-        )
-        # fmt: on
-
     _encode_xor(component, ctx, _parity_equality)

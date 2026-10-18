@@ -5,7 +5,10 @@ in `tools.py` or are entirely standalone.
 """
 
 from typing import Any
-from ..model_options import CRYPTANALYSIS
+
+#
+from .. import model_options as MO
+from ..component import Component
 
 from functools import cache
 from sage.crypto.sbox import SBox
@@ -23,13 +26,13 @@ def type_name(obj: Any) -> str:
     return type(obj).__name__
 
 
-def _transition_table(sbox: SBox, analysis: CRYPTANALYSIS):
+def _transition_table(sbox: SBox, analysis: MO.CRYPTANALYSIS):
     """nil"""
 
     match analysis:
-        case CRYPTANALYSIS.DIFFERENTIAL:
+        case MO.CRYPTANALYSIS.DIFFERENTIAL:
             return sbox.difference_distribution_table()
-        case CRYPTANALYSIS.LINEAR:
+        case MO.CRYPTANALYSIS.LINEAR:
             # use LAT instead of DDT
             return [
                 [abs(int(entry * len(sbox))) for entry in row]
@@ -38,3 +41,10 @@ def _transition_table(sbox: SBox, analysis: CRYPTANALYSIS):
         case _:
             raise ValueError()
 
+
+def _wordcoarse_perm_table(table, wc: int) -> tuple[int]:
+    return tuple(wc * table[i] + j for i in range(len(table)) for j in range(wc))
+
+
+def _get_divide_factor(component: Component, options: MO.MODEL_OPTIONS):
+    return component.wordsize if options.granularity == MO.GRANULARITY.WORDWISE else 1

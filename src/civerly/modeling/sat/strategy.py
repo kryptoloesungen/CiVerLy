@@ -13,6 +13,7 @@ from ...component import (
 from ...util import translate_sat_clause
 
 from ..tools import _identity_table, _rotation_table
+from ..utils import _wordcoarse_perm_table
 
 #
 from .core import SATContext
@@ -39,5 +40,5 @@ def encode_const_xor(component: ConstXOR_CVL, ctx: SATContext) -> None:
 
 def encode_permute_layer(component: PermuteLayer_CVL, ctx: SATContext) -> None:
     wc = component.word_coarseness
-    table = tuple(wc * component.perm[i] + j for i in range(len(component.perm)) for j in range(wc))
+    table = _wordcoarse_perm_table(component.perm, wc)
     _encode_permutation_sat(table)
