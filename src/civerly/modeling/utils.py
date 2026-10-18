@@ -38,5 +38,3 @@ def _transition_table(sbox: SBox, analysis: CRYPTANALYSIS):
         case _:
             raise ValueError()
 
-
-
