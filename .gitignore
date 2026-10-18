@@ -5,3 +5,11 @@ docs/source/installation/versions.rst
 # Copy .local-shell-hook.sh.example to .local-shell-hook.sh and edit it.
 /.local-shell-hook.sh
 /result
+
+
+# [mtvkn@impulsivebishop] specific stuff for @refactor-encoding
+**/__pycache__/
+*.ju.py
+.jukit/
+/testdir/
+/build/
