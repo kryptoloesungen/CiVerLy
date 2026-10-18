@@ -18,7 +18,12 @@ from ...core import EncodingStrategy
 
 #
 from ..core import SATContext, SATVar
-from ..tools import _AND_DIFFERENTIAL_TABLE
+from ..tools import (
+    _encode_xor,
+    ParityEquation,
+    _encode_abg_helper,
+    _AND_DIFFERENTIAL_TABLE,
+)
 
 
 # Analysis independent; implemented in modeling.sat.strategy;
@@ -33,6 +38,22 @@ from ..strategy import encode_const_xor, encode_id, encode_permute_layer
 
 # [ Const ]--------------------------------------------------------- *)
 
+
 def encode_const(component: C_CVL, ctx: SATContext) -> None:
     for variable in ctx.OUT:
         ctx.model.add_clause((-variable,))
+
+
+# [ XOR ]----------------------------------------------------------- *)
+
+
+def encode_xor(component: XOR_CVL, ctx: SATContext) -> None:
+    def _parity_three_xor(width: int):
+        # fmt: off
+        return tuple(
+            ParityEquation((i, i + width, i + 2 * width)) 
+            for i in range(width)
+        )
+        # fmt: on
+
+    _encode_xor(component, ctx, _parity_three_xor)

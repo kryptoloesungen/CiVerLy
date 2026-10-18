@@ -89,3 +89,26 @@ def _weighted_transition_rel(
     )
 
     return WeightedTransitions(iw, ow, transitions, int(table[0][0]))
+
+
+# [ Parity Equations ]---------------------------------------------- *)
+
+@dataclass(frozen=True, slots=True)
+class ParityEquation:
+    """indices of all variables in one XOR equation
+
+    assuminig flat local namespace:
+        [IN..., OUT...] = [0, ... , |IN| - 1, |IN|, ... , |OUT| - 1]
+
+    Example:
+        variables = (0, 2, 5), rhs = 0
+
+    means:
+        VAR[0] XOR VAR[2] XOR VAR[5] = 0
+    """
+
+    variables: tuple[int, ...]
+
+    # right hand side
+    rhs: Bit = 0
+

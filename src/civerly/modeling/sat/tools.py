@@ -5,14 +5,16 @@ from functools import cache
 from math import log2
 from numbers import Number
 from pathlib import Path
+from collections.abc import Callable
 
 #
 from ... import model_options as MO
-from ...component import SBox_CVL, AND_CVL
+from ...component import SBox_CVL, AND_CVL, XOR_CVL
 
 #
 from ..tools import _weighted_transition_rel
-from ..tools import WeightedTransitions
+from ..tools import WeightedTransitions, Bit
+from ..tools import ParityEquation
 
 #
 from .core import SATVar, SATContext
@@ -202,3 +204,13 @@ def _encode_parity_equation_direct_sat(
         ctx.model.add_clause(
             tuple(-var if value else var for var, value in zip(variables, assignment, strict=False))
         )
+
+
+def _encode_xor(
+    component: XOR_CVL, ctx: SATContext, parity_equation_f: Callable[int, ParityEquation]
+) -> None:
+    variables = (*ctx.IN, *ctx.OUT)
+
+    for equation in parity_equation_f(component.word_length):
+        eqvars = tuple(variables[i] for i in equation.variables)
+        _encode_parity_equation_direct_sat(eqvars, equation.rhs, ctx)
