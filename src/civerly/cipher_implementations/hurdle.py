@@ -1,5 +1,6 @@
 from sage.crypto.sbox import SBox
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import RK_CVL, XOR_CVL, ModAdd_CVL, PermuteLayer_CVL, SBox_CVL
 from civerly.wordbasedcipher import WordBasedCipher
 
@@ -97,7 +98,7 @@ def hurdle_key_schedule(masterkey):
     return out
 
 
-class HURDLE_F_CVL:
+class HURDLE_F_CVL(WordBasedCipher):
     def __init__(self, rk=0x0) -> None:
         r"""
         Implementation of HURDLE-II's F function, imitating MidnightBlue's
@@ -126,20 +127,20 @@ class HURDLE_F_CVL:
         """
 
         # build F function
-        hurdle_f = WordBasedCipher(4, 8, 8, name="F")
+        super().__init__(4, 8, 8, name="F")
 
         rk_comp = RK_CVL(96, rk, name="rk")
-        rk_node = hurdle_f.add_subcipher(rk_comp, [])
+        rk_node = self.add_subcipher(rk_comp, [])
         rk_adds = [None for _ in range(12)]
 
         E = [3 - i for i in [1, 3, 0, 2, 3, 1, 2, 0, 3, 2, 1, 0]]
         for i in range(12):
             rk_add = ModAdd_CVL(8, name=f"rk_add{i}")
-            rk_adds[i] = hurdle_f.add_subcipher(
+            rk_adds[i] = self.add_subcipher(
                 rk_add,
                 [
-                    (hurdle_f.IN, (2 * E[i], 0)),
-                    (hurdle_f.IN, (2 * E[i] + 1, 1)),
+                    (self.IN, (2 * E[i], 0)),
+                    (self.IN, (2 * E[i] + 1, 1)),
                     (rk_node, (2 * i, 2)),
                     (rk_node, (2 * i + 1, 3)),
                 ],
@@ -174,21 +175,19 @@ class HURDLE_F_CVL:
         S = [SBox_CVL(sb, name=f"HURDLE-S{i}") for i in range(12)]
 
         sbox_nodes = [None for _ in range(12)]
-        sbox_nodes[11] = hurdle_f.add_subcipher(
+        sbox_nodes[11] = self.add_subcipher(
             S[11], [(rk_adds[11], (j, j)) for j in range(2)]
         )
 
         for i in range(10, -1, -1):
             xor = XOR_CVL(8, name=f"xor{i}")
-            node = hurdle_f.add_subcipher(
+            node = self.add_subcipher(
                 xor,
                 [(rk_adds[i], (j, j)) for j in range(2)]
                 + [(sbox_nodes[i + 1], (j, j + 2)) for j in range(2)],
             )
 
-            sbox_nodes[i] = hurdle_f.add_subcipher(
-                S[i], [(node, (j, j)) for j in range(2)]
-            )
+            sbox_nodes[i] = self.add_subcipher(S[i], [(node, (j, j)) for j in range(2)])
 
         perm = [
             0, 4, 8, 12, 16, 20, 24, 28,
@@ -198,21 +197,12 @@ class HURDLE_F_CVL:
         ]  # fmt: skip
         P = PermuteLayer_CVL([perm[i] for i in range(32)], name="P").inv()
 
-        node_perm = hurdle_f.add_subcipher(
-            P, [(sbox_nodes[i], (1, i)) for i in range(8)]
-        )
-        hurdle_f.add_output([(node_perm, (i, i)) for i in range(8)])
-
-        self.cipher = hurdle_f
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        node_perm = self.add_subcipher(P, [(sbox_nodes[i], (1, i)) for i in range(8)])
+        self.add_output([(node_perm, (i, i)) for i in range(8)])
 
 
-class HURDLE_CVL:
-    def __init__(self, R=16, k=None, name="HURDLE-II") -> None:
+class HURDLE_CVL(CipherImplementation_CVL, WordBasedCipher):
+    def __init__(self, R=16, key_schedule=None, key=None, name="HURDLE-II") -> None:
         r"""
         Implementation of the HURDLE cipher, imitating MidnightBlue's
         implementation (https://github.com/MidnightBlueLabs/TETRA_crypto/blob/main/hurdle.c).
@@ -220,8 +210,19 @@ class HURDLE_CVL:
 
             - ``R`` -- integer; Number of rounds (default: 16)
 
-            - ``k`` -- integer (128-bit); Master key (default: None).  When given,
-              the round keys are derived and injected immediately.
+            - ``key_schedule`` -- callable or
+              :class:`civerly.keyschedule.KeySchedule` (optional); Key
+              schedule used to derive round keys from ``key`` via
+              ``set_round_keys``. Pass ``hurdle_key_schedule`` to use the real
+              HURDLE key schedule, a custom callable/``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (``R`` of them, 96 bits each).
+              Defaults to ``None`` (no key schedule, all-zero round keys).
+
+            - ``key`` -- integer (optional); The 128-bit master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
 
             - ``name`` -- string; The name of the cipher (default: "HURDLE-II").
               This will be used to name the cipher and the corresponding file
@@ -231,10 +232,12 @@ class HURDLE_CVL:
 
         Test HURDLE-F from the outside:
 
-            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.cipher_implementations.hurdle import (
+            ....:   HURDLE_CVL, hurdle_key_schedule)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle_f = HURDLE_CVL(
-            ....:   R=1, k=0x99990099991188992277993366994455
+            ....:   R=1, key=0x99990099991188992277993366994455,
+            ....:   key_schedule=hurdle_key_schedule
             ....:   ).nodes[1].nodes[1]
             sage: vec_to_int(hurdle_f(int_to_vec(0x2222eeee, 32))) == \
             ....:   0x2bee4c18
@@ -242,32 +245,42 @@ class HURDLE_CVL:
 
         Test round-reduced versions of HURDLE-II:
 
-            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.cipher_implementations.hurdle import (
+            ....:   HURDLE_CVL, hurdle_key_schedule)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: hurdle = HURDLE_CVL(R=1, k=0x99990099991188992277993366994455)
+            sage: hurdle = HURDLE_CVL(
+            ....:   R=1, key=0x99990099991188992277993366994455,
+            ....:   key_schedule=hurdle_key_schedule)
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0x09cc2a7e2222eeee
             True
-            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.cipher_implementations.hurdle import (
+            ....:   HURDLE_CVL, hurdle_key_schedule)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: hurdle = HURDLE_CVL(R=2, k=0xabcdef12c001f00ddeadbeefcafebabe)
+            sage: hurdle = HURDLE_CVL(
+            ....:   R=2, key=0xabcdef12c001f00ddeadbeefcafebabe,
+            ....:   key_schedule=hurdle_key_schedule)
             sage: vec_to_int(hurdle(int_to_vec(0xcafebabedeadbeef, 64))) == \
             ....:   0x01451285643ddd6f
             True
 
         Test full round HURDLE-II:
 
-            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.cipher_implementations.hurdle import (
+            ....:   HURDLE_CVL, hurdle_key_schedule)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle = HURDLE_CVL(
-            ....:   R=16, k=0x99990099991188992277993366994455)
+            ....:   R=16, key=0x99990099991188992277993366994455,
+            ....:   key_schedule=hurdle_key_schedule)
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0xb4da6698d36b1652
             True
-            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.cipher_implementations.hurdle import (
+            ....:   HURDLE_CVL, hurdle_key_schedule)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle = HURDLE_CVL(
-            ....:   R=16, k=0xabcdef12c001f00ddeadbeefcafebabe)
+            ....:   R=16, key=0xabcdef12c001f00ddeadbeefcafebabe,
+            ....:   key_schedule=hurdle_key_schedule)
             sage: vec_to_int(hurdle(int_to_vec(0xcafebabedeadbeef, 64))) == \
             ....:   0x4bf15508812e06f0
             True
@@ -295,12 +308,13 @@ class HURDLE_CVL:
             12
 
         """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        cipher = WordBasedCipher(4, 16, 16, name=name)
+        rks = [0] * self.R
 
-        round_node = cipher.IN
-        for _r in range(R):
-            hurdle_f = HURDLE_F_CVL(rk=0)
+        round_node = self.IN
+        for r in range(self.R):
+            hurdle_f = HURDLE_F_CVL(rk=rks[r])
 
             # build feistel round
             hurdle_round = WordBasedCipher(4, 16, 16, name="round")
@@ -315,25 +329,17 @@ class HURDLE_CVL:
             )
             hurdle_round.add_output([(node, (i, i + 8)) for i in range(8)])
             hurdle_round.add_output([(hurdle_round.IN, (i + 8, i)) for i in range(8)])
-            round_node = cipher.add_subcipher(
+            round_node = self.add_subcipher(
                 hurdle_round, [(round_node, (i, i)) for i in range(16)]
             )
 
         # final swap (as in MidnightBlue's implementation)
-        cipher.add_output([(round_node, (i, (i + 8) % 16)) for i in range(16)])
+        self.add_output([(round_node, (i, (i + 8) % 16)) for i in range(16)])
 
         # collect RK references after deepcopying is complete
-        cipher._rk_components = [
-            cipher.nodes[r + 1].nodes[1].nodes[1] for r in range(R)
+        self._rk_components = [
+            self.nodes[r + 1].nodes[1].nodes[1] for r in range(self.R)
         ]
-        cipher.key_schedule = hurdle_key_schedule
 
-        self.cipher = cipher
-
-        if k is not None:
-            cipher.set_round_keys(k)
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

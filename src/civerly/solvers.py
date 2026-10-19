@@ -4,6 +4,7 @@ Utils for interacting with MILP and SAT solvers.
 
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
@@ -15,6 +16,8 @@ from pathlib import Path
 
 from civerly.problem import SAT_CVL
 from civerly.util import suppress_output
+
+logger = logging.getLogger(__name__)
 
 
 def _float_or_int(value):
@@ -245,7 +248,9 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
 
         if solution_file.exists():
-            print(f"Using existing file {solution_file}, make sure it is up to date!")
+            logger.info(
+                f"Using existing file {solution_file}, make sure it is up to date!"
+            )
             objective_value, assignment = self._process_solution_file(solution_file)
             return {
                 "status": SOLVING_STATUS.SUCCESS,
@@ -531,7 +536,9 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         log_file = input_file.parent / f"{input_file.stem}_{self.name}.log"
 
         if solution_file.exists():
-            print(f"Using existing file {solution_file}, make sure it is up to date!")
+            logger.info(
+                f"Using existing file {solution_file}, make sure it is up to date!"
+            )
             satisfiability, assignment = self._process_solution_file(solution_file)
             return {
                 "status": SOLVING_STATUS.SUCCESS,
@@ -1296,35 +1303,32 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"time limit reached"
         self.bounds_regexp = r"Primal Bound\s*:\s*(\S+).*\nDual Bound\s*:\s*(\S+).*"
 
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the SCIP solver via its CLI.
-
-        SCIP needs a settings file alongside the command-line invocation; this
-        method writes it before delegating to the shared MILP template and
-        removes it afterwards.
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        try:
-            with Path("scip_settings.set").open("w") as f:
-                f.write("write/printzeros = TRUE")
-                if time_limit is not None:
-                    f.write(f"\nlimits/time = {time_limit}")
-            return super().invoke(input_file, solution_file, log_file, time_limit)
-        finally:
-            Path("scip_settings.set").unlink(missing_ok=True)
-
     def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Build the SCIP CLI command list."""
+        """
+        Build the SCIP CLI command list.
+
+        EXAMPLE::
+
+            sage: from pathlib import Path
+            sage: from civerly.solvers import SCIP_CVL
+            sage: SCIP_CVL()._build_command(
+            ....:     Path("m.mps"), Path("m.sol"), Path("m.log"), time_limit=10)
+            ['scip',
+             '-c',
+             'set write printzeros TRUE set limits time 10 read m.mps optimize write solution m.sol quit',
+             '-l',
+             'm.log']
+        """
+        settings = "set write printzeros TRUE"
+        if time_limit is not None:
+            settings += f" set limits time {time_limit}"
         return [
             "scip",
             "-c",
-            (f"read {input_file} optimize write solution {solution_file} quit"),
-            "-s",
-            "scip_settings.set",
+            (
+                f"{settings} read {input_file} optimize "
+                f"write solution {solution_file} quit"
+            ),
             "-l",
             str(log_file),
         ]
@@ -2189,7 +2193,9 @@ class ESPRESSO_CVL(LOGIC_MINIMIZER_CVL):
         """
         self._check_can_invoke()
         if solution_file.exists():
-            print(f"Using existing file {solution_file}, make sure it is up to date!")
+            logger.info(
+                f"Using existing file {solution_file}, make sure it is up to date!"
+            )
         else:
             command = ["espresso", "-epos", str(input_file)]
             with solution_file.open("a") as redirect:

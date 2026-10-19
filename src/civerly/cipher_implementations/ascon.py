@@ -3,17 +3,24 @@ from sage.matrix.special import circulant
 from sage.modules.free_module_element import vector
 from sage.rings.finite_rings.finite_field_constructor import GF
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import LinearLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
 from civerly.sboxcipher import SBoxCipher
 from civerly.wordsboxcipher import WordSBoxCipher
 
 
-class ASCON_CVL:
-    def __init__(self, R=12, name="Ascon"):
+class ASCON_CVL(CipherImplementation_CVL, SBoxCipher):
+    def __init__(self, R=12, key_schedule=None, key=None, name="Ascon"):
         r"""
         The CiVerLy implementation of ASCON. It takes the following arguments:
 
             - ``R`` -- integer; Number of rounds.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Unused, since ASCON has no round key components.
+
+            - ``key`` -- integer (optional); Unused, since ASCON has no round
+              key components.
 
             - ``name`` -- string; The name of the cipher (default: "Ascon").
               Will be used to name the cipher and the corresponding files
@@ -57,6 +64,7 @@ class ASCON_CVL:
 
 
         """
+        super().__init__(320, 320, R=R, key_schedule=key_schedule, key=key, name=name)
 
         constants = [
             0xf0, 0xe1, 0xd2, 0xc3,
@@ -128,20 +136,12 @@ class ASCON_CVL:
 
         # Inserting the round functions into the ASCON cipher
         # ------------------------------------------------ #
-        ascon_cipher = SBoxCipher(320, 320, name=name)
-        node_round_start = ascon_cipher.IN
+        node_round_start = self.IN
 
-        for r in range(R):
-            ascon_round.nodes[1].nodes[1].const = constants[-R:][r]
-            node_round_start = ascon_cipher.add_subcipher(
+        for r in range(self.R):
+            ascon_round.nodes[1].nodes[1].const = constants[-self.R :][r]
+            node_round_start = self.add_subcipher(
                 ascon_round, [(node_round_start, (i, i)) for i in range(320)]
             )
-        ascon_cipher.add_output([(node_round_start, (i, i)) for i in range(320)])
+        self.add_output([(node_round_start, (i, i)) for i in range(320)])
         # ------------------------------------------------ #
-
-        self.ascon_cipher = ascon_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.ascon_cipher

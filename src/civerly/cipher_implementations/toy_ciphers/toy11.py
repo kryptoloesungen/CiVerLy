@@ -7,7 +7,7 @@ from civerly.sboxcipher import SBoxCipher
 
 
 # cipher testing whether linear modeling of k-branching works for k > 2
-class Toy11:
+class Toy11(SBoxCipher):
     def __init__(self):
         r"""
 
@@ -56,18 +56,18 @@ class Toy11:
             1
 
         """
+        super().__init__(3, 8, name="toy11")
 
-        cipher = SBoxCipher(3, 8, name="toy11")
         arr = [[0, 1, 1], [1, 0, 1], [0, 0, 1]]
 
         mat = matrix(GF(2), arr)
         ll = LinearLayer_CVL(mat, name="L")
 
         node = []
-        node.append(cipher.add_subcipher(ll, [(cipher.IN, (i, i)) for i in range(3)]))
-        node.append(cipher.add_subcipher(ll, [(cipher.IN, (i, i)) for i in range(3)]))
-        node.append(cipher.add_subcipher(ll, [(cipher.IN, (i, i)) for i in range(3)]))
-        node.append(cipher.add_subcipher(ll, [(cipher.IN, (i, i)) for i in range(3)]))
+        node.append(self.add_subcipher(ll, [(self.IN, (i, i)) for i in range(3)]))
+        node.append(self.add_subcipher(ll, [(self.IN, (i, i)) for i in range(3)]))
+        node.append(self.add_subcipher(ll, [(self.IN, (i, i)) for i in range(3)]))
+        node.append(self.add_subcipher(ll, [(self.IN, (i, i)) for i in range(3)]))
 
         S = SBox((
             14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
@@ -76,7 +76,7 @@ class Toy11:
             15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13,
         ))  # fmt: skip
         sb = SBox_CVL(S, name="S")
-        node2 = cipher.add_subcipher(sb, [(node[i // 3], (i % 3, i)) for i in range(6)])
+        node2 = self.add_subcipher(sb, [(node[i // 3], (i % 3, i)) for i in range(6)])
 
         S = SBox((
             14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
@@ -86,7 +86,7 @@ class Toy11:
         ))  # fmt: skip
         sb = SBox_CVL(S, name="S")
 
-        node3 = cipher.add_subcipher(
+        node3 = self.add_subcipher(
             sb,
             [
                 (node[2], (0, 0)),
@@ -97,12 +97,5 @@ class Toy11:
                 (node[3], (2, 5)),
             ],
         )
-        cipher.add_output([(node2, (i, i)) for i in range(4)])
-        cipher.add_output([(node3, (i, i + 4)) for i in range(4)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        self.add_output([(node2, (i, i)) for i in range(4)])
+        self.add_output([(node3, (i, i + 4)) for i in range(4)])

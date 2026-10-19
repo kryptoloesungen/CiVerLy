@@ -3,7 +3,7 @@ from civerly.component import ModAdd_CVL, RotateLayer_CVL
 
 
 # cipher using ModAdd_CVL, enforcing probabilistic transition
-class Toy6:
+class Toy6(Cipher):
     def __init__(self):
         r"""
 
@@ -32,39 +32,31 @@ class Toy6:
 
 
         """
+        super().__init__(32, 16, name="Toy6")
 
         rot5 = RotateLayer_CVL(16, r=5, name="rot5")
         rot7 = RotateLayer_CVL(16, r=7, name="rot7")
         modadd = ModAdd_CVL(16, name="ModAdd")
 
-        cipher = Cipher(32, 16, name="Toy6")
-
-        node_rot1 = cipher.add_subcipher(rot5, [(cipher.IN, (i, i)) for i in range(16)])
-        node_rot2 = cipher.add_subcipher(
-            rot7, [(cipher.IN, (i + 16, i)) for i in range(16)]
+        node_rot1 = self.add_subcipher(rot5, [(self.IN, (i, i)) for i in range(16)])
+        node_rot2 = self.add_subcipher(
+            rot7, [(self.IN, (i + 16, i)) for i in range(16)]
         )
 
-        node_xor1 = cipher.add_subcipher(
+        node_xor1 = self.add_subcipher(
             modadd,
             [(node_rot1, (i, i)) for i in range(16)]
-            + [(cipher.IN, (i, i + 16)) for i in range(16)],
+            + [(self.IN, (i, i + 16)) for i in range(16)],
         )
-        node_xor2 = cipher.add_subcipher(
+        node_xor2 = self.add_subcipher(
             modadd,
             [(node_rot2, (i, i)) for i in range(16)]
-            + [(cipher.IN, (i + 16, i + 16)) for i in range(16)],
+            + [(self.IN, (i + 16, i + 16)) for i in range(16)],
         )
 
-        node_modadd1 = cipher.add_subcipher(
+        node_modadd1 = self.add_subcipher(
             modadd,
             [(node_xor1, (i, i)) for i in range(16)]
             + [(node_xor2, (i, i + 16)) for i in range(16)],
         )
-        cipher.add_output([(node_modadd1, (i, i)) for i in range(16)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        self.add_output([(node_modadd1, (i, i)) for i in range(16)])

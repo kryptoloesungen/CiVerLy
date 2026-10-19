@@ -5,7 +5,7 @@ from civerly.sboxcipher import SBoxCipher
 
 
 # cipher using different sbox sizes in one layer
-class Toy7:
+class Toy7(SBoxCipher):
     def __init__(self):
         r"""
 
@@ -90,8 +90,7 @@ class Toy7:
             sage: shutil.rmtree(tmpdir)
 
         """
-
-        cipher = SBoxCipher(24, 64, name="Toy7")
+        super().__init__(24, 64, name="Toy7")
 
         # 2 -> 3
         S1 = SBox_CVL(SBox((6, 2, 5, 1)), name="S(2 -> 3)")
@@ -145,15 +144,8 @@ class Toy7:
             43, 31, 23, 25, 22, 12, 14, 44, 16, 5, 42, 28, 13,
         ]  # fmt: skip
 
-        node = cipher.IN
-        node = cipher.add_subcipher(round1, [(node, (i, i)) for i in range(24)])
-        node = cipher.add_subcipher(round2, [(node, (i, P36[i])) for i in range(36)])
-        node = cipher.add_subcipher(round3, [(node, (i, P48[i])) for i in range(48)])
-        cipher.add_output([(node, (i, i)) for i in range(64)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        node = self.IN
+        node = self.add_subcipher(round1, [(node, (i, i)) for i in range(24)])
+        node = self.add_subcipher(round2, [(node, (i, P36[i])) for i in range(36)])
+        node = self.add_subcipher(round3, [(node, (i, P48[i])) for i in range(48)])
+        self.add_output([(node, (i, i)) for i in range(64)])

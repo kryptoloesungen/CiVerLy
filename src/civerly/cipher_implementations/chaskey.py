@@ -1,8 +1,9 @@
 from civerly.addrx import AddRX
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import XOR_CVL, ModAdd_CVL, RotateLayer_CVL
 
 
-class ChaskeyQRF_CVL:
+class ChaskeyQRF_CVL(AddRX):
     # chaskey permutation function
     def __init__(self, name="ChaskeyQRF_CVL"):
         r"""
@@ -78,7 +79,7 @@ class ChaskeyQRF_CVL:
 
 
         """
-        chaskey_qr = AddRX(32, 4, 4, name=name)
+        super().__init__(32, 4, 4, name=name)
         # modular addition operation
         add = ModAdd_CVL(32, name="add")
         # xor addition operation
@@ -91,48 +92,45 @@ class ChaskeyQRF_CVL:
         rot16 = RotateLayer_CVL(32, 16, name="rot16")
 
         # Step 1: v0 += v1
-        a0 = chaskey_qr.add_subcipher(
-            add, [(chaskey_qr.IN, (0, 0)), (chaskey_qr.IN, (1, 1))]
-        )
+        a0 = self.add_subcipher(add, [(self.IN, (0, 0)), (self.IN, (1, 1))])
         # Step 2: v01 = rot5(v1)^v0
-        b1 = chaskey_qr.add_subcipher(rot5, [(chaskey_qr.IN, (1, 0))])
-        b2 = chaskey_qr.add_subcipher(xor, [(b1, (0, 0)), (a0, (0, 1))])
-        a3 = chaskey_qr.add_subcipher(rot16, [(a0, (0, 0))])
+        b1 = self.add_subcipher(rot5, [(self.IN, (1, 0))])
+        b2 = self.add_subcipher(xor, [(b1, (0, 0)), (a0, (0, 1))])
+        a3 = self.add_subcipher(rot16, [(a0, (0, 0))])
         # Step 3: v2 += v3
-        c0 = chaskey_qr.add_subcipher(
-            add, [(chaskey_qr.IN, (2, 0)), (chaskey_qr.IN, (3, 1))]
-        )
+        c0 = self.add_subcipher(add, [(self.IN, (2, 0)), (self.IN, (3, 1))])
         # Step 4: v3 = rot8(v3) ^ v2
-        d1 = chaskey_qr.add_subcipher(rot8, [(chaskey_qr.IN, (3, 0))])
-        d2 = chaskey_qr.add_subcipher(xor, [(d1, (0, 0)), (c0, (0, 1))])
+        d1 = self.add_subcipher(rot8, [(self.IN, (3, 0))])
+        d2 = self.add_subcipher(xor, [(d1, (0, 0)), (c0, (0, 1))])
         # Step 5: v0 += v3
-        a4 = chaskey_qr.add_subcipher(add, [(a3, (0, 0)), (d2, (0, 1))])
-        d3 = chaskey_qr.add_subcipher(rot13, [(d2, (0, 0))])
-        d4 = chaskey_qr.add_subcipher(xor, [(d3, (0, 0)), (a4, (0, 1))])
+        a4 = self.add_subcipher(add, [(a3, (0, 0)), (d2, (0, 1))])
+        d3 = self.add_subcipher(rot13, [(d2, (0, 0))])
+        d4 = self.add_subcipher(xor, [(d3, (0, 0)), (a4, (0, 1))])
         # Step 6: v2 += v1
-        c1 = chaskey_qr.add_subcipher(add, [(c0, (0, 0)), (b2, (0, 1))])
-        b3 = chaskey_qr.add_subcipher(rot7, [(b2, (0, 0))])
-        b4 = chaskey_qr.add_subcipher(xor, [(b3, (0, 0)), (c1, (0, 1))])
-        c2 = chaskey_qr.add_subcipher(rot16, [(c1, (0, 0))])
+        c1 = self.add_subcipher(add, [(c0, (0, 0)), (b2, (0, 1))])
+        b3 = self.add_subcipher(rot7, [(b2, (0, 0))])
+        b4 = self.add_subcipher(xor, [(b3, (0, 0)), (c1, (0, 1))])
+        c2 = self.add_subcipher(rot16, [(c1, (0, 0))])
 
-        chaskey_qr.add_output([(a4, (0, 0)), (b4, (0, 1)), (c2, (0, 2)), (d4, (0, 3))])
-        self.chaskey_qr = chaskey_qr
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.chaskey_qr
+        self.add_output([(a4, (0, 0)), (b4, (0, 1)), (c2, (0, 2)), (d4, (0, 3))])
 
 
-class Chaskey_CVL:
+class Chaskey_CVL(CipherImplementation_CVL, AddRX):
     # this class applies the permutation function 8 times
-    def __init__(self, R=8, name="Chaskey"):
+    def __init__(self, R=8, key_schedule=None, key=None, name="Chaskey"):
         r"""
 
         The CiVerLy implementation of the Chaskey Cipher. It takes the
         following arguments:
 
             - ``R`` -- integer; Number of rounds (default: 8)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Unused, since Chaskey has no round key components
+              (default: ``None``).
+
+            - ``key`` -- integer (optional); Unused, since Chaskey has no
+              round key components (default: ``None``).
 
             - ``name`` -- string; The name of the cipher (default: "Chaskey").
               Will be used to name the cipher and the corresponding files
@@ -170,21 +168,14 @@ class Chaskey_CVL:
             4
 
         """
+        super().__init__(32, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name)
 
         chaskey_round = ChaskeyQRF_CVL()
 
-        chaskey_cipher = AddRX(32, 4, 4, name=name)
-        state = chaskey_cipher.IN
-        for _ in range(R):
-            state = chaskey_cipher.add_subcipher(
+        state = self.IN
+        for _ in range(self.R):
+            state = self.add_subcipher(
                 chaskey_round, [(state, (i, i)) for i in range(4)]
             )
 
-        chaskey_cipher.add_output([(state, (i, i)) for i in range(4)])
-        self.chaskey_cipher = chaskey_cipher
-
-    def __new__(cls, *args, **kwargs):
-        """Instantiate a Chaskey cipher."""
-        instance = super().__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.chaskey_cipher
+        self.add_output([(state, (i, i)) for i in range(4)])

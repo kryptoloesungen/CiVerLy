@@ -21,5 +21,6 @@ This sites are automatically generated from the docstrings in the Python files.
    addrx
    solvers
    util
+   log
    benchmark
    implementations/index

@@ -35,6 +35,7 @@ EXAMPLES::
 """
 
 import json
+import logging
 import subprocess
 import time
 from collections.abc import Iterable
@@ -48,6 +49,7 @@ from sage.modules.vector_mod2_dense import Vector_mod2_dense
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.component import Component
+from civerly.log import analysis_log
 from civerly.model_options import (
     CRYPTANALYSIS,
     GRANULARITY,
@@ -57,6 +59,8 @@ from civerly.model_options import (
 from civerly.problem import SAT_CVL
 from civerly.trail import TrailNode
 from civerly.util import suppress_output, translate_sat_clause
+
+logger = logging.getLogger(__name__)
 
 
 class CipherNotValidError(Exception):
@@ -616,9 +620,10 @@ class Cipher:
 
         EXAMPLES::
 
-            sage: from civerly.cipher_implementations.hurdle import HURDLE_CVL
+            sage: from civerly.cipher_implementations.hurdle import (
+            ....:   HURDLE_CVL, hurdle_key_schedule)
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: hurdle = HURDLE_CVL(R=1)
+            sage: hurdle = HURDLE_CVL(R=1, key_schedule=hurdle_key_schedule)
             sage: hurdle.set_round_keys(0x99990099991188992277993366994455)
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0x09cc2a7e2222eeee
@@ -1501,9 +1506,8 @@ class Cipher:
 
         if model_options.write_to_file:
             sat.write()
-            print(
-                f"{sat.number_of_variables()} variables and "
-                f"{sat.number_of_constraints()} clauses "
+            logger.info(
+                f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
                 "were written to "
                 f"'{model_options.path / (self.name + '.cnf')!s}'"
             )
@@ -1581,6 +1585,35 @@ class Cipher:
             sage: cipher.result['status'] == SOLVING_STATUS.TIMEOUT
             True
 
+        All messages of the analysis run are appended to
+        ``<name>_civerly.log`` in ``model_options.path``::
+
+            sage: # optional - glpk
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:   aes = AES_CVL(R=2)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:       cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:       optimization=OPTIMIZATION.MILP,
+            ....:       granularity=GRANULARITY.WORDWISE,
+            ....:       linear_layer_modeling=LINEAR_LAYER_MODELING.BRANCH_NUMBER,
+            ....:       milp_solver=SOLVER.GLPK,
+            ....:       path=Path(tmpdir))
+            ....:   aes.analyse(model_options)
+            ....:   print((Path(tmpdir) / "AES_civerly.log").read_text(), end="")
+            644 variables and 653 constraints were written to '...'
+            5
+            ... [INFO] civerly.sboxcipher: 644 variables and 653 constraints were written to '...'
+        """
+        log_file = None
+        if model_options.write_to_file:
+            model_options.path.mkdir(parents=True, exist_ok=True)
+            log_file = model_options.path / f"{self.name}_civerly.log"
+        with analysis_log(log_file):
+            return self._analyse(model_options)
+
+    def _analyse(self, model_options):
+        r"""
+        Implementation of :meth:`analyse`, see there.
         """
         start_time_analyse = time.perf_counter()
         # Reset per-analysis state.
@@ -1591,7 +1624,7 @@ class Cipher:
             if self.milp is None:
                 self.model(model_options)
             else:
-                print("Using existing MILP model, make sure it is up to date!")
+                logger.info("Using existing MILP model, make sure it is up to date!")
                 self._finish_milp(model_options, self.milp)
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
@@ -1640,7 +1673,7 @@ class Cipher:
             if self.sat is None:
                 self.model(model_options)
             else:
-                print("Using existing SAT model, make sure it is up to date!")
+                logger.info("Using existing SAT model, make sure it is up to date!")
                 self._finish_sat(model_options, self.sat)
             input_file = model_options.path / (self.name + ".cnf")
             sum_arr_file = model_options.path / (self.name + "sum.json")
@@ -2007,7 +2040,7 @@ class Cipher:
         """
         with Path(path).open("w") as f:
             json.dump(self._to_dict(), f, default=lambda obj: int(obj))
-        print(f"Object '{self.name}' has been exported to {path}.")
+        logger.info(f"Object '{self.name}' has been exported to {path}.")
 
     @classmethod
     def _init_from_dict(cls, d):
@@ -2221,7 +2254,7 @@ class Cipher:
                 for f in model_options.path.glob(pattern):
                     subprocess.Popen(["rm", "-f", f]).wait()
 
-        print(f"Output file in: {pdf_file_name}")
+        logger.info(f"Output file in: {pdf_file_name}")
 
     def _latex_section(self, trail_node, model_options) -> str:
         r"""
