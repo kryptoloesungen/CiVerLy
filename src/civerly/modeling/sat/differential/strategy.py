@@ -13,7 +13,7 @@ from ....component import (
 )
 
 #
-from ...tools import bits_to_int
+from ...tools import bits_to_int, _linear_layer_equations
 from ...core import EncodingStrategy
 
 #
@@ -23,7 +23,6 @@ from ..tools import (
     _encode_xor_equations,
     _parity_three_xor,
     _two_bit_xor_differential,
-    _linear_layer_equations,
     _encode_linear_layer_exclude_odd,
     _encode_linear_layer_more_dummies,
     _encode_abg_helper,

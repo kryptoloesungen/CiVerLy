@@ -271,13 +271,12 @@ def _two_bit_xor_differential(vars):
     return ((x1, x2, x3),)
 
 
-
-
 def _linear_layer_more_dummies(
     ctx: SATContext,
     equations: tuple[ParityEquation, ...],
     two_bit_xor_f: Callable[[tuple[SATVar, ...]], tuple[tuple[SATVar]]],
 ):
+    """nil"""
     for equation in equations:
         active_vars = equation.variables
 
@@ -313,6 +312,7 @@ def _encode_linear_layer_exclude_odd(
     """nil"""
     equations, _ = encode_linear_layer(component, ctx)
     _encode_xor_equations(ctx, equations)
+    return
 
 
 def _encode_linear_layer_more_dummies(
@@ -324,3 +324,4 @@ def _encode_linear_layer_more_dummies(
 
     equations, two_bit_xor_f = encode_linear_layer(component, ctx)
     _linear_layer_more_dummies(ctx, equations, two_bit_xor_f)
+    return

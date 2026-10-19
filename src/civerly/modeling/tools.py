@@ -7,6 +7,7 @@ from itertools import product
 from dataclasses import dataclass, field
 from typing import Any, TYPE_CHECKING
 from typing_extensions import Literal
+import numpy as np
 
 
 #
@@ -136,6 +137,7 @@ def _weighted_transition_rel(
 
 # [ Parity and Linear Layer utils ]--------------------------------- *)
 
+
 @dataclass(frozen=True, slots=True)
 class ParityEquation:
     """indices of all variables in one XOR equation
@@ -172,7 +174,46 @@ def _linear_layer_equations(matrix, IN, OUT) -> tuple[ParityEquation, ...]:
     return equations
 
 
-def _parity_violating_assignments(n: int, rhs: int):
+
+def _parity_violating_assignments(n: int, rhs: int) -> np.ndarray:
+    """Lovely website about error-correction: https://errorcorrectionzoo.org/c/parity_check
+
+    Single-parity check code gives us exactly the binary vectors that we can interpret as
+    integers with even parity.
+
+    Using a generator matrix : G = [I_{n - 1} | allones] where allones = (1 1 1 ... 1)^t
+    it is clear that for any u in F_2^{n-1}:
+            uG = (u1, u2, ..., u_{n-1}, XOR(ui))
+
+    We want all u's with parity that violates XOR(ui) = rhs, i.e. all u's that satisfy XOR(ui) = 1 - rhs
+
+    An inductive procedure:
+    1. start with a vector u{k} of dimension k
+    2. define the next vector u{k + 1} as u{k}G + (1 - r)e_{k + 1} where e_{k + 1} is a standard unit
+
+    Basically, we are taking ints with 1, 2, ..., n - 1 bits, shifting them left and XORing 1 - rhs
+    to the shifted int to get a result with a desired parity.
+
+    """
+
+    if n == 0:
+        if rhs == 1:  # <=> 1 - rhs == 0
+            return 0
+        raise ValueError("No satisfying assignments exist n == 0 and rhs == 0.")
+
+    # all possible u's up to 2^{n-1} - 1 (since max overall is 2^n - 1 and we shift left by 1)
+    Us = np.arange(1 << (n - 1), dtype=int)
+
+    # lshift by 1 and xor a bit to get correct parity
+    parities = (np.bitwise_count(Us) & 1).astype(int) ^ (1 - rhs)
+    Us = (Us << 1) | parities
+
+    # transform ints to bit-vectors
+    shifts = np.arange(n - 1, -1, -1, dtype=int)
+    return ((Us[:, None] >> shifts) & 1).astype(int).tolist()
+
+
+def _parity_violating_assignments_old(n: int, rhs: int):
     return (assignment for assignment in product((0, 1), repeat=n) if sum(assignment) % 2 != rhs)
 
 
@@ -186,24 +227,33 @@ def _parity_violating_assignments(n: int, rhs: int):
 # publisher="Springer International Publishing",
 # address="Cham",
 # pages="113--121",
-# abstract="This chapter is focused on the parity polytope, i.e., the convex hull of all 0-1 vectors with an even number of ones. A closely related polytope is the convex hull of all 0-1 vectors with an odd number of ones. We show two alternative compact extended formulations for both polytopes, one based on the union of polyhedra and the other one on LP. Whereas the former is a quadratic extension, the latter is only linear. This result seems to be new.",
+# abstract="This chapter is focused on the parity polytope, i.e., the convex hull of all 0-1 vectors with an even number of ones.",
 # isbn="978-3-319-63976-5",
 # doi="10.1007/978-3-319-63976-5_8",
 # url="https://doi.org/10.1007/978-3-319-63976-5_8"
 # }
 #
 
-
-def _even_parity_polytope_h_form():
+def _even_parity_polytope_h_form(ctx: MILPContext, matrix, IN, OUT):
     """
     Let F be a subset of {0, 1, ..., n - 1} and let |F| = 1 mod 2.
 
     External representation:
         sum_{i in F} zi - sum_{i not in F} zi <= |F| - 1
 
-    Rearanging variables:
+    Re-aranging variables:
         sum_{i in F} (1 - zi) - sum_{i not in F} zi >= 1
 
 
     """
-    return
+
+    equations = _linear_layer_equations(matrix, IN, OUT)
+    for equation in equations:
+        for assignment in _parity_violating_assignments(len(equation.variables), rhs=0):
+            ctx.model.add_constraint(
+                sum(
+                    1 - var if value else var
+                    for var, value in zip(equation.variables, assignment, strict=True)
+                )
+                >= 1
+            )
