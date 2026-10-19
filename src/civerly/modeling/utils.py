@@ -4,14 +4,23 @@ in `tools.py` or are entirely standalone.
 
 """
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
+from functools import cache
+
+
+#
+from sage.crypto.sbox import SBox
 
 #
 from .. import model_options as MO
-from ..component import Component
+from ..component import Component, LinearLayer_CVL, SBox_CVL
 
-from functools import cache
-from sage.crypto.sbox import SBox
+
+if TYPE_CHECKING:
+    from .milp.core import MILPContext
+
+
+# ----------------------------------------------------------------- *)
 
 
 def int_to_bits(integer: int, width: int) -> tuple[int, ...]:
@@ -48,3 +57,5 @@ def _wordcoarse_perm_table(table, wc: int) -> tuple[int]:
 
 def _get_divide_factor(component: Component, options: MO.MODEL_OPTIONS):
     return component.wordsize if options.granularity == MO.GRANULARITY.WORDWISE else 1
+
+
