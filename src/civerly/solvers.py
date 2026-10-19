@@ -1304,35 +1304,32 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"time limit reached"
         self.bounds_regexp = r"Primal Bound\s*:\s*(\S+).*\nDual Bound\s*:\s*(\S+).*"
 
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the SCIP solver via its CLI.
-
-        SCIP needs a settings file alongside the command-line invocation; this
-        method writes it before delegating to the shared MILP template and
-        removes it afterwards.
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        try:
-            with Path("scip_settings.set").open("w") as f:
-                f.write("write/printzeros = TRUE")
-                if time_limit is not None:
-                    f.write(f"\nlimits/time = {time_limit}")
-            return super().invoke(input_file, solution_file, log_file, time_limit)
-        finally:
-            Path("scip_settings.set").unlink(missing_ok=True)
-
     def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Build the SCIP CLI command list."""
+        """
+        Build the SCIP CLI command list.
+
+        EXAMPLE::
+
+            sage: from pathlib import Path
+            sage: from civerly.solvers import SCIP_CVL
+            sage: SCIP_CVL()._build_command(
+            ....:     Path("m.mps"), Path("m.sol"), Path("m.log"), time_limit=10)
+            ['scip',
+             '-c',
+             'set write printzeros TRUE set limits time 10 read m.mps optimize write solution m.sol quit',
+             '-l',
+             'm.log']
+        """
+        settings = "set write printzeros TRUE"
+        if time_limit is not None:
+            settings += f" set limits time {time_limit}"
         return [
             "scip",
             "-c",
-            (f"read {input_file} optimize write solution {solution_file} quit"),
-            "-s",
-            "scip_settings.set",
+            (
+                f"{settings} read {input_file} optimize "
+                f"write solution {solution_file} quit"
+            ),
             "-l",
             str(log_file),
         ]
