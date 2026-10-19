@@ -13,7 +13,7 @@ from ....component import (
 )
 
 #
-from ...utils import bits_to_int
+from ...tools import bits_to_int
 from ...core import EncodingStrategy
 
 #
@@ -62,17 +62,18 @@ def encode_xor(component: XOR_CVL, ctx: SATContext) -> None:
 # the goal here is to remove both the Linear vs Differential options
 # and to remove Exclude odd vs More dummies options
 #
-# Since most of the code is the same, right now it is all done with 
+# Since most of the code is the same, right now it is all done with
 # a bunch of function call which barely differe from one another,
 # so we could think of a better way of implementing it here *shrug*
 #
 
+
 def _encode_linear_layer(component: LinearLayer_CVL, ctx: SATContext) -> None:
     matrix = component.binary_matrix
-    source_offset = 0
-    target_offset = component.input_length
+    IN = ctx.IN
+    OUT = ctx.OUT
 
-    equations = _linear_layer_equations(matrix, source_offset, target_offset)
+    equations = _linear_layer_equations(matrix, IN, OUT)
     two_bit_xor_f = _two_bit_xor_differential
 
     return equations, two_bit_xor_f

@@ -13,7 +13,7 @@ from ....component import (
 )
 
 #
-from ...utils import bits_to_int, _get_divide_factor
+from ...tools import bits_to_int, _get_divide_factor
 from ...core import EncodingStrategy
 
 #

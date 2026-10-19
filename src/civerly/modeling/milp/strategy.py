@@ -13,7 +13,7 @@ from ...component import (
 )
 from ...util import translate_sat_clause
 
-from ..utils import _wordcoarse_perm_table, _get_divide_factor
+from ..tools import _wordcoarse_perm_table, _get_divide_factor
 from ..tools import _identity_table, _rotation_table
 
 #

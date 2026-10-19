@@ -29,6 +29,7 @@ from ...component import (
 from ..tools import _weighted_transition_rel
 from ..tools import WeightedTransitions, Bit
 from ..tools import ParityEquation
+from ..tools import _parity_violating_assignments
 
 #
 from .core import SATVar, SATContext
@@ -235,20 +236,18 @@ def _parity_equality(width: int):
     # fmt: on
 
 
-def _encode_parity_equation_direct_sat(
-    variables: tuple[SATVar, ...], rhs: int, ctx: SATContext
-) -> None:
+# fmt: off
+def _encode_parity_equation_direct_sat(variables: tuple[SATVar, ...], rhs: int, ctx: SATContext) -> None:
 
     # This will exclude constraints of the type XOR_i vi != rhs
     #
     # So, if rhs == 0, we are excluding assignments with odd HW
-    for assignment in product((0, 1), repeat=len(variables)):
-        if sum(assignment) % 2 == rhs:
-            continue
-
-        ctx.model.add_clause(
-            tuple(-var if value else var for var, value in zip(variables, assignment, strict=False))
-        )
+    for assignment in _parity_violating_assignments(n=len(variables), rhs=rhs):
+        ctx.model.add_clause(tuple(
+            -var if value else var 
+            for var, value in zip(variables, assignment, strict=False)
+        ))
+# fmt: on
 
 
 def _encode_xor_equations(ctx: SATContext, equations: tuple[ParityEquation, ...]) -> None:
@@ -272,20 +271,6 @@ def _two_bit_xor_differential(vars):
     return ((x1, x2, x3),)
 
 
-def _linear_layer_equations(matrix, source_offset, target_offset) -> tuple[ParityEquation, ...]:
-    equations = tuple(
-        # parity equation to exclude assignments with odd HW (hence, rhs = 0)
-        ParityEquation(
-            (
-                *tuple(source_offset + i for i, entry in enumerate(row) if entry == 1),
-                target_offset + row_index,
-            ),
-            rhs=0,
-        )
-        for row_index, row in enumerate(matrix)
-    )
-
-    return equations
 
 
 def _linear_layer_more_dummies(
@@ -293,9 +278,8 @@ def _linear_layer_more_dummies(
     equations: tuple[ParityEquation, ...],
     two_bit_xor_f: Callable[[tuple[SATVar, ...]], tuple[tuple[SATVar]]],
 ):
-    ctx_vars = (*ctx.IN, *ctx.OUT)
     for equation in equations:
-        active_vars = tuple(ctx_vars[vi] for vi in equation.variables)
+        active_vars = equation.variables
 
         if len(active_vars) <= 2:
             _encode_parity_equation_direct_sat(active_vars, equation.rhs, ctx)

@@ -17,7 +17,7 @@ from ....component import (
 )
 
 #
-from ...utils import bits_to_int
+from ...tools import bits_to_int
 from ...core import EncodingStrategy
 
 #
@@ -77,10 +77,10 @@ def encode_xor(component: XOR_CVL, ctx: SATContext) -> None:
 
 def _encode_linear_layer(component: LinearLayer_CVL, ctx: SATContext) -> None:
     matrix = component.binary_matrix.transpose()
-    source_offset = component.input_length
-    target_offset = 0
+    IN = ctx.OUT
+    OUT = ctx.IN
 
-    equations = _linear_layer_equations(matrix, source_offset, target_offset)
+    equations = _linear_layer_equations(matrix, IN, OUT)
     two_bit_xor_f = _two_bit_xor_linear
 
     return equations, two_bit_xor_f

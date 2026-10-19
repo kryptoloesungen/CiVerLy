@@ -5,7 +5,7 @@ from typing import Generic, TypeVar, TYPE_CHECKING
 from functools import singledispatch
 
 #
-from .utils import type_name
+from .tools import type_name
 
 #
 if TYPE_CHECKING:

@@ -40,7 +40,7 @@ from ...component import (
 
 #
 from ..tools import _weighted_transition_rel
-from ..utils import _get_divide_factor, int_to_bits, bits_to_int
+from ..tools import _get_divide_factor, int_to_bits, bits_to_int
 from ..tools import WeightedTransitions, Bit
 from ..tools import ParityEquation
 
