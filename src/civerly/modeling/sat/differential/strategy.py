@@ -19,9 +19,13 @@ from ...core import EncodingStrategy
 #
 from ..core import SATContext, SATVar
 from ..tools import (
-    _encode_xor,
-    _parity_three_xor,
     ParityEquation,
+    _encode_xor_equations,
+    _parity_three_xor,
+    _two_bit_xor_differential,
+    _linear_layer_equations,
+    _encode_linear_layer_exclude_odd,
+    _encode_linear_layer_more_dummies,
     _encode_abg_helper,
     _AND_DIFFERENTIAL_TABLE,
 )
@@ -37,7 +41,7 @@ from ..tools import (
 from ..strategy import encode_const_xor, encode_id, encode_permute_layer
 
 
-# [ Const ]--------------------------------------------------------- *)
+# [ C_CVL ]--------------------------------------------------------- *)
 
 
 def encode_const(component: C_CVL, ctx: SATContext) -> None:
@@ -45,8 +49,38 @@ def encode_const(component: C_CVL, ctx: SATContext) -> None:
         ctx.model.add_clause((-variable,))
 
 
-# [ XOR ]----------------------------------------------------------- *)
+# [ XOR_CVL ]------------------------------------------------------- *)
 
 
 def encode_xor(component: XOR_CVL, ctx: SATContext) -> None:
-    _encode_xor(component, ctx, _parity_three_xor)
+    equations = _parity_three_xor(component.word_length)
+    _encode_xor_equations(ctx, equations)
+
+
+# [ LinearLayer_CVL ]----------------------------------------------- *)
+#
+# the goal here is to remove both the Linear vs Differential options
+# and to remove Exclude odd vs More dummies options
+#
+# Since most of the code is the same, right now it is all done with 
+# a bunch of function call which barely differe from one another,
+# so we could think of a better way of implementing it here *shrug*
+#
+
+def _encode_linear_layer(component: LinearLayer_CVL, ctx: SATContext) -> None:
+    matrix = component.binary_matrix
+    source_offset = 0
+    target_offset = component.input_length
+
+    equations = _linear_layer_equations(matrix, source_offset, target_offset)
+    two_bit_xor_f = _two_bit_xor_differential
+
+    return equations, two_bit_xor_f
+
+
+def encode_linear_layer_exclude_odd(component: LinearLayer_CVL, ctx: SATContext) -> None:
+    _encode_linear_layer_exclude_odd(component, ctx, _encode_linear_layer)
+
+
+def encode_linear_layer_more_dummies(component: LinearLayer_CVL, ctx: SATContext) -> None:
+    _encode_linear_layer_more_dummies(component, ctx, _encode_linear_layer)

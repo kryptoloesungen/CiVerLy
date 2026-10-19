@@ -9,7 +9,21 @@ from collections.abc import Callable
 
 #
 from ... import model_options as MO
-from ...component import SBox_CVL, AND_CVL, XOR_CVL
+from ...component import (
+    AND_CVL,
+    C_CVL,
+    I_CVL,
+    XOR_CVL,
+    Component,
+    ConstXOR_CVL,
+    LinearLayer_CVL,
+    RotateLayer_CVL,
+    ModAdd_CVL,
+    PermuteLayer_CVL,
+    SBox_CVL,
+    ROT_AND_CVL,
+)
+
 
 #
 from ..tools import _weighted_transition_rel
@@ -18,6 +32,16 @@ from ..tools import ParityEquation
 
 #
 from .core import SATVar, SATContext
+
+
+# [ Bit Permutations ]---------------------------------------------- *)
+
+
+def _encode_permutation_sat(table: tuple[int], ctx: SATContext) -> None:
+    for i, j in enumerate(table):
+        ctx.model.add_clause((ctx.OUT[j], -ctx.IN[i]))
+        ctx.model.add_clause((-ctx.OUT[j], ctx.IN[i]))
+
 
 # [ Utilities for _SAT encoding_ of probablistic transitions ]------ *)
 #
@@ -215,7 +239,9 @@ def _encode_parity_equation_direct_sat(
     variables: tuple[SATVar, ...], rhs: int, ctx: SATContext
 ) -> None:
 
-    # [@imp being obnoxious]
+    # This will exclude constraints of the type XOR_i vi != rhs
+    #
+    # So, if rhs == 0, we are excluding assignments with odd HW
     for assignment in product((0, 1), repeat=len(variables)):
         if sum(assignment) % 2 == rhs:
             continue
@@ -225,11 +251,92 @@ def _encode_parity_equation_direct_sat(
         )
 
 
-def _encode_xor(
-    component: XOR_CVL, ctx: SATContext, parity_equation_f: Callable[int, ParityEquation]
-) -> None:
+def _encode_xor_equations(ctx: SATContext, equations: tuple[ParityEquation, ...]) -> None:
     variables = (*ctx.IN, *ctx.OUT)
 
-    for equation in parity_equation_f(component.word_length):
+    for equation in equations:
         eqvars = tuple(variables[i] for i in equation.variables)
         _encode_parity_equation_direct_sat(eqvars, equation.rhs, ctx)
+
+
+# [ Helpers for linear layer encoding ]----------------------------- *)
+
+
+def _two_bit_xor_linear(vars):
+    x1, x2, x3 = vars
+    return (x1, x2), (x1, x3)
+
+
+def _two_bit_xor_differential(vars):
+    x1, x2, x3 = vars
+    return ((x1, x2, x3),)
+
+
+def _linear_layer_equations(matrix, source_offset, target_offset) -> tuple[ParityEquation, ...]:
+    equations = tuple(
+        # parity equation to exclude assignments with odd HW (hence, rhs = 0)
+        ParityEquation(
+            (
+                *tuple(source_offset + i for i, entry in enumerate(row) if entry == 1),
+                target_offset + row_index,
+            ),
+            rhs=0,
+        )
+        for row_index, row in enumerate(matrix)
+    )
+
+    return equations
+
+
+def _linear_layer_more_dummies(
+    ctx: SATContext,
+    equations: tuple[ParityEquation, ...],
+    two_bit_xor_f: Callable[[tuple[SATVar, ...]], tuple[tuple[SATVar]]],
+):
+    ctx_vars = (*ctx.IN, *ctx.OUT)
+    for equation in equations:
+        active_vars = tuple(ctx_vars[vi] for vi in equation.variables)
+
+        if len(active_vars) <= 2:
+            _encode_parity_equation_direct_sat(active_vars, equation.rhs, ctx)
+            continue
+
+        current_node = active_vars[0]
+        for variable in active_vars[1:-2]:
+            alpha = current_node
+            beta = variable
+            gamma = ctx.model.var()
+            VAR = (alpha, beta, gamma)
+            for eq in two_bit_xor_f(VAR):
+                _encode_parity_equation_direct_sat(eq, 0, ctx)
+            current_node = gamma
+
+        alpha = current_node
+        beta = active_vars[-2]
+        gamma = active_vars[-1]
+        VAR = (alpha, beta, gamma)
+
+        for eq in two_bit_xor_f(VAR):
+            _encode_parity_equation_direct_sat(eq, equation.rhs, ctx)
+    return
+
+
+def _encode_linear_layer_exclude_odd(
+    component: LinearLayer_CVL,
+    ctx: SATContext,
+    encode_linear_layer: Callable[[Component, SATContext], tuple[ParityEquation, ...], Callable],
+) -> None:
+    """nil"""
+    equations, _ = encode_linear_layer(component, ctx)
+    _encode_xor_equations(ctx, equations)
+
+
+def _encode_linear_layer_more_dummies(
+    component: LinearLayer_CVL,
+    ctx: SATContext,
+    encode_linear_layer: Callable[[Component, SATContext], tuple[ParityEquation, ...], Callable],
+) -> None:
+    """nil"""
+
+    equations, two_bit_xor_f = encode_linear_layer(component, ctx)
+    _linear_layer_more_dummies(ctx, equations, two_bit_xor_f)

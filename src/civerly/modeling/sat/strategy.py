@@ -17,14 +17,7 @@ from ..utils import _wordcoarse_perm_table
 
 #
 from .core import SATContext
-
-# [ Bit Permutations ]---------------------------------------------- *)
-
-
-def _encode_permutation_sat(table: tuple[int], ctx: SATContext) -> None:
-    for i, j in enumerate(table):
-        ctx.model.add_clause((ctx.OUT[j], -ctx.IN[i]))
-        ctx.model.add_clause((-ctx.OUT[j], ctx.IN[i]))
+from .tools import _encode_permutation_sat, _encode_xor_equations, _encode_parity_equation_direct_sat
 
 
 # ----------------------------------------------------------------- *)
@@ -42,3 +35,5 @@ def encode_permute_layer(component: PermuteLayer_CVL, ctx: SATContext) -> None:
     wc = component.word_coarseness
     table = _wordcoarse_perm_table(component.perm, wc)
     _encode_permutation_sat(table)
+
+
