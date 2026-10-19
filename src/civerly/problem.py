@@ -747,6 +747,7 @@ class MILP_CVL(Problem_CVL, MixedIntegerLinearProgram):
 
         return milp
 
+
 class SATVariable(dict):
     r"""
     The SAT counterpart of SageMath's ``MIPVariable``: a dictionary mapping
