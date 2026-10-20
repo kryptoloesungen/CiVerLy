@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from functools import partial
 
 #
 from ....util import translate_sat_clause
@@ -17,18 +18,23 @@ from ....component import (
 )
 
 #
-from ...tools import bits_to_int, _linear_layer_equations
+from ...tools import (
+    bits_to_int,
+    _linear_layer_equations,
+    _build_linear_equations,
+    _build_differential_equations,
+)
 from ...core import EncodingStrategy
+
 
 #
 from ..core import SATContext, SATVar
 from ..tools import (
     ParityEquation,
     _encode_xor_equations,
+    _encode_xor_dummies_linear,
+    _encode_linear_layer,
     _parity_equality,
-    _two_bit_xor_linear,
-    _encode_linear_layer_exclude_odd,
-    _encode_linear_layer_more_dummies,
     _encode_abg_helper,
     _AND_LINEAR_TABLE,
 )
@@ -59,7 +65,7 @@ def encode_const(component: C_CVL, ctx: SATContext) -> None:
 
 
 def encode_xor(component: XOR_CVL, ctx: SATContext) -> None:
-    equations = _parity_equality(component.word_length)
+    equations = _parity_equality(component.word_length, ctx.IN, ctx.OUT)
     _encode_xor_equations(ctx, equations)
 
 
@@ -68,26 +74,19 @@ def encode_xor(component: XOR_CVL, ctx: SATContext) -> None:
 # the goal here is to remove both the Linear vs Differential options
 # and to remove Exclude odd vs More dummies options
 #
-# Since most of the code is the same, right now it is all done with 
+# Since most of the code is the same, right now it is all done with
 # a bunch of function call which barely differe from one another,
 # so we could think of a better way of implementing it here *shrug*
 #
 
 
-def _encode_linear_layer(component: LinearLayer_CVL, ctx: SATContext) -> None:
-    matrix = component.binary_matrix.transpose()
-    IN = ctx.OUT
-    OUT = ctx.IN
-
-    equations = _linear_layer_equations(matrix, IN, OUT)
-    two_bit_xor_f = _two_bit_xor_linear
-
-    return equations, two_bit_xor_f
-
-
-def encode_linear_layer_exclude_odd(component: LinearLayer_CVL, ctx: SATContext) -> None:
-    _encode_linear_layer_exclude_odd(component, ctx, _encode_linear_layer)
-
-
-def encode_linear_layer_more_dummies(component: LinearLayer_CVL, ctx: SATContext) -> None:
-    _encode_linear_layer_more_dummies(component, ctx, _encode_linear_layer)
+encode_linear_exclude_odd = partial(
+    _encode_linear_layer,
+    _build_linear_equations,  # build_equations function argument
+    _encode_xor_equations,  # encode_equations function argument
+)
+encode_linear_more_dummies = partial(
+    _encode_linear_layer,
+    _build_linear_equations,  # build_equations function argument
+    _encode_xor_dummies_linear,  # encode_equations function argument
+)

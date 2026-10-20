@@ -49,11 +49,14 @@ def encode_xor(component: XOR_CVL, ctx: MILPContext) -> None:
     divide_by = _get_divide_factor(component, ctx.options)
     n = component.word_length // divide_by
 
+    #
+    _extra_eq = ((1, 1, 1), -2) if divide_by == 1 else ()
+    #
     assignments_rhs = (
         ((1, 0, 0), 0),
         ((0, 1, 0), 0),
         ((0, 0, 1), 0),
-    ) + (((1, 1, 1), -2) if divide_by == 1 else ())
+    ) + _extra_eq
 
     for i in range(component.word_length // divide_by):
         variables = (ctx.IN[i], ctx.IN[i + n], ctx.OUT[i])

@@ -34,5 +34,5 @@ def encode_const_xor(component: ConstXOR_CVL, ctx: SATContext) -> None:
 def encode_permute_layer(component: PermuteLayer_CVL, ctx: SATContext) -> None:
     wc = component.word_coarseness
     table = _wordcoarse_perm_table(component.perm, wc)
-    _encode_permutation_sat(table)
+    _encode_permutation_sat(table, ctx)
 

@@ -5,7 +5,8 @@ Various utility functions / shared code across all different analysis types / op
 from functools import cache
 from itertools import product
 from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from typing import Any 
+from typing import TYPE_CHECKING
 from typing_extensions import Literal
 import numpy as np
 
@@ -13,14 +14,14 @@ import numpy as np
 #
 from sage.crypto.sbox import SBox
 
+
 #
 from .. import model_options as MO
 from ..component import Component, LinearLayer_CVL, SBox_CVL
 
-
-if TYPE_CHECKING:
-    from .milp.core import MILPContext
-    from .. import model_options as MO
+#
+from .core import EncodingContext
+from .milp.core import MILPContext
 
 # [ Standalone ]---------------------------------------------------- *)
 
@@ -174,6 +175,19 @@ def _linear_layer_equations(matrix, IN, OUT) -> tuple[ParityEquation, ...]:
     return equations
 
 
+# ----------------------------------------------------------------- *)
+
+
+def _build_differential_equations(component: LinearLayer_CVL, ctx: EncodingContext):
+    return _linear_layer_equations(component.binary_matrix, ctx.IN, ctx.OUT)
+
+
+def _build_linear_equations(component: LinearLayer_CVL, ctx: EncodingContext):
+    return _linear_layer_equations(component.binary_matrix.transpose(), ctx.OUT, ctx.IN)
+
+
+# ----------------------------------------------------------------- *)
+
 
 def _parity_violating_assignments(n: int, rhs: int) -> np.ndarray:
     """Lovely website about error-correction: https://errorcorrectionzoo.org/c/parity_check
@@ -233,6 +247,7 @@ def _parity_violating_assignments_old(n: int, rhs: int):
 # url="https://doi.org/10.1007/978-3-319-63976-5_8"
 # }
 #
+
 
 def _even_parity_polytope_h_form(ctx: MILPContext, matrix, IN, OUT):
     """

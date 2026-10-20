@@ -5,12 +5,8 @@ from typing import Generic, TypeVar, TYPE_CHECKING
 from functools import singledispatch
 
 #
-from .tools import type_name
-
-#
-if TYPE_CHECKING:
-    from ..component import Component
-    from ..model_options import MODEL_OPTIONS
+from ..component import Component
+from ..model_options import MODEL_OPTIONS
 
 # [ Types ]--------------------------------------------------------- *)
 
@@ -54,6 +50,7 @@ type EncodingStrategy = Callable[[Component, EncodingContext], None]
 def encode(component: Component, ctx: EncodingContext):
     r"""
     """
+    from .tools import type_name
     raise NotImplementedError(f"no encoder defined for {type_name(component)}.")
     
 

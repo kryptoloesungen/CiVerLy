@@ -1,11 +1,12 @@
 import zlib
 from dataclasses import dataclass
 from itertools import product
-from functools import cache
+from functools import cache, partial
 from math import log2
 from numbers import Number
 from pathlib import Path
 from collections.abc import Callable
+from typing_extensions import Literal
 
 #
 from ... import model_options as MO
@@ -30,6 +31,7 @@ from ..tools import _weighted_transition_rel
 from ..tools import WeightedTransitions, Bit
 from ..tools import ParityEquation
 from ..tools import _parity_violating_assignments
+from ..tools import _build_differential_equations, _build_linear_equations
 
 #
 from .core import SATVar, SATContext
@@ -217,23 +219,26 @@ def _encode_abg_helper(ctx: SATContext, width: int):
 # [ Encoding "Parity" Equations; Relevant for XOR / LinearLayer ]--- *)
 
 
-def _parity_three_xor(width: int):
+def _parity_three_xor(width: int, IN, OUT):
     # fmt: off
     return tuple(
-        ParityEquation((i, i + width, i + 2 * width)) 
+        ParityEquation((IN[i], IN[i + width], OUT[i])) 
         for i in range(width)
     )
     # fmt: on
 
 
-def _parity_equality(width: int):
+def _parity_equality(width: int, IN, OUT):
     # fmt: off
     return tuple(
         ParityEquation(vars) 
         for i in range(width) 
-        for vars in ((i, i + width), (i, i + 2 * width))
+        for vars in ((IN[i], IN[i + width]), (IN[i], OUT[i]))
     )
     # fmt: on
+
+
+# ----------------------------------------------------------------- *)
 
 
 # fmt: off
@@ -251,11 +256,8 @@ def _encode_parity_equation_direct_sat(variables: tuple[SATVar, ...], rhs: int, 
 
 
 def _encode_xor_equations(ctx: SATContext, equations: tuple[ParityEquation, ...]) -> None:
-    variables = (*ctx.IN, *ctx.OUT)
-
     for equation in equations:
-        eqvars = tuple(variables[i] for i in equation.variables)
-        _encode_parity_equation_direct_sat(eqvars, equation.rhs, ctx)
+        _encode_parity_equation_direct_sat(equation.variables, equation.rhs, ctx)
 
 
 # [ Helpers for linear layer encoding ]----------------------------- *)
@@ -271,12 +273,16 @@ def _two_bit_xor_differential(vars):
     return ((x1, x2, x3),)
 
 
+# ----------------------------------------------------------------- *)
+
+
 def _linear_layer_more_dummies(
     ctx: SATContext,
     equations: tuple[ParityEquation, ...],
-    two_bit_xor_f: Callable[[tuple[SATVar, ...]], tuple[tuple[SATVar]]],
+    two_bit_xor_f: Literal[_two_bit_xor_linear, _two_bit_xor_differential],
 ):
     """nil"""
+
     for equation in equations:
         active_vars = equation.variables
 
@@ -304,24 +310,36 @@ def _linear_layer_more_dummies(
     return
 
 
-def _encode_linear_layer_exclude_odd(
+# ----------------------------------------------------------------- *)
+
+
+_encode_xor_dummies_differential = partial(
+    _linear_layer_more_dummies,
+    two_bit_xor_f=_two_bit_xor_differential,
+)
+
+_encode_xor_dummies_linear = partial(
+    _linear_layer_more_dummies,
+    two_bit_xor_f=_two_bit_xor_linear,
+)
+
+# ----------------------------------------------------------------- *)
+
+
+build_eq_t = Literal[_build_differential_equations, _build_linear_equations]
+encode_eq_t = Literal[
+    _encode_xor_equations, _encode_xor_dummies_linear, _encode_xor_dummies_differential
+]
+
+# ----------------------------------------------------------------- *)
+
+
+def _encode_linear_layer(
+    build_equations: build_eq_t,
+    encode_equations: encode_eq_t,
     component: LinearLayer_CVL,
     ctx: SATContext,
-    encode_linear_layer: Callable[[Component, SATContext], tuple[ParityEquation, ...], Callable],
 ) -> None:
-    """nil"""
-    equations, _ = encode_linear_layer(component, ctx)
-    _encode_xor_equations(ctx, equations)
-    return
 
-
-def _encode_linear_layer_more_dummies(
-    component: LinearLayer_CVL,
-    ctx: SATContext,
-    encode_linear_layer: Callable[[Component, SATContext], tuple[ParityEquation, ...], Callable],
-) -> None:
-    """nil"""
-
-    equations, two_bit_xor_f = encode_linear_layer(component, ctx)
-    _linear_layer_more_dummies(ctx, equations, two_bit_xor_f)
-    return
+    equations = build_equations(component, ctx)
+    encode_equations(ctx, equations)
