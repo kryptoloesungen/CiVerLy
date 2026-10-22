@@ -1219,6 +1219,22 @@ class Cipher:
             ....:     cipher.add_output(edges)
             sage: cipher._dfs_traversal()
             [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 3]
+
+        Components without inputs, such as ``RK_CVL`` or ``C_CVL``, are not
+        reachable from ``IN``. They get depth 1, as if ``IN`` fed them, even
+        if their first consumer reads ``IN`` directly. Only ``IN`` has depth 0::
+
+            sage: from civerly.component import C_CVL, RK_CVL, XOR_CVL
+            sage: for const in (RK_CVL, C_CVL):
+            ....:     cipher = Cipher(4, 4, name="round")
+            ....:     node_k = cipher.add_subcipher(const(4, 0x3), [])
+            ....:     edges = [(cipher.IN, (i, i)) for i in range(4)]
+            ....:     edges += [(node_k, (i, 4 + i)) for i in range(4)]
+            ....:     node = cipher.add_subcipher(XOR_CVL(4), edges)
+            ....:     cipher.add_output([(node, (i, i)) for i in range(4)])
+            ....:     print(cipher._dfs_traversal())
+            [0, 1, 2, 3]
+            [0, 1, 2, 3]
         """
         if not self.is_valid:
             raise CipherNotValidError()
@@ -1230,13 +1246,13 @@ class Cipher:
             self.nodes.index(self.IN), visited, dfs_order, depths, 0
         )
 
-        # handle components like ``C_CVL`` that are unreachable using
-        # conventional DFS-search
-        for (a, b), (_x, _y) in self.edges:
-            if not visited[a] and visited[b]:
-                depths[a] = depths[b] - 1
-                visited[a] = True
-                dfs_order.append(a)
+        # Components without inputs (e.g. ``C_CVL``, ``RK_CVL``) are not
+        # reachable from IN. Treat them as if fed by IN, i.e. continue the DFS
+        # from them at depth 1, which also pushes their consumers deeper.
+        # Only IN may have depth 0, see :class:`civerly.trail.TrailNode`.
+        for a in range(len(self.nodes)):
+            if not visited[a] and any(x == a for (x, _), _ in self.edges):
+                self._dfs_traversal_help(a, visited, dfs_order, depths, 1)
 
         e = (
             f"{self.name}.OUT doesn't have the highest depth "
@@ -2006,6 +2022,58 @@ class Cipher:
         :class:`civerly.trail.TrailNode` objects is returned (one per
         solution, best first).  The stored :attr:`trail_nodes` (populated by
         the preceding :meth:`analyse` call) are returned directly.
+
+        TESTS:
+
+        A round starting with the XOR of its input and a component without
+        inputs (``RK_CVL`` or ``C_CVL``). The trail of each round has the width
+        of the round, and the rounds chain::
+
+            sage: import tempfile
+            sage: from civerly.cipher import Cipher
+            sage: from civerly.component import C_CVL, RK_CVL, XOR_CVL, ModAdd_CVL
+            sage: from civerly.model_options import *
+            sage: def two_rounds(const):
+            ....:     rnd = Cipher(8, 8, name="round")
+            ....:     node_k = rnd.add_subcipher(const(4, 0x3, name="K"), [])
+            ....:     edges = [(rnd.IN, (i, i)) for i in range(4)]
+            ....:     edges += [(node_k, (i, 4 + i)) for i in range(4)]
+            ....:     node_x = rnd.add_subcipher(XOR_CVL(4), edges)
+            ....:     edges = [(node_x, (i, i)) for i in range(4)]
+            ....:     edges += [(rnd.IN, (4 + i, 4 + i)) for i in range(4)]
+            ....:     node_a = rnd.add_subcipher(ModAdd_CVL(4), edges)
+            ....:     edges = [(node_a, (i, i)) for i in range(4)]
+            ....:     edges += [(rnd.IN, (i, 4 + i)) for i in range(4)]
+            ....:     rnd.add_output(edges)
+            ....:     cipher = Cipher(8, 8, name="cipher")
+            ....:     node = cipher.IN
+            ....:     for _ in range(2):
+            ....:         edges = [(node, (i, i)) for i in range(8)]
+            ....:         node = cipher.add_subcipher(rnd, edges)
+            ....:     cipher.add_output([(node, (i, i)) for i in range(8)])
+            ....:     return cipher
+            sage: # optional - cadical
+            sage: trails = {}
+            sage: for const in (RK_CVL, C_CVL):
+            ....:     with tempfile.TemporaryDirectory() as tmpdir:
+            ....:         cipher = two_rounds(const)
+            ....:         model_options = MODEL_OPTIONS(
+            ....:             cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:             optimization=OPTIMIZATION.SAT,
+            ....:             granularity=GRANULARITY.BITWISE,
+            ....:             sat_solver=SOLVER.CADICAL,
+            ....:             path=Path(tmpdir))
+            ....:         weight = cipher.analyse(model_options)
+            ....:         trails[const.__name__] = (weight, cipher.get_trail(model_options))
+            206 variables and 463 clauses were written to '...'
+            206 variables and 463 clauses were written to '...'
+            sage: for name, (weight, trail) in trails.items():
+            ....:     first, second = trail.children
+            ....:     print(name, weight, len(first.input), len(first.output),
+            ....:           len(second.input), len(second.output),
+            ....:           first.output == second.input)
+            RK_CVL 0 8 8 8 8 True
+            C_CVL 0 8 8 8 8 True
         """
 
         if model_options.number_of_solutions == 1:
