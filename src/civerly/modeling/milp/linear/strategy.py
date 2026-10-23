@@ -1,3 +1,6 @@
+from functools import partial
+
+#
 from ....util import translate_sat_clause
 from ....component import (
     I_CVL,
@@ -19,7 +22,8 @@ from ...core import EncodingStrategy
 #
 from ..core import MILPContext, MILPVar
 from ..tools import (
-    _AND_LINEAR_TABLE,
+    _linear_layer_generalised_wordwise,
+    _build_linear_matrix,
 )
 
 
@@ -30,10 +34,14 @@ from ..tools import (
 #  even if something is analysis independent, I, in theory, do not know this as a user
 #  and so I will try to import something like `encode_id` etc. from here. Hence, the extra import
 # )
-from ..strategy import encode_const_xor, encode_id, encode_permute_layer
+from ..strategy import (
+    encode_const_xor,
+    encode_id,
+    encode_permute_layer,
+)
 
 
-# [ Const ]--------------------------------------------------------- *)
+# [ C_CVL ]--------------------------------------------------------- *)
 
 
 def encode_const(component: C_CVL, ctx: MILPContext) -> None:
@@ -41,7 +49,7 @@ def encode_const(component: C_CVL, ctx: MILPContext) -> None:
     return
 
 
-# [ XOR ]----------------------------------------------------------- *)
+# [ XOR_CVL ]------------------------------------------------------- *)
 
 
 def encode_xor(component: XOR_CVL, ctx: MILPContext) -> None:
@@ -53,3 +61,12 @@ def encode_xor(component: XOR_CVL, ctx: MILPContext) -> None:
         ctx.model.add_constraint(ctx.IN[i] == ctx.IN[i + n])
         # Output masks should also be the same
         ctx.model.add_constraint(ctx.IN[i] == ctx.OUT[i])
+
+
+# [ LinearLayer_CVL ]----------------------------------------------- *)
+
+
+encode_linear_generalised_wordwise = partial(
+    _linear_layer_generalised_wordwise,
+    _build_linear_matrix,
+)

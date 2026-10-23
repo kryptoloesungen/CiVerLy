@@ -9,6 +9,7 @@ docs/source/installation/versions.rst
 
 # [mtvkn@impulsivebishop] specific stuff for @refactor-encoding
 **/__pycache__/
+**/*.egg-info/
 *.ju.py
 .jukit/
 /testdir/

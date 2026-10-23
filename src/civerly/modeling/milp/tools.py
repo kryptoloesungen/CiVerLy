@@ -6,6 +6,7 @@ from math import log2
 from numbers import Number
 from pathlib import Path
 from collections.abc import Callable
+from typing_extensions import Literal
 
 
 #
@@ -39,10 +40,15 @@ from ...component import (
 )
 
 #
-from ..tools import _weighted_transition_rel
-from ..tools import _get_divide_factor, int_to_bits, bits_to_int
-from ..tools import WeightedTransitions, Bit
-from ..tools import ParityEquation
+from ..tools import (
+    ParityEquation,
+    _get_divide_factor,
+    int_to_bits,
+    bits_to_int,
+    _weighted_transition_rel,
+    WeightedTransitions,
+    Bit,
+)
 
 #
 from .core import MILPVar, MILPContext
@@ -67,26 +73,47 @@ from .core import MILPVar, MILPContext
 # [ # bitwise linear layer ]---------------------------------------- *)
 
 
+def _linear_layer_more_dummies(ctx: MILPContext, equations: tuple[ParityEquation, ...]):
+    return
+
+
 # [ # wordwise linear layer ]--------------------------------------- *)
 
+
+def _build_linear_matrix(component: LinearLayer_CVL, o_zero_inds: tuple[int]):
+    M = component.binary_matrix.inverse().transpose()
+    nrows = component.binary_matrix.nrows()
+    return list(M[j] for j in range(nrows) if j in o_zero_inds)
+
+
+def _build_differential_matrix(component: LinearLayer_CVL, o_zero_inds: tuple[int]):
+    M = component.binary_matrix
+    nrows = M.nrows()
+    return list(M[j] for j in range(nrows) if j in o_zero_inds)
+
+
 matrix_t = list[binvector_t]
+get_unsolved_mat_t = Literal[_build_linear_matrix, _build_differential_matrix]
 
 
 def _linear_layer_generalised_wordwise(
-    component: LinearLayer_CVL, ctx: MILPContext, get_equations: Callable[[list[int]], matrix_t]
+    get_unsolved_mat: get_unsolved_mat_t,
+    component: LinearLayer_CVL,
+    ctx: MILPContext,
 ):
 
-    compmat = component.binary_matrix
+    posset = []  # possible set of transitions
+    dimensions = []  # kernel-dimensions of each entry
 
     # wordsize is set externally in wordbasedcipher.add_subcipher
     wordsize = component.wordsize
-    ncols = compmat.ncols()
-    nrows = compmat.nrows()
+    binmatrix = component.binary_matrix
 
-    #
-    n_input_words = ncols // wordsize
-    n_output_words = nrows // wordsize
-    vec_len_both = n_input_words + n_output_words
+    vec_len_in = binmatrix.ncols() // wordsize
+    vec_len_out = binmatrix.nrows() // wordsize
+    vec_len_both = vec_len_in + vec_len_out
+
+    # all-zero and all-ones vecs for lookup below
     exceptions = ([0] * (vec_len_both), [1] * (vec_len_both))
 
     def zero_words_bit_pattern(mask: int, nwords: int):
@@ -115,56 +142,54 @@ def _linear_layer_generalised_wordwise(
             if active == 0
             for bit in range(wordsize)
         ]
-        return words, zero_inds
+        return words, tuple(zero_inds)
 
-    #
-    posset = []  # possible set of transitions
-    dimensions = []  # kernel-dimensions of each entry
-
-    for i in range(1 << n_input_words):
-        i_wordarr, i_zero_inds = zero_words_bit_pattern(i, n_input_words)
+    # Go over all input patterns
+    for i in range(1 << vec_len_in):
+        i_wordarr, i_zero_inds = zero_words_bit_pattern(i, vec_len_in)
 
         # Go over all output patterns
-        for o in range(1 << n_output_words):
-            o_wordarr, o_zero_inds = zero_words_bit_pattern(o, n_output_words)
+        for o in range(1 << vec_len_out):
+            o_wordarr, o_zero_inds = zero_words_bit_pattern(o, vec_len_out)
 
-            matrix_to_be_solved = list(get_equations(o_zero_inds))
+            # matrix_to_be_solved is a submatrix of the linear layer,
+            # together with additional rows restricting the
+            # corresponding inputs to be zero
+            matrix_to_be_solved = get_unsolved_mat(component, o_zero_inds)
 
             # Append the additional rows forcing the corresponding
             # input to be zero
             for zero_index in i_zero_inds:
-                new_row = [0] * ncols
+                new_row = [0 for _ in range(binmatrix.ncols())]
                 new_row[zero_index] = 1
                 matrix_to_be_solved.append(new_row)
 
-            #
-            zero_words = i_wordarr + o_wordarr
+            wordarr = i_wordarr + o_wordarr
+            # Two special cases: [0,...,0], [1,...,1] are recognized
+            # as impossible (since the matrix is trivial then)
 
-            current_dimension = matrix(GF(2), matrix_to_be_solved).right_kernel().dimension()
-            # current_dimension = ncols - matrix(GF(2), matrix_to_be_solved).rank()
+            current_dimension = binmatrix.ncols() - matrix(GF(2), matrix_to_be_solved).rank()
+            # current_dimension = matrix(GF(2), matrix_to_be_solved).right_kernel().dimension()
             dimensions.append(current_dimension)
 
             # wordsize is set externally in
             # wordbasedcipher.add_subcipher
-            predecessors = list_of_predecessor_vector_indices(
-                vector(GF(2), zero_words), vec_len_both
-            )
+            predecessors = list_of_predecessor_vector_indices(vector(GF(2), wordarr), vec_len_both)
             # predecessors contains
             # {u | u \prec (i_wordarr + o_wordarr)},
             # with u \prec v <=> u_i \leq v_i \forall i
 
-            # Two special cases: [0,...,0], [1,...,1] are recognized
-            # as impossible (since the matrix is trivial then)
-            is_exc = zero_words in exceptions
-            greater_dim_then_pred = all(
+            # Only a possible transition if the
+            # solution-space is **larger** than before
+            is_exc = wordarr in exceptions
+            curdim_gt_prevdims = all(
                 current_dimension > dimensions[index_dim] for index_dim in predecessors
             )
 
-            # Only a possible transition if the
-            # solution-space is **larger** than before
-            if is_exc or (current_dimension > 0 and greater_dim_then_pred):
-                posset.append(zero_words)
+            if (current_dimension > 0 and curdim_gt_prevdims) or is_exc:
+                posset.append(wordarr)
 
+    # ----------------------------------------------------------------- *)
     reduction_algorithm_ST17(component, ctx, posset)
 
 

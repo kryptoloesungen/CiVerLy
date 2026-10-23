@@ -1,3 +1,6 @@
+from functools import partial
+
+#
 from ....util import translate_sat_clause
 from ....component import (
     I_CVL,
@@ -13,13 +16,19 @@ from ....component import (
 )
 
 #
-from ...tools import bits_to_int, _get_divide_factor
+from ...tools import (
+    bits_to_int,
+    _get_divide_factor,
+    _build_differential_equations,
+    _build_linear_equations,
+)
 from ...core import EncodingStrategy
 
 #
 from ..core import MILPContext, MILPVar
 from ..tools import (
-    _AND_DIFFERENTIAL_TABLE,
+    _linear_layer_generalised_wordwise,
+    _build_differential_matrix,
 )
 
 
@@ -30,10 +39,14 @@ from ..tools import (
 #  even if something is analysis independent, I, in theory, do not know this as a user
 #  and so I will try to import something like `encode_id` etc. from here. Hence, the extra import
 # )
-from ..strategy import encode_const_xor, encode_id, encode_permute_layer
+from ..strategy import (
+    encode_const_xor,
+    encode_id,
+    encode_permute_layer,
+)
 
 
-# [ Const ]--------------------------------------------------------- *)
+# [ C_CVL ]--------------------------------------------------------- *)
 
 
 def encode_const(component: C_CVL, ctx: MILPContext) -> None:
@@ -42,7 +55,7 @@ def encode_const(component: C_CVL, ctx: MILPContext) -> None:
         ctx.model.add_constraint(ctx.OUT[i] == 0)
 
 
-# [ XOR ]----------------------------------------------------------- *)
+# [ XOR_CVL ]------------------------------------------------------- *)
 
 
 def encode_xor(component: XOR_CVL, ctx: MILPContext) -> None:
@@ -65,3 +78,12 @@ def encode_xor(component: XOR_CVL, ctx: MILPContext) -> None:
             ctx.model.add_constraint(
                 sum(-var if value else var for var, value in zip(variables, assignment)) >= rhs
             )
+
+
+# [ LinearLayer_CVL ]----------------------------------------------- *)
+
+
+encode_linear_generalised_wordwise = partial(
+    _linear_layer_generalised_wordwise,
+    _build_differential_matrix
+)

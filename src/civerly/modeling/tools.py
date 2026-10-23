@@ -33,7 +33,7 @@ def _get_divide_factor(component: Component, options: MO.MODEL_OPTIONS):
 
 
 def int_to_bits(integer: int, width: int) -> tuple[int, ...]:
-    return tuple(int(bit) for bit in f"{integer:0{width}b}")
+    return list(int(bit) for bit in f"{integer:0{width}b}")
 
 
 def bits_to_int(bits: tuple[int, ...]) -> int:
