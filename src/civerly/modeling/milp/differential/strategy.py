@@ -92,7 +92,10 @@ encode_linear_branch_number = partial(_linear_layer_branch_number, "differential
 
 # ----------------------------------------------------------------- *)
 
+
 def encode_linear_more_dummies(component: LinearLayer_CVL, ctx: MILPContext) -> None:
     _linear_layer_more_dummies(component.binary_matrix, ctx.IN, ctx.OUT, ctx)
 
 
+def encode_linear_convex_hull(component: LinearLayer_CVL, ctx: MILPContext) -> None:
+    _linear_layer_convex_hull(component, ctx, component.binary_matrix, ctx.IN, ctx.OUT)

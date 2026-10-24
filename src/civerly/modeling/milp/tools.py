@@ -105,7 +105,57 @@ def _linear_layer_more_dummies(matrix, IN, OUT, ctx: MILPContext):
     #     ctx.model.add_constraint(sum(eq.variables) == 2 * dummy[i])
 
 
-def _linear_layer_convex_hull(matrix, IN, OUT, ctx: MILPContext):
+def _linear_layer_convex_hull(component: LinearLayer_CVL, ctx: MILPContext, matrix, IN, OUT):
+    # [mtvkn@impulsivebishop]
+    # I want to be a smartass again
+    # This time, however, I know for a fact that
+    # the model will be different because I want to use a different representation
+    # of the parity polytope and I don't know if it is a good idea
+
+    from math import ceil
+    from itertools import chain
+
+    # fmt: off
+    equations: tuple[tuple[int], ...] = tuple(
+        tuple(i for i, e in enumerate(row) if e > 0) 
+        for row in matrix
+    )
+    for i in set(range(matrix.ncols())).difference(chain.from_iterable(equations)):
+        ctx.model.add_constraint(IN[i] == 0)
+    # fmt: on
+
+    # from ..tools import _even_parity_polytope_h_form
+    # _even_parity_polytope_h_form(ctx, matrix, IN, OUT)
+    # ^^^^^^^^^^^^ gives more constraints, actually
+
+    from ...util import int_to_vec, hw
+
+    for i, tup in enumerate(equations):
+        # set of possible transitions: all transitions with even
+        # hammingweight (x_1 + x_2 + x_3 = y_1, then 4).
+        posset = [
+            vector(ZZ, int_to_vec(j, len(tup) + 1))
+            for j in range(1 << (len(tup) + 1))
+            if hw(j) % 2 == 0
+        ]
+        convex_hull = Polyhedron(vertices=posset)
+
+        constrs = convex_hull.inequalities() + convex_hull.equations()
+        for constr in constrs:
+            assert all(component.input_length > u for u in (max(tup), i))
+
+            # sub_constr : substituted constraints (with
+            # the appropriate variables)
+            sub_constr = (
+                constr[0]
+                + sum(constr[ind + 1] * IN[tup[ind]] for ind in range(len(constr) - 2))
+                + constr[-1] * OUT[i]
+            )
+            if constr.is_inequality():
+                ctx.model.add_constraint(sub_constr >= 0)
+            elif constr.is_equation():
+                ctx.model.add_constraint(sub_constr == 0)
+
     return
 
 
