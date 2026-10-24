@@ -46,6 +46,7 @@ from ..tools import (
     int_to_bits,
     bits_to_int,
     _weighted_transition_rel,
+    build_eq_t,
     WeightedTransitions,
     Bit,
 )
@@ -73,7 +74,38 @@ from .core import MILPVar, MILPContext
 # [ # bitwise linear layer ]---------------------------------------- *)
 
 
-def _linear_layer_more_dummies(ctx: MILPContext, equations: tuple[ParityEquation, ...]):
+def _linear_layer_more_dummies(matrix, IN, OUT, ctx: MILPContext):
+    """nil"""
+    from math import ceil
+    from itertools import chain
+
+    # fmt: off
+    equations: tuple[tuple[int], ...] = tuple(
+        tuple(i for i, e in enumerate(row) if e > 0) 
+        for row in matrix
+    )
+    for i in set(range(matrix.ncols())).difference(chain.from_iterable(equations)):
+        ctx.model.add_constraint(IN[i] == 0)
+    # fmt: on
+
+    MILP_DUMMY = ctx.model.new_variable(name="MILP_DUMMY", binary=True)
+    doff = 0
+    for i, ei in enumerate(equations):
+        ell = ceil(log2(len(ei) + 1))
+        int_sum = sum(IN[vari] for vari in ei) + OUT[i]
+        binary_repr = sum((2 << i) * MILP_DUMMY[doff + i] for i in range(ell))
+        doff += ell
+
+        ctx.model.add_constraint(int_sum == binary_repr)
+
+    # Sum_{x in equation} x == 0 (mod 2)
+    #
+    # dummy = ctx.model.new_variable(integer=True, nonnegative=True, name="MILP_DUMMY")
+    # for i, eq in enumerate(equations):
+    #     ctx.model.add_constraint(sum(eq.variables) == 2 * dummy[i])
+
+
+def _linear_layer_convex_hull(matrix, IN, OUT, ctx: MILPContext):
     return
 
 
@@ -91,6 +123,8 @@ def _build_differential_matrix(component: LinearLayer_CVL, o_zero_inds: tuple[in
     nrows = M.nrows()
     return list(M[j] for j in range(nrows) if j in o_zero_inds)
 
+
+# ----------------------------------------------------------------- *)
 
 matrix_t = list[binvector_t]
 get_unsolved_mat_t = Literal[_build_linear_matrix, _build_differential_matrix]
@@ -195,10 +229,13 @@ def _linear_layer_generalised_wordwise(
 
 # ----------------------------------------------------------------- *)
 
+bn_t = Literal["differential", "linear"]
 
-def _linear_layer_branch_number(component: LinearLayer_CVL, ctx: MILPContext, bn: int = None):
+
+def _linear_layer_branch_number(bn: bn_t, component: LinearLayer_CVL, ctx: MILPContext):
 
     # this should be verified at `__init__` time
+    bn = getattr(component, f"branch_number_{bn}", None)
     if bn is None:
         raise ValueError(
             "No branch number specified, specify it when "
@@ -210,8 +247,9 @@ def _linear_layer_branch_number(component: LinearLayer_CVL, ctx: MILPContext, bn
     OUT = ctx.OUT
 
     # wordsize is set externally in wordbasedcipher.add_subcipher
-    words_in = component.input_length // component.wordsize
-    words_out = component.output_length // component.wordsize
+    wordsize = component.wordsize
+    words_in = component.input_length // wordsize
+    words_out = component.output_length // wordsize
 
     # fmt: off
     ctx.model.add_constraint(

@@ -22,16 +22,14 @@ type SATContext = EncodingContext[SAT_CVL, SATVar, SATObjectiveTerm, MO.MODEL_OP
 # [ Default Context Initialisation Functions ]---------------------- *)
 
 
-def get_sat_context(
-    component: Component,
-    options: MO.MODEL_OPTIONS,
-    filename: str | Path | None = None,
-) -> SATContext:
+def get_sat_context(component: Component, options: MO.MODEL_OPTIONS) -> SATContext:
 
-    filename = Path(filename)
-    filename.parent.mkdir(parents=True, exist_ok=True)
-
-    model = SAT_CVL(filename=filename) if filename is not None else SAT_CVL()
+    if options.path is not None:
+        fn = options.path / f"{component.name.replace(' ', '_')}.cnf"
+        fn.parent.mkdir(parents=True, exist_ok=True)
+        model = SAT_CVL(filename=fn)
+    else:
+        model = SAT_CVL()
 
     return EncodingContext(
         model=model,

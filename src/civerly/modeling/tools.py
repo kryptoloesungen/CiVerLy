@@ -5,7 +5,7 @@ Various utility functions / shared code across all different analysis types / op
 from functools import cache
 from itertools import product
 from dataclasses import dataclass, field
-from typing import Any 
+from typing import Any
 from typing import TYPE_CHECKING
 from typing_extensions import Literal
 import numpy as np
@@ -159,6 +159,9 @@ class ParityEquation:
     rhs: Bit = 0
 
 
+# ----------------------------------------------------------------- *)
+
+
 def _linear_layer_equations(matrix, IN, OUT) -> tuple[ParityEquation, ...]:
     equations = tuple(
         # parity equation to exclude assignments with odd HW (hence, rhs = 0)
@@ -185,6 +188,11 @@ def _build_differential_equations(component: LinearLayer_CVL, ctx: EncodingConte
 def _build_linear_equations(component: LinearLayer_CVL, ctx: EncodingContext):
     return _linear_layer_equations(component.binary_matrix.transpose(), ctx.OUT, ctx.IN)
 
+
+build_eq_t = Literal[
+    _build_differential_equations,
+    _build_linear_equations,
+]
 
 # ----------------------------------------------------------------- *)
 

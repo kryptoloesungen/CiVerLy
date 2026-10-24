@@ -31,7 +31,7 @@ from ..tools import _weighted_transition_rel
 from ..tools import WeightedTransitions, Bit
 from ..tools import ParityEquation
 from ..tools import _parity_violating_assignments
-from ..tools import _build_differential_equations, _build_linear_equations
+from ..tools import _build_differential_equations, _build_linear_equations, build_eq_t
 
 #
 from .core import SATVar, SATContext
@@ -326,7 +326,6 @@ _encode_xor_dummies_linear = partial(
 # ----------------------------------------------------------------- *)
 
 
-build_eq_t = Literal[_build_differential_equations, _build_linear_equations]
 encode_eq_t = Literal[
     _encode_xor_equations, _encode_xor_dummies_linear, _encode_xor_dummies_differential
 ]

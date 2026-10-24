@@ -20,7 +20,6 @@ from ...tools import (
     bits_to_int,
     _get_divide_factor,
     _build_differential_equations,
-    _build_linear_equations,
 )
 from ...core import EncodingStrategy
 
@@ -28,7 +27,10 @@ from ...core import EncodingStrategy
 from ..core import MILPContext, MILPVar
 from ..tools import (
     _linear_layer_generalised_wordwise,
+    _linear_layer_branch_number,
     _build_differential_matrix,
+    _linear_layer_convex_hull,
+    _linear_layer_more_dummies,
 )
 
 
@@ -84,6 +86,13 @@ def encode_xor(component: XOR_CVL, ctx: MILPContext) -> None:
 
 
 encode_linear_generalised_wordwise = partial(
-    _linear_layer_generalised_wordwise,
-    _build_differential_matrix
+    _linear_layer_generalised_wordwise, _build_differential_matrix
 )
+encode_linear_branch_number = partial(_linear_layer_branch_number, "differential")
+
+# ----------------------------------------------------------------- *)
+
+def encode_linear_more_dummies(component: LinearLayer_CVL, ctx: MILPContext) -> None:
+    _linear_layer_more_dummies(component.binary_matrix, ctx.IN, ctx.OUT, ctx)
+
+
