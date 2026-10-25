@@ -7,6 +7,7 @@ from ....util import translate_sat_clause
 from ....component import (
     I_CVL,
     C_CVL,
+    ModAdd_CVL,
     ConstXOR_CVL,
     PermuteLayer_CVL,
     XOR_CVL,
@@ -34,7 +35,6 @@ from ..tools import (
     _encode_xor_dummies_differential,
     _encode_linear_layer,
     _parity_three_xor,
-    _encode_abg_helper,
     _encode_sbox_direct,
     _encode_sbox_espresso,
     _weighted_transition_rel,
@@ -42,6 +42,7 @@ from ..tools import (
     _get_weighted_transition_data,
     _encode_and,
     _precompute_one_bit_and,
+    _encode_abg_helper,
 )
 
 
@@ -114,3 +115,56 @@ def _get_and_model():
 
 
 encode_and = partial(_encode_and, _get_and_model)
+
+
+# [ ModAdd_CVL ]---------------------------------------------------- *)
+
+
+def encode_mod_add(component: ModAdd_CVL, ctx: SATContext) -> None:
+    n = component.word_length
+    alpha, beta, gamma, PROB = _encode_abg_helper(ctx, n)
+
+    # NOTE that alpha[n-1] is LSB and alpha[0] is MSB
+    # Clauses for ModAdd (excluding LSB)
+    for i in range(n - 1):
+        ctx.model.add_clause(
+            (alpha[i], beta[i], -gamma[i], alpha[i + 1], beta[i + 1], gamma[i + 1])
+        )
+        ctx.model.add_clause(
+            (alpha[i], -beta[i], gamma[i], alpha[i + 1], beta[i + 1], gamma[i + 1])
+        )
+        ctx.model.add_clause(
+            (-alpha[i], beta[i], gamma[i], alpha[i + 1], beta[i + 1], gamma[i + 1])
+        )
+        ctx.model.add_clause(
+            (-alpha[i], -beta[i], -gamma[i], alpha[i + 1], beta[i + 1], gamma[i + 1])
+        )
+        ctx.model.add_clause(
+            (alpha[i], beta[i], gamma[i], -alpha[i + 1], -beta[i + 1], -gamma[i + 1])
+        )
+        ctx.model.add_clause(
+            (alpha[i], -beta[i], -gamma[i], -alpha[i + 1], -beta[i + 1], -gamma[i + 1])
+        )
+        ctx.model.add_clause(
+            (-alpha[i], beta[i], -gamma[i], -alpha[i + 1], -beta[i + 1], -gamma[i + 1])
+        )
+        ctx.model.add_clause(
+            (-alpha[i], -beta[i], gamma[i], -alpha[i + 1], -beta[i + 1], -gamma[i + 1])
+        )
+
+    ctx.model.add_clause((alpha[n - 1], beta[n - 1], -gamma[n - 1]))
+    ctx.model.add_clause((alpha[n - 1], -beta[n - 1], gamma[n - 1]))
+    ctx.model.add_clause((-alpha[n - 1], beta[n - 1], gamma[n - 1]))
+    ctx.model.add_clause((-alpha[n - 1], -beta[n - 1], -gamma[n - 1]))
+
+    # encode probability
+    # ---------------------------------------------------------------------------
+    scale = 1 * 10**ctx.options.sat_precision
+    for i in range(n - 1):
+        ctx.model.add_clause((-alpha[i + 1], gamma[i + 1], PROB[i]))
+        ctx.model.add_clause((beta[i + 1], -gamma[i + 1], PROB[i]))
+        ctx.model.add_clause((alpha[i + 1], -beta[i + 1], PROB[i]))
+        ctx.model.add_clause((alpha[i + 1], beta[i + 1], gamma[i + 1], -PROB[i]))
+        ctx.model.add_clause((-alpha[i + 1], -beta[i + 1], -gamma[i + 1], -PROB[i]))
+        ctx.objective.append((scale, PROB[i]))
+    # ---------------------------------------------------------------------------

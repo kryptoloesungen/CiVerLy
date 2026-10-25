@@ -8,6 +8,7 @@ from ....component import (
     Component,
     I_CVL,
     C_CVL,
+    ModAdd_CVL,
     ConstXOR_CVL,
     PermuteLayer_CVL,
     XOR_CVL,
@@ -123,3 +124,54 @@ def _get_and_model():
 
 
 encode_and = partial(_encode_and, _get_and_model)
+
+
+# [ ModAdd_CVL ]---------------------------------------------------- *)
+
+
+def encode_mod_add(component: ModAdd_CVL, ctx: SATContext) -> None:
+    n = component.word_length
+    alpha, beta, gamma, PROB = _encode_abg_helper(ctx, n)
+
+    # PROB[0] == 0
+    ctx.model.add_clause((-PROB[0],))
+
+    # alpha[0] + beta[0] + gamma[0] + PROB[1] == 0
+    ctx.model.add_clause((alpha[0], beta[0], gamma[0], -PROB[1]))
+    ctx.model.add_clause((alpha[0], beta[0], -gamma[0], PROB[1]))
+    ctx.model.add_clause((alpha[0], -beta[0], gamma[0], PROB[1]))
+    ctx.model.add_clause((-alpha[0], beta[0], gamma[0], PROB[1]))
+    ctx.model.add_clause((alpha[0], -beta[0], -gamma[0], -PROB[1]))
+    ctx.model.add_clause((-alpha[0], beta[0], -gamma[0], -PROB[1]))
+    ctx.model.add_clause((-alpha[0], -beta[0], gamma[0], -PROB[1]))
+    ctx.model.add_clause((-alpha[0], -beta[0], -gamma[0], PROB[1]))
+
+    # alpha[j+1] + beta[j+1] + gamma[j+1] + PROB[j+1] + PROB[j+2] == 0
+    # for j in range(0, n-2)
+    for j in range(1, n - 1):
+        # From LinearLayer_CVL:
+        ctx.model.add_clause((alpha[j], beta[j], gamma[j], PROB[j], -PROB[j + 1]))
+        ctx.model.add_clause((alpha[j], beta[j], gamma[j], -PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((alpha[j], beta[j], -gamma[j], PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((alpha[j], -beta[j], gamma[j], PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], beta[j], gamma[j], PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((alpha[j], beta[j], -gamma[j], -PROB[j], -PROB[j + 1]))
+        ctx.model.add_clause((alpha[j], -beta[j], gamma[j], -PROB[j], -PROB[j + 1]))
+        ctx.model.add_clause((alpha[j], -beta[j], -gamma[j], PROB[j], -PROB[j + 1]))
+        ctx.model.add_clause((alpha[j], -beta[j], -gamma[j], -PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], beta[j], gamma[j], -PROB[j], -PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], beta[j], -gamma[j], PROB[j], -PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], beta[j], -gamma[j], -PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], -beta[j], gamma[j], PROB[j], -PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], -beta[j], gamma[j], -PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], -beta[j], -gamma[j], PROB[j], PROB[j + 1]))
+        ctx.model.add_clause((-alpha[j], -beta[j], -gamma[j], -PROB[j], -PROB[j + 1]))
+
+    scale = 10**ctx.options.sat_precision
+    for i in range(n):
+        ctx.model.add_clause((alpha[i], -gamma[i], PROB[i]))
+        ctx.model.add_clause((-alpha[i], gamma[i], PROB[i]))
+        ctx.model.add_clause((beta[i], -gamma[i], PROB[i]))
+        ctx.model.add_clause((-beta[i], gamma[i], PROB[i]))
+
+        ctx.objective.append((scale, PROB[i]))

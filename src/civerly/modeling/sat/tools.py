@@ -185,7 +185,8 @@ def _encode_abg_helper(ctx: SATContext, width: int):
     alpha = [ctx.IN[i] for i in range(width)]
     beta = [ctx.IN[i + width] for i in range(width)]
     gamma = [ctx.OUT[i] for i in range(width)]
-    return alpha, beta, gamma
+    PROB = [ctx.model.var() for _ in range(width)]
+    return alpha, beta, gamma, PROB
 
 
 # [ Encoding "Parity" Equations; Relevant for XOR / LinearLayer ]--- *)
