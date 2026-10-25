@@ -55,22 +55,6 @@ def _rotation_table(width: int, degree: int) -> tuple[int]:
     return tuple(range((-degree) % width, width)) + tuple(range((-degree) % width))
 
 
-def _transition_table(sbox: SBox, analysis: MO.CRYPTANALYSIS):
-    """nil"""
-
-    match analysis:
-        case MO.CRYPTANALYSIS.DIFFERENTIAL:
-            return sbox.difference_distribution_table()
-        case MO.CRYPTANALYSIS.LINEAR:
-            # use LAT instead of DDT
-            return [
-                [abs(int(entry * len(sbox))) for entry in row]
-                for row in sbox.linear_approximation_table("correlation")
-            ]
-        case _:
-            raise ValueError()
-
-
 def _wordcoarse_perm_table(table, wc: int) -> tuple[int]:
     return tuple(wc * table[i] + j for i in range(len(table)) for j in range(wc))
 
@@ -109,31 +93,24 @@ class WeightedTransitions:
 
 @cache
 def _weighted_transition_rel(
-    sbox_table: tuple[int, ...], analysis: MO.CRYPTANALYSIS
+    transition_table: tuple[int, ...], input_sz: int, output_sz: int
 ) -> WeightedTransitions:
     """nil"""
 
-    from sage.crypto.sbox import SBox
-    from .tools import _transition_table, int_to_bits
-
-    sbox = SBox(list(sbox_table))
-    table = _transition_table(sbox, analysis)
-
-    # input/output width
-    iw = sbox.input_size()
-    ow = sbox.output_size()
-
     def _get_bits(i, o):
-        return (*int_to_bits(i, iw), *int_to_bits(o, ow))
+        return (*int_to_bits(i, input_sz), *int_to_bits(o, output_sz))
+
+    iN = 1 << input_sz
+    oN = 1 << output_sz
 
     transitions = tuple(
-        WeightedTransition(_get_bits(i, o), int(table[i][o]))
-        for i in range(1 << iw)
-        for o in range(1 << ow)
-        if table[i][o] > 0
+        WeightedTransition(_get_bits(i, o), int(transition_table[i][o]))
+        for i in range(iN)
+        for o in range(oN)
+        if transition_table[i][o] > 0
     )
 
-    return WeightedTransitions(iw, ow, transitions, int(table[0][0]))
+    return WeightedTransitions(transitions, int(transition_table[0][0]))
 
 
 # [ Parity and Linear Layer utils ]--------------------------------- *)
@@ -235,48 +212,4 @@ def _parity_violating_assignments(n: int, rhs: int) -> np.ndarray:
     return ((Us[:, None] >> shifts) & 1).astype(int).tolist()
 
 
-def _parity_violating_assignments_old(n: int, rhs: int):
-    return (assignment for assignment in product((0, 1), repeat=n) if sum(assignment) % 2 != rhs)
-
-
-#
-# @Inbook{Lancia2018,
-# author="Lancia, Giuseppe
-# and Serafini, Paolo",
-# title="The Parity Polytope",
-# bookTitle="Compact Extended Linear Programming Models",
-# year="2018",
-# publisher="Springer International Publishing",
-# address="Cham",
-# pages="113--121",
-# abstract="This chapter is focused on the parity polytope, i.e., the convex hull of all 0-1 vectors with an even number of ones.",
-# isbn="978-3-319-63976-5",
-# doi="10.1007/978-3-319-63976-5_8",
-# url="https://doi.org/10.1007/978-3-319-63976-5_8"
-# }
-#
-
-
-def _even_parity_polytope_h_form(ctx: MILPContext, matrix, IN, OUT):
-    """
-    Let F be a subset of {0, 1, ..., n - 1} and let |F| = 1 mod 2.
-
-    External representation:
-        sum_{i in F} zi - sum_{i not in F} zi <= |F| - 1
-
-    Re-aranging variables:
-        sum_{i in F} (1 - zi) - sum_{i not in F} zi >= 1
-
-
-    """
-
-    equations = _linear_layer_equations(matrix, IN, OUT)
-    for equation in equations:
-        for assignment in _parity_violating_assignments(len(equation.variables), rhs=0):
-            ctx.model.add_constraint(
-                sum(
-                    1 - var if value else var
-                    for var, value in zip(equation.variables, assignment, strict=True)
-                )
-                >= 1
-            )
+# ----------------------------------------------------------------- *)

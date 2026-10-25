@@ -38,19 +38,3 @@ def get_milp_context(
         options=options,    # granularity is sort of important here
     )
     # fmt: on
-
-
-def get_wired_sat_context(
-    component: Component,
-    parent_variables: tuple[MILPVariable, ...],
-    wiring: tuple[int, ...],
-    ctx: MILPContext,
-) -> MILPContext:
-    wired = tuple(parent_variables[i] for i in wiring)
-    return EncodingContext(
-        model=ctx.model,
-        IN=wired[: component.input_length],
-        OUT=wired[component.input_length :],
-        options=ctx.options,
-        objective=ctx.objective,
-    )

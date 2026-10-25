@@ -27,7 +27,7 @@ from ...component import (
 
 
 #
-from ..tools import _weighted_transition_rel
+from ..tools import _weighted_transition_rel, bits_to_int
 from ..tools import WeightedTransitions, Bit
 from ..tools import ParityEquation
 from ..tools import _parity_violating_assignments
@@ -70,7 +70,6 @@ def _encode_permutation_sat(table: tuple[int], ctx: SATContext) -> None:
 @dataclass(frozen=True, slots=True)
 class WeightedTransitionData:
     metrics: tuple[int, ...]
-    posset: tuple[tuple[int, ...], ...]
     metric_vars: tuple[SATVariable, ...]
     variables: tuple[SATVariable, ...]
 
@@ -78,7 +77,6 @@ class WeightedTransitionData:
 @cache
 def _get_weighted_transition_data(
     rel: WeightedTransitions,
-    analysis: MO.CRYPTANALYSIS,
 ) -> tuple[tuple[int, ...], tuple[tuple[int, ...], ...]]:
     r"""nil"""
 
@@ -102,25 +100,19 @@ def _get_weighted_transition_data(
 
 
 def _prepare_weighted_transition_sat(
-    rel: WeightedTransitions,
-    analysis: MO.CRYPTANALYSIS,
+    metrics,
     ctx: SATContext,
 ) -> WeightedTransitionData:
     """Split into multiple parts or caching"""
 
-    metrics, posset = _get_weighted_transition_data(rel, analysis)
     metric_vars = tuple(ctx.model.var() for _ in metrics)
     variables = (*ctx.IN, *ctx.OUT, *metric_vars)
 
     return WeightedTransitionData(
         metrics=metrics,
-        posset=tuple(posset),
         metric_vars=metric_vars,
         variables=variables,
     )
-
-
-# [ # weighted transitions: objective ]----------------------------- *)
 
 
 def _weighted_transition_objective_sat(
@@ -139,11 +131,8 @@ def _weighted_transition_objective_sat(
     )
 
 
-# [ # weighted transition: espresso utility ]----------------------- *)
-
-
 @cache
-def _get_espresso_clauses(rel: WeightedTransitions):
+def _get_espresso_clauses(posset):
     import os
     import subprocess
 
@@ -151,9 +140,6 @@ def _get_espresso_clauses(rel: WeightedTransitions):
         raise ValueError(
             "ESPRESSO was disabled by setting environment variable CIVERLY_DISABLE_ESPRESSO"
         )
-
-    _, posset = _get_weighted_transition_data(rel)
-
     # create espresso input
     espresso_input = [f".i {len(posset[0])}", ".o 1"]
     for possible_transition in posset:
@@ -190,20 +176,6 @@ def _get_espresso_clauses(rel: WeightedTransitions):
 # [ # Two-Bit AND ]------------------------------------------------- *)
 #
 # precomputation for the 2-to-1 bit ANDs (x AND y)
-
-_AND_DIFFERENTIAL_TABLE = (
-    (4, 0),
-    (2, 2),
-    (2, 2),
-    (2, 2),
-)
-
-_AND_LINEAR_TABLE = (
-    (4, 2),
-    (0, 2),
-    (0, 2),
-    (0, 2),
-)
 
 
 # [ ABG Helper for ModAdd encoding ]-------------------------------- *)
@@ -342,3 +314,118 @@ def _encode_linear_layer(
 
     equations = build_equations(component, ctx)
     encode_equations(ctx, equations)
+
+
+# [ SBox_CVL ]------------------------------------------------------ *)
+
+
+def _encode_sbox_espresso(
+    get_transition_table_f: Callable[[SBox_CVL], tuple[tuple[int, ...], ...]],
+    component: SBox_CVL,
+    ctx: SATContext,
+) -> None:
+    from ...util import translate_sat_clause
+
+    table, input_sz, output_sz = get_transition_table_f(component)
+    rel = _weighted_transition_rel(table, input_sz, output_sz)
+    metrics, posset = _get_weighted_transition_data(rel)
+
+    data = _prepare_weighted_transition_sat(metrics, ctx)
+    clauses = _get_espresso_clauses(posset)
+
+    for clause in clauses:
+        ctx.model.add_clause(translate_sat_clause(data.variables, clause))
+        # ctx.model.append(clause)
+    _weighted_transition_objective_sat(rel, data, ctx)
+
+
+def _encode_sbox_direct(
+    get_transition_table_f: Callable[[SBox_CVL], WeightedTransitions],
+    component: SBox_CVL,
+    ctx: SATContext,
+) -> None:
+    from ..tools import bits_to_int
+
+    table, input_sz, output_sz = get_transition_table_f(component)
+    rel = _weighted_transition_rel(table, input_sz, output_sz)
+    metrics, posset = _get_weighted_transition_data(rel)
+    posset_int = {bits_to_int(transition) for transition in posset}
+
+    data = _prepare_weighted_transition_sat(metrics, ctx)
+
+    var_cnt = len(data.variables)
+    for transition in range(1 << var_cnt):
+        if transition in posset_int:
+            continue
+
+        clause = tuple(
+            -variable if transition >> (var_cnt - i - 1) & 1 else variable
+            for i, variable in enumerate(data.variables)
+        )
+        ctx.model.add_clause(clause)
+
+    _weighted_transition_objective_sat(rel, data, ctx)
+
+
+# [ AND_CVL ]------------------------------------------------------- *)
+
+
+def _precompute_one_bit_and(*args):
+    from .core import get_sat_context, _AND_SBOX
+    from types import SimpleNamespace
+
+    rel = _weighted_transition_rel(*args)
+    metrics, posset = _get_weighted_transition_data(rel)
+    posset_int = {bits_to_int(transition) for transition in posset}
+
+    ctx = get_sat_context(_AND_SBOX, SimpleNamespace(path=None))
+    data = _prepare_weighted_transition_sat(metrics, ctx)
+
+    var_cnt = len(data.variables)
+    for transition in range(1 << var_cnt):
+        if transition in posset_int:
+            continue
+        clause = tuple(
+            -variable if transition >> (var_cnt - i - 1) & 1 else variable
+            for i, variable in enumerate(data.variables)
+        )
+        ctx.model.add_clause(clause)
+
+    return ctx, rel, data
+
+
+def _encode_and(get_and_model_f: Callable, component: AND_CVL, ctx: SATContext) -> None:
+    from ...util import translate_sat_clause
+    from itertools import cycle
+
+    onebit_ctx: SATContext
+    onebit_rel: WeightedTransitions
+    onebit_data: WeightedTransitionData
+
+    # 2-to-1 AND gate data (precomputed)
+    onebit_ctx, onebit_rel, onebit_data = get_and_model_f()
+
+    #
+    LP = len(onebit_data.metrics)
+    n = component.word_length
+    PROB = tuple(ctx.model.var() for _ in range(n * LP))
+
+    already_there = set(cl[0] for cl in ctx.model.clauses())
+    for i in range(n):
+        VAR = (ctx.IN[i], ctx.IN[n + i], ctx.OUT[i], *PROB[i * LP : (i + 1) * LP])
+        for clause in onebit_ctx.model.clauses():
+            clause = translate_sat_clause(VAR, clause[0])
+            if clause not in already_there:
+                ctx.model.add_clause(clause)
+                already_there.add(clause)
+                # ctx.model.append(clause)
+
+    # objective
+
+    # fmt: off
+    scale = 10**ctx.options.sat_precision
+    ctx.objective.extend(
+        (-int(scale * log2(metric / onebit_rel.normalizer)), PROBi) 
+        for PROBi, metric in zip(PROB, cycle(onebit_data.metrics))
+    )
+    # fmt: on

@@ -4,7 +4,7 @@ from pathlib import Path
 from sage.sat.solvers.dimacs import DIMACS
 
 #
-from ...component import Component
+from ...component import Component, SBox_CVL, SBox
 from ... import model_options as MO
 from ...problem import SAT_CVL, SATVariable
 
@@ -38,17 +38,6 @@ def get_sat_context(component: Component, options: MO.MODEL_OPTIONS) -> SATConte
     )
 
 
-def get_wired_sat_context(
-    component: Component,
-    parent_variables: tuple[SATVariable, ...],
-    wiring: tuple[int, ...],
-    ctx: SATContext,
-) -> SATContext:
-    wired = tuple(parent_variables[i] for i in wiring)
-    return EncodingContext(
-        model=ctx.model,
-        IN=wired[: component.input_length],
-        OUT=wired[component.input_length :],
-        options=ctx.options,
-        objective=ctx.objective,
-    )
+# ----------------------------------------------------------------- *)
+
+_AND_SBOX = SBox_CVL(SBox([0, 0, 0, 1]))

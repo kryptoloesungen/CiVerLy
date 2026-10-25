@@ -110,3 +110,55 @@ class Modeler(...):
   to register the functions; 
   Then, we do not need to keep track of any dicts, since this is done for us through `singledispatch`.
 
+
+# Drafts
+
+## Parity Polytope
+
+```py
+def _parity_violating_assignments_old(n: int, rhs: int):
+    return (assignment for assignment in product((0, 1), repeat=n) if sum(assignment) % 2 != rhs)
+
+#
+# @Inbook{Lancia2018,
+# author="Lancia, Giuseppe
+# and Serafini, Paolo",
+# title="The Parity Polytope",
+# bookTitle="Compact Extended Linear Programming Models",
+# year="2018",
+# publisher="Springer International Publishing",
+# address="Cham",
+# pages="113--121",
+# abstract="This chapter is focused on the parity polytope, i.e., the convex hull of all 0-1 vectors with an even number of ones.",
+# isbn="978-3-319-63976-5",
+# doi="10.1007/978-3-319-63976-5_8",
+# url="https://doi.org/10.1007/978-3-319-63976-5_8"
+# }
+#
+
+
+def _even_parity_polytope_h_form(ctx: MILPContext, matrix, IN, OUT):
+    """
+    Let F be a subset of {0, 1, ..., n - 1} and let |F| = 1 mod 2.
+
+    External representation:
+        sum_{i in F} zi - sum_{i not in F} zi <= |F| - 1
+
+    Re-aranging variables:
+        sum_{i in F} (1 - zi) - sum_{i not in F} zi >= 1
+
+
+    """
+
+    equations = _linear_layer_equations(matrix, IN, OUT)
+    for equation in equations:
+        for assignment in _parity_violating_assignments(len(equation.variables), rhs=0):
+            ctx.model.add_constraint(
+                sum(
+                    1 - var if value else var
+                    for var, value in zip(equation.variables, assignment, strict=True)
+                )
+                >= 1
+            )
+```
+
