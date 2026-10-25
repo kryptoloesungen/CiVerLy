@@ -27,11 +27,17 @@ from ...component import (
 
 
 #
-from ..tools import _weighted_transition_rel, bits_to_int
-from ..tools import WeightedTransitions, Bit
-from ..tools import ParityEquation
-from ..tools import _parity_violating_assignments
-from ..tools import _build_differential_equations, _build_linear_equations, build_eq_t
+from ..tools import (
+    _weighted_transition_rel,
+    bits_to_int,
+    WeightedTransitions,
+    Bit,
+    ParityEquation,
+    _parity_violating_assignments,
+    _build_differential_equations,
+    _build_linear_equations,
+    build_eq_t,
+)
 
 #
 from .core import SATVariable, SATContext

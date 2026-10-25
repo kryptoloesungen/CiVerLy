@@ -41,11 +41,7 @@ from ..tools import (
 #  even if something is analysis independent, I, in theory, do not know this as a user
 #  and so I will try to import something like `encode_id` etc. from here. Hence, the extra import
 # )
-from ..strategy import (
-    encode_const_xor,
-    encode_id,
-    _encode_permute_layer,
-)
+from ..strategy import encode_const_xor, encode_id, _encode_permute_layer, encode_sbox_wordwise
 
 
 # [ C_CVL ]--------------------------------------------------------- *)
