@@ -52,7 +52,7 @@ from ..tools import (
 )
 
 #
-from .core import MILPVar, MILPContext
+from .core import MILPVariable, MILPContext
 
 # [ Utilities for _SAT encoding_ of probablistic transitions ]------ *)
 #
@@ -333,8 +333,8 @@ def reduction_algorithm_ST17(
     """
     # assert isinstance(component, (SBox_CVL, LinearLayer_CVL))
 
-    from civerly.component import LinearLayer_CVL, SBox_CVL
-    from civerly.milp import MILP_CVL
+    from ...component import LinearLayer_CVL, SBox_CVL
+    from ...problem import MILP_CVL
 
     model_options = ctx.options
 

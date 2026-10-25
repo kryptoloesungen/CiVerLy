@@ -28,7 +28,7 @@ from ...core import EncodingStrategy
 
 
 #
-from ..core import SATContext, SATVar
+from ..core import SATContext
 from ..tools import (
     ParityEquation,
     _encode_xor_equations,

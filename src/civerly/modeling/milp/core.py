@@ -5,7 +5,7 @@ from pathlib import Path
 from sage.numerical.linear_functions import LinearFunction
 
 #
-from ...milp import MILP_CVL
+from ...problem import MILP_CVL
 from ...component import Component
 from ... import model_options as MO
 
@@ -14,9 +14,9 @@ from ..core import EncodingContext
 
 # ----------------------------------------------------------------- *)
 
-type MILPVar = LinearFunction
-type MILPObjectiveTerm = tuple[Number, MILPVar]
-type MILPContext = EncodingContext[MILP_CVL, MILPVar, MILPObjectiveTerm, MO.MODEL_OPTIONS]
+type MILPVariable = LinearFunction
+type MILPObjectiveTerm = tuple[Number, MILPVariable]
+type MILPContext = EncodingContext[MILP_CVL, MILPVariable, MILPObjectiveTerm, MO.MODEL_OPTIONS]
 
 
 # [ Default Context Initialisation Functions ]---------------------- *)
@@ -42,7 +42,7 @@ def get_milp_context(
 
 def get_wired_sat_context(
     component: Component,
-    parent_variables: tuple[MILPVar, ...],
+    parent_variables: tuple[MILPVariable, ...],
     wiring: tuple[int, ...],
     ctx: MILPContext,
 ) -> MILPContext:

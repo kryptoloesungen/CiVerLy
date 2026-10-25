@@ -20,7 +20,7 @@ from ...tools import bits_to_int, _get_divide_factor, _build_linear_equations
 from ...core import EncodingStrategy
 
 #
-from ..core import MILPContext, MILPVar
+from ..core import MILPContext, MILPVariable
 from ..tools import (
     _linear_layer_generalised_wordwise,
     _linear_layer_branch_number,

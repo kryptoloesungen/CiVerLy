@@ -34,7 +34,7 @@ from ..tools import _parity_violating_assignments
 from ..tools import _build_differential_equations, _build_linear_equations, build_eq_t
 
 #
-from .core import SATVar, SATContext
+from .core import SATVariable, SATContext
 
 
 # [ Bit Permutations ]---------------------------------------------- *)
@@ -71,8 +71,8 @@ def _encode_permutation_sat(table: tuple[int], ctx: SATContext) -> None:
 class WeightedTransitionData:
     metrics: tuple[int, ...]
     posset: tuple[tuple[int, ...], ...]
-    metric_vars: tuple[SATVar, ...]
-    variables: tuple[SATVar, ...]
+    metric_vars: tuple[SATVariable, ...]
+    variables: tuple[SATVariable, ...]
 
 
 @cache
@@ -242,7 +242,7 @@ def _parity_equality(width: int, IN, OUT):
 
 
 # fmt: off
-def _encode_parity_equation_direct_sat(variables: tuple[SATVar, ...], rhs: int, ctx: SATContext) -> None:
+def _encode_parity_equation_direct_sat(variables: tuple[SATVariable, ...], rhs: int, ctx: SATContext) -> None:
 
     # This will exclude constraints of the type XOR_i vi != rhs
     #

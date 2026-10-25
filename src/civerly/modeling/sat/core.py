@@ -6,17 +6,16 @@ from sage.sat.solvers.dimacs import DIMACS
 #
 from ...component import Component
 from ... import model_options as MO
+from ...problem import SAT_CVL, SATVariable
 
 #
 from ..core import EncodingContext
 
 # ----------------------------------------------------------------- *)
-#
-SAT_CVL = DIMACS
 
-type SATVar = int
-type SATObjectiveTerm = tuple[Number, SATVar]
-type SATContext = EncodingContext[SAT_CVL, SATVar, SATObjectiveTerm, MO.MODEL_OPTIONS]
+
+type SATObjectiveTerm = tuple[Number, SATVariable]
+type SATContext = EncodingContext[SAT_CVL, SATVariable, SATObjectiveTerm, MO.MODEL_OPTIONS]
 
 
 # [ Default Context Initialisation Functions ]---------------------- *)
@@ -41,7 +40,7 @@ def get_sat_context(component: Component, options: MO.MODEL_OPTIONS) -> SATConte
 
 def get_wired_sat_context(
     component: Component,
-    parent_variables: tuple[SATVar, ...],
+    parent_variables: tuple[SATVariable, ...],
     wiring: tuple[int, ...],
     ctx: SATContext,
 ) -> SATContext:
