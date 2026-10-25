@@ -14,8 +14,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from sage.sat.solvers.dimacs import DIMACS
-
+from civerly.problem import SAT_CVL
 from civerly.util import suppress_output
 
 logger = logging.getLogger(__name__)
@@ -431,7 +430,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
                 break
             self._exclude_assignment(milp, r["assignment"], trail_vars=trail_vars)
             with suppress_output():
-                milp.write_mps(str(input_file))
+                milp.write(input_file)
         return results
 
     def _exclude_assignment(self, milp, assignment, trail_vars=None):
@@ -499,7 +498,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
     def __init__(self):
         """Initizialize the SAT solver interface."""
         super().__init__()
-        # 10 = SAT, 20 = UNSAT are standard DIMACS exit codes.
+        # 10 = SAT, 20 = UNSAT are standard exit codes of SAT solvers.
         self.errno_map = {
             0: SOLVING_STATUS.SUCCESS,
             10: SOLVING_STATUS.SUCCESS,
@@ -658,7 +657,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             }
 
         def _decide_at(w) -> dict:
-            sat = DIMACS()
+            sat = SAT_CVL()
             sat.read(str(input_file))
             start_time_model = time.perf_counter()
             constrained = self._generate_constraints_sum_leq_int_LS24(
@@ -833,7 +832,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         variables whose CNF index is in ``trail_vars`` participate in the
         clause; helpers are ignored.
         """
-        sat = DIMACS()
+        sat = SAT_CVL()
         sat.read(str(input_file))
         if trail_vars is not None:
             trail_vars = set(trail_vars)
@@ -851,7 +850,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
     def _parse_assignment_line(self, line):
         """
-        Parse a DIMACS-style assignment line into a ``{var: 0/1}`` dictionary.
+        Parse an assignment line into a ``{var: 0/1}`` dictionary.
 
         The line is expected to be a space-separated list of signed integers
         terminated by a ``0`` sentinel (the standard SAT solver output format).
@@ -900,7 +899,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
 
         INPUT:
 
-            - ``sat``-- sat model as ``DIMACS`` instance
+            - ``sat``-- sat model as ``SAT_CVL`` instance
 
             - ``sum_arr_file`` -- path to the JSON file containing the sum
               array, i.e. a list of ``(weight, var)`` pairs
@@ -924,14 +923,14 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
         TESTS::
 
             sage: # optional - cryptominisat
-            sage: from sage.sat.solvers.dimacs import DIMACS
+            sage: from civerly.problem import SAT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
             sage: from pathlib import Path
             sage: tmpdir = tempfile.mkdtemp()
             sage: path = Path(tmpdir)
             sage: for NUM_CLAUSES in range(1, 20):
-            ....:   sat = DIMACS()
+            ....:   sat = SAT_CVL()
             ....:   for i in range(1, NUM_CLAUSES + 1): sat.add_clause((i,))
             ....:   for bound in range(NUM_CLAUSES + 4):
             ....:       new_sat = SOLVER.CRYPTOMINISAT._generate_constraints_sum_leq_int_LS24(
@@ -954,7 +953,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
         """
-        new_sat = DIMACS()
+        new_sat = SAT_CVL()
         for _ in range(sat.nvars()):
             new_sat.var()  # set counter to ``sat.nvars()``
         assert sat.nvars() == new_sat.nvars()
@@ -1304,35 +1303,32 @@ class SCIP_CVL(MILP_SOLVER_CVL):
         self.timeout_string = r"time limit reached"
         self.bounds_regexp = r"Primal Bound\s*:\s*(\S+).*\nDual Bound\s*:\s*(\S+).*"
 
-    def invoke(self, input_file, solution_file, log_file, time_limit=None):
-        """
-        Invoke the SCIP solver via its CLI.
-
-        SCIP needs a settings file alongside the command-line invocation; this
-        method writes it before delegating to the shared MILP template and
-        removes it afterwards.
-
-        .. SEEALSO::
-
-            :meth:`civerly.solvers.SOLVER_CVL.invoke`
-        """
-        try:
-            with Path("scip_settings.set").open("w") as f:
-                f.write("write/printzeros = TRUE")
-                if time_limit is not None:
-                    f.write(f"\nlimits/time = {time_limit}")
-            return super().invoke(input_file, solution_file, log_file, time_limit)
-        finally:
-            Path("scip_settings.set").unlink(missing_ok=True)
-
     def _build_command(self, input_file, solution_file, log_file, time_limit):
-        """Build the SCIP CLI command list."""
+        """
+        Build the SCIP CLI command list.
+
+        EXAMPLE::
+
+            sage: from pathlib import Path
+            sage: from civerly.solvers import SCIP_CVL
+            sage: SCIP_CVL()._build_command(
+            ....:     Path("m.mps"), Path("m.sol"), Path("m.log"), time_limit=10)
+            ['scip',
+             '-c',
+             'set write printzeros TRUE set limits time 10 read m.mps optimize write solution m.sol quit',
+             '-l',
+             'm.log']
+        """
+        settings = "set write printzeros TRUE"
+        if time_limit is not None:
+            settings += f" set limits time {time_limit}"
         return [
             "scip",
             "-c",
-            (f"read {input_file} optimize write solution {solution_file} quit"),
-            "-s",
-            "scip_settings.set",
+            (
+                f"{settings} read {input_file} optimize "
+                f"write solution {solution_file} quit"
+            ),
             "-l",
             str(log_file),
         ]
