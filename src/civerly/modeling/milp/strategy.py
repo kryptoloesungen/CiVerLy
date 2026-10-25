@@ -1,3 +1,6 @@
+from collections.abc import Callable
+
+#
 from ... import model_options as MO
 from ...component import (
     C_CVL,
@@ -46,16 +49,19 @@ def encode_const_xor(component: ConstXOR_CVL, ctx: MILPContext) -> None:
     _encode_permutation_milp(_identity_table(component.input_length // divide_by), ctx)
 
 
-def encode_permute_layer(component: PermuteLayer_CVL, ctx: MILPContext) -> None:
+def _encode_permute_layer(
+    encode_linear_f: Callable, component: PermuteLayer_CVL, ctx: MILPContext
+) -> None:
     wc = component.word_coarseness
     gran = ctx.options.granularity
 
     if gran == MO.GRANULARITY.WORDWISE and wc != component.wordsize:
-        raise NotImplementedError("Must call the corresponding milp encoder for LinearLayer_CVL.")
+        encode_linear_f(component, ctx)
+        return
 
     table = (
         _wordcoarse_perm_table(component.perm, wc)
         if gran == MO.GRANULARITY.BITWISE
         else tuple(range(component.input_length // wc))
     )
-    _encode_permutation_milp(table)
+    _encode_permutation_milp(table, ctx)

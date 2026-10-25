@@ -44,7 +44,7 @@ from ..tools import (
 from ..strategy import (
     encode_const_xor,
     encode_id,
-    encode_permute_layer,
+    _encode_permute_layer,
 )
 
 
@@ -64,14 +64,11 @@ def encode_xor(component: XOR_CVL, ctx: MILPContext) -> None:
     divide_by = _get_divide_factor(component, ctx.options)
     n = component.word_length // divide_by
 
-    #
-    _extra_eq = ((1, 1, 1), -2) if divide_by == 1 else ()
-    #
     assignments_rhs = (
         ((1, 0, 0), 0),
         ((0, 1, 0), 0),
         ((0, 0, 1), 0),
-    ) + _extra_eq
+    ) + ((((1, 1, 1), -2),) if divide_by == 1 else ())
 
     for i in range(component.word_length // divide_by):
         variables = (ctx.IN[i], ctx.IN[i + n], ctx.OUT[i])
@@ -99,3 +96,15 @@ def encode_linear_more_dummies(component: LinearLayer_CVL, ctx: MILPContext) -> 
 
 def encode_linear_convex_hull(component: LinearLayer_CVL, ctx: MILPContext) -> None:
     _linear_layer_convex_hull(component, ctx, component.binary_matrix, ctx.IN, ctx.OUT)
+
+
+# [ PermuteLayer_CVL ]---------------------------------------------- *)
+
+encode_permute_layer_generalised_wordwise = partial(
+    _encode_permute_layer,
+    encode_linear_generalised_wordwise,
+)
+encode_permute_layer_branch_number = partial(
+    _encode_permute_layer,
+    encode_linear_branch_number,
+)

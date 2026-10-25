@@ -40,7 +40,7 @@ from ..tools import (
 from ..strategy import (
     encode_const_xor,
     encode_id,
-    encode_permute_layer,
+    _encode_permute_layer,
 )
 
 
@@ -83,3 +83,16 @@ def encode_linear_more_dummies(component: LinearLayer_CVL, ctx: MILPContext) -> 
 
 def encode_linear_convex_hull(component: LinearLayer_CVL, ctx: MILPContext) -> None:
     _linear_layer_convex_hull(component, ctx, component.binary_matrix.transpose(), ctx.OUT, ctx.IN)
+
+
+# [ PermuteLayer_CVL ]---------------------------------------------- *)
+
+
+encode_permute_layer_generalised_wordwise = partial(
+    _encode_permute_layer,
+    encode_linear_generalised_wordwise,
+)
+encode_permute_layer_branch_number = partial(
+    _encode_permute_layer,
+    encode_linear_branch_number,
+)
