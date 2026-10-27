@@ -1,101 +1,150 @@
 from sage.crypto.sbox import SBox
 
 from civerly.cipher_implementations.base import CipherImplementation_CVL
-from civerly.component import RK_CVL, XOR_CVL, ModAdd_CVL, PermuteLayer_CVL, SBox_CVL
+from civerly.cipher import Cipher
+from civerly.component import (
+    RK_CVL,
+    XOR_CVL,
+    ConstXOR_CVL,
+    ModAdd_CVL,
+    PermuteLayer_CVL,
+    RotateLayer_CVL,
+    SBox_CVL,
+)
+from civerly.keyschedule import KeySchedule
+from civerly.util import int_to_vec, vec_to_int
 from civerly.wordbasedcipher import WordBasedCipher
 
 
-def hurdle_key_schedule(masterkey):
-    r"""
-    The HURDLE key schedule, as implemented in `HURDLE_set_key` in
-    MidnightBlue's implementation.
+# Left byte-rotation of the 128-bit master key used for each round key.
+_HURDLE_KS_ROT = [0, 5, 10, 15, 4, 7, 14, 3, 8, 13, 2, 9, 12, 1, 6, 11]
 
-    TESTS::
-        sage: from civerly.cipher_implementations.hurdle \
-        ....:   import hurdle_key_schedule
-        sage: for rk in [f'{rk:024x}' for rk in hurdle_key_schedule(
-        ....:   0xabcdef12c001f00ddeadbeefcafebabe
-        ....: )]: print(rk)
-        c001f00ddeadbeefcafebabe
-        d4e9300ac6b08db53e63e637
-        c9da6afe5bec0423a46d0f23
-        9553fc64550510cb646a173e
-        7c4714a4521d0df83e9e8a62
-        dd05c2cdc034ad9491e3af7f
-        edc63c6f4746e8b5c251f135
-        3fbf6a0269fb06ef94547c1a
-        825130546c7629e4680f96c8
-        0f7e3ba8379cfb9d3e62b875
-        e5ac42fe5ab246736434bdf8
-        0a33eb7dc048af5ae16958b5
-        0497976f62eb5a46464e09a9
-        920d998676039a415e533af3
-        7acd9e9e6b30c0b5c30fb365
-        49976a0337b9562fcde6a78d
-        sage: for rk in [f'{rk:024x}' for rk in hurdle_key_schedule(
-        ....:   0x99990099991188992277993366994455
-        ....: )]: print(rk)
-        991188992277993366994455
-        0eceeca6a14e66876a8c6d6e
-        373158aab4675d33dcf9f3f9
-        1e0aec1cc1f9caecb8c670c0
-        809d3378fe7af3130cca65e9
-        01a9a5332b06f97b1ababf07
-        024d657f3fd2146fe58d5d52
-        ab43b025b55761117f6628f5
-        2e36cebf5e22c66f311fee5c
-        5b91b0f127e46f61e44564d9
-        9d38be247d6eea149adf8fac
-        6dcd004f94a72403f111cc49
-        36c378e43bfb22d2ba942e75
-        82750d7aac2446ed39add1c1
-        5d1132f995dbf2e12c84ea75
-        a2a53eecbce04657591a7daa
+# 96-bit round constants (the last 12 bytes of each row of MidnightBlue's
+# 16-byte constant table; the first 4 bytes are discarded with the key bytes).
+_HURDLE_KS_CONST = [
+    0x000000000000000000000000, 0x7957DFC0380A331EF38CF4F7,
+    0x7364C133B4FEC4225460D18E, 0x8793FD9458DBBD758BA0E984,
+    0xA2EAAA4B98E3B74695536570, 0x32CF3C777E9F607B8323AE8F,
+    0x02D4FC6EB74B36187CBE3BCB, 0x3261C7BC8631F8552AFFB1F5,
+    0x48AF8AEAC7BBC6F6A80E66C5, 0xC2912968366CF64393DC57BF,
+    0x15A19C53E45D8C8DDE8A1635, 0xF48955D60DA7BD9AE099556B,
+    0xAF5A787DA2EAAA4B98E3B746, 0x93FD9458DBBD758BA0E98458,
+    0xC4225460D18E6B782C1D7364, 0xF73CA7EC257957DFC0380A33,
+]  # fmt: skip
 
-    """
-    k = [(masterkey >> (8 * (15 - i))) & 0xFF for i in range(16)]
-    kk = [
-        [k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15]],
-        [k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4]],
-        [k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9]],
-        [k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14]],
-        [k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3]],
-        [k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6]],
-        [k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13]],
-        [k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2]],
-        [k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7]],
-        [k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12]],
-        [k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1]],
-        [k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8]],
-        [k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11]],
-        [k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0]],
-        [k[6], k[7], k[8], k[9], k[10], k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5]],
-        [k[11], k[12], k[13], k[14], k[15], k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], k[8], k[9], k[10]],
-    ]  # fmt: skip
-    const = [
-        [0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00],   # rk00
-        [0x3C,  0xA7,  0xEC,  0x25,  0x79,  0x57,  0xDF,  0xC0,  0x38,  0x0A,  0x33,  0x1E,  0xF3,  0x8C,  0xF4,  0xF7],   # rk01
-        [0x6B,  0x78,  0x2C,  0x1D,  0x73,  0x64,  0xC1,  0x33,  0xB4,  0xFE,  0xC4,  0x22,  0x54,  0x60,  0xD1,  0x8E],   # rk02
-        [0x58,  0x66,  0xDF,  0x91,  0x87,  0x93,  0xFD,  0x94,  0x58,  0xDB,  0xBD,  0x75,  0x8B,  0xA0,  0xE9,  0x84],   # rk03
-        [0xAF,  0x5A,  0x78,  0x7D,  0xA2,  0xEA,  0xAA,  0x4B,  0x98,  0xE3,  0xB7,  0x46,  0x95,  0x53,  0x65,  0x70],   # rk04
-        [0x41,  0x05,  0x06,  0x8F,  0x32,  0xCF,  0x3C,  0x77,  0x7E,  0x9F,  0x60,  0x7B,  0x83,  0x23,  0xAE,  0x8F],   # rk05
-        [0x4B,  0xD9,  0x73,  0x45,  0x02,  0xD4,  0xFC,  0x6E,  0xB7,  0x4B,  0x36,  0x18,  0x7C,  0xBE,  0x3B,  0xCB],   # rk06
-        [0xE8,  0x5B,  0x82,  0x92,  0x32,  0x61,  0xC7,  0xBC,  0x86,  0x31,  0xF8,  0x55,  0x2A,  0xFF,  0xB1,  0xF5],   # rk07
-        [0x5D,  0x60,  0x50,  0xA3,  0x48,  0xAF,  0x8A,  0xEA,  0xC7,  0xBB,  0xC6,  0xF6,  0xA8,  0x0E,  0x66,  0xC5],   # rk08
-        [0x93,  0x2D,  0x06,  0xE2,  0xC2,  0x91,  0x29,  0x68,  0x36,  0x6C,  0xF6,  0x43,  0x93,  0xDC,  0x57,  0xBF],   # rk09
-        [0xAD,  0x8E,  0x84,  0x13,  0x15,  0xA1,  0x9C,  0x53,  0xE4,  0x5D,  0x8C,  0x8D,  0xDE,  0x8A,  0x16,  0x35],   # rk10
-        [0x6F,  0x43,  0xB1,  0xA9,  0xF4,  0x89,  0x55,  0xD6,  0x0D,  0xA7,  0xBD,  0x9A,  0xE0,  0x99,  0x55,  0x6B],   # rk11
-        [0x95,  0x53,  0x65,  0x70,  0xAF,  0x5A,  0x78,  0x7D,  0xA2,  0xEA,  0xAA,  0x4B,  0x98,  0xE3,  0xB7,  0x46],   # rk12
-        [0x66,  0xDF,  0x91,  0x87,  0x93,  0xFD,  0x94,  0x58,  0xDB,  0xBD,  0x75,  0x8B,  0xA0,  0xE9,  0x84,  0x58],   # rk13
-        [0xC1,  0x33,  0xB4,  0xFE,  0xC4,  0x22,  0x54,  0x60,  0xD1,  0x8E,  0x6B,  0x78,  0x2C,  0x1D,  0x73,  0x64],   # rk14
-        [0x1E,  0xF3,  0x8C,  0xF4,  0xF7,  0x3C,  0xA7,  0xEC,  0x25,  0x79,  0x57,  0xDF,  0xC0,  0x38,  0x0A,  0x33]    # rk15
-    ]  # fmt: skip
-    out = [
-        sum([(kk[row][i] ^ const[row][i]) << (8 * (15 - i)) for i in range(4, 16)])
-        for row in range(16)
-    ]
 
-    return out
+class HURDLE_KeySchedule_CVL(KeySchedule):
+    def __init__(self, R=16, name="HURDLE-KeySchedule"):
+        r"""
+        The HURDLE key schedule as a CiVerLy DAG, as implemented in
+        `HURDLE_set_key` in MidnightBlue's implementation.
+
+        Round key ``r`` (96 bits) is obtained by rotating the 128-bit master
+        key to the left by ``_HURDLE_KS_ROT[r]`` bytes, keeping the last 12
+        bytes and XORing them with the round constant ``_HURDLE_KS_CONST[r]``.
+
+        INPUT:
+
+            - ``R`` -- integer; Number of rounds, i.e. number of 96-bit round
+              keys produced (default: 16, at most 16).
+
+            - ``name`` -- string; The name of the key schedule
+              (default: "HURDLE-KeySchedule").
+
+        EXAMPLES::
+
+            sage: from civerly.cipher_implementations.hurdle \
+            ....:   import HURDLE_KeySchedule_CVL
+            sage: ks = HURDLE_KeySchedule_CVL(R=3)
+            sage: ks.input_length, ks.output_length
+            (128, 288)
+            sage: [hex(rk) for rk in ks(0x000102030405060708090a0b0c0d0e0f)]
+            ['0x405060708090a0b0c0d0e0f',
+             '0x705dd4cc35043c1ef28ef7f3',
+             '0x7d6bc132b6fdc0275267d987']
+
+        TESTS::
+
+            sage: from civerly.cipher_implementations.hurdle \
+            ....:   import HURDLE_KeySchedule_CVL
+            sage: for rk in [f'{rk:024x}' for rk in HURDLE_KeySchedule_CVL()(
+            ....:   0xabcdef12c001f00ddeadbeefcafebabe
+            ....: )]: print(rk)
+            c001f00ddeadbeefcafebabe
+            d4e9300ac6b08db53e63e637
+            c9da6afe5bec0423a46d0f23
+            9553fc64550510cb646a173e
+            7c4714a4521d0df83e9e8a62
+            dd05c2cdc034ad9491e3af7f
+            edc63c6f4746e8b5c251f135
+            3fbf6a0269fb06ef94547c1a
+            825130546c7629e4680f96c8
+            0f7e3ba8379cfb9d3e62b875
+            e5ac42fe5ab246736434bdf8
+            0a33eb7dc048af5ae16958b5
+            0497976f62eb5a46464e09a9
+            920d998676039a415e533af3
+            7acd9e9e6b30c0b5c30fb365
+            49976a0337b9562fcde6a78d
+            sage: for rk in [f'{rk:024x}' for rk in HURDLE_KeySchedule_CVL()(
+            ....:   0x99990099991188992277993366994455
+            ....: )]: print(rk)
+            991188992277993366994455
+            0eceeca6a14e66876a8c6d6e
+            373158aab4675d33dcf9f3f9
+            1e0aec1cc1f9caecb8c670c0
+            809d3378fe7af3130cca65e9
+            01a9a5332b06f97b1ababf07
+            024d657f3fd2146fe58d5d52
+            ab43b025b55761117f6628f5
+            2e36cebf5e22c66f311fee5c
+            5b91b0f127e46f61e44564d9
+            9d38be247d6eea149adf8fac
+            6dcd004f94a72403f111cc49
+            36c378e43bfb22d2ba942e75
+            82750d7aac2446ed39add1c1
+            5d1132f995dbf2e12c84ea75
+            a2a53eecbce04657591a7daa
+            sage: HURDLE_KeySchedule_CVL(R=17)
+            Traceback (most recent call last):
+            ...
+            ValueError: HURDLE's key schedule defines at most 16 round keys, got R=17
+
+        """
+        if not 0 <= R <= len(_HURDLE_KS_ROT):
+            raise ValueError(
+                "HURDLE's key schedule defines at most "
+                f"{len(_HURDLE_KS_ROT)} round keys, got {R=}"
+            )
+        super().__init__(128, 96 * R, name=name)
+        self.R = R
+
+        output_edges = []
+        for r in range(R):
+            node_rot = self.add_subcipher(
+                RotateLayer_CVL(16, _HURDLE_KS_ROT[r], word_coarseness=8, name="rot"),
+                [(self.IN, (i, i)) for i in range(128)],
+            )
+            node_rc = self.add_subcipher(
+                ConstXOR_CVL(96, _HURDLE_KS_CONST[r], name="RC"),
+                [(node_rot, (32 + i, i)) for i in range(96)],
+            )
+            output_edges += [(node_rc, (i, 96 * r + i)) for i in range(96)]
+
+        self.add_output(output_edges)
+
+    def eval(self, master_key):
+        r"""
+        Expand the 128-bit ``master_key`` into ``self.R`` round keys.
+
+        INPUT:
+
+            - ``master_key`` -- integer; 128-bit master key.
+
+        OUTPUT: List of ``self.R`` 96-bit integers, in round order.
+        """
+        bits = Cipher.eval(self, int_to_vec(master_key, self.input_length))
+        return [vec_to_int(bits[96 * r : 96 * (r + 1)]) for r in range(self.R)]
 
 
 class HURDLE_F_CVL(WordBasedCipher):
@@ -213,8 +262,8 @@ class HURDLE_CVL(CipherImplementation_CVL, WordBasedCipher):
             - ``key_schedule`` -- callable or
               :class:`civerly.keyschedule.KeySchedule` (optional); Key
               schedule used to derive round keys from ``key`` via
-              ``set_round_keys``. Pass ``hurdle_key_schedule`` to use the real
-              HURDLE key schedule, a custom callable/``KeySchedule`` subclass
+              ``set_round_keys``. Pass ``HURDLE_KeySchedule_CVL(R)`` to use the
+              real HURDLE key schedule, a custom callable/``KeySchedule`` subclass
               instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
               to pass explicit round keys (``R`` of them, 96 bits each).
               Defaults to ``None`` (no key schedule, all-zero round keys).
@@ -233,11 +282,11 @@ class HURDLE_CVL(CipherImplementation_CVL, WordBasedCipher):
         Test HURDLE-F from the outside:
 
             sage: from civerly.cipher_implementations.hurdle import (
-            ....:   HURDLE_CVL, hurdle_key_schedule)
+            ....:   HURDLE_CVL, HURDLE_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle_f = HURDLE_CVL(
             ....:   R=1, key=0x99990099991188992277993366994455,
-            ....:   key_schedule=hurdle_key_schedule
+            ....:   key_schedule=HURDLE_KeySchedule_CVL(R=1)
             ....:   ).nodes[1].nodes[1]
             sage: vec_to_int(hurdle_f(int_to_vec(0x2222eeee, 32))) == \
             ....:   0x2bee4c18
@@ -246,20 +295,20 @@ class HURDLE_CVL(CipherImplementation_CVL, WordBasedCipher):
         Test round-reduced versions of HURDLE-II:
 
             sage: from civerly.cipher_implementations.hurdle import (
-            ....:   HURDLE_CVL, hurdle_key_schedule)
+            ....:   HURDLE_CVL, HURDLE_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle = HURDLE_CVL(
             ....:   R=1, key=0x99990099991188992277993366994455,
-            ....:   key_schedule=hurdle_key_schedule)
+            ....:   key_schedule=HURDLE_KeySchedule_CVL(R=1))
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0x09cc2a7e2222eeee
             True
             sage: from civerly.cipher_implementations.hurdle import (
-            ....:   HURDLE_CVL, hurdle_key_schedule)
+            ....:   HURDLE_CVL, HURDLE_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle = HURDLE_CVL(
             ....:   R=2, key=0xabcdef12c001f00ddeadbeefcafebabe,
-            ....:   key_schedule=hurdle_key_schedule)
+            ....:   key_schedule=HURDLE_KeySchedule_CVL(R=2))
             sage: vec_to_int(hurdle(int_to_vec(0xcafebabedeadbeef, 64))) == \
             ....:   0x01451285643ddd6f
             True
@@ -267,20 +316,20 @@ class HURDLE_CVL(CipherImplementation_CVL, WordBasedCipher):
         Test full round HURDLE-II:
 
             sage: from civerly.cipher_implementations.hurdle import (
-            ....:   HURDLE_CVL, hurdle_key_schedule)
+            ....:   HURDLE_CVL, HURDLE_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle = HURDLE_CVL(
             ....:   R=16, key=0x99990099991188992277993366994455,
-            ....:   key_schedule=hurdle_key_schedule)
+            ....:   key_schedule=HURDLE_KeySchedule_CVL(R=16))
             sage: vec_to_int(hurdle(int_to_vec(0x222266662222eeee, 64))) == \
             ....:   0xb4da6698d36b1652
             True
             sage: from civerly.cipher_implementations.hurdle import (
-            ....:   HURDLE_CVL, hurdle_key_schedule)
+            ....:   HURDLE_CVL, HURDLE_KeySchedule_CVL)
             sage: from civerly.util import int_to_vec, vec_to_int
             sage: hurdle = HURDLE_CVL(
             ....:   R=16, key=0xabcdef12c001f00ddeadbeefcafebabe,
-            ....:   key_schedule=hurdle_key_schedule)
+            ....:   key_schedule=HURDLE_KeySchedule_CVL(R=16))
             sage: vec_to_int(hurdle(int_to_vec(0xcafebabedeadbeef, 64))) == \
             ....:   0x4bf15508812e06f0
             True
