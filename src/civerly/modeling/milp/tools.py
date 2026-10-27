@@ -22,6 +22,7 @@ from sage.rings.integer_ring import ZZ
 
 
 #
+from ...problem import MILP_CVL
 from ...util import list_of_predecessor_vector_indices, suppress_output
 from ... import model_options as MO
 from ...component import (
@@ -46,8 +47,10 @@ from ..tools import (
     int_to_bits,
     bits_to_int,
     _weighted_transition_rel,
+    _get_weighted_transition_data,
     build_eq_t,
     WeightedTransitions,
+    WeightedTransitionData,
     Bit,
 )
 
@@ -320,6 +323,8 @@ def _linear_layer_branch_number(bn: bn_t, component: LinearLayer_CVL, ctx: MILPC
 
 
 # ----------------------------------------------------------------- *)
+# [ reduction_algorithm_ST17 ]-------------------------------------- *)
+# ----------------------------------------------------------------- *)
 # slight change to the `reduction_algorithm_ST17` from civerly.util to accommodate the introduced
 # arch. changes
 def reduction_algorithm_ST17(
@@ -450,3 +455,198 @@ def reduction_algorithm_ST17(
         elif ineq.is_equation():
             ctx.model.add_constraint(sum(tmp_arr) + ineq.b() == 0)
     return
+
+
+# [ SBox_CVL ]------------------------------------------------------ *)
+
+
+def _prepare_weighted_transition_milp(
+    metrics,
+    ctx: MILPContext,
+) -> WeightedTransitionData:
+    """Split into multiple parts or caching"""
+
+    metric_vars = tuple(ctx.model.var() for _ in metrics)
+    variables = (*ctx.IN, *ctx.OUT, *metric_vars)
+
+    return WeightedTransitionData(
+        metrics=metrics,
+        metric_vars=metric_vars,
+        variables=variables,
+    )
+
+
+def _weighted_transition_objective_milp(
+    rel: WeightedTransitions,
+    data: WeightedTransitionData,
+    ctx: MILPContext,
+) -> None:
+    """nil"""
+
+    precision = ctx.options.sat_precision
+    scale = 10**precision
+
+    ctx.objective.extend(
+        (-int(scale * log2(metric / rel.normalizer)), metric_var)
+        for metric, metric_var in zip(data.metrics, data.metric_vars, strict=False)
+    )
+
+
+def _encode_sbox_distorted(
+    get_table_data_f: Callable,
+    component: SBox_CVL,
+    ctx: MILPContext,
+):
+    """nil"""
+
+    from civerly.distorted_balls import distorted_balls
+    import json
+
+    transition_table, input_sz, output_sz = get_table_data_f(component)
+
+    rel = _weighted_transition_rel(transition_table, input_sz, output_sz)
+    metrics, posset = _get_weighted_transition_data(rel)
+
+    solver = ctx.options.milp_solver
+
+    PROB = ctx.model.new_variable(name="PROB", binary=True)
+
+    s_file_name = "".join([f"{s_entry:x}" for s_entry in component.S])
+    # what if the path is not specified?
+    s_file_ineq = ctx.options.path / (s_file_name + ".ineq.json")
+
+    if s_file_ineq.exists():
+        with s_file_ineq.open() as ineq_file:
+            inequations_for_prob = json.load(ineq_file)
+    else:  # Create inequations for s-box transitions
+        # Originally, this method does not take the probability
+        # of an s-box transition into account. Hence, the easiest way
+        # to do so is the iterate for every non-zero probability
+        # within the DDT and merge the resulting models while keeping
+        # track of the probability.
+        inequations_for_prob = {}
+        for prob in posset:
+            if prob == 0:
+                continue
+            # prob needs to be a string to comply with json format
+            inequations_for_prob[str(prob)] = distorted_balls.get_inequations(
+                transition_table, prob
+            )
+        # Cache inequations
+        with s_file_ineq.open("w") as ineq_file:
+            json.dump(inequations_for_prob, ineq_file)
+
+    # import numpy as np
+    # table = np.asarray(transition_table)
+    #
+    # impossible_points_for_prob = {
+    #     prob: np.argwhere(table != int(prob))
+    #     for prob in inequations_for_prob
+    # }
+    #
+    # impossible_points_for_prob = {
+    #     prob: list(map(tuple, np.argwhere(table != int(prob))))
+    #     for prob in inequations_for_prob
+    # }
+
+    impossible_points_for_prob = {prob: [] for prob in inequations_for_prob}
+    for a in range(1 << input_sz):
+        for b in range(1 << output_sz):
+            for prob in impossible_points_for_prob:
+                if transition_table[a][b] != int(prob):
+                    impossible_points_for_prob[prob].append((a, b))
+
+    reduction_solution = {}
+    for prob, impossible_points in impossible_points_for_prob.items():
+        s_file_mps = ctx.options.path / f"{s_file_name}.p{prob}.mps"
+
+        # Generate the reduction-MILP and write into an .mps file.
+        # We add equations to make sure that each impossible point is
+        # removed by at least one equation. Here, impossible means
+        # that the probability does not match the desired one.
+        # The solver handles the "solution already on disk" cache
+        # check internally and (for an external solver) aborts via
+        # :class:`ExternalSolveRequiredError` when the user must solve.
+        milp_to_minimize_milp = MILP_CVL(maximization=False)  # Reduction MILP
+        Z = milp_to_minimize_milp.new_variable(name="Z", binary=True)
+        for point in impossible_points:
+            point
+            # Add a reduction inequation ensuring that each
+            # impossible point is removed by at least one
+            # inequation
+            milp_to_minimize_milp.add_constraint(
+                sum(
+                    [
+                        Z[ineq_index]
+                        for ineq_index, inequation in enumerate(inequations_for_prob[prob])
+                        if removes(inequation, point, input_sz, output_sz)
+                    ]
+                )
+                >= 1
+            )
+
+        milp_to_minimize_milp.set_objective(sum(Z))
+        with suppress_output():  # to avoid doctest failure
+            milp_to_minimize_milp.write(s_file_mps)
+        reduction_solution[prob] = solver.solve(s_file_mps)["assignment"]
+
+    selected_inequations = {prob: [] for prob in reduction_solution}
+    for prob, results in reduction_solution.items():
+        assert "Z" in results and len(results) == 1, (
+            f"ERROR: Unexpected variables in results. Found {results.keys()}, expected 'Z'"
+        )
+        for ineq_index, use in results["Z"].items():
+            if use:  # if Z[ineq_index] was determined to be 1
+                selected_inequations[prob].append(inequations_for_prob[prob][ineq_index])
+
+    for prob_str, sel_ineq in selected_inequations.items():
+        prob_index = posset.index(int(prob_str))
+        for inequation in sel_ineq:
+            lhs = 0
+            for i in range(input_sz):
+                lhs += ctx.model.IN[i] * inequation[i]
+            for i in range(output_sz):
+                lhs += ctx.model.OUT[i] * inequation[input_sz + i]
+            non_zero_coefficients = sum([i != 0 for i in inequation])
+            # To incorporate the probability we subtract
+            # non_zero_coefficients*128 from the right-hand side and
+            # add it to the left-hand side if the probability variable
+            # is set. This is motivated by the fact that the
+            # coefficients are int8 values in the C++ code and the
+            # equation will therefore always be fulfilled if the
+            # probability variable is zero, and it will match the
+            # original inequation otherwise.
+            lhs -= PROB[prob_index] * non_zero_coefficients * 128  # probability encoding bits
+            ctx.model.add_constraint(lhs >= inequation[-1] - non_zero_coefficients * 128)
+
+    # Add a constraint that at least one probability
+    # variable needs to be one
+    ctx.model.add_constraint(sum(PROB) >= 1)
+
+    return
+
+
+# ----------------------------------------------------------------- *)
+def removes(inequation, point, input_length, output_length):
+    r"""
+    Checks if inequation removes point
+    :param inequation: List of coefficients representing an
+      inequation
+    :param point: point of the form (in,out)
+    :return: Whether inequation removes point
+    """
+    assert len(inequation) == input_length + output_length + 1, (
+        "ERROR: Length of inequation does not match "
+        f"(expected {input_length + output_length + 1}, "
+        f"got {len(inequation)})"
+    )
+    # Build left-hand side using coefficients given in inequation
+    lhs = 0
+    for i in range(input_length):
+        # the 0-th bit is the msb
+        lhs += ((point[0] >> i) & 1) * inequation[input_length - i - 1]
+    for i in range(output_length):
+        # the 0-th bit is the msb
+        lhs += ((point[1] >> i) & 1) * inequation[input_length + output_length - i - 1]
+    # Compare with right-hand size
+    return lhs < inequation[-1]

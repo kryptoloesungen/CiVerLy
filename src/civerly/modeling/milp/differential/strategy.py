@@ -20,6 +20,7 @@ from ...tools import (
     bits_to_int,
     _get_divide_factor,
     _build_differential_equations,
+    _get_transition_table_differential,
 )
 from ...core import EncodingStrategy
 
@@ -31,6 +32,7 @@ from ..tools import (
     _build_differential_matrix,
     _linear_layer_convex_hull,
     _linear_layer_more_dummies,
+    _encode_sbox_distorted,
 )
 
 
@@ -104,3 +106,7 @@ encode_permute_layer_branch_number = partial(
     _encode_permute_layer,
     encode_linear_branch_number,
 )
+
+# [ SBox_CVL (Bitwise) ]-------------------------------------------- *)
+
+encode_sbox_distorted_ball = partial(_encode_sbox_distorted, _get_transition_table_differential)

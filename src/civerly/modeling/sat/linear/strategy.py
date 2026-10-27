@@ -25,6 +25,7 @@ from ...tools import (
     _linear_layer_equations,
     _build_linear_equations,
     _build_differential_equations,
+    _get_transition_table_linear,
 )
 from ...core import EncodingStrategy
 
@@ -101,18 +102,8 @@ encode_linear_more_dummies = partial(
 
 # [ SBox_CVL ]------------------------------------------------------ *)
 
-
-def _get_transition_table(component: SBox_CVL) -> Sequence[Sequence[int, ...], ...]:
-    sbox = component.S
-    table = tuple(
-        tuple(abs(int(entry * len(sbox))) for entry in row)
-        for row in sbox.linear_approximation_table("correlation")
-    )
-    return table, sbox.input_size(), sbox.output_size()
-
-
-encode_sbox_direct = partial(_encode_sbox_direct, _get_transition_table)
-encode_sbox_espresso = partial(_encode_sbox_espresso, _get_transition_table)
+encode_sbox_direct = partial(_encode_sbox_direct, _get_transition_table_linear)
+encode_sbox_espresso = partial(_encode_sbox_espresso, _get_transition_table_linear)
 
 # [ AND_CVL ]------------------------------------------------------- *)
 
@@ -120,7 +111,7 @@ encode_sbox_espresso = partial(_encode_sbox_espresso, _get_transition_table)
 # precomputed
 @cache
 def _get_and_model():
-    return _precompute_one_bit_and(*_get_transition_table(_AND_SBOX))
+    return _precompute_one_bit_and(*_get_transition_table_linear(_AND_SBOX))
 
 
 encode_and = partial(_encode_and, _get_and_model)

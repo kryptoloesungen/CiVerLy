@@ -14,3 +14,4 @@ docs/source/installation/versions.rst
 .jukit/
 /testdir/
 /build/
+*.so

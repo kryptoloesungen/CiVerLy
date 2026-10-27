@@ -69,8 +69,9 @@ def _encode_permute_layer(
 
 def encode_sbox_wordwise(component: SBox_CVL, ctx: MILPContext):
 
-    if ctx.options.granularity == MO.GRANULARITY.WORDWISE:
-        # wordsize is set externally in wordbasedcipher.add_subcipher
-        for i in range(component.input_length // component.wordsize):
-            ctx.model.add_constraint(ctx.OUT[i] == ctx.IN[i])
-            ctx.objective.append((-1, ctx.model.vars["IN"].get_index(i)))
+    #if ctx.options.granularity == MO.GRANULARITY.WORDWISE:
+    # wordsize is set externally in wordbasedcipher.add_subcipher
+    for i in range(component.input_length // component.wordsize):
+        ctx.model.add_constraint(ctx.OUT[i] == ctx.IN[i])
+        ctx.objective.append((-1, ctx.model.vars["IN"].get_index(i)))
+

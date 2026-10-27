@@ -28,6 +28,8 @@ from ...component import (
 
 #
 from ..tools import (
+    _get_weighted_transition_data,
+    WeightedTransitionData,
     _weighted_transition_rel,
     bits_to_int,
     WeightedTransitions,
@@ -71,38 +73,6 @@ def _encode_permutation_sat(table: tuple[int], ctx: SATContext) -> None:
 #
 #     PROB_VARS = tuple(ctx.model.var() for _ in set_ddt)
 #     VARS = (*ctx.IN, *ctx.OUT, *PROB_VARS)
-
-
-@dataclass(frozen=True, slots=True)
-class WeightedTransitionData:
-    metrics: tuple[int, ...]
-    metric_vars: tuple[SATVariable, ...]
-    variables: tuple[SATVariable, ...]
-
-
-@cache
-def _get_weighted_transition_data(
-    rel: WeightedTransitions,
-) -> tuple[tuple[int, ...], tuple[tuple[int, ...], ...]]:
-    r"""nil"""
-
-    metrics = tuple(sorted({transition.metric for transition in rel.transitions}))
-    metric_index = {metric: i for i, metric in enumerate(metrics)}
-
-    # fmt: off
-    posset = tuple(
-        (
-            *transition.bits,
-            *(
-              int(i == metric_index[transition.metric]) 
-              for i in range(len(metrics))
-             ),
-        )
-        for transition in rel.transitions
-    )
-    # fmt: on
-
-    return metrics, posset
 
 
 def _prepare_weighted_transition_sat(

@@ -2,6 +2,7 @@
 Various utility functions / shared code across all different analysis types / optimisation problems.
 """
 
+from collections.abc import Sequence
 from functools import cache
 from itertools import product
 from dataclasses import dataclass, field
@@ -91,6 +92,41 @@ class WeightedTransitions:
     normalizer: int
 
 
+@dataclass(frozen=True, slots=True)
+class WeightedTransitionData:
+    metrics: tuple[int, ...]
+    metric_vars: tuple
+    variables: tuple
+
+
+# ----------------------------------------------------------------- *)
+
+
+@cache
+def _get_weighted_transition_data(
+    rel: WeightedTransitions,
+) -> tuple[tuple[int, ...], tuple[tuple[int, ...], ...]]:
+    r"""nil"""
+
+    metrics = tuple(sorted({transition.metric for transition in rel.transitions}))
+    metric_index = {metric: i for i, metric in enumerate(metrics)}
+
+    # fmt: off
+    posset = tuple(
+        (
+            *transition.bits,
+            *(
+              int(i == metric_index[transition.metric]) 
+              for i in range(len(metrics))
+             ),
+        )
+        for transition in rel.transitions
+    )
+    # fmt: on
+
+    return metrics, posset
+
+
 @cache
 def _weighted_transition_rel(
     transition_table: tuple[int, ...], input_sz: int, output_sz: int
@@ -111,6 +147,23 @@ def _weighted_transition_rel(
     )
 
     return WeightedTransitions(transitions, int(transition_table[0][0]))
+
+
+# [ get DDTs for linear or differential analysis ]------------------ *)
+
+
+def _get_transition_table_differential(component: SBox_CVL) -> Sequence[Sequence[int, ...], ...]:
+    table = component.S.difference_distribution_table()
+    return table, component.S.input_size(), component.S.output_size()
+
+
+def _get_transition_table_linear(component: SBox_CVL) -> Sequence[Sequence[int, ...], ...]:
+    sbox = component.S
+    table = tuple(
+        tuple(abs(int(entry * len(sbox))) for entry in row)
+        for row in sbox.linear_approximation_table("correlation")
+    )
+    return table, sbox.input_size(), sbox.output_size()
 
 
 # [ Parity and Linear Layer utils ]--------------------------------- *)
