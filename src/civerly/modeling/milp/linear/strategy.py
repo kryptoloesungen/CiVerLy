@@ -102,4 +102,12 @@ encode_permute_layer_branch_number = partial(
 # [ SBox_CVL (Bitwise) ]-------------------------------------------- *)
 
 
-encode_sbox_distorted_ball = partial(_encode_sbox_distorted, _get_transition_table_linear)
+def _get_tt_for_db(component: SBox_CVL):
+
+    from sage.matrix.constructor import Matrix as matrix
+
+    tt, isz, osz = _get_transition_table_linear(component)
+    return matrix(tt), isz, osz
+
+
+encode_sbox_distorted_ball = partial(_encode_sbox_distorted, _get_tt_for_db)

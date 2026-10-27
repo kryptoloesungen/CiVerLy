@@ -504,8 +504,7 @@ def _encode_sbox_distorted(
 
     transition_table, input_sz, output_sz = get_table_data_f(component)
 
-    rel = _weighted_transition_rel(transition_table, input_sz, output_sz)
-    metrics, posset = _get_weighted_transition_data(rel)
+    posset = sorted({d for dr in transition_table for d in dr if d > 0})
 
     solver = ctx.options.milp_solver
 
@@ -536,25 +535,12 @@ def _encode_sbox_distorted(
         with s_file_ineq.open("w") as ineq_file:
             json.dump(inequations_for_prob, ineq_file)
 
-    # import numpy as np
-    # table = np.asarray(transition_table)
-    #
-    # impossible_points_for_prob = {
-    #     prob: np.argwhere(table != int(prob))
-    #     for prob in inequations_for_prob
-    # }
-    #
-    # impossible_points_for_prob = {
-    #     prob: list(map(tuple, np.argwhere(table != int(prob))))
-    #     for prob in inequations_for_prob
-    # }
+    import numpy as np
 
-    impossible_points_for_prob = {prob: [] for prob in inequations_for_prob}
-    for a in range(1 << input_sz):
-        for b in range(1 << output_sz):
-            for prob in impossible_points_for_prob:
-                if transition_table[a][b] != int(prob):
-                    impossible_points_for_prob[prob].append((a, b))
+    impossible_points_for_prob = {
+        prob: np.argwhere(np.asarray(transition_table) != int(prob))
+        for prob in inequations_for_prob
+    }
 
     reduction_solution = {}
     for prob, impossible_points in impossible_points_for_prob.items():
@@ -602,11 +588,9 @@ def _encode_sbox_distorted(
     for prob_str, sel_ineq in selected_inequations.items():
         prob_index = posset.index(int(prob_str))
         for inequation in sel_ineq:
-            lhs = 0
-            for i in range(input_sz):
-                lhs += ctx.model.IN[i] * inequation[i]
-            for i in range(output_sz):
-                lhs += ctx.model.OUT[i] * inequation[input_sz + i]
+            lhs = sum(ctx.IN[i] * inequation[i] for i in range(input_sz)) + sum(
+                ctx.OUT[i] * inequation[input_sz + i] for i in range(output_sz)
+            )
             non_zero_coefficients = sum([i != 0 for i in inequation])
             # To incorporate the probability we subtract
             # non_zero_coefficients*128 from the right-hand side and
@@ -641,12 +625,12 @@ def removes(inequation, point, input_length, output_length):
         f"got {len(inequation)})"
     )
     # Build left-hand side using coefficients given in inequation
-    lhs = 0
-    for i in range(input_length):
-        # the 0-th bit is the msb
-        lhs += ((point[0] >> i) & 1) * inequation[input_length - i - 1]
-    for i in range(output_length):
-        # the 0-th bit is the msb
-        lhs += ((point[1] >> i) & 1) * inequation[input_length + output_length - i - 1]
+    lhs = sum(
+        ((point[0] >> i) & 1) * inequation[input_length - i - 1] for i in range(input_length)
+    ) + sum(
+        ((point[1] >> i) & 1) * inequation[input_length + output_length - i - 1]
+        for i in range(output_length)
+    )
+
     # Compare with right-hand size
     return lhs < inequation[-1]
