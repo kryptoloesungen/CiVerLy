@@ -749,14 +749,6 @@ def _mix_columns(state_bytes):
     return mc
 
 
-def _inverse_perm(perm):
-    """Return the inverse permutation of ``perm``."""
-    inv = [0] * len(perm)
-    for i, p in enumerate(perm):
-        inv[p] = i
-    return inv
-
-
 def _vec_perm(pbox, state_nibbles):
     r"""Translate Blink's paper permutation into CiVerLy's vector convention.
 

@@ -26,53 +26,56 @@ from civerly.keyschedule import KeySchedule
 from civerly.sboxcipher import SBoxCipher
 from civerly.util import int_to_vec
 
-_MASK16 = (1 << 16) - 1
 _MASK32 = (1 << 32) - 1
 
 
-def _rol16(value, shift):
-    """Rotate a 16-bit half-word left by ``shift`` bits."""
-    shift %= 16
-    value &= _MASK16
-    return ((value << shift) | (value >> (16 - shift))) & _MASK16
+# ARADI S-box as a truth table (4 bits, MSB first).
+_SBOX = [0, 1, 2, 3, 4, 13, 15, 6, 8, 11, 5, 14, 12, 7, 10, 9]
+
+# The four linear layers L0..L3 on one 32-bit word, as binary matrices. Row i
+# (bit i of the output, MSB first) is given as a 32-bit integer whose bits are
+# the coefficients of the input bits, MSB first. L_j maps (u, l) to
+# (u ^ (u <<< a) ^ (l <<< c), l ^ (l <<< a) ^ (u <<< b)) on the 16-bit halves,
+# with (a, b, c) = (11, 8, 14), (10, 9, 11), (9, 4, 14), (8, 9, 7).
+_LINEAR_LAYER_ROWS = [
+    [  # L0: (a, b, c) = (11, 8, 14)
+        0x80100002, 0x40080001, 0x20048000, 0x10024000, 0x08012000, 0x84001000,
+        0x42000800, 0x21000400, 0x10800200, 0x08400100, 0x04200080, 0x02100040,
+        0x01080020, 0x00840010, 0x00420008, 0x00210004, 0x00808010, 0x00404008,
+        0x00202004, 0x00101002, 0x00080801, 0x00048400, 0x00024200, 0x00012100,
+        0x80001080, 0x40000840, 0x20000420, 0x10000210, 0x08000108, 0x04000084,
+        0x02000042, 0x01000021,
+    ],
+    [  # L1: (a, b, c) = (10, 9, 11)
+        0x80200010, 0x40100008, 0x20080004, 0x10040002, 0x08020001, 0x04018000,
+        0x82004000, 0x41002000, 0x20801000, 0x10400800, 0x08200400, 0x04100200,
+        0x02080100, 0x01040080, 0x00820040, 0x00410020, 0x00408020, 0x00204010,
+        0x00102008, 0x00081004, 0x00040802, 0x00020401, 0x00018200, 0x80004100,
+        0x40002080, 0x20001040, 0x10000820, 0x08000410, 0x04000208, 0x02000104,
+        0x01000082, 0x00800041,
+    ],
+    [  # L2: (a, b, c) = (9, 4, 14)
+        0x80400002, 0x40200001, 0x20108000, 0x10084000, 0x08042000, 0x04021000,
+        0x02010800, 0x81000400, 0x40800200, 0x20400100, 0x10200080, 0x08100040,
+        0x04080020, 0x02040010, 0x01020008, 0x00810004, 0x08008040, 0x04004020,
+        0x02002010, 0x01001008, 0x00800804, 0x00400402, 0x00200201, 0x00108100,
+        0x00084080, 0x00042040, 0x00021020, 0x00010810, 0x80000408, 0x40000204,
+        0x20000102, 0x10000081,
+    ],
+    [  # L3: (a, b, c) = (8, 9, 7)
+        0x80800100, 0x40400080, 0x20200040, 0x10100020, 0x08080010, 0x04040008,
+        0x02020004, 0x01010002, 0x80800001, 0x40408000, 0x20204000, 0x10102000,
+        0x08081000, 0x04040800, 0x02020400, 0x01010200, 0x00408080, 0x00204040,
+        0x00102020, 0x00081010, 0x00040808, 0x00020404, 0x00010202, 0x80000101,
+        0x40008080, 0x20004040, 0x10002020, 0x08001010, 0x04000808, 0x02000404,
+        0x01000202, 0x00800101,
+    ],
+]  # fmt: skip
 
 
-def _aradi_sbox_table():
-    """Build the 4-bit ARADI S-box truth table."""
-    table = []
-    for nibble in range(16):
-        w = (nibble >> 3) & 1
-        x = (nibble >> 2) & 1
-        y = (nibble >> 1) & 1
-        z = nibble & 1
-
-        x = x ^ (w & y)
-        z = z ^ (x & y)
-        y = y ^ (w & z)
-        w = w ^ (x & z)
-
-        table.append((w << 3) | (x << 2) | (y << 1) | z)
-    return table
-
-
-def _aradi_linear_word_eval(word, a, b, c):
-    """Evaluate ARADI's linear layer on one 32-bit word."""
-    upper = (word >> 16) & _MASK16
-    lower = word & _MASK16
-
-    first = upper ^ _rol16(upper, a) ^ _rol16(lower, c)
-    second = lower ^ _rol16(lower, a) ^ _rol16(upper, b)
-
-    return ((first & _MASK16) << 16) | (second & _MASK16)
-
-
-def _aradi_linear_word_matrix(a, b, c):
-    """Return the binary matrix representation for one word transform."""
-    rows = []
-    for basis_index in range(32):
-        basis = 1 << (31 - basis_index)
-        rows.append(int_to_vec(_aradi_linear_word_eval(basis, a, b, c), 32))
-    return matrix(GF(2), rows).transpose()
+def _linear_layer_matrix(j):
+    """Return the 32x32 binary matrix of the linear layer ``L_j``."""
+    return matrix(GF(2), [int_to_vec(row, 32) for row in _LINEAR_LAYER_ROWS[j]])
 
 
 def _make_mix(a, b, name):
@@ -445,7 +448,7 @@ class ARADI_CVL(CipherImplementation_CVL, SBoxCipher):
         """
         super().__init__(128, 128, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        sbox = SBox_CVL(SBox(_aradi_sbox_table()), name="SBox")
+        sbox = SBox_CVL(SBox(_SBOX), name="SBox")
         sbox_layer = SBoxCipher(128, 128, name="SBoxLayer")
         for bit_index in range(32):
             node = sbox_layer.add_subcipher(
@@ -464,16 +467,8 @@ class ARADI_CVL(CipherImplementation_CVL, SBoxCipher):
 
         linear_layers = []
         for round_index in range(4):
-            a_values = [11, 10, 9, 8]
-            b_values = [8, 9, 4, 9]
-            c_values = [14, 11, 14, 7]
-
             linear_layer = SBoxCipher(128, 128, name=f"LinearLayer{round_index}")
-            word_matrix = _aradi_linear_word_matrix(
-                a_values[round_index],
-                b_values[round_index],
-                c_values[round_index],
-            )
+            word_matrix = _linear_layer_matrix(round_index)
             word_component = LinearLayer_CVL(word_matrix, name=f"L{round_index}")
             for word_index in range(4):
                 node = linear_layer.add_subcipher(

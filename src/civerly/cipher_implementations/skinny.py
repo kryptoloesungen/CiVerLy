@@ -4,14 +4,17 @@ from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.aeslike import AESlike
+from civerly.cipher import Cipher
 from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     I_CVL,
+    XOR_CVL,
     LinearLayer_CVL,
     PermuteLayer_CVL,
     RoundkeyXOR_CVL,
     SBox_CVL,
 )
+from civerly.keyschedule import KeySchedule
 from civerly.util import int_to_vec, vec_to_int
 from civerly.wordsboxcipher import WordSBoxCipher  # For the TK-schedules
 
@@ -25,6 +28,16 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
         0x08, 0x11, 0x22, 0x04, 0x09, 0x13, 0x26, 0x0C, 0x19, 0x32, 0x25,
         0x0A, 0x15, 0x2A, 0x14, 0x28, 0x10, 0x20,
     )  # fmt: skip
+
+    # Number of rounds of the full-round versions, indexed by (n, t)
+    rounds = {
+        (64, 64): 32,
+        (64, 128): 36,
+        (64, 192): 40,
+        (128, 128): 40,
+        (128, 256): 48,
+        (128, 384): 56,
+    }
 
     def create_tk_schedules(s, z):
         r"""
@@ -222,31 +235,48 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             - ``t`` -- integer; The tweakey size of SKINNY. Needs to fulfill
               :math:`t \in \{ n, 2n, 3n \}`.
 
-            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
-              (optional); Key schedule instance used by ``set_round_keys``.
-              The tweakey schedule of SKINNY is already applied directly in
-              Python via ``key``, so this parameter only exists for custom
-              ``KeySchedule`` subclass instances. Defaults to ``None`` (no
-              key schedule).
+            - ``R`` -- integer (optional); The number of rounds. Defaults to
+              the full number of rounds of SKINNY-``n``-``t``.
 
-            - ``key`` -- integer (optional); The (tweak-)key value for SKINNY.
-              If no key is specified, it is defaulted to 0.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive the round
+              tweakeys from ``key`` via ``set_round_keys``. Pass a
+              :class:`SKINNY_KeySchedule_CVL` instance to use the real SKINNY
+              tweakey schedule, a custom ``KeySchedule`` subclass instance,
+              or :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
+              explicit round tweakeys (``2R`` of them, ``n/4`` bits each:
+              ``atk1`` (row 0) and ``atk2`` (row 1) of round 0, then of
+              round 1, ...). Defaults to ``None`` (no key schedule, all-zero
+              round tweakeys).
+
+            - ``key`` -- integer or list of integers (optional); The master
+              (tweak-)key :math:`TK1 \| TK2 \| TK3` passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``. When using
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL`, this is
+              the list of round tweakeys.
 
             - ``name`` -- string (optional); The name of the SKINNY cipher.
               Is defaulted to "SKINNY".
 
-        The test vectors used below are taken from SKINNYs original
-        specification (https://eprint.iacr.org/2016/660.pdf):
+        The round constants are part of the cipher, the round tweakeys are
+        only set via ``key_schedule`` and ``key``. The test vectors used
+        below are taken from SKINNYs original specification
+        (https://eprint.iacr.org/2016/660.pdf):
 
-        sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+        sage: from civerly.cipher_implementations.skinny import (
+        ....:   SKINNY_CVL, SKINNY_KeySchedule_CVL)
         sage: from civerly.util import int_to_vec, vec_to_int
         sage: skinny = SKINNY_CVL(
-        ....:   64, 64, key=0xf5269826fc681238, name="SKINNY-64-64")
+        ....:   64, 64, key=0xf5269826fc681238,
+        ....:   key_schedule=SKINNY_KeySchedule_CVL(64, 64), name="SKINNY-64-64")
         sage: vec_to_int(skinny(int_to_vec(0x06034f957724d19d, 64))) == \
         ....:   0xbb39dfb2429b8ac7
         True
         sage: skinny = SKINNY_CVL(
         ....:   64, 128, key=0x9eb93640d088da63_76a39d1c8bea71e1,
+        ....:   key_schedule=SKINNY_KeySchedule_CVL(64, 128),
         ....:   name="SKINNY-64-128")
         sage: vec_to_int(skinny(int_to_vec(0xcf16cfe8fd0f98aa, 64))) == \
         ....:   0x6ceda1f43de92b9e
@@ -254,18 +284,22 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
         sage: skinny = SKINNY_CVL(
         ....:    64, 192,
         ....:   key=0xed00c85b120d6861_8753e24bfd908f60_b2dbb41b422dfcd0,
+        ....:   key_schedule=SKINNY_KeySchedule_CVL(64, 192),
         ....:   name="SKINNY-64-192")
         sage: vec_to_int(skinny(int_to_vec(0x530c61d35e8663c3, 64))) == \
         ....:   0xdd2cf1a8f330303c
         True
         sage: skinny = SKINNY_CVL(128, 128,
-        ....:   key=0x4f55cfb0520cac52fd92c15f37073e93, name="SKINNY-128-128")
+        ....:   key=0x4f55cfb0520cac52fd92c15f37073e93,
+        ....:   key_schedule=SKINNY_KeySchedule_CVL(128, 128),
+        ....:   name="SKINNY-128-128")
         sage: vec_to_int(skinny(int_to_vec(
         ....:   0xf20adb0eb08b648a3b2eeed1f0adda14, 128))) == \
         ....:   0x22ff30d498ea62d7e45b476e33675b74
         True
         sage: skinny = SKINNY_CVL(128, 256,
         ....:   key=0x009cec81605d4ac1d2ae9e3085d7a1f3_1ac123ebfc00fddcf01046ceeddfcab3,
+        ....:   key_schedule=SKINNY_KeySchedule_CVL(128, 256),
         ....:   name="SKINNY-128-256")
         sage: vec_to_int(skinny(int_to_vec(
         ....:   0x3a0c47767a26a68dd382a695e7022e25, 128))) == \
@@ -273,10 +307,31 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
         True
         sage: skinny = SKINNY_CVL(128, 384,
         ....:   key=0xdf889548cfc7ea52d296339301797449_ab588a34a47f1ab2dfe9c8293fbea9a5_ab1afac2611012cd8cef952618c3ebe8,
+        ....:   key_schedule=SKINNY_KeySchedule_CVL(128, 384),
         ....:   name="SKINNY-128-384")
         sage: vec_to_int(skinny(int_to_vec(
         ....:   0xa3994b66ad85a3459f44e92b08f550cb, 128))) == \
         ....:   0x94ecf589e2017c601b38c6346a10dcfa
+        True
+
+        Without a key schedule, ``key`` has no effect and all round
+        tweakeys are 0:
+
+        sage: SKINNY_CVL(64, 64, R=3, key=0xf5269826fc681238)(
+        ....:   int_to_vec(0x06034f957724d19d, 64)) == \
+        ....:   SKINNY_CVL(64, 64, R=3)(int_to_vec(0x06034f957724d19d, 64))
+        True
+
+        Explicit round tweakeys can be passed via
+        :class:`civerly.keyschedule.DefaultKeySchedule_CVL` (``2R`` round
+        tweakeys of ``n/4`` bits each):
+
+        sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+        sage: rtks = SKINNY_KeySchedule_CVL(64, 64)(0xf5269826fc681238)
+        sage: skinny = SKINNY_CVL(
+        ....:   64, 64, key=rtks, key_schedule=DefaultKeySchedule_CVL(16, 64))
+        sage: vec_to_int(skinny(int_to_vec(0x06034f957724d19d, 64))) == \
+        ....:   0xbb39dfb2429b8ac7
         True
 
         TESTS::
@@ -526,17 +581,8 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
         if name is None:
             name = "SKINNY"
 
-        round_dict = {
-            (64, 64): 32,
-            (64, 128): 36,
-            (64, 192): 40,
-            (128, 128): 40,
-            (128, 256): 48,
-            (128, 384): 56,
-        }
-
         if R is None:
-            R = round_dict[(n, t)]  # For full-round versions
+            R = SKINNY_CVL.rounds[(n, t)]  # For full-round versions
 
         super().__init__(
             n // 16, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name
@@ -544,8 +590,6 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
 
         n = self.n
         R = self.R
-        z = self.t // n
-        k = 0 if self.key is None else self.key
 
         s = n // 16  # wordsize
 
@@ -708,20 +752,6 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
 
         skinny_round.add_output([(node_round, (i, i)) for i in range(16)])
 
-        # array of tk-schedule ciphers
-        tk_schedules = SKINNY_CVL.create_tk_schedules(s, z)
-
-        # divide up the key into [TK1, TK2, TK3]
-        current_tweakeys = [(k >> (y * n)) & ((1 << n) - 1) for y in range(z)][::-1]
-        final_tweakeys = [0 for _ in range(R)]
-        for r in range(R):
-            for w in range(z):
-                final_tweakeys[r] ^= current_tweakeys[w]
-            current_tweakeys = [
-                vec_to_int(tk_schedules[w](int_to_vec(current_tweakeys[w], n)))
-                for w in range(z)
-            ]  # Update tweakeys with the respective tk-schedule
-
         node_cipher = self.IN
         for r in range(R):
             # Set roundconstant values
@@ -737,18 +767,170 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ].const = current_constant
             # ---------------------------------------------
 
-            # Set roundtweakey values
-            # ---------------------------------------------
-            skinny_round.nodes[node_round_tweakey].nodes[node_atk1].const = (
-                final_tweakeys[r] >> (3 * 4 * s)
-            ) & ((1 << (4 * s)) - 1)
-            skinny_round.nodes[node_round_tweakey].nodes[node_atk2].const = (
-                final_tweakeys[r] >> (2 * 4 * s)
-            ) & ((1 << (4 * s)) - 1)
-            # ---------------------------------------------
-
             node_cipher = self.add_subcipher(
                 skinny_round, [(node_cipher, (i, i)) for i in range(16)]
             )
 
         self.add_output([(node_cipher, (i, i)) for i in range(16)])
+
+        # Round tweakey components (first two rows of the state), in round
+        # order with atk1 (row 0) before atk2 (row 1). Their values are set
+        # by ``set_round_keys`` from ``key_schedule`` (e.g.
+        # ``SKINNY_KeySchedule_CVL``); without a key schedule they are 0.
+        self._rk_components = [
+            self.nodes[r + 1].nodes[node_round_tweakey].nodes[node]
+            for r in range(R)
+            for node in (node_atk1, node_atk2)
+        ]
+
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)
+
+
+class SKINNY_KeySchedule_CVL(KeySchedule):
+    def __init__(self, n=64, t=64, R=None, name=None):
+        r"""
+        The SKINNY tweakey schedule as a CiVerLy DAG.
+
+        Takes the ``t``-bit tweakey :math:`TK1 \| TK2 \| TK3` (``TK1`` in the
+        most significant ``n`` bits, ``TK2``/``TK3`` only present for
+        :math:`t \geq 2n` resp. :math:`t = 3n`) and computes the ``R``
+        round tweakeys. Each tweakey word ``TKw`` is updated by the
+        per-word tweakey update cipher from
+        :meth:`SKINNY_CVL.create_tk_schedules` (permutation :math:`P_T`
+        and, for ``TK2``/``TK3``, the LFSRs), chained ``R - 1`` times. In
+        each round the first two rows of :math:`TK1 \oplus TK2 \oplus TK3`
+        are extracted with ``XOR_CVL`` components; they are the values of
+        the ``atk1`` (row 0) and ``atk2`` (row 1) round tweakey components
+        of :class:`SKINNY_CVL`.
+
+        INPUT:
+
+            - ``n`` -- integer; The block size of SKINNY, :math:`n \in \{64,
+              128\}`.
+
+            - ``t`` -- integer; The tweakey size of SKINNY,
+              :math:`t \in \{n, 2n, 3n\}`.
+
+            - ``R`` -- integer (optional); The number of rounds. Defaults to
+              the full number of rounds of SKINNY-``n``-``t``.
+
+            - ``name`` -- string (optional); The name of the key schedule.
+
+        OUTPUT: The key schedule. Evaluating it on a tweakey (integer)
+        returns the list of :math:`2R` round tweakey integers of
+        :math:`n/4` bits each, in the order ``atk1`` of round 0, ``atk2``
+        of round 0, ``atk1`` of round 1, ... (matching
+        ``SKINNY_CVL._rk_components``).
+
+        EXAMPLES::
+
+            sage: from civerly.cipher_implementations.skinny import (
+            ....:   SKINNY_KeySchedule_CVL)
+            sage: ks = SKINNY_KeySchedule_CVL(64, 64)
+            sage: ks
+            SKINNY-64-64-KeySchedule: 64 -> 1024 bits
+            ...
+            sage: rks = ks(0xf5269826fc681238)
+            sage: len(rks)
+            64
+            sage: [hex(rk) for rk in rks[:4]]
+            ['0xf526', '0x9826', '0xc8f2', '0x6318']
+
+        The round tweakeys of the first round are the first two rows of
+        :math:`TK1 \oplus TK2 \oplus TK3`::
+
+            sage: ks = SKINNY_KeySchedule_CVL(64, 192, R=1)
+            sage: [hex(rk) for rk in ks(
+            ....:   0xed00c85b120d6861_8753e24bfd908f60_b2dbb41b422dfcd0)]
+            ['0xd888', '0x9e0b']
+
+        TESTS:
+
+        End-to-end test vector for SKINNY-64-128 via ``set_round_keys``::
+
+            sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
+            sage: from civerly.util import int_to_vec, vec_to_int
+            sage: skinny = SKINNY_CVL(
+            ....:   64, 128, key_schedule=SKINNY_KeySchedule_CVL(64, 128))
+            sage: skinny.set_round_keys(0x9eb93640d088da63_76a39d1c8bea71e1)
+            sage: vec_to_int(skinny(int_to_vec(0xcf16cfe8fd0f98aa, 64))) == \
+            ....:   0x6ceda1f43de92b9e
+            True
+
+        Invalid parameters are rejected::
+
+            sage: SKINNY_KeySchedule_CVL(64, 96)
+            Traceback (most recent call last):
+            ...
+            AssertionError: The tweakey size of SKINNY can only be 64, 128 or 192, ...
+        """
+        assert n in [64, 128], (
+            f"The block size of SKINNY can only be 64 or 128, not {n}!"
+        )
+        assert t in [n, 2 * n, 3 * n], (
+            f"The tweakey size of SKINNY can only be {n}, {2 * n} or {3 * n}, "
+            f"but not {t}!"
+        )
+        if R is None:
+            R = SKINNY_CVL.rounds[(n, t)]
+        if name is None:
+            name = f"SKINNY-{n}-{t}-KeySchedule"
+
+        s = n // 16  # wordsize
+        z = t // n  # number of tweakey words TK1, ..., TKz
+        h = n // 2  # first two rows of the internal state (atk1 || atk2)
+
+        super().__init__(t, R * h, name=name)
+
+        tk_schedules = SKINNY_CVL.create_tk_schedules(s, z)
+        xor = XOR_CVL(h, name="XOR_TK")
+
+        # (node, bit offset) of the current state of TK1, ..., TKz
+        tk_states = [(self.IN, w * n) for w in range(z)]
+        output_edges = []
+        for r in range(R):
+            if r > 0:  # TKw-update of the previous round's state
+                tk_states = [
+                    (
+                        self.add_subcipher(
+                            tk_schedules[w],
+                            [(node, (off + i, i)) for i in range(n)],
+                        ),
+                        0,
+                    )
+                    for w, (node, off) in enumerate(tk_states)
+                ]
+
+            # TK1 ^ TK2 ^ TK3, restricted to the first two rows
+            acc_node, acc_off = tk_states[0]
+            for node, off in tk_states[1:]:
+                acc_node = self.add_subcipher(
+                    xor,
+                    [(acc_node, (acc_off + i, i)) for i in range(h)]
+                    + [(node, (off + i, h + i)) for i in range(h)],
+                )
+                acc_off = 0
+
+            # Round r: atk1 (row 0) || atk2 (row 1)
+            output_edges += [(acc_node, (acc_off + i, r * h + i)) for i in range(h)]
+
+        self.add_output(output_edges)
+        self._rk_width = n // 4
+        self._rk_count = 2 * R
+
+    def eval(self, master_key):
+        r"""
+        Expand the tweakey ``master_key`` into the list of round tweakeys.
+
+        INPUT:
+
+            - ``master_key`` -- integer; the tweakey :math:`TK1 \| TK2 \|
+              TK3` (``t`` bits).
+
+        OUTPUT: List of :math:`2R` integers (``n/4`` bits each): ``atk1``
+        and ``atk2`` of round 0, ``atk1`` and ``atk2`` of round 1, ...
+        """
+        bits = Cipher.eval(self, int_to_vec(master_key, self.input_length))
+        w = self._rk_width
+        return [vec_to_int(bits[i * w : (i + 1) * w]) for i in range(self._rk_count)]

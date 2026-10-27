@@ -44,13 +44,6 @@ PARAMS = {
 }
 
 
-def _key_bits(key, rounds):
-    bits = [(int(key) >> i) & 1 for i in range(80)]
-    for i in range(80, 2 * rounds):
-        bits.append(bits[i - 80] ^ bits[i - 61] ^ bits[i - 50] ^ bits[i - 13])
-    return bits
-
-
 def _ir_bits(rounds):
     r"""
     Return the first ``rounds`` irregular-update bits used by KATAN.
@@ -233,55 +226,6 @@ class KATAN_KeySchedule_CVL(KeySchedule):
         ]
 
 
-def reference_katan_encrypt(variant, plaintext_int, key_int, rounds):
-    r"""Reference Python implementation mirroring the C reference.
-
-    Returns integer ciphertext. Used for doctests.
-    """
-    params = PARAMS[variant]
-    l1 = params["l1"]
-    l2 = params["l2"]
-    fa_pos = params["fa"]
-    fb_pos = params["fb"]
-
-    # initialize L1 and L2 as lists of bits, index 0 = least significant
-    L2 = [(plaintext_int >> i) & 1 for i in range(l2)]
-    L1 = [((plaintext_int >> (l2 + i)) & 1) for i in range(l1)]
-
-    k = _key_bits(key_int, rounds)
-    ir = _ir_bits(rounds)
-
-    for r in range(rounds):
-        # all steps of a round use the same key and IR bits
-        for _ in range(params["steps"]):
-            fa = (
-                L1[fa_pos[0]]
-                ^ L1[fa_pos[1]]
-                ^ (L1[fa_pos[2]] & L1[fa_pos[3]])
-                ^ (L1[fa_pos[4]] & ir[r])
-                ^ k[2 * r]
-            )
-            fb = (
-                L2[fb_pos[0]]
-                ^ L2[fb_pos[1]]
-                ^ (L2[fb_pos[2]] & L2[fb_pos[3]])
-                ^ (L2[fb_pos[4]] & L2[fb_pos[5]])
-                ^ k[2 * r + 1]
-            )
-
-            # shift left (towards higher index), dropping MSB (last element)
-            L1 = [fb, *L1[:-1]]
-            L2 = [fa, *L2[:-1]]
-
-    # recombine
-    out = 0
-    for i in range(l1 - 1, -1, -1):
-        out = (out << 1) | L1[i]
-    for i in range(l2 - 1, -1, -1):
-        out = (out << 1) | L2[i]
-    return out
-
-
 class KATAN_CVL(CipherImplementation_CVL, SBoxCipher):
     r"""
     The CiVerLy implementation of the KATAN block cipher family.
@@ -301,36 +245,26 @@ class KATAN_CVL(CipherImplementation_CVL, SBoxCipher):
 
     EXAMPLES:
 
-    Encrypt with the three variants (verified against the reference
-    implementation)::
+    Encrypt with the three variants::
 
         sage: from civerly.cipher_implementations.katan import (
-        ....:   KATAN_CVL, KATAN_KeySchedule_CVL, reference_katan_encrypt)
+        ....:   KATAN_CVL, KATAN_KeySchedule_CVL)
         sage: from civerly.util import int_to_vec, vec_to_int
         sage: key = 0x0123456789abcdef0123  # 80-bit example key
         sage: c32 = KATAN_CVL(
         ....:   variant=32, R=10, key_schedule=KATAN_KeySchedule_CVL(32, 10),
         ....:   key=key)
         sage: pt32 = 0x12345678
-        sage: vec_to_int(c32(int_to_vec(pt32, 32))) == \
-        ....:   reference_katan_encrypt(32, pt32, key, 10)
-        True
         sage: vec_to_int(c32(int_to_vec(pt32, 32))) == 0xdb31e2cd
         True
         sage: ks48 = KATAN_KeySchedule_CVL(variant=48, R=8)
         sage: c48 = KATAN_CVL(variant=48, R=8, key_schedule=ks48, key=key)
         sage: pt48 = 0x123456789abc
-        sage: vec_to_int(c48(int_to_vec(pt48, 48))) == \
-        ....:   reference_katan_encrypt(48, pt48, key, 8)
-        True
         sage: vec_to_int(c48(int_to_vec(pt48, 48))) == 0x51873abc9a78
         True
         sage: ks64 = KATAN_KeySchedule_CVL(variant=64, R=6)
         sage: c64 = KATAN_CVL(variant=64, R=6, key_schedule=ks64, key=key)
         sage: pt64 = 0x0123456789abcdef
-        sage: vec_to_int(c64(int_to_vec(pt64, 64))) == \
-        ....:   reference_katan_encrypt(64, pt64, key, 6)
-        True
         sage: vec_to_int(c64(int_to_vec(pt64, 64))) == 0x15ff052f37bc14f0
         True
 
@@ -349,9 +283,8 @@ class KATAN_CVL(CipherImplementation_CVL, SBoxCipher):
     Without key schedule, all round keys are zero::
 
         sage: c32 = KATAN_CVL(variant=32, R=10)
-        sage: vec_to_int(c32(int_to_vec(pt32, 32))) == \
-        ....:   reference_katan_encrypt(32, pt32, 0, 10)
-        True
+        sage: hex(vec_to_int(c32(int_to_vec(pt32, 32))))
+        '0xce39e0cd'
 
     Reduced-round versions with a matching key schedule::
 
