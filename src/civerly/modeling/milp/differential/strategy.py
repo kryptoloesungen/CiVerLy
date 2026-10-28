@@ -33,6 +33,9 @@ from ..tools import (
     _linear_layer_convex_hull,
     _linear_layer_more_dummies,
     _encode_sbox_distorted,
+    _encode_sbox_convhull,
+    _encode_sbox_direct,
+    _encode_sbox_espresso,
 )
 
 
@@ -110,3 +113,7 @@ encode_permute_layer_branch_number = partial(
 # [ SBox_CVL (Bitwise) ]-------------------------------------------- *)
 
 encode_sbox_distorted_ball = partial(_encode_sbox_distorted, _get_transition_table_differential)
+
+encode_sbox_convex_hull = partial(_encode_sbox_convhull, _get_transition_table_differential)
+encode_sbox_direct = partial(_encode_sbox_direct, _get_transition_table_differential)
+encode_sbox_espresso = partial(_encode_sbox_espresso, _get_transition_table_differential)

@@ -23,7 +23,7 @@ from sage.rings.integer_ring import ZZ
 
 #
 from ...problem import MILP_CVL
-from ...util import list_of_predecessor_vector_indices, suppress_output
+from ...util import list_of_predecessor_vector_indices, suppress_output, translate_sat_clause
 from ... import model_options as MO
 from ...component import (
     Component,
@@ -492,6 +492,124 @@ def _weighted_transition_objective_milp(
     )
 
 
+# [ convex hull ]--------------------------------------------------- *)
+
+
+def _encode_sbox_convhull(
+    get_table_data_f: Callable,
+    component: SBox_CVL,
+    ctx: MILPContext,
+):
+    """nil"""
+
+    from civerly.distorted_balls import distorted_balls
+    import json
+
+    transition_table, input_sz, output_sz = get_table_data_f(component)
+    rel = _weighted_transition_rel(transition_table, input_sz, output_sz)
+    metrics, posset = _get_weighted_transition_data(rel)
+    PROB = ctx.model.new_variable(name="PROB", binary=True)
+    reduction_algorithm_ST17(component, ctx, posset, PROB=PROB)
+
+    # ----------------------------------------------------------------- *)
+    ctx.objective.extend(
+        (log2(metric / rel.normalizer), PROB.get_index(i)) for i, metric in enumerate(metrics)
+    )
+
+
+# [ direct ]-------------------------------------------------------- *)
+
+
+def _encode_sbox_direct(
+    get_table_data_f: Callable,
+    component: SBox_CVL,
+    ctx: MILPContext,
+):
+    """nil"""
+
+    from civerly.distorted_balls import distorted_balls
+    import json
+
+    PROB = ctx.model.new_variable(name="PROB", binary=True)
+
+    transition_table, input_sz, output_sz = get_table_data_f(component)
+    rel = _weighted_transition_rel(transition_table, input_sz, output_sz)
+
+    metrics, posset = _get_weighted_transition_data(rel)
+
+    L = input_sz + output_sz + len(posset)
+    posset_int = {bits_to_int(transition) for transition in posset}
+    imposset = sorted(set(range(1 << L)).difference(posset_int))
+
+    VAR = (
+        *(ctx.IN[i] for i in range(input_sz)),
+        (ctx.OUT[i] for i in range(output_sz)),
+        *(PROB[i] for i in range(len(metrics))),
+    )
+    for impossible_transition in imposset:
+        clause = tuple(
+            (-1) ** ((impossible_transition >> (L - i - 1)) & 1) * (i + 1) for i in range(L)
+        )
+        constr = translate_sat_clause(VAR, clause)
+        ctx.model.add_constraint(sum(constr) >= 1 - sum(1 if lit < 0 else 0 for lit in clause))
+
+    # ----------------------------------------------------------------- *)
+    ctx.objective.extend(
+        (log2(metric / rel.normalizer), PROB.get_index(i)) for i, metric in enumerate(metrics)
+    )
+
+
+# [ espresso ]------------------------------------------------------ *)
+
+
+def _encode_sbox_espresso(
+    get_table_data_f: Callable,
+    component: SBox_CVL,
+    ctx: MILPContext,
+):
+    """nil"""
+
+    from civerly.distorted_balls import distorted_balls
+    import json
+
+    PROB = ctx.model.new_variable(name="PROB", binary=True)
+
+    transition_table, input_sz, output_sz = get_table_data_f(component)
+    rel = _weighted_transition_rel(transition_table, input_sz, output_sz)
+    metrics, posset = _get_weighted_transition_data(rel)
+
+    esp_file_name = f"espresso-{
+        zlib.crc32(
+            ''.join([str(int(''.join(map(str, pos)), 2)) for pos in sorted(posset)]).encode(
+                'utf-8'
+            )
+        ):x}.pla"
+    pla_file = ctx.options.path / esp_file_name
+    clauses = ctx.options.logic_minimizer.solve(pla_file, posset)
+
+    VAR = (
+        *(ctx.IN[i] for i in range(input_sz)),
+        *(ctx.OUT[i] for i in range(output_sz)),
+        *(PROB[i] for i in range(len(metrics))),
+    )
+
+    # translate SAT clauses into MILP constraints
+    for clause in clauses:
+        constr = translate_sat_clause(VAR, clause)
+        # the rhs computes the hammingweight of the currently
+        # processed transition vector
+        ctx.model.add_constraint(
+        sum(constr) >= 
+        1 - sum([1 if lit < 0 else 0 for lit in clause])
+        )
+
+    # ----------------------------------------------------------------
+    ctx.objective.extend(
+        (log2(metric / rel.normalizer), PROB.get_index(i)) for i, metric in enumerate(metrics)
+    )
+
+
+# [ distorted ball ]------------------------------------------------ *)
 def _encode_sbox_distorted(
     get_table_data_f: Callable,
     component: SBox_CVL,
@@ -606,6 +724,10 @@ def _encode_sbox_distorted(
     # Add a constraint that at least one probability
     # variable needs to be one
     ctx.model.add_constraint(sum(PROB) >= 1)
+    ctx.objective.extend(
+        (log2(metric / transition_table[0][0]), PROB.get_index(i))
+        for i, metric in enumerate(posset)
+    )
 
     return
 

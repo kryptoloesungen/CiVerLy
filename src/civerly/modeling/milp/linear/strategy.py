@@ -33,6 +33,9 @@ from ..tools import (
     _linear_layer_more_dummies,
     _linear_layer_convex_hull,
     _encode_sbox_distorted,
+    _encode_sbox_convhull,
+    _encode_sbox_direct,
+    _encode_sbox_espresso,
 )
 
 
@@ -111,3 +114,9 @@ def _get_tt_for_db(component: SBox_CVL):
 
 
 encode_sbox_distorted_ball = partial(_encode_sbox_distorted, _get_tt_for_db)
+
+encode_sbox_convex_hull = partial(_encode_sbox_convhull, _get_transition_table_linear)
+encode_sbox_direct = partial(_encode_sbox_direct, _get_transition_table_linear)
+encode_sbox_espresso = partial(_encode_sbox_espresso, _get_transition_table_linear)
+
+
