@@ -87,7 +87,7 @@ As we rely on an external solver, we can simply put it to ``None`` in the
     sage: aes.model(model_options)
     Traceback (most recent call last):
     ...
-    civerly.solvers.ExternalSolveRequired: ExternalMILPSolver: solve
+    civerly.solvers.ExternalSolveRequiredError: ExternalMILPSolver: solve
     DOCTEST-AES-Models/MixColumn51845.mps externally and place the result
     at DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol, then re-run.
 
@@ -175,6 +175,12 @@ the corresponding activity pattern, we can generate a PDF report::
     ....:     granularity=GRANULARITY.WORDWISE,
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
     ....:     path=Path("./DOCTEST-AES-Models/"))
+    sage: aes.model(model_options) # optional - scip
+    Using existing file DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol,
+    make sure it is up to date!
+    3200 variables and 3329 constraints were written to
+    'DOCTEST-AES-Models/AES.mps'
+    Boolean Program (minimization, 3200 variables, 3329 constraints)
     sage: aes.generate_report(model_options) # optional - scip
     Output file in: DOCTEST-AES-Models/AES.pdf
 
@@ -183,18 +189,24 @@ To conclude our example, we remove the generated files::
     sage: import shutil
     sage: shutil.rmtree("DOCTEST-AES-Models", ignore_errors=True)
 """
-from civerly.aeslike import AESlike
-from civerly.component import (
-    SBox_CVL, PermuteLayer_CVL, LinearLayer_CVL,
-    RoundkeyXOR_CVL, ConstXOR_CVL, XOR_CVL,
-)
-from civerly.sboxcipher import SBoxCipher
-from civerly.keyschedule import KeySchedule
 
-from sage.matrix.constructor import Matrix as matrix
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.matrix.special import identity_matrix, block_matrix
 from sage.crypto.sboxes import AES as AES_S
+from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import block_matrix, identity_matrix
+from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.aeslike import AESlike
+from civerly.cipher_implementations.base import CipherImplementation_CVL
+from civerly.component import (
+    XOR_CVL,
+    ConstXOR_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
+from civerly.keyschedule import KeySchedule
+from civerly.sboxcipher import SBoxCipher
 
 
 class AES_KeySchedule_CVL(KeySchedule):
@@ -250,7 +262,7 @@ class AES_KeySchedule_CVL(KeySchedule):
             0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
             0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000,
             0x6c000000, 0xd8000000, 0xab000000,
-        ]
+        ]  # fmt: skip
 
         output_edges = [(self.IN, (i, i)) for i in range(128)]
         node = self.IN
@@ -273,11 +285,15 @@ class AES_KeySchedule_CVL(KeySchedule):
 
         OUTPUT: List of R+1 integers.
         """
-        from civerly.util import int_to_vec, vec_to_int
         from civerly.cipher import Cipher
+        from civerly.util import int_to_vec, vec_to_int
+
         n = self.input_length
         bits = Cipher.eval(self, int_to_vec(k, n))
-        return [vec_to_int(bits[i*n:(i+1)*n]) for i in range(self.output_length // n)]
+        return [
+            vec_to_int(bits[i * n : (i + 1) * n])
+            for i in range(self.output_length // n)
+        ]
 
     @staticmethod
     def _make_ks_step(rcon_val):
@@ -309,7 +325,7 @@ class AES_KeySchedule_CVL(KeySchedule):
         sb_nodes = [
             step.add_subcipher(
                 SBox_CVL(AES_S, name=f"SubWord_S{b}"),
-                [(node_rot, (8*b + i, i)) for i in range(8)],
+                [(node_rot, (8 * b + i, i)) for i in range(8)],
             )
             for b in range(4)
         ]
@@ -317,7 +333,7 @@ class AES_KeySchedule_CVL(KeySchedule):
         # Rcon XOR on the 32-bit SubWord result.
         node_rcon = step.add_subcipher(
             ConstXOR_CVL(32, rcon_val, name="Rcon"),
-            [(sb_nodes[b], (i, 8*b + i)) for b in range(4) for i in range(8)],
+            [(sb_nodes[b], (i, 8 * b + i)) for b in range(4) for i in range(8)],
         )
 
         # Chain-XOR the four new key words.
@@ -351,26 +367,39 @@ class AES_KeySchedule_CVL(KeySchedule):
         return step
 
 
-class AES_CVL:
+class AES_CVL(CipherImplementation_CVL, AESlike):
     """Implementation of the AES in CiVerLy."""
 
-    def __init__(self, R, k=None, name=None) -> None:
+    def __init__(self, R, key_schedule=None, key=None, name="AES") -> None:
         r"""
         Implement AES-128 in CiVerLy.
 
         By default round keys are zero, which leaves correctness of the
-        data path verifiable without a key schedule.  Pass a 128-bit master
-        key ``k`` to inject the real AES-128 round keys via
-        :meth:`civerly.cipher.Cipher.set_round_keys`.
+        data path verifiable without a key schedule.  Pass a
+        :class:`AES_KeySchedule_CVL` instance (or a custom
+        :class:`civerly.keyschedule.KeySchedule`) as ``key_schedule``, together
+        with a 128-bit master key ``key``, to inject the real AES-128 round keys
+        via :meth:`civerly.cipher.Cipher.set_round_keys`.
 
         INPUT:
 
             - ``R`` -- integer; Number of rounds.
 
-            - ``k`` -- integer (128-bit); Master key (optional).  When given,
-              the AES-128 round keys are derived and injected immediately.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``key`` via ``set_round_keys``. Pass an
+              :class:`AES_KeySchedule_CVL` instance to use the real AES-128
+              key schedule, a custom ``KeySchedule`` subclass instance, or
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
+              explicit round keys (``R + 1`` of them, 128 bits each). Defaults
+              to ``None`` (no key schedule, all-zero round keys).
 
-            - ``name`` -- string; The name of the cipher (optional).
+            - ``key`` -- integer (optional); The 128-bit master key passed to
+              ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+
+            - ``name`` -- string; The name of the cipher (default: "AES").
               This will be used to name the cipher and the corresponding file
               generated (such as the reports and cipher graphs).
 
@@ -380,8 +409,10 @@ class AES_CVL:
         Encrypt using the NIST FIPS 197 Appendix B test vector::
 
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: from civerly.cipher_implementations.aes import AES_CVL
-            sage: aes = AES_CVL(R=10, k=0x2b7e151628aed2a6abf7158809cf4f3c)
+            sage: from civerly.cipher_implementations.aes import AES_CVL, AES_KeySchedule_CVL
+            sage: aes = AES_CVL(
+            ....:   R=10, key=0x2b7e151628aed2a6abf7158809cf4f3c,
+            ....:   key_schedule=AES_KeySchedule_CVL(10))
             sage: pt = int_to_vec(0x3243f6a8885a308d313198a2e0370734, 128)
             sage: hex(vec_to_int(aes(pt)))
             '0x3925841d02dc09fbdc118597196a0b32'
@@ -511,8 +542,7 @@ class AES_CVL:
             construction does not increase the ciphers security against
             differential cryptanalysis.
         """
-        if name is None:
-            name = "AES"
+        super().__init__(8, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name)
 
         # sboxlayer is an AESlike cipher, containing the sbox components
         # (SBox_CVL) 16 times in parallel.
@@ -531,26 +561,36 @@ class AES_CVL:
         # ------------------------------------------------ #
         I = identity_matrix(GF(2), 8)  # noqa: E741
 
-        mul2 = matrix(GF(2), [[0, 1, 0, 0, 0, 0, 0, 0],
-                              [0, 0, 1, 0, 0, 0, 0, 0],
-                              [0, 0, 0, 1, 0, 0, 0, 0],
-                              [1, 0, 0, 0, 1, 0, 0, 0],
-                              [1, 0, 0, 0, 0, 1, 0, 0],
-                              [0, 0, 0, 0, 0, 0, 1, 0],
-                              [1, 0, 0, 0, 0, 0, 0, 1],
-                              [1, 0, 0, 0, 0, 0, 0, 0]])
+        mul2 = matrix(
+            GF(2),
+            [
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [1, 0, 0, 0, 1, 0, 0, 0],
+                [1, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+                [1, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0],
+            ],
+        )
         mul3 = mul2 + I
-        arr = [[mul2, mul3, I, I],
-               [I, mul2, mul3, I],
-               [I, I, mul2, mul3],
-               [mul3, I, I, mul2]]
+        arr = [
+            [mul2, mul3, I, I],
+            [I, mul2, mul3, I],
+            [I, I, mul2, mul3],
+            [mul3, I, I, mul2],
+        ]
         # ------------------------------------------------ #
 
         # LinearLayer_CVL accepts a binary matrix, which is sufficient to fully
         # describe its behaviour
-        mixcolumn = LinearLayer_CVL(block_matrix(GF(2), arr, subdivide=False),
-                                    branch_number_differential=5,
-                                    branch_number_linear=5, name="MixColumn")
+        mixcolumn = LinearLayer_CVL(
+            block_matrix(GF(2), arr, subdivide=False),
+            branch_number_differential=5,
+            branch_number_linear=5,
+            name="MixColumn",
+        )
 
         # Constructing the AES round
         # ------------------------------------------------ #
@@ -560,47 +600,46 @@ class AES_CVL:
         edges = [(node_sboxlayer, (i, i)) for i in range(16)]
         node_shiftrow = aes_round.add_subcipher(shiftrow, edges)
         for j in range(4):  # MixColumn is added 4 times in parallel
-            edges = [(node_shiftrow, (i + 4*j, i)) for i in range(4)]
+            edges = [(node_shiftrow, (i + 4 * j, i)) for i in range(4)]
             node_mixcolumn = aes_round.add_subcipher(mixcolumn, edges)
-            edges = [(node_mixcolumn, (i, i + 4*j)) for i in range(4)]
+            edges = [(node_mixcolumn, (i, i + 4 * j)) for i in range(4)]
             aes_round.add_output(edges)
         # ------------------------------------------------ #
 
         # Adding round functions (and the last non-full round) into the
         # aes_cipher
         # ------------------------------------------------ #
-        aes_cipher = AESlike(8, 4, 4, name=name)
+        rks = [0] * (self.R + 1)
 
-        node = aes_cipher.IN
+        node = self.IN
         edges = [(node, (i, i)) for i in range(16)]
-        node = aes_cipher.add_subcipher(RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges)
+        node = self.add_subcipher(
+            RoundkeyXOR_CVL(128, rks[0], name="AddRoundKey"), edges
+        )
 
-        for r in range(R-1):
+        for r in range(self.R - 1):
             edges = [(node, (i, i)) for i in range(16)]
-            node = aes_cipher.add_subcipher(aes_round, edges)
+            node = self.add_subcipher(aes_round, edges)
             edges = [(node, (i, i)) for i in range(16)]
-            node = aes_cipher.add_subcipher(RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges)
+            node = self.add_subcipher(
+                RoundkeyXOR_CVL(128, rks[r + 1], name="AddRoundKey"), edges
+            )
 
         edges = [(node, (i, i)) for i in range(16)]
-        node = aes_cipher.add_subcipher(sboxlayer, edges)
+        node = self.add_subcipher(sboxlayer, edges)
         edges = [(node, (i, i)) for i in range(16)]
-        node = aes_cipher.add_subcipher(shiftrow, edges)
+        node = self.add_subcipher(shiftrow, edges)
         edges = [(node, (i, i)) for i in range(16)]
-        node = aes_cipher.add_subcipher(RoundkeyXOR_CVL(128, 0, name="AddRoundKey"), edges)
+        node = self.add_subcipher(
+            RoundkeyXOR_CVL(128, rks[self.R], name="AddRoundKey"), edges
+        )
 
-        aes_cipher.add_output([(node, (i, i)) for i in range(16)])
+        self.add_output([(node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
 
-        aes_cipher._rk_components = [aes_cipher.nodes[2*r+1] for r in range(R)] + [aes_cipher.nodes[2*R+2]]
-        aes_cipher.key_schedule = AES_KeySchedule_CVL(R)
+        self._rk_components = [self.nodes[2 * r + 1] for r in range(self.R)] + [
+            self.nodes[2 * self.R + 2]
+        ]
 
-        self.aes_cipher = aes_cipher
-
-        if k is not None:
-            aes_cipher.set_round_keys(k)
-
-    def __new__(cls, *args, **kwargs):
-        """Instantiate the AES."""
-        instance = super(AES_CVL, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.aes_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

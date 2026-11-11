@@ -136,6 +136,24 @@ The last step of implementing a cipher is to declare its outputs which is done b
 Whether this is the case or not is indicated by the ``is_valid`` attribute, which is only set to True if all outputs have been specified.
 Once we have finished implementing the cipher, we can evaluate it, e.g., to verify test vectors, by simply calling its ``eval`` method.
 
+The ciphers in :mod:`civerly.cipher_implementations` are implemented as subclasses of
+:class:`civerly.cipher_implementations.base.CipherImplementation_CVL` *and* of the
+fitting cipher class from above (in exactly that order).
+``CipherImplementation_CVL`` provides the common attributes ``R`` (number of rounds),
+``key_schedule``, ``key`` (the master key) and ``name``. A subclass passes the
+arguments of its cipher class on to ``super().__init__``, then builds the DAG on
+``self`` and, if it supports round keys, injects them itself::
+
+    class PRESENT_CVL(CipherImplementation_CVL, WordSBoxCipher):
+        def __init__(self, R=31, key_schedule=None, key=None, name="PRESENT"):
+            super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
+
+            ...  # add_subcipher / add_output on self, using self.R
+
+            self._rk_components = [...]
+            if key_schedule is not None and key is not None:
+                self.set_round_keys(key)
+
 Key Schedules
 -------------
 

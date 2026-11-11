@@ -13,12 +13,11 @@ it is ensured that the ciphers non-linear part comprises only of ``SBox_CVL``,
 which can be modeled using MILP.
 """
 
-from civerly.wordbasedcipher import WordBasedCipher
 from civerly.sboxcipher import SBoxCipher
+from civerly.wordbasedcipher import WordBasedCipher
 
 
 class WordSBoxCipher(WordBasedCipher, SBoxCipher):
-
     def _to_dict(self):
         d = super()._to_dict()
         d["type"] = "WordSBoxCipher"

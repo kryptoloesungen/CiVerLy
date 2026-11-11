@@ -1,0 +1,38 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# cancels pipeline runs from old commits if a new one is pushed
+concurrency:
+  group: lint_${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    # pushes cover branches of this repository, so only run on pull requests
+    # that come from a fork to avoid linting the same commit twice
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Enable Nix Caching
+      uses: DeterminateSystems/magic-nix-cache-action@main
+      with:
+        use-flakehub: false
+
+    # The Makefile targets enter the Nix dev shell themselves.
+    - name: Run Linter, Formatter Check, Spell Check and Link Check
+      run: make lint

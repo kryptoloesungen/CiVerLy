@@ -1,10 +1,11 @@
-from civerly.sboxcipher import SBoxCipher
-from civerly.component import SBox_CVL
 from sage.crypto.sboxes import GIFT as gift_S
+
+from civerly.component import SBox_CVL
+from civerly.sboxcipher import SBoxCipher
 
 
 # cipher using sboxes with transition of non-integer weight
-class Toy9:
+class Toy9(SBoxCipher):
     def __init__(self):
         r"""
 
@@ -82,15 +83,8 @@ class Toy9:
             sage: import shutil
             sage: shutil.rmtree(model_options.path)
         """
+        super().__init__(4, 4, name="toy9")
 
-        cipher = SBoxCipher(4, 4, name="toy9")
         s = SBox_CVL(gift_S, name="S")  # 4 -> 4
-        node = cipher.add_subcipher(s, [(cipher.IN, (i, i)) for i in range(4)])
-        cipher.add_output([(node, (i, i)) for i in range(4)])
-
-        self.cipher = cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super(Toy9, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        node = self.add_subcipher(s, [(self.IN, (i, i)) for i in range(4)])
+        self.add_output([(node, (i, i)) for i in range(4)])

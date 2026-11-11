@@ -1,17 +1,19 @@
+import json
+
 from sage.modules.free_module_element import vector
 from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.component import Component
+from civerly.model_options import GRANULARITY, OPTIMIZATION
 from civerly.util import vec_to_int
 
-import json
-from civerly.component import Component
-from civerly.model_options import OPTIMIZATION, GRANULARITY
-from civerly.util import _between_brackets
 
 class TrailNode:
-    def __init__(self, cipher_instance, model_options, results_and_weight,
-                 _parent_depth=None) -> None:
+    def __init__(
+        self, cipher_instance, model_options, results_and_weight, _parent_depth=None
+    ) -> None:
         r"""
-        Initialize the recursive TrailNode structure, which contains the results 
+        Initialize the recursive TrailNode structure, which contains the results
         of the last analysis with CiVerLy.
         Called in :meth:`Cipher.analysis` and automatically adds
         the `.results` attribute to `cipher_instance` and its subciphers.
@@ -23,7 +25,7 @@ class TrailNode:
             - model_options -- see :class:`MODEL_OPTIONS`
 
             - results -- list containing the solver results, coming from :meth:`Cipher.read_results`
-            
+
             - _parent_depth -- internally used to measure the recursion depth
 
         OUTPUT: The root node of the tree-like structure, containing the results in a structured way.
@@ -47,11 +49,11 @@ class TrailNode:
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options)
-            ....:   cipher.results[0]
+            ....:   cipher.result
             1792 variables and 4581 clauses were written to ...
-            {'in': [...], 'out': [...], 'weight': ...}
+            {'assignment': ...}
         """
-        self.children : list[TrailNode] = []
+        self.children: list[TrailNode] = []
         self.right = None
         self.input = None
         self.output = None
@@ -67,18 +69,26 @@ class TrailNode:
         results, self.weight = results_and_weight
 
         # obtain dictionaries
-        opt_to_attr = {OPTIMIZATION.MILP: 'dictionaries_milp', OPTIMIZATION.SAT: 'dictionaries_sat'}
+        opt_to_attr = {
+            OPTIMIZATION.MILP: "dictionaries_milp",
+            OPTIMIZATION.SAT: "dictionaries_sat",
+        }
         attr = opt_to_attr[model_options.optimization]
         if hasattr(self.cipher_instance, attr):
             dictionaries = getattr(self.cipher_instance, attr)
         else:
-            with open(model_options.path / (self.name + "_d.json")) as f:
+            with (model_options.path / (self.name + "_d.json")).open() as f:
                 dictionaries = json.load(f)
 
         if model_options.optimization == OPTIMIZATION.SAT:
+
             def check_condition(comp_num, s):
-                return s > self.cipher_instance.input_length + self.cipher_instance.output_length and \
-                    s in dictionaries[comp_num].keys()
+                return (
+                    s
+                    > self.cipher_instance.input_length
+                    + self.cipher_instance.output_length
+                    and s in dictionaries[comp_num]
+                )
 
         depths = self.cipher_instance._dfs_traversal()
         nodes = self.cipher_instance.nodes
@@ -86,17 +96,27 @@ class TrailNode:
         ################################################
         depth_range = range(max(depths) + 1)
         max_width_in = max(
-            sum(n.input_length for n, d in zip(nodes, depths) if d == depth)
+            sum(
+                n.input_length for n, d in zip(nodes, depths, strict=True) if d == depth
+            )
             for depth in depth_range
         )
         max_width_out = max(
-            sum(n.output_length for n, d in zip(nodes, depths) if d == depth)
+            sum(
+                n.output_length
+                for n, d in zip(nodes, depths, strict=True)
+                if d == depth
+            )
             for depth in depth_range
         )
 
-        divide_by = self.cipher_instance.wordsize if model_options.granularity == GRANULARITY.WORDWISE else 1
+        divide_by = (
+            self.cipher_instance.wordsize
+            if model_options.granularity == GRANULARITY.WORDWISE
+            else 1
+        )
 
-        bits_in  = [[None] * (max_width_in  // divide_by) for _ in depth_range]
+        bits_in = [[None] * (max_width_in // divide_by) for _ in depth_range]
         bits_out = [[None] * (max_width_out // divide_by) for _ in depth_range]
 
         # Sort the (messy and unordered) variable values correctly
@@ -105,24 +125,44 @@ class TrailNode:
                 if var_name in ("IN", "OUT"):
                     # if var_name is VAR_IN or VAR_OUT, we skip it
                     continue
-                comp_num = int(var_name[1:])
-                for s_ind, solution_bit_value in var_dict.items():
-                    translated_component = dictionaries[comp_num][
-                        f"{var_name}[{s_ind}]"
-                    ]
-                    # Draw the input nodes of each component
-                    bool1 = "IN" in translated_component
-                    # We also draw the output of the last component.
-                    bool2 = "OUT" in translated_component
 
-                    if bool1 and comp_num != 0:  # dont draw self.IN.in
-                        current_index = _between_brackets(translated_component)
+                # recover comp_num and comp
+                comp_num = int(var_name[1:])
+                comp = cipher_instance.nodes[comp_num]
+
+                for s_ind, solution_bit_value in var_dict.items():
+                    local_ind = dictionaries[comp_num][
+                        cipher_instance.milp.vars[var_name].get_index(s_ind)
+                    ]
+
+                    # the bit index in the IN/OUT node corresponding to local_ind
+                    id_in = [
+                        cur_idx
+                        for cur_idx in comp.milp.VAR_IN.keys()  # noqa: SIM118
+                        if comp.milp.VAR_IN.get_index(cur_idx) == local_ind
+                    ]
+                    id_out = [
+                        cur_idx
+                        for cur_idx in comp.milp.VAR_OUT.keys()  # noqa: SIM118
+                        if comp.milp.VAR_OUT.get_index(cur_idx) == local_ind
+                    ]
+                    assert len(id_in) + len(id_out) <= 1, (
+                        f"There should be only one variable with index {local_ind}!"
+                    )
+
+                    # Draw the input nodes of each component, as well as
+                    # the output of the last component.
+                    bool1 = len(id_in) == 1
+                    bool2 = len(id_out) == 1
+
+                    if bool1 and comp_num > 0:  # dont draw self.IN.in
+                        current_index = id_in[0]
                         bit_ind = self.cipher_instance._from_grid(
                             comp_num, current_index, model_options, input_side=True
                         )
                         bits_in[depths[comp_num]][bit_ind] = solution_bit_value
                     elif bool2:
-                        current_index = _between_brackets(translated_component)
+                        current_index = id_out[0]
                         bit_ind = self.cipher_instance._from_grid(
                             comp_num, current_index, model_options, input_side=False
                         )
@@ -130,14 +170,18 @@ class TrailNode:
         elif model_options.optimization == OPTIMIZATION.SAT:
             # NOTE: SAT-vars start at 1 while grid-indexing starts at 0
             for s, solution_bit_value in results.items():
-                if s <= self.cipher_instance.input_length + self.cipher_instance.output_length:
+                if (
+                    s
+                    <= self.cipher_instance.input_length
+                    + self.cipher_instance.output_length
+                ):
                     # if s is SAT_IN or SAT_OUT, we skip it
                     continue
                 comp_num = 0
                 try:
                     # determine correct comp_num based on s being in
                     # dictionaries[comp_num]
-                    while s not in dictionaries[comp_num].keys():
+                    while s not in dictionaries[comp_num]:
                         comp_num += 1
                 except IndexError as error:
                     # if the variable comes from the summation logic that bound
@@ -154,8 +198,10 @@ class TrailNode:
                 # Draw the input nodes of each component
                 bool1 = translated_component <= comp.input_length
                 # We also draw the output of the last component.
-                bool2 = comp.input_length < translated_component and \
-                    translated_component <= comp.input_length + comp.output_length
+                bool2 = (
+                    comp.input_length < translated_component
+                    and translated_component <= comp.input_length + comp.output_length
+                )
 
                 if bool1 and comp_num != 0:  # dont draw self.IN.in
                     current_index = translated_component - 1
@@ -164,40 +210,48 @@ class TrailNode:
                     )
                     bits_in[depths[comp_num]][bit_ind] = solution_bit_value
                 elif bool2:
-                    current_index = translated_component - \
-                        nodes[comp_num].input_length - 1
+                    current_index = (
+                        translated_component - nodes[comp_num].input_length - 1
+                    )
                     bit_ind = self.cipher_instance._from_grid(
                         comp_num, current_index, model_options, input_side=False
                     )
                     bits_out[depths[comp_num]][bit_ind] = solution_bit_value
 
         # Extract per-node result slices before None removal changes indexing
-        grid_in  = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=True)
-        grid_out = self.cipher_instance._construct_grid(divide_by=divide_by, input_side=False)
+        grid_in = self.cipher_instance._construct_grid(
+            divide_by=divide_by, input_side=True
+        )
+        grid_out = self.cipher_instance._construct_grid(
+            divide_by=divide_by, input_side=False
+        )
         _node_results = {}
-        for comp_num, comp in enumerate(nodes):
+        for comp_num, _comp in enumerate(nodes):
             d = depths[comp_num]
-            comp_bits_in  = [bits_in[d][i]  for i, (n, _) in enumerate(grid_in[d])  if n == comp_num and bits_in[d][i]  is not None]
-            comp_bits_out = [bits_out[d][i] for i, (n, _) in enumerate(grid_out[d]) if n == comp_num and bits_out[d][i] is not None]
+            comp_bits_in = [
+                bits_in[d][i]
+                for i, (n, _) in enumerate(grid_in[d])
+                if n == comp_num and bits_in[d][i] is not None
+            ]
+            comp_bits_out = [
+                bits_out[d][i]
+                for i, (n, _) in enumerate(grid_out[d])
+                if n == comp_num and bits_out[d][i] is not None
+            ]
             _node_results[comp_num] = {"in": comp_bits_in, "out": comp_bits_out}
 
         # realign bits_in, bits_out by removing any 'None' entries
-        bits_in  = [[e for e in row if e is not None] for row in bits_in]
+        bits_in = [[e for e in row if e is not None] for row in bits_in]
         bits_out = [[e for e in row if e is not None] for row in bits_out]
 
-        self.bits_in  = bits_in
+        self.bits_in = bits_in
         self.bits_out = bits_out
-        self.input  = bits_out[0]
+        self.input = bits_out[0]
         self.output = bits_out[-1]
 
-        # Set .results on this cipher and each of its direct nodes
-        self.cipher_instance.results.append(
-            {"in": self.input, "out": self.output, "weight": self.weight}
-        )
-        # for comp_num, comp in enumerate(nodes):
-        #     comp.results.append(_node_results[comp_num])
         ################################################
 
+        break_out = False
         # Iterate through each subcipher
         for comp_num, comp in enumerate(nodes):
             if model_options.optimization == OPTIMIZATION.MILP:
@@ -205,26 +259,40 @@ class TrailNode:
                 # from the parent's nested results entry for this comp_num
                 sub_results = {}
                 var_name = f"X{comp_num}"
-                for s_ind, solution_bit_value in \
-                        results.get(var_name, {}).items():
-                    translated = dictionaries[comp_num][
-                        f"{var_name}[{s_ind}]"
+                if var_name not in results:
+                    raise AssertionError(f"{comp_num} not in results")
+                for s_ind, solution_bit_value in results[var_name].items():
+                    local_index = dictionaries[comp_num][
+                        cipher_instance.milp.vars[var_name].get_index(s_ind)
                     ]
-                    tr_name, tr_rest = translated.split('[', 1)
-                    tr_ind = int(tr_rest.rstrip(']'))
-                    sub_results.setdefault(tr_name, {})[tr_ind] = \
-                        solution_bit_value
+                    break_out = False
+                    for name, _var in comp.milp.vars.items():
+                        for ind in _var.keys():  # noqa: SIM118
+                            if local_index == _var.get_index(ind):
+                                tr_ind, tr_name = ind, name
+                                break_out = True
+                                break
+                        if break_out:
+                            break
+                    if not break_out:
+                        raise AssertionError(
+                            f"index {local_index} not found in node {comp_num}"
+                        )
+                    if tr_name not in sub_results:
+                        sub_results[tr_name] = {}
+                    sub_results[tr_name][tr_ind] = solution_bit_value
+
                 # Compute the weight of this subcipher's trail from the
                 # parent's objective contributions for comp_num.
-                prefix = f"X{comp_num}["
-                if hasattr(self.cipher_instance, 'sum_arr_milp'):
-                    sub_weight = sum(
-                        -factor * int(results.get(f"X{comp_num}", {}).get(
-                            int(v[len(prefix):-1]), 0
-                        ))
-                        for factor, v in self.cipher_instance.sum_arr_milp
-                        if v.startswith(prefix)
-                    )
+                if hasattr(self.cipher_instance, "sum_arr_milp"):
+                    sub_weight = 0
+                    for factor, v in self.cipher_instance.sum_arr_milp:
+                        for var_name, var in self.cipher_instance.milp.vars.items():
+                            for index in var.keys():  # noqa: SIM118
+                                if var.get_index(index) == v:
+                                    sub_weight += -factor * int(
+                                        results[var_name][index]
+                                    )
                 else:
                     sub_weight = 0
             else:  # SAT
@@ -233,28 +301,29 @@ class TrailNode:
                     if check_condition(comp_num, s):
                         # Translate the results using the corresponding
                         # dictionaries
-                        sub_results[dictionaries[comp_num][s]] = \
-                            solution_bit_value
+                        sub_results[dictionaries[comp_num][s]] = solution_bit_value
                 # Compute the weight of this subcipher's trail from the
                 # parent's objective contributions for comp_num.
-                if hasattr(self.cipher_instance, 'sum_arr_sat'):
+                if hasattr(self.cipher_instance, "sum_arr_sat"):
                     comp_vars = set(dictionaries[comp_num].keys())
                     pr = model_options.sat_precision
                     sub_weight = sum(
                         factor * results.get(sat_var, 0)
                         for factor, sat_var in self.cipher_instance.sum_arr_sat
                         if sat_var in comp_vars
-                    ) / (10 ** pr)
+                    ) / (10**pr)
                 else:
                     sub_weight = 0
             # recurse
             if not isinstance(comp, Component):
-                self.children.append(TrailNode(
-                    comp,
-                    model_options=model_options,
-                    results_and_weight=(sub_results, sub_weight),
-                    _parent_depth=depths[comp_num]
-                ))
+                self.children.append(
+                    TrailNode(
+                        comp,
+                        model_options=model_options,
+                        results_and_weight=(sub_results, sub_weight),
+                        _parent_depth=depths[comp_num],
+                    )
+                )
 
         # link siblings
         for i in range(len(self.children) - 1):
@@ -263,20 +332,19 @@ class TrailNode:
         assert len(self.bits_out[0]) == len(self.input)
         assert len(self.bits_out[-1]) == len(self.output)
 
-
     def _to_hex(self) -> str:
         string = ""
         if self.output is not None:
-            string += f"{vec_to_int(
-                vector(GF(2), self.input)
-            ):0{(self.input_length + 3)//4}x}"
+            string += f"{
+                vec_to_int(vector(GF(2), self.input)):0{(self.input_length + 3) // 4}x}"
         else:
             string += "None"
         string += " -> "
         if self.output is not None:
-            string += f"{vec_to_int(
-                vector(GF(2), self.output)
-            ):0{(self.output_length + 3)//4}x}"
+            string += f"{
+                vec_to_int(vector(GF(2), self.output)):0{
+                    (self.output_length + 3) // 4
+                }x}"
         else:
             string += "None"
         return string
@@ -284,112 +352,111 @@ class TrailNode:
     def __repr__(self, _depth=0) -> str:
         r"""
 
-        Represent ``self`` in string format.
+            Represent ``self`` in string format.
 
-        TESTS:
+            TESTS:
 
-            sage: from civerly.trail import TrailNode
-            sage: from civerly.cipher_implementations.speck import SPECK_CVL
-            sage: from civerly.model_options import * 
-            sage: import tempfile
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
-            ....:   cipher = SPECK_CVL(32, 64, R=5)
-            ....:   model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
-            ....:     optimization=OPTIMIZATION.SAT,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
-            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
-            ....:     logic_minimizer=SOLVER.ESPRESSO,
-            ....:     path=Path(tmpdir))
-            sage: cipher.analyse(model_options) # optional - cryptominisat espresso
-            ...
-            sage: # optional - cryptominisat espresso
-            sage: results_and_weight = cipher.read_results(model_options)
-            sage: TrailNode(cipher, model_options, results_and_weight)
-            -> speck : ... -> ...
-                -> speck_round : ... -> ...
-                -> speck_round : ... -> ...
-                -> speck_round : ... -> ...
-                -> speck_round : ... -> ...
-                -> speck_round : ... -> ...
-            sage: import shutil 
-            sage: shutil.rmtree(tmpdir)
+                sage: from civerly.trail import TrailNode
+                sage: from civerly.cipher_implementations.speck import SPECK_CVL
+                sage: from civerly.model_options import *
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+                ....:   cipher = SPECK_CVL(32, 64, R=5)
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+                ....:     optimization=OPTIMIZATION.SAT,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+                ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+                ....:     logic_minimizer=SOLVER.ESPRESSO,
+                ....:     path=Path(tmpdir))
+                sage: cipher.analyse(model_options) # optional - cryptominisat espresso
+                ...
+                sage: # optional - cryptominisat espresso
+                sage: results_and_weight = cipher.read_results(model_options)
+                sage: TrailNode(cipher, model_options, results_and_weight)
+                -> speck : ... -> ...
+                    -> speck_round : ... -> ...
+                    -> speck_round : ... -> ...
+                    -> speck_round : ... -> ...
+                    -> speck_round : ... -> ...
+                    -> speck_round : ... -> ...
+                sage: import shutil
+                sage: shutil.rmtree(tmpdir)
 
-        Another example with some toy cipher:
+            Another example with some toy cipher:
 
-            sage: from civerly.sboxcipher import SBoxCipher
-            sage: from civerly.component import PermuteLayer_CVL, SBox_CVL
-            sage: from sage.crypto.sbox import SBox
-            sage: cipher = SBoxCipher(10, 10, name="cipher")
-            sage: subcipher6 = SBoxCipher(6, 6, name="sub-cipher-6-bit")
-            sage: subcipher3 = SBoxCipher(3, 3, name="sub-sub-cipher-3-bit")
-            sage: subcipher4 = SBoxCipher(4, 4, name="sub-cipher-4-bit")
-            sage: sbox1 = SBox_CVL(
-            ....:   SBox([0, 7, 3, 5, 1, 2, 6, 4]), name="sbox1")
-            sage: sbox2 = SBox_CVL(
-            ....:   SBox([4, 2, 1, 7, 0, 3, 5, 6]), name="sbox2")
-            sage: perm = PermuteLayer_CVL([0, 3, 1, 2], name="perm")
-            sage: node = subcipher3.add_subcipher(
-            ....:   sbox1, [(subcipher3.IN, (i, i)) for i in range(3)])
-            sage: node = subcipher3.add_subcipher(
-            ....:   sbox2, [(node, (i, i)) for i in range(3)])
-            sage: subcipher3.add_output([(node, (i, i)) for i in range(3)])
-            sage: node1 = subcipher6.add_subcipher(
-            ....:   subcipher3, [(subcipher6.IN, (i, i)) for i in range(3)])
-            sage: node2 = subcipher6.add_subcipher(
-            ....:   subcipher3, [(subcipher6.IN, (i + 3, i)) for i in range(3)])
-            sage: subcipher6.add_output(
-            ....:   [(node1, (i, i)) for i in range(3)])
-            sage: subcipher6.add_output(
-            ....:   [(node2, (i, i + 3)) for i in range(3)])
-            sage: node = subcipher4.add_subcipher(
-            ....:   perm, [(subcipher4.IN, (i, i)) for i in range(4)])
-            sage: node = subcipher4.add_subcipher(
-            ....:   perm, [(node, (i, i)) for i in range(4)])
-            sage: subcipher4.add_output(
-            ....:   [(node, (i, i)) for i in range(4)])
-            sage: node1 = cipher.add_subcipher(
-            ....:   subcipher6, [(cipher.IN, (i, i)) for i in range(6)])
-            sage: node2 = cipher.add_subcipher(
-            ....:   subcipher4, [(cipher.IN, (i + 6, i)) for i in range(4)])
-            sage: cipher.add_output(
-            ....:   [(node1, (i, i)) for i in range(6)])
-            sage: cipher.add_output(
-            ....:   [(node2, (i, i + 6)) for i in range(4)])
+                sage: from civerly.sboxcipher import SBoxCipher
+                sage: from civerly.component import PermuteLayer_CVL, SBox_CVL
+                sage: from sage.crypto.sbox import SBox
+                sage: cipher = SBoxCipher(10, 10, name="cipher")
+                sage: subcipher6 = SBoxCipher(6, 6, name="sub-cipher-6-bit")
+                sage: subcipher3 = SBoxCipher(3, 3, name="sub-sub-cipher-3-bit")
+                sage: subcipher4 = SBoxCipher(4, 4, name="sub-cipher-4-bit")
+                sage: sbox1 = SBox_CVL(
+                ....:   SBox([0, 7, 3, 5, 1, 2, 6, 4]), name="sbox1")
+                sage: sbox2 = SBox_CVL(
+                ....:   SBox([4, 2, 1, 7, 0, 3, 5, 6]), name="sbox2")
+                sage: perm = PermuteLayer_CVL([0, 3, 1, 2], name="perm")
+                sage: node = subcipher3.add_subcipher(
+                ....:   sbox1, [(subcipher3.IN, (i, i)) for i in range(3)])
+                sage: node = subcipher3.add_subcipher(
+                ....:   sbox2, [(node, (i, i)) for i in range(3)])
+                sage: subcipher3.add_output([(node, (i, i)) for i in range(3)])
+                sage: node1 = subcipher6.add_subcipher(
+                ....:   subcipher3, [(subcipher6.IN, (i, i)) for i in range(3)])
+                sage: node2 = subcipher6.add_subcipher(
+                ....:   subcipher3, [(subcipher6.IN, (i + 3, i)) for i in range(3)])
+                sage: subcipher6.add_output(
+                ....:   [(node1, (i, i)) for i in range(3)])
+                sage: subcipher6.add_output(
+                ....:   [(node2, (i, i + 3)) for i in range(3)])
+                sage: node = subcipher4.add_subcipher(
+                ....:   perm, [(subcipher4.IN, (i, i)) for i in range(4)])
+                sage: node = subcipher4.add_subcipher(
+                ....:   perm, [(node, (i, i)) for i in range(4)])
+                sage: subcipher4.add_output(
+                ....:   [(node, (i, i)) for i in range(4)])
+                sage: node1 = cipher.add_subcipher(
+                ....:   subcipher6, [(cipher.IN, (i, i)) for i in range(6)])
+                sage: node2 = cipher.add_subcipher(
+                ....:   subcipher4, [(cipher.IN, (i + 6, i)) for i in range(4)])
+                sage: cipher.add_output(
+                ....:   [(node1, (i, i)) for i in range(6)])
+                sage: cipher.add_output(
+                ....:   [(node2, (i, i + 6)) for i in range(4)])
 
-    Analyse the cipher:
+        Analyse the cipher:
 
-            sage: # optional - scip
-            sage: from civerly.model_options import *
-            sage: from pathlib import Path
-            sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:
-            ....:   model_options = MODEL_OPTIONS(
-            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
-            ....:     optimization=OPTIMIZATION.MILP,
-            ....:     granularity=GRANULARITY.BITWISE,
-            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND,
-            ....:     milp_solver=SOLVER.SCIP,
-            ....:     path=Path(tmpdir))
-            sage: cipher.analyse(model_options)
-            206 variables and 1711 constraints were written to ...
-            0
-            sage: cipher.get_trail(model_options)
-            -> cipher : 00... -> 00...
-                -> sub-cipher-6-bit : 00 -> 00
-                    -> sub-sub-cipher-3-bit : 0 -> 0
-                    -> sub-sub-cipher-3-bit : 0 -> 0
-                -> sub-cipher-4-bit : ... -> ...
+                sage: # optional - scip
+                sage: from civerly.model_options import *
+                sage: from pathlib import Path
+                sage: import tempfile
+                sage: with tempfile.TemporaryDirectory() as tmpdir:
+                ....:   model_options = MODEL_OPTIONS(
+                ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+                ....:     optimization=OPTIMIZATION.MILP,
+                ....:     granularity=GRANULARITY.BITWISE,
+                ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND,
+                ....:     milp_solver=SOLVER.SCIP,
+                ....:     path=Path(tmpdir))
+                sage: cipher.analyse(model_options)
+                206 variables and 1637 constraints were written to ...
+                0
+                sage: cipher.get_trail(model_options)
+                -> cipher : 00... -> 00...
+                    -> sub-cipher-6-bit : 00 -> 00
+                        -> sub-sub-cipher-3-bit : 0 -> 0
+                        -> sub-sub-cipher-3-bit : 0 -> 0
+                    -> sub-cipher-4-bit : ... -> ...
 
         """
         from civerly.cipher import Cipher
-        string = "\t"*_depth + "-> " + f"{self.name} : {self._to_hex()}"
+
+        string = "\t" * _depth + "-> " + f"{self.name} : {self._to_hex()}"
         for child in self.children:
-            if not isinstance(
-                child.cipher_instance, Cipher._Cipher__Special_Node
-            ):
-                string += "\n" + child.__repr__(_depth+1)
+            if not isinstance(child.cipher_instance, Cipher._Cipher__Special_Node):
+                string += "\n" + child.__repr__(_depth + 1)
         return string
 
     def __eq__(self, other) -> bool:
@@ -399,7 +466,7 @@ class TrailNode:
 
         TESTS:
 
-            sage: # optional - cryptominisat, espresso
+            sage: # optional - cryptominisat espresso
             sage: from civerly.cipher_implementations.toy_ciphers.toy7 \
             ....:   import Toy7
             sage: from civerly.model_options import *
@@ -423,14 +490,16 @@ class TrailNode:
             sage: t1 == t2
             False
 
-            
         """
-        return isinstance(other, TrailNode) and \
-            self.input == other.input and \
-            self.output == other.output and \
-            all([
-                c1 == c2 for c1, c2 in zip(self.children, other.children)
-            ])
+        return (
+            isinstance(other, TrailNode)
+            and self.input == other.input
+            and self.output == other.output
+            and len(self.children) == len(other.children)
+            and all(
+                c1 == c2 for c1, c2 in zip(self.children, other.children, strict=True)
+            )
+        )
 
     def to_latex(self, model_options) -> str:
         string = self.cipher_instance._latex_section(self, model_options)
@@ -482,18 +551,18 @@ class TrailNode:
             return valid
 
         dmax = 1 + max([child._parent_depth for child in self.children])
-        off_in  = [0]*dmax
-        off_out = [0]*dmax
+        off_in = [0] * dmax
+        off_out = [0] * dmax
 
         for child in self.children:
             d = child._parent_depth
 
-            expected_in  = self.bits_in[d][off_in[d] : off_in[d] + len(child.input)]
+            expected_in = self.bits_in[d][off_in[d] : off_in[d] + len(child.input)]
             expected_out = self.bits_out[d][off_out[d] : off_out[d] + len(child.output)]
-            actual_in    = child.bits_out[0]
-            actual_out   = child.bits_out[-1]
+            actual_in = child.bits_out[0]
+            actual_out = child.bits_out[-1]
 
-            off_in[d]  += len(child.input)
+            off_in[d] += len(child.input)
             off_out[d] += len(child.output)
 
             if expected_in and actual_in and expected_in != actual_in:

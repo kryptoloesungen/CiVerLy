@@ -1,22 +1,33 @@
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL, RoundkeyXOR_CVL
 from sage.crypto.sboxes import PRESENT as present_S
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
+from civerly.component import PermuteLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
-class PRESENT_CVL:
-    def __init__(self, R=31, rks=[], name=None):
+
+class PRESENT_CVL(CipherImplementation_CVL, WordSBoxCipher):
+    def __init__(self, R=31, key_schedule=None, key=None, name="PRESENT"):
         r"""
         The CiVerLy implementation of PRESENT. It takes in the following
         arguments:
 
-            - ``R`` -- integer; Number of rounds.
+            - ``R`` -- integer; Number of rounds (default: 31)
 
-            - ``rks`` -- list (optional); Specifies the roundkey values of
-              PRESENT, in order to being able to properly test the
-              implementation. Is required to have length :math:`R+1`, and
-              defaults to ``[0, ..., 0]``.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``key`` via ``set_round_keys``. Pass
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL` to pass
+              explicit round keys (see ``key``). Defaults to ``None`` (no key
+              schedule, all-zero round keys).
 
-            - ``name`` -- string (optional); The name of the cipher.
+            - ``key`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
+
+            - ``name`` -- string (default: "PRESENT"); The name of the cipher.
               Will be used to name the cipher and the corresponding files
               generated (such as the reports and cipher graphs).
 
@@ -25,7 +36,7 @@ class PRESENT_CVL:
 
         EXAMPLES:
 
-        Encrypt a message (for verifying the implemenation)::
+        Encrypt a message (for verifying the implementation)::
 
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
@@ -55,7 +66,7 @@ class PRESENT_CVL:
             4
 
         Of course, since the branch number of any word-permutation is 2, this
-        result is not very interesting and unprecise, as the optimal solution
+        result is not very interesting and imprecise, as the optimal solution
         here would be one active word per round, which is specifically avoided
         to be possible in PRESENT. This indicates that generalized wordwise
         modeling might be a more reasonable approach. However, performing
@@ -101,7 +112,8 @@ class PRESENT_CVL:
 
         TESTS::
 
-            sage: rks = [
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: k = [
             ....:   0x0000000000000000, 0xc000000000000000, 0x5000180000000001,
             ....:   0x60000a0003000001, 0xb0000c0001400062, 0x900016000180002a,
             ....:   0x0001920002c00033, 0xa000a0003240005b, 0xd000d4001400064c,
@@ -117,7 +129,7 @@ class PRESENT_CVL:
             sage: from civerly.cipher_implementations.present \
             ....:   import PRESENT_CVL
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: present_cipher = PRESENT_CVL(R=31,rks=rks)
+            sage: present_cipher = PRESENT_CVL(R=31, key=k, key_schedule=DefaultKeySchedule_CVL(64, 32))
             sage: vec_to_int(present_cipher(int_to_vec(0x0, 64))) \
             ....:   == 0x5579C138_7B228445
             True
@@ -288,12 +300,55 @@ class PRESENT_CVL:
             ....:   assert "Unnamed Component" not in trail
             6512 variables and 16017 clauses were written to '...'
             8
-        """
-        if name is None:
-            name = "PRESENT"
 
-        if rks == []:
-            rks = [0 for _ in range(R+1)]  # set roundkeys = 0 as default
+        Verify the well-known iterative linear trail for PRESENT:
+
+            sage: # optional - scip espresso
+            sage: from civerly.cipher_implementations.present \
+            ....:   import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
+            ....:   cipher = PRESENT_CVL(R=4)
+            ....:   model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=Path(tmpdir))
+            sage: cipher.model(model_options)
+            5312 variables and 8193 constraints were written to ...
+            Boolean Program (minimization, 5312 variables, 8193 constraints)
+            sage: MASK = 0x8000_0000_0000_0000
+            sage: for ROUND in range(1, 5):
+            ....:   for i in range(cipher.input_length):
+            ....:       ind = cipher.inv_dictionaries_milp[ROUND][cipher.nodes[ROUND].milp.VAR_IN.get_index(i)]
+            ....:       cipher.milp.add_constraint(cipher.milp.get_var(ind) == (MASK >> (63 - i)) & 1)
+            sage: for i in range(cipher.input_length):
+            ....:     ind = cipher.inv_dictionaries_milp[ROUND][cipher.nodes[ROUND].milp.VAR_OUT.get_index(i)]
+            ....:     cipher.milp.add_constraint(cipher.milp.get_var(ind) == (MASK >> (63 - i)) & 1)
+            sage: cipher.analyse(model_options)
+            Using existing MILP model, make sure it is up to date!
+            5312 variables and 8513 constraints were written to ...
+            8
+            sage: cipher.get_trail(model_options)
+            -> PRESENT : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+                -> present_round : 8000000000000000 -> 8000000000000000
+                    -> SBoxLayer : 8000000000000000 -> 8000000000000000
+            sage: import shutil
+            sage: shutil.rmtree(model_options.path)
+        """
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
+
         s = SBox_CVL(present_S, name="SBox")
 
         # sboxlayer is an SBoxCipher, containing the sbox components
@@ -309,10 +364,10 @@ class PRESENT_CVL:
             4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55,
             8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59,
             12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63
-        ], name="Permutation")
+        ], name="Permutation")  # fmt: skip
 
         # NOTE: This is an alternative component to the RK_CVL. Instead
-        # of seperating the key addition into a "factory" component that
+        # of separating the key addition into a "factory" component that
         # outputs the key, and an XOR addition, it makes more sense to combine
         # them to a component, which is the RoundkeyXOR_CVL component.
         # It eases the implementation in several aspects (such as modeling and
@@ -336,25 +391,21 @@ class PRESENT_CVL:
 
         # Implementation of the PRESENT cipher.
         # ------------------------------------------------ #
-        present_cipher = WordSBoxCipher(4, 16, 16, name=name)
-        cipher_node = present_cipher.IN
-        for r in range(R):
-            present_round.nodes[node_rk].const = rks[r]
-            cipher_node = present_cipher.add_subcipher(
+        cipher_node = self.IN
+        for _ in range(self.R):
+            cipher_node = self.add_subcipher(
                 present_round, [(cipher_node, (i, i)) for i in range(16)]
             )
 
-        key_add.const = rks[R]
-
-        cipher_node = present_cipher.add_subcipher(
+        cipher_node = self.add_subcipher(
             key_add, [(cipher_node, (i, i)) for i in range(16)]
         )
-        present_cipher.add_output([(cipher_node, (i, i)) for i in range(16)])
+        self.add_output([(cipher_node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
 
-        self.present_cipher = present_cipher
+        self._rk_components = [
+            self.nodes[r + 1].nodes[node_rk] for r in range(self.R)
+        ] + [self.nodes[self.R + 1]]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super(PRESENT_CVL, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.present_cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

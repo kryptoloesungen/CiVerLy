@@ -1,27 +1,44 @@
-from civerly.aeslike import AESlike
-from civerly.component import SBox_CVL, LinearLayer_CVL, RoundkeyXOR_CVL
-from civerly.component import PermuteLayer_CVL, I_CVL
-
-from sage.rings.finite_rings.finite_field_constructor import GF
 from sage.crypto.sbox import SBox as SBox_sage
-from sage.matrix.special import zero_matrix, identity_matrix, block_matrix
+from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
+from sage.rings.finite_rings.finite_field_constructor import GF
+
+from civerly.aeslike import AESlike
+from civerly.cipher_implementations.base import CipherImplementation_CVL
+from civerly.component import (
+    I_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
 
 
-class CRAFT_CVL:
-    RC = [
+class CRAFT_CVL(CipherImplementation_CVL, AESlike):
+    RC = (
         0x11, 0x84, 0x42, 0x25, 0x96, 0xc7, 0x63, 0xb1, 0x54, 0xa2, 0xd5,
         0xe6, 0xf7, 0x73, 0x31, 0x14, 0x82, 0x45, 0x26, 0x97, 0xc3, 0x61,
-        0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85
-    ]
+        0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85,
+    )  # fmt: skip
 
-    def __init__(self, R, name=None) -> None:
+    def __init__(self, R, key_schedule=None, key=None, name="CRAFT") -> None:
         r"""
         The CiVerLy implementation of CRAFT. It takes the following arguments:
 
             - ``R`` -- integer; Specifies the number of rounds that are
               performed.
 
-            - ``name`` -- string (optional); The name of the cipher.
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used by ``set_round_keys`` to
+              derive round keys from a master key. No built-in key schedule is
+              implemented for CRAFT; pass a custom ``KeySchedule`` subclass
+              instance. Defaults to ``None`` (no key schedule).
+
+            - ``key`` -- integer (optional); The master key passed to
+              ``key_schedule``, injected via ``set_round_keys`` when both are
+              given. Note that CRAFT currently has no round key components,
+              so ``set_round_keys`` is not supported.
+
+            - ``name`` -- string; The name of the cipher (default: "CRAFT").
               Will be used to name the cipher and the corresponding files
               generated (such as the reports and cipher graphs).
 
@@ -187,8 +204,7 @@ class CRAFT_CVL:
             sage: c14 == R14
             True
         """
-        if name is None:
-            name = "CRAFT"
+        super().__init__(4, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name)
 
         # SBox layer
         # ------------------------------------------------------------------- #
@@ -196,7 +212,7 @@ class CRAFT_CVL:
         sb = SBox_CVL(SBox_sage((
             0xc, 0xa, 0xd, 0x3, 0xe, 0xb, 0xf, 0x7,
             0x8, 0x9, 0x1, 0x5, 0x0, 0x2, 0x4, 0x6
-        )), name="SBox")
+        )), name="SBox")  # fmt: skip
         for i in range(16):
             node = sboxlayer.add_subcipher(sb, [(sboxlayer.IN, (i, 0))])
             sboxlayer.add_output([(node, (0, i))])
@@ -208,32 +224,28 @@ class CRAFT_CVL:
 
         craft_perm = [15, 12, 13, 14, 10, 9, 8, 11, 6, 5, 4, 7, 1, 2, 3, 0]
         craft_perm = [tr[craft_perm[tr[i]]] for i in range(16)]
-        pn = PermuteLayer_CVL(
-            craft_perm, word_coarseness=4, name="PermuteNibbles"
-        )
+        pn = PermuteLayer_CVL(craft_perm, word_coarseness=4, name="PermuteNibbles")
 
         # Generation of the binary matrix of CRAFT-MixColumn
         # ------------------------------------------------------------------- #
         I = identity_matrix(GF(2), 4)  # noqa: E741
         O = zero_matrix(GF(2), 4)  # noqa: E741
 
-        MC_mat = [
-            [I, O, I, I],
-            [O, I, O, I],
-            [O, O, I, O],
-            [O, O, O, I]
-        ]
+        MC_mat = [[I, O, I, I], [O, I, O, I], [O, O, I, O], [O, O, O, I]]
 
-        mc = LinearLayer_CVL(block_matrix(GF(2), MC_mat, subdivide=False),
-                             branch_number_differential=2, name="MixColumn")
+        mc = LinearLayer_CVL(
+            block_matrix(GF(2), MC_mat, subdivide=False),
+            branch_number_differential=2,
+            name="MixColumn",
+        )
 
         # mc_layer = 4x mc in parallel
         mc_layer = AESlike(4, 4, 4, name="MixColumnLayer")
         for j in range(4):
             node = mc_layer.add_subcipher(
-                mc, [(mc_layer.IN, (k + 4*j, k)) for k in range(4)]
+                mc, [(mc_layer.IN, (k + 4 * j, k)) for k in range(4)]
             )
-            mc_layer.add_output([(node, (k, k + 4*j)) for k in range(4)])
+            mc_layer.add_output([(node, (k, k + 4 * j)) for k in range(4)])
 
         # AddRoundConstants, done with RoundkeyXOR_CVL component
         arc_layer = AESlike(4, 4, 4, name="ARC-layer")
@@ -250,24 +262,20 @@ class CRAFT_CVL:
         )
         arc_layer.add_output([(node_arc, (0, 1)), (node_arc, (1, 5))])
         node_id2 = arc_layer.add_subcipher(
-            id2, [(arc_layer.IN, (i, i-2)) for i in range(2, 5)]
+            id2, [(arc_layer.IN, (i, i - 2)) for i in range(2, 5)]
         )
-        arc_layer.add_output([(node_id2, (i-2, i)) for i in range(2, 5)])
+        arc_layer.add_output([(node_id2, (i - 2, i)) for i in range(2, 5)])
         node_id3 = arc_layer.add_subcipher(
-            id3, [(arc_layer.IN, (i, i-6)) for i in range(6, 16)]
+            id3, [(arc_layer.IN, (i, i - 6)) for i in range(6, 16)]
         )
-        arc_layer.add_output([(node_id3, (i-6, i)) for i in range(6, 16)])
+        arc_layer.add_output([(node_id3, (i - 6, i)) for i in range(6, 16)])
 
         # Implementation of CRAFT round
         # ------------------------------------------------------------------- #
         craft_round = AESlike(4, 4, 4, name="CRAFT-round")
         node = craft_round.IN
-        node = craft_round.add_subcipher(
-            transpose, [(node, (i, i)) for i in range(16)]
-        )
-        node = craft_round.add_subcipher(
-            mc_layer, [(node, (i, i)) for i in range(16)]
-        )
+        node = craft_round.add_subcipher(transpose, [(node, (i, i)) for i in range(16)])
+        node = craft_round.add_subcipher(mc_layer, [(node, (i, i)) for i in range(16)])
 
         node_arclayer = craft_round.add_subcipher(
             arc_layer, [(node, (i, i)) for i in range(16)]
@@ -276,35 +284,20 @@ class CRAFT_CVL:
             pn, [(node_arclayer, (i, i)) for i in range(16)]
         )
 
-        node = craft_round.add_subcipher(
-            sboxlayer, [(node, (i, i)) for i in range(16)]
-        )
-        node = craft_round.add_subcipher(
-            transpose, [(node, (i, i)) for i in range(16)]
-        )
+        node = craft_round.add_subcipher(sboxlayer, [(node, (i, i)) for i in range(16)])
+        node = craft_round.add_subcipher(transpose, [(node, (i, i)) for i in range(16)])
         craft_round.add_output([(node, (i, i)) for i in range(16)])
         # ------------------------------------------------------------------- #
 
         # Add the round function into the CRAFT cipher
         # ------------------------------------------------------------------- #
-        craft_cipher = AESlike(4, 4, 4, name=name)
-        node_cipher = craft_cipher.IN
+        node_cipher = self.IN
 
-        for r in range(R):
-            craft_round.nodes[node_arclayer].nodes[node_arc].const = \
-                CRAFT_CVL.RC[r]
+        for r in range(self.R):
+            craft_round.nodes[node_arclayer].nodes[node_arc].const = CRAFT_CVL.RC[r]
 
-            node_cipher = craft_cipher.add_subcipher(
+            node_cipher = self.add_subcipher(
                 craft_round, [(node_cipher, (i, i)) for i in range(16)]
             )
-        craft_cipher.add_output(
-            [(node_cipher, (i, i)) for i in range(16)]
-        )
+        self.add_output([(node_cipher, (i, i)) for i in range(16)])
         # ------------------------------------------------------------------- #
-
-        self.craft_cipher = craft_cipher
-
-    def __new__(cls, *args, **kwargs):
-        instance = super(CRAFT_CVL, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.craft_cipher

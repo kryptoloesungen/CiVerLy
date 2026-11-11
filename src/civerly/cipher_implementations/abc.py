@@ -1,31 +1,54 @@
 from sage.crypto.sbox import SBox
+
+from civerly.cipher_implementations.base import CipherImplementation_CVL
+from civerly.component import (
+    XOR_CVL,
+    PermuteLayer_CVL,
+    RotateLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
 from civerly.sboxcipher import SBoxCipher
-from civerly.component import PermuteLayer_CVL, SBox_CVL, RotateLayer_CVL
-from civerly.component import RoundkeyXOR_CVL, XOR_CVL
 
 
-class ABC_CVL:
-    def __init__(self, R=16, rks=[], name=None):
+class ABC_CVL(CipherImplementation_CVL, SBoxCipher):
+    def __init__(self, R=16, key_schedule=None, key=None, name="ABC"):
         r"""
         The ABC cipher, a 128 bit block size Feistel cipher patented by Apple
         and first analysed in
         https://link.springer.com/chapter/10.1007/978-3-031-56232-7_13.
         The main weakness is the lack of diffusion between each byte of
-        the state, which CiVerLy also recognizes.
+        the state, which CiVerLy also finds. It takes the
+        following arguments:
+
+            - ``R`` -- integer; Number of rounds (default 16)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``key`` via ``set_round_keys``. No built-in key schedule is
+              implemented for ABC; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``key``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``key`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
+
+            - ``name`` -- string; The object's name (default "ABC")
 
 
         TESTS:
 
             sage: from civerly.cipher_implementations.abc import ABC_CVL
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: # rks from master key = 0
-            sage: rks = [
-            ....:   0x0,
-            ....:   0xffffffffffffffff, 0x9999999999999999, 0xffffffffffffffff,
-            ....:   0x6666666666666666, 0xffffffffffffffff, 0xffffffffffffffff,
-            ....:   0x3434343434343434
-            ....: ]
-            sage: abc = ABC_CVL(R=1, rks=rks)
+            sage: # round keys (derived from master key = 0)
+            sage: k = [0x0000000000000000]
+            sage: abc = ABC_CVL(R=1, key=k, key_schedule=DefaultKeySchedule_CVL(64, 1))
             sage: hex(vec_to_int(abc(int_to_vec(0x0, 128))))
             '0x6733ce016733ce01'
             sage: hex(vec_to_int(abc(int_to_vec(
@@ -33,7 +56,12 @@ class ABC_CVL:
             ....: 128))))
             '0x80512957fea0c1179a06f273f61a9cb1'
 
-            sage: abc = ABC_CVL(R=8, rks=rks)
+            sage: k = [
+            ....:   0x0000000000000000, 0xffffffffffffffff, 0x9999999999999999,
+            ....:   0xffffffffffffffff, 0x6666666666666666, 0xffffffffffffffff,
+            ....:   0xffffffffffffffff, 0x3434343434343434
+            ....: ]
+            sage: abc = ABC_CVL(R=8, key=k, key_schedule=DefaultKeySchedule_CVL(64, 8))
             sage: arr = [(
             ....:   0xeb9b8dbebfc68d8c9c7e91ce2836fa7f,
             ....:   0x54b692ebe6e8198d215a24b81f291e82
@@ -94,15 +122,9 @@ class ABC_CVL:
             ....:   abc_cipher.analyse(model_options)
             12640 variables and 44257 clauses were written to '...'
             3
-
         """
-        if rks == []:
-            rks = [0x0 for _ in range(R)]
+        super().__init__(128, 128, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        if name is None:
-            name = "ABC"
-
-        cipher = SBoxCipher(128, 128, name=name)
         abc_round = SBoxCipher(128, 128, name="ABC-round")
 
         rk = RoundkeyXOR_CVL(64, const=0x0, name="rk")
@@ -113,20 +135,21 @@ class ABC_CVL:
 
         for j in range(8):
             node = smallR.add_subcipher(
-                RotateLayer_CVL(8, j, name=f"r{j}"), [(smallR.IN, (i + 8*j, i)) for i in range(8)]
+                RotateLayer_CVL(8, j, name=f"r{j}"),
+                [(smallR.IN, (i + 8 * j, i)) for i in range(8)],
             )
-            smallR.add_output([(node, (i, i + 8*j)) for i in range(8)])
+            smallR.add_output([(node, (i, i + 8 * j)) for i in range(8)])
 
         sb = SBox_CVL(SBox([
             0x4, 0xc, 0x0, 0x8, 0x6, 0xe, 0x1, 0xb,
             0x9, 0xd, 0x2, 0x5, 0xa, 0xf, 0x3, 0x7
-        ]), name="S")
+        ]), name="S")  # fmt: skip
         sb_layer = SBoxCipher(64, 64, name="S-Layer")
         for j in range(16):
-            node = sb_layer.add_subcipher(sb, [
-                (sb_layer.IN, (i + 4*j, i)) for i in range(4)
-            ])
-            sb_layer.add_output([(node, (i, i + 4*j)) for i in range(4)])
+            node = sb_layer.add_subcipher(
+                sb, [(sb_layer.IN, (i + 4 * j, i)) for i in range(4)]
+            )
+            sb_layer.add_output([(node, (i, i + 4 * j)) for i in range(4)])
 
         bs = SBox_CVL(SBox([
             0x9b, 0x9e, 0xa1, 0xa4, 0xa7, 0xaa, 0xad, 0xb0, 0xb3, 0xb6, 0xb9,
@@ -153,48 +176,45 @@ class ABC_CVL:
             0x50, 0x53, 0x56, 0x59, 0x5c, 0x5f, 0x62, 0x65, 0x68, 0x6b, 0x6e,
             0x71, 0x74, 0x77, 0x7a, 0x7d, 0x80, 0x83, 0x86, 0x89, 0x8c, 0x8f,
             0x92, 0x95, 0x98
-        ], name="BS"))
+        ], name="BS"))  # fmt: skip
 
         bs_layer = SBoxCipher(64, 64, name="BS-Layer")
         for j in range(8):
-            node = bs_layer.add_subcipher(bs, [
-                (bs_layer.IN, (i + 8*j, i)) for i in range(8)
-            ])
-            bs_layer.add_output([(node, (i, i + 8*j)) for i in range(8)])
+            node = bs_layer.add_subcipher(
+                bs, [(bs_layer.IN, (i + 8 * j, i)) for i in range(8)]
+            )
+            bs_layer.add_output([(node, (i, i + 8 * j)) for i in range(8)])
 
-        node_rk = abc_round.add_subcipher(rk, [
-            (abc_round.IN, (i + 64, i)) for i in range(64)
-        ])
-        node_s = abc_round.add_subcipher(sb_layer, [
-            (node_rk, (i, i)) for i in range(64)
-        ])
-        node_r = abc_round.add_subcipher(smallR, [
-            (node_s, (i, i)) for i in range(64)
-        ])
-        node_bigr = abc_round.add_subcipher(bigR, [
-            (abc_round.IN, (i, i)) for i in range(64)
-        ])
-        node_xor = abc_round.add_subcipher(xor, [
-            (node_r, (i, i)) for i in range(64)
-        ] + [(node_bigr, (i, i + 64)) for i in range(64)])
-        node_bs = abc_round.add_subcipher(bs_layer, [
-            (node_xor, (i, i)) for i in range(64)
-        ])
+        node_rk = abc_round.add_subcipher(
+            rk, [(abc_round.IN, (i + 64, i)) for i in range(64)]
+        )
+        node_s = abc_round.add_subcipher(
+            sb_layer, [(node_rk, (i, i)) for i in range(64)]
+        )
+        node_r = abc_round.add_subcipher(smallR, [(node_s, (i, i)) for i in range(64)])
+        node_bigr = abc_round.add_subcipher(
+            bigR, [(abc_round.IN, (i, i)) for i in range(64)]
+        )
+        node_xor = abc_round.add_subcipher(
+            xor,
+            [(node_r, (i, i)) for i in range(64)]
+            + [(node_bigr, (i, i + 64)) for i in range(64)],
+        )
+        node_bs = abc_round.add_subcipher(
+            bs_layer, [(node_xor, (i, i)) for i in range(64)]
+        )
 
         abc_round.add_output([(node_bs, (i, i + 64)) for i in range(64)])
         abc_round.add_output([(abc_round.IN, (i + 64, i)) for i in range(64)])
 
-        node = cipher.IN
-        for r in range(R):
-            abc_round.nodes[node_rk].const = rks[r]
-            node = cipher.add_subcipher(abc_round, [
-                (node, (i, i)) for i in range(128)
-            ])
-        cipher.add_output([(node, (i, i)) for i in range(128)])
+        node = self.IN
+        rk_nodes = []
+        for _ in range(self.R):
+            node = self.add_subcipher(abc_round, [(node, (i, i)) for i in range(128)])
+            rk_nodes.append(node)
+        self.add_output([(node, (i, i)) for i in range(128)])
 
-        self.cipher = cipher
+        self._rk_components = [self.nodes[n].nodes[node_rk] for n in rk_nodes]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super(ABC_CVL, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.cipher
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

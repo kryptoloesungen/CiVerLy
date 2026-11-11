@@ -1,9 +1,8 @@
 r"""Benchmark CiVerLy."""
 
+from civerly.model_options import OPTIMIZATION, InvalidModelOptionError
 from civerly.solvers import SOLVING_STATUS
 from civerly.util import suppress_output
-from civerly.model_options import OPTIMIZATION
-from civerly.model_options import InvalidModelOptionException
 
 
 def benchmark(CM):
@@ -25,7 +24,7 @@ def benchmark(CM):
 
         We benchmark two models, one for the AES and one for CRAFT::
 
-            sage: # optional - scip, espresso, cryptominisat
+            sage: # optional - scip espresso cryptominisat
             sage: from civerly.benchmark import benchmark
             sage: from civerly.cipher_implementations.aes import AES_CVL
             sage: from civerly.cipher_implementations.craft import CRAFT_CVL
@@ -81,7 +80,7 @@ def benchmark(CM):
 
         For a pretty printing, you may use ``tabulate``::
 
-            sage: # optional - scip, espresso, cryptominisat
+            sage: # optional - scip espresso cryptominisat
             sage: from tabulate import tabulate
             sage: print(tabulate(T[0], headers="firstrow")) # random
             Name      \#Variables    \#Constraints    $t_{M}$    $t_{S}$    w
@@ -113,11 +112,26 @@ def benchmark(CM):
     tables = []
     for ciphers, model_options in CM:
         if model_options.optimization == OPTIMIZATION.MILP:
-            header = ["Name", r"\#Variables", r"\#Constraints", "$t_{M}$", "$t_{S}$", "w"]
+            header = [
+                "Name",
+                r"\#Variables",
+                r"\#Constraints",
+                "$t_{M}$",
+                "$t_{S}$",
+                "w",
+            ]
         elif model_options.optimization == OPTIMIZATION.SAT:
-            header = ["Name", "Weight Bound", r"\#Variables", r"\#Clauses", "$t_{M}$", "$t_{S}$", "Result"]
+            header = [
+                "Name",
+                "Weight Bound",
+                r"\#Variables",
+                r"\#Clauses",
+                "$t_{M}$",
+                "$t_{S}$",
+                "Result",
+            ]
         else:
-            raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
         table = [header]
         for cipher in ciphers:
             with suppress_output():
@@ -125,18 +139,11 @@ def benchmark(CM):
 
             row = [cipher.name]
 
-            if model_options.optimization == OPTIMIZATION.MILP:
-                v = cipher._model.number_of_variables()
-                c = cipher._model.number_of_constraints()
-            elif model_options.optimization == OPTIMIZATION.SAT:
-                v = cipher._model.nvars()
-                c = len(cipher._model.clauses())
-                row.append("") # empty weight bound
-            else:
-                raise InvalidModelOptionException(model_options.optimization, OPTIMIZATION)
+            if model_options.optimization == OPTIMIZATION.SAT:
+                row.append("")  # empty weight bound
 
-            row.append(v)
-            row.append(c)
+            row.append(cipher._model.number_of_variables())
+            row.append(cipher._model.number_of_constraints())
             row.append(cipher.model_time)
             row.append(cipher.solve_time)
             if cipher.result["status"] == SOLVING_STATUS.SUCCESS:
@@ -150,8 +157,8 @@ def benchmark(CM):
             if model_options.optimization == OPTIMIZATION.SAT:
                 for weight, result in cipher.result["trace"].items():
                     row = ["", weight]
-                    row.append(result["model"].nvars())
-                    row.append(len(result["model"].clauses()))
+                    row.append(result["model"].number_of_variables())
+                    row.append(result["model"].number_of_constraints())
                     row.append(result["model_time"])
                     row.append(result["solve_time"])
                     if result["status"] == SOLVING_STATUS.SUCCESS:
@@ -162,4 +169,3 @@ def benchmark(CM):
 
         tables.append(table)
     return tables
-

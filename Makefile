@@ -34,22 +34,24 @@ help:
 # ==============================================================================
 
 check:
-	ruff check $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff check $(TEST_DIR)
 
 check-fix:
-	ruff check --fix $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff check --fix $(TEST_DIR)
 
 format:
-	ruff format $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff format $(TEST_DIR)
 
 format-check:
-	ruff format --check $(TEST_DIR)
+	$(NIX_OR_NOTHING) ruff format --check $(TEST_DIR)
 
 spell:
-	codespell $(TEST_DIR) docs
+	$(NIX_OR_NOTHING) codespell $(TEST_DIR) docs
 
+# lychee options live in lychee.toml. The config file itself is skipped
+# because its exclude patterns would be picked up as (broken) links.
 check-links:
-	git ls-files | grep -v "\.png$$" | xargs lychee --user-agent "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0" --retry-wait-time 1 --max-concurrency 1 --accept "100..=103,200..=299,403"
+	git ls-files -z -- ':!:*.png' ':!:lychee.toml' | xargs -0 $(NIX_OR_NOTHING) lychee
 
 lint: check format-check spell check-links
 

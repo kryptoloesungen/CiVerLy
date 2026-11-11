@@ -21,8 +21,8 @@ EXAMPLES::
     TypeError: AndRX does not accept SBox_CVL and ModAdd_CVL
 """
 
+from civerly.component import Component, ModAdd_CVL, SBox_CVL
 from civerly.wordbasedcipher import WordBasedCipher
-from civerly.component import Component, SBox_CVL, ModAdd_CVL
 
 
 class AndRX(WordBasedCipher):

@@ -1,21 +1,34 @@
-"""
-A rudimentary implementation of a weakend version of PRESENT.
-
-The S-box is swapped out such that its linearity is 12 and its differential
-uniformity is 6. The main purpose of this is to test CiVerLy on trails with
-non-integer weight.
-"""
-from civerly.wordsboxcipher import WordSBoxCipher
-from civerly.component import SBox_CVL, PermuteLayer_CVL
 from sage.crypto.sbox import SBox
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
+from civerly.component import PermuteLayer_CVL, SBox_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
-class WEAK_PRESENT_CVL:
+
+class WEAK_PRESENT_CVL(CipherImplementation_CVL, WordSBoxCipher):
     """Rudimentary implementation of WEAK_PRESENT."""
 
-    def __init__(self, R=31, name=None):
+    def __init__(self, R=31, key_schedule=None, key=None, name="WEAK_PRESENT"):
         r"""
-        Initizalise WEAK_PRESENT.
+        The CiVerly implementation of a weakened version of PRESENT.
+
+        The S-box is swapped out such that its linearity is 12 and its differential
+        uniformity is 6. The main purpose of this is to test CiVerLy on trails with
+        non-integer weight. It takes the following parameters:
+
+            - ``R`` -- integer; Number of rounds (default: 31)
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Unused, since WEAK_PRESENT has no round key
+              additions. Defaults to ``None``.
+
+            - ``key`` -- integer (optional); Unused, since WEAK_PRESENT has
+              no round key additions. Defaults to ``None``.
+
+            - ``name`` -- string; The name of the cipher (default: "WEAK_PRESENT").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
+
 
         TESTS::
 
@@ -25,7 +38,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - gurobi  # optional - espresso
+            sage: # optional - gurobi espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -46,7 +60,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
+            sage: # optional - scip espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -67,7 +82,8 @@ class WEAK_PRESENT_CVL:
             ....:     import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory() as tmpdir:  # optional - scip  # optional - espresso
+            sage: # optional - scip espresso
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
             ....:   weak_cipher = WEAK_PRESENT_CVL(R=2)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.LINEAR,
@@ -84,13 +100,13 @@ class WEAK_PRESENT_CVL:
 
         Below we generate a custom model by adding constraints.
         First analyse the cipher as per usual:
-            
-            sage: # optional - scip, espresso
+
+            sage: # optional - scip espresso
             sage: from civerly.cipher_implementations.weak_present \
             ....:   import WEAK_PRESENT_CVL
             sage: from civerly.model_options import *
             sage: import tempfile
-            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir: 
+            sage: with tempfile.TemporaryDirectory(delete=False) as tmpdir:
             ....:   cipher = WEAK_PRESENT_CVL(R=3)
             ....:   model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
@@ -104,29 +120,29 @@ class WEAK_PRESENT_CVL:
             sage: cipher.analyse(model_options)
             3648 variables and 6465 constraints were written to ...
             5.4150374993
-        
+
         Set all input bits to active and analyse again:
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: for i in range(cipher.input_length):
-            ....:     cipher.milp.add_constraint(cipher.nodes[0].milp.VAR_OUT[i] == 1)
+            ....:     cipher.milp.add_constraint(cipher.milp.VAR_IN[i] == 1)
             sage: cipher.analyse(model_options)
             Using existing MILP model, make sure it is up to date!
             3648 variables and 6529 constraints were written to ...
             61.8300749986
-            sage: cipher.results[0]['in'] == [1]*64
+            sage: list(cipher.result['assignment']['IN'].values()) \
+            ....:   == [1]*64
             True
-            
+
         Remove temporary files:
 
-            sage: # optional - scip, espresso
+            sage: # optional - scip espresso
             sage: import shutil
             sage: shutil.rmtree(tmpdir)
 
-        
+
         """
-        if name is None:
-            name = "WEAK_PRESENT"
+        super().__init__(4, 16, 16, R=R, key_schedule=key_schedule, key=key, name=name)
 
         S = SBox([7, 9, 11, 6, 2, 3, 1, 12, 4, 5, 15, 13, 8, 10, 14, 0])
         S = SBox_CVL(S, name="S")
@@ -144,10 +160,10 @@ class WEAK_PRESENT_CVL:
                 0, 16, 32, 48, 1, 17, 33, 49, 2, 18, 34, 50, 3, 19, 35, 51,
                 4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55,
                 8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59,
-                12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63
+                12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63,
             ],
-            name="Permutation"
-        )
+            name="Permutation",
+        )  # fmt: skip
 
         # Implementation of the WEAK_PRESENT round.
         # ------------------------------------------------ #
@@ -161,19 +177,10 @@ class WEAK_PRESENT_CVL:
 
         # Implementation of the WEAK_PRESENT cipher.
         # ------------------------------------------------ #
-        weak_cipher = WordSBoxCipher(4, 16, 16, name=name)
-        cipher_node = weak_cipher.IN
-        for _ in range(R):
+        cipher_node = self.IN
+        for _ in range(self.R):
             edges = [(cipher_node, (i, i)) for i in range(16)]
-            cipher_node = weak_cipher.add_subcipher(weak_round, edges)
+            cipher_node = self.add_subcipher(weak_round, edges)
 
-        weak_cipher.add_output([(cipher_node, (i, i)) for i in range(16)])
+        self.add_output([(cipher_node, (i, i)) for i in range(16)])
         # ------------------------------------------------ #
-
-        self.weak_cipher = weak_cipher
-
-    def __new__(cls, *args, **kwargs):
-        """Instantiate a WEAK_PRESENT cipher."""
-        instance = super(WEAK_PRESENT_CVL, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.weak_cipher

@@ -35,8 +35,8 @@ EXAMPLES::
     ....:   aeslikecipher.add_output([(node, (0, i))])
 """
 
-from civerly.wordsboxcipher import WordSBoxCipher
 from civerly.component import LinearLayer_CVL
+from civerly.wordsboxcipher import WordSBoxCipher
 
 
 class AESlike(WordSBoxCipher):
@@ -84,10 +84,7 @@ class AESlike(WordSBoxCipher):
         self.__rows = rows
         self.__cols = cols
         super().__init__(
-            wordsize,
-            self.rows * self.cols,
-            self.rows * self.cols,
-            name=name
+            wordsize, self.rows * self.cols, self.rows * self.cols, name=name
         )
 
     def add_subcipher(self, sub_cipher, edges):
@@ -98,8 +95,8 @@ class AESlike(WordSBoxCipher):
         """
         if type(sub_cipher) is LinearLayer_CVL:
             # this means LinearLayer, but not PermuteLayer or RotateLayer
-            if not sub_cipher.input_length == self.rows * self.wordsize:
-                a = self.rows*self.wordsize
+            if sub_cipher.input_length != self.rows * self.wordsize:
+                a = self.rows * self.wordsize
                 b = sub_cipher.input_length
                 e = "LinearLayer should be MixColumn and should be of size "
                 e += f"{a} instead of {b}!"
@@ -107,8 +104,7 @@ class AESlike(WordSBoxCipher):
             minimum = min([e[1][1] for e in edges])
             maximum = max([e[1][1] for e in edges]) - minimum
             if not (
-                (maximum - minimum == self.rows - 1) and
-                (minimum % self.rows == 0)
+                (maximum - minimum == self.rows - 1) and (minimum % self.rows == 0)
             ):
                 e = "Only properly aligned MixColumn allowed!"
                 raise AssertionError(e)

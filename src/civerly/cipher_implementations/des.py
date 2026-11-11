@@ -1,24 +1,56 @@
-from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.matrix.constructor import Matrix as matrix
 from sage.crypto.sbox import SBox as SBox_sage
-from sage.crypto.sboxes import DES_S1_1, DES_S1_2, DES_S1_3, DES_S1_4
-from sage.crypto.sboxes import DES_S2_1, DES_S2_2, DES_S2_3, DES_S2_4
-from sage.crypto.sboxes import DES_S3_1, DES_S3_2, DES_S3_3, DES_S3_4
-from sage.crypto.sboxes import DES_S4_1, DES_S4_2, DES_S4_3, DES_S4_4
-from sage.crypto.sboxes import DES_S5_1, DES_S5_2, DES_S5_3, DES_S5_4
-from sage.crypto.sboxes import DES_S6_1, DES_S6_2, DES_S6_3, DES_S6_4
-from sage.crypto.sboxes import DES_S7_1, DES_S7_2, DES_S7_3, DES_S7_4
-from sage.crypto.sboxes import DES_S8_1, DES_S8_2, DES_S8_3, DES_S8_4
+from sage.crypto.sboxes import (
+    DES_S1_1,
+    DES_S1_2,
+    DES_S1_3,
+    DES_S1_4,
+    DES_S2_1,
+    DES_S2_2,
+    DES_S2_3,
+    DES_S2_4,
+    DES_S3_1,
+    DES_S3_2,
+    DES_S3_3,
+    DES_S3_4,
+    DES_S4_1,
+    DES_S4_2,
+    DES_S4_3,
+    DES_S4_4,
+    DES_S5_1,
+    DES_S5_2,
+    DES_S5_3,
+    DES_S5_4,
+    DES_S6_1,
+    DES_S6_2,
+    DES_S6_3,
+    DES_S6_4,
+    DES_S7_1,
+    DES_S7_2,
+    DES_S7_3,
+    DES_S7_4,
+    DES_S8_1,
+    DES_S8_2,
+    DES_S8_3,
+    DES_S8_4,
+)
+from sage.matrix.constructor import Matrix as matrix
+from sage.rings.finite_rings.finite_field_constructor import GF
 
+from civerly.cipher_implementations.base import CipherImplementation_CVL
+from civerly.component import (
+    XOR_CVL,
+    LinearLayer_CVL,
+    PermuteLayer_CVL,
+    RoundkeyXOR_CVL,
+    SBox_CVL,
+)
 from civerly.sboxcipher import SBoxCipher
-from civerly.component import LinearLayer_CVL, PermuteLayer_CVL, XOR_CVL
-from civerly.component import SBox_CVL, RoundkeyXOR_CVL
 
 
-class DES_F_CVL:
+class DES_F_CVL(SBoxCipher):
     def __init__(self):
         r"""
-        The implementation of DES-F.
+        The implementation of DES-F, taking no arguments.
         The test vectors are taken from
         https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.
 
@@ -95,7 +127,7 @@ class DES_F_CVL:
             Output file in: ...
 
         """
-        f = SBoxCipher(32, 32, name="f")
+        super().__init__(32, 32, name="f")
 
         e_table = [
             32,  1,  2,  3,  4,  5,
@@ -105,8 +137,8 @@ class DES_F_CVL:
             16, 17, 18, 19, 20, 21,
             20, 21, 22, 23, 24, 25,
             24, 25, 26, 27, 28, 29,
-            28, 29, 30, 31, 32,  1
-        ]
+            28, 29, 30, 31, 32,  1,
+        ]  # fmt: skip
         arr = [[0 for _ in range(32)] for _ in range(len(e_table))]
         for i in range(len(e_table)):
             arr[i][e_table[i] - 1] = 1
@@ -121,7 +153,7 @@ class DES_F_CVL:
             [DES_S5_1, DES_S5_2, DES_S5_3, DES_S5_4],
             [DES_S6_1, DES_S6_2, DES_S6_3, DES_S6_4],
             [DES_S7_1, DES_S7_2, DES_S7_3, DES_S7_4],
-            [DES_S8_1, DES_S8_2, DES_S8_3, DES_S8_4]
+            [DES_S8_1, DES_S8_2, DES_S8_3, DES_S8_4],
         ]
 
         S_new = []
@@ -129,9 +161,7 @@ class DES_F_CVL:
         for n, sb in enumerate(S_arr):
             S_new.append([])
             for i in range(64):
-                S_new[n].append(
-                    sb[(((i >> 5) & 1) << 1) | (i & 1)][(i >> 1) & 0xf]
-                )
+                S_new[n].append(sb[(((i >> 5) & 1) << 1) | (i & 1)][(i >> 1) & 0xF])
 
         # SBox_CVL is CiVerLy component, SBox_sage is SageMath-SBox object
         S = [SBox_CVL(SBox_sage(s), name=f"S{i}") for i, s in enumerate(S_new)]
@@ -143,58 +173,66 @@ class DES_F_CVL:
             2,  8, 24, 14,
             32, 27,  3,  9,
             19, 13, 30,  6,
-            22, 11,  4, 25
-        ]
-        permute = PermuteLayer_CVL([p-1 for p in P_perm], name="P").inv()
+            22, 11,  4, 25,
+        ]  # fmt: skip
+        permute = PermuteLayer_CVL([p - 1 for p in P_perm], name="P").inv()
         key_add = RoundkeyXOR_CVL(48, 0x0, name="key_add")
 
         # ---------------------------- F ------------------------------------ #
-        e_node = f.add_subcipher(
-            E, [(f.IN, (i, i)) for i in range(32)]
-        )
-        rk_node = f.add_subcipher(
-            key_add, [(e_node, (i, i)) for i in range(48)]
-        )
-        s_nodes = [f.add_subcipher(
-            S[s], [(rk_node, (i + 6*s, i)) for i in range(6)])
+        e_node = self.add_subcipher(E, [(self.IN, (i, i)) for i in range(32)])
+        rk_node = self.add_subcipher(key_add, [(e_node, (i, i)) for i in range(48)])
+        s_nodes = [
+            self.add_subcipher(S[s], [(rk_node, (i + 6 * s, i)) for i in range(6)])
             for s in range(8)
         ]
-        p_node = f.add_subcipher(
-            permute, [
-                (nod, (i, i + 4*n))
-                for i in range(4)
-                for n, nod in enumerate(s_nodes)
-            ]
+        p_node = self.add_subcipher(
+            permute,
+            [(nod, (i, i + 4 * n)) for i in range(4) for n, nod in enumerate(s_nodes)],
         )
-        f.add_output([(p_node, (i, i)) for i in range(32)])
+        self.add_output([(p_node, (i, i)) for i in range(32)])
         # ------------------------------------------------------------------- #
-        self.f = f
-
-    def __new__(cls, *args, **kwargs):
-        instance = super(DES_F_CVL, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.f
 
 
-class DES_CVL:
-    def __init__(self, R, rks=[], name=None) -> None:
+class DES_CVL(CipherImplementation_CVL, SBoxCipher):
+    def __init__(self, R, key_schedule=None, key=None, name="DES") -> None:
         r"""
         The DES implementation.
         The test vectors are taken from https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.
+        It takes the following arguments:
+
+            - ``R`` -- integer; Number of rounds.
+
+            - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
+              (optional); Key schedule instance used to derive round keys from
+              ``key`` via ``set_round_keys``. No built-in key schedule is
+              implemented for DES; pass a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (see ``key``). Defaults to ``None``
+              (no key schedule, all-zero round keys).
+
+            - ``key`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and injected via
+              ``set_round_keys`` when both are given. Has no effect when
+              ``key_schedule`` is ``None``.
+              When using :class:`civerly.keyschedule.DefaultKeySchedule_CVL`,
+              this is the list of round keys (round key 0 first).
+
+            - ``name`` -- string; The name of the cipher (default: "DES").
+              Will be used to name the cipher and the corresponding files
+              generated (such as the reports and cipher graphs).
 
         TESTS::
 
             sage: from civerly.cipher_implementations.des import DES_CVL
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
             sage: from civerly.util import vec_to_int, int_to_vec
-            sage: rks = [
-            ....:   0x0B02679B49A5, 0x69A659256A26, 0x45D48AB428D2,
-            ....:   0x7289D2A58257, 0x3CE80317A6C2, 0x23251E3C8545,
-            ....:   0x6C04950AE4C6, 0x5788386CE581, 0xC0C9E926B839,
-            ....:   0x91E307631D72, 0x211F830D893A, 0x7130E5455C54,
-            ....:   0x91C4D04980FC, 0x5443B681DC8D, 0xB691050A16B5,
-            ....:   0xCA3D03B87032
+            sage: k = [
+            ....:   0x0b02679b49a5, 0x69a659256a26, 0x45d48ab428d2, 0x7289d2a58257,
+            ....:   0x3ce80317a6c2, 0x23251e3c8545, 0x6c04950ae4c6, 0x5788386ce581,
+            ....:   0xc0c9e926b839, 0x91e307631d72, 0x211f830d893a, 0x7130e5455c54,
+            ....:   0x91c4d04980fc, 0x5443b681dc8d, 0xb691050a16b5, 0xca3d03b87032
             ....: ]
-            sage: des = DES_CVL(R=16, rks=rks)
+            sage: des = DES_CVL(R=16, key=k, key_schedule=DefaultKeySchedule_CVL(48, 16))
             sage: vec_to_int(des(int_to_vec(0x4E6F772069732074, 64))) \
             ....:   == 0x3FA40E8A984D4815
             True
@@ -227,13 +265,8 @@ class DES_CVL:
             4
 
         """
-        if name is None:
-            name = "DES"
+        super().__init__(64, 64, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        if rks == []:
-            rks = [0 for _ in range(R)]  # default to zero keys
-
-        des = SBoxCipher(64, 64, name=name)
         xor = XOR_CVL(32, name="XOR")
         round_function = SBoxCipher(64, 64, name="Round")
 
@@ -245,8 +278,8 @@ class DES_CVL:
             56, 48, 40, 32, 24, 16, 8,  0,
             58, 50, 42, 34, 26, 18, 10, 2,
             60, 52, 44, 36, 28, 20, 12, 4,
-            62, 54, 46, 38, 30, 22, 14, 6
-        ]
+            62, 54, 46, 38, 30, 22, 14, 6,
+        ]  # fmt: skip
         ip = PermuteLayer_CVL(ip_arr, name="IP").inv()
 
         f = DES_F_CVL()
@@ -257,37 +290,29 @@ class DES_CVL:
         )
         xor_node = round_function.add_subcipher(
             xor,
-            [
-                (f_node, (i, i)) for i in range(32)
-            ] + [
-                (round_function.IN, (i, i + 32)) for i in range(32)
-            ]
+            [(f_node, (i, i)) for i in range(32)]
+            + [(round_function.IN, (i, i + 32)) for i in range(32)],
         )
 
-        round_function.add_output(
-            [(round_function.IN, (i + 32, i)) for i in range(32)]
-        )
-        round_function.add_output(
-            [(xor_node, (i, i + 32)) for i in range(32)]
-        )
+        round_function.add_output([(round_function.IN, (i + 32, i)) for i in range(32)])
+        round_function.add_output([(xor_node, (i, i + 32)) for i in range(32)])
         # ------------------------------------------------------------------- #
 
         # ----------------------------- DES --------------------------------- #
-        current = des.add_subcipher(ip, [(des.IN, (i, i)) for i in range(64)])
-        for r in range(R):
-            round_function.nodes[f_node].nodes[2].const = rks[r]
-            current = des.add_subcipher(
+        current = self.add_subcipher(ip, [(self.IN, (i, i)) for i in range(64)])
+        rk_nodes = []
+        for _ in range(self.R):
+            current = self.add_subcipher(
                 round_function, [(current, (i, i)) for i in range(64)]
             )
-        current = des.add_subcipher(
+            rk_nodes.append(current)
+        current = self.add_subcipher(
             ip.inv(), [(current, ((i + 32) % 64, i)) for i in range(64)]
         )
-        des.add_output([(current, (i, i)) for i in range(64)])
+        self.add_output([(current, (i, i)) for i in range(64)])
         # ------------------------------------------------------------------- #
 
-        self.des = des
+        self._rk_components = [self.nodes[n].nodes[f_node].nodes[2] for n in rk_nodes]
 
-    def __new__(cls, *args, **kwargs):
-        instance = super(DES_CVL, cls).__new__(cls)
-        instance.__init__(*args, **kwargs)
-        return instance.des
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)
