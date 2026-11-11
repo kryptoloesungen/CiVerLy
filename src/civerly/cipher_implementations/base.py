@@ -104,13 +104,3 @@ class CipherImplementation_CVL(Cipher):
         self.key = key
         super().__init__(*args, name=name, **kwargs)
         self.key_schedule = key_schedule
-
-    @classmethod
-    def _init_from_dict(cls, d):
-        r"""
-        Construct an empty shell of the structural parent class, as the
-        constructor of a cipher implementation builds the full cipher.
-        """
-        for base in cls.__mro__:
-            if not issubclass(base, CipherImplementation_CVL):
-                return base._init_from_dict(d)
