@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from sage.crypto.sbox import SBox
 from sage.matrix.constructor import Matrix as matrix
 from sage.matrix.special import block_matrix, identity_matrix, zero_matrix
@@ -30,7 +32,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
     )  # fmt: skip
 
     # Number of rounds of the full-round versions, indexed by (n, t)
-    rounds = {
+    rounds: ClassVar[dict[tuple[int, int], int]] = {
         (64, 64): 32,
         (64, 128): 36,
         (64, 192): 40,

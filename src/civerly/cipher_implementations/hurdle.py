@@ -1,7 +1,7 @@
 from sage.crypto.sbox import SBox
 
-from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.cipher import Cipher
+from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
     RK_CVL,
     XOR_CVL,
@@ -14,7 +14,6 @@ from civerly.component import (
 from civerly.keyschedule import KeySchedule
 from civerly.util import int_to_vec, vec_to_int
 from civerly.wordbasedcipher import WordBasedCipher
-
 
 # Left byte-rotation of the 128-bit master key used for each round key.
 _HURDLE_KS_ROT = [0, 5, 10, 15, 4, 7, 14, 3, 8, 13, 2, 9, 12, 1, 6, 11]
