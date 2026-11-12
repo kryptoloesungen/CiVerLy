@@ -2166,6 +2166,7 @@ class Cipher:
         The model and the results are restored into a new ``PRESENT_CVL``,
         whose trail can be read without solving again::
 
+            sage: # optional - scip espresso
             sage: loaded = PRESENT_CVL(R=4).load(tmpdir / "present.json")
             sage: loaded.milp == cipher.milp
             True
@@ -2177,15 +2178,23 @@ class Cipher:
         Analysing the loaded cipher solves the loaded model, instead of
         modeling the cipher again::
 
+            sage: # optional - scip espresso
             sage: from dataclasses import replace
             sage: loaded.analyse(replace(model_options, path=tmpdir / "loaded"))
             Using existing MILP model, make sure it is up to date!
             5312 variables and 8641 constraints were written to ...
             12
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
 
         The same for SAT::
 
             sage: # optional - cryptominisat espresso
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: from dataclasses import replace
+            sage: import shutil, tempfile
+            sage: tmpdir = Path(tempfile.mkdtemp())
             sage: model_options = MODEL_OPTIONS(
             ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
             ....:     optimization=OPTIMIZATION.SAT,
@@ -2193,7 +2202,7 @@ class Cipher:
             ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
             ....:     sat_solver=SOLVER.CRYPTOMINISAT,
             ....:     logic_minimizer=SOLVER.ESPRESSO,
-            ....:     path=tmpdir / "sat")
+            ....:     path=tmpdir)
             sage: cipher = PRESENT_CVL(R=3)
             sage: cipher.analyse(model_options)
             ... variables and ... clauses were written to ...
@@ -2204,19 +2213,23 @@ class Cipher:
             True
             sage: loaded.get_trail(model_options).input == cipher.get_trail(model_options).input
             True
-            sage: loaded.analyse(replace(model_options, path=tmpdir / "sat_loaded"))
+            sage: loaded.analyse(replace(model_options, path=tmpdir / "loaded"))
             Using existing SAT model, make sure it is up to date!
             ... variables and ... clauses were written to ...
             8
+            sage: shutil.rmtree(tmpdir)
 
-        Loading into a different cipher fails::
+        Loading into a different cipher fails. This needs no model, as an
+        unmodeled cipher can be exported as well::
 
-            sage: PRESENT_CVL(R=2).load(tmpdir / "present.json")
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: import tempfile
+            sage: with tempfile.TemporaryDirectory() as tmpdir:
+            ....:     PRESENT_CVL(R=4).export(Path(tmpdir) / "present.json")
+            ....:     PRESENT_CVL(R=2).load(Path(tmpdir) / "present.json")
             Traceback (most recent call last):
             ...
             ValueError: ... the exported model belongs to a different cipher.
-            sage: import shutil
-            sage: shutil.rmtree(tmpdir)
         """
         data = {
             "name": self.name,
