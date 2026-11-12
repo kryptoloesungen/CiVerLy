@@ -20,12 +20,13 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
         0xb4, 0x52, 0xa5, 0xd6, 0xe7, 0xf3, 0x71, 0x34, 0x12, 0x85,
     )  # fmt: skip
 
-    def __init__(self, R, key_schedule=None, key=None, name="CRAFT") -> None:
+    def __init__(self, R=32, key_schedule=None, key=None, name="CRAFT") -> None:
         r"""
         The CiVerLy implementation of CRAFT. It takes the following arguments:
 
-            - ``R`` -- integer; Specifies the number of rounds that are
-              performed.
+            - ``R`` -- integer (default: ``32``); Specifies the number of
+              rounds that are performed. Full CRAFT has 32 rounds
+              (Beierle et al., ToSC 2019).
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used by ``set_round_keys`` to
