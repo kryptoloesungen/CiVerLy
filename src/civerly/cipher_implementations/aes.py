@@ -210,7 +210,7 @@ from civerly.sboxcipher import SBoxCipher
 
 
 class AES_KeySchedule_CVL(KeySchedule):
-    def __init__(self, R):
+    def __init__(self, R=10):
         r"""
         AES-128 key schedule as a CiVerLy DAG.
 
@@ -219,7 +219,8 @@ class AES_KeySchedule_CVL(KeySchedule):
 
         INPUT:
 
-            - ``R`` -- integer; Number of rounds (1..10 for AES-128).
+            - ``R`` -- integer (default: ``10``); Number of rounds (1..10 for
+              AES-128).
 
         EXAMPLES::
 
@@ -370,7 +371,7 @@ class AES_KeySchedule_CVL(KeySchedule):
 class AES_CVL(CipherImplementation_CVL, AESlike):
     """Implementation of the AES in CiVerLy."""
 
-    def __init__(self, R, key_schedule=None, key=None, name="AES") -> None:
+    def __init__(self, R=10, key_schedule=None, key=None, name="AES") -> None:
         r"""
         Implement AES-128 in CiVerLy.
 
@@ -383,7 +384,8 @@ class AES_CVL(CipherImplementation_CVL, AESlike):
 
         INPUT:
 
-            - ``R`` -- integer; Number of rounds.
+            - ``R`` -- integer (default: ``10``); Number of rounds. Full
+              AES-128 has 10 rounds (FIPS 197).
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from

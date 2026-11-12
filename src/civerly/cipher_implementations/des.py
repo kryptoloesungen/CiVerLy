@@ -194,13 +194,14 @@ class DES_F_CVL(SBoxCipher):
 
 
 class DES_CVL(CipherImplementation_CVL, SBoxCipher):
-    def __init__(self, R, key_schedule=None, key=None, name="DES") -> None:
+    def __init__(self, R=16, key_schedule=None, key=None, name="DES") -> None:
         r"""
         The DES implementation.
         The test vectors are taken from https://crypto.stackexchange.com/questions/65996/64-des-full-example-with-all-the-stages.
         It takes the following arguments:
 
-            - ``R`` -- integer; Number of rounds.
+            - ``R`` -- integer (default: ``16``); Number of rounds. Full DES
+              has 16 rounds (FIPS 46-3).
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
               (optional); Key schedule instance used to derive round keys from

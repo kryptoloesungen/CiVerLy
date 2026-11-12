@@ -1,6 +1,7 @@
 from civerly.andrx import AndRX
 from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import AND_CVL, XOR_CVL, RotateLayer_CVL, RoundkeyXOR_CVL
+from civerly.keyschedule import KeySchedule
 
 # Round: Add round constant -> theta(key, state) -> pi1 -> gamma -> pi2
 # theta: linear diffusion + key injection (XORs + byte-rotations)
@@ -15,6 +16,83 @@ rc1 = [
 RC_FINAL = 0xD4
 
 
+class NOEKEON_KeySchedule_CVL(KeySchedule):
+    def __init__(self, R=16, name="Noekeon-KeySchedule"):
+        r"""
+        Noekeon key schedule (direct-key mode) as a CiVerLy DAG.
+
+        In direct-key mode, Noekeon uses the 128-bit master key, split into
+        the four 32-bit words ``K0, K1, K2, K3`` (``K0`` most significant), as
+        working key unchanged in every theta. The DAG is therefore pure
+        output wiring: the master key is repeated once per round, plus once
+        more for the final theta of the full 16-round cipher.
+
+        INPUT:
+
+            - ``R`` -- integer; Number of rounds, same meaning as ``R`` of
+              :class:`NOEKEON_CVL` (default: 16)
+
+            - ``name`` -- string; The name of the key schedule
+              (default: "Noekeon-KeySchedule")
+
+        OUTPUT: :meth:`eval` returns ``4 * R`` 32-bit round keys (``4 * R +
+        4`` for ``R == 16``), ordered ``K0, K1, K2, K3`` per theta in round
+        order, matching ``NOEKEON_CVL._rk_components``.
+
+        EXAMPLES::
+
+            sage: from civerly.cipher_implementations.noekeon import (
+            ....:   NOEKEON_KeySchedule_CVL)
+            sage: ks = NOEKEON_KeySchedule_CVL(R=2)
+            sage: [hex(rk) for rk in ks(0x000102030405060708090a0b0c0d0e0f)]
+            ['0x10203', '0x4050607', '0x8090a0b', '0xc0d0e0f',
+             '0x10203', '0x4050607', '0x8090a0b', '0xc0d0e0f']
+            sage: len(NOEKEON_KeySchedule_CVL()(0x0))
+            68
+
+        End-to-end encryption via ``set_round_keys``::
+
+            sage: from civerly.cipher_implementations.noekeon import NOEKEON_CVL
+            sage: from civerly.util import int_to_vec, vec_to_int
+            sage: noekeon = NOEKEON_CVL(key_schedule=NOEKEON_KeySchedule_CVL())
+            sage: noekeon.set_round_keys(0xb1656851699e29fa24b70148503d2dfc)
+            sage: P = 0x2a78421b87c7d0924f26113f1d1349b2
+            sage: hex(vec_to_int(noekeon(int_to_vec(P, 128))))
+            '0xe2f687e07b75660ffc372233bc47532c'
+        """
+        assert 0 <= R <= 16
+        self._num_thetas = R + (1 if R == 16 else 0)
+        super().__init__(128, 128 * self._num_thetas, name=name)
+        self._R = R
+        self.add_output(
+            [
+                (self.IN, (i, t * 128 + i))
+                for t in range(self._num_thetas)
+                for i in range(128)
+            ]
+        )
+
+    def eval(self, k):
+        r"""
+        Expand master key ``k`` into the list of 32-bit round keys
+        ``[K0, K1, K2, K3] * (number of thetas)``.
+
+        INPUT:
+
+            - ``k`` -- integer; 128-bit master key.
+
+        OUTPUT: List of ``4 * R`` integers (``4 * R + 4`` for ``R == 16``).
+        """
+        from civerly.cipher import Cipher
+        from civerly.util import int_to_vec, vec_to_int
+
+        bits = Cipher.eval(self, int_to_vec(k, self.input_length))
+        return [
+            vec_to_int(bits[i * 32 : (i + 1) * 32])
+            for i in range(self.output_length // 32)
+        ]
+
+
 class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
     def __init__(self, R=16, key_schedule=None, key=None, name="Noekeon"):
         r"""
@@ -24,15 +102,22 @@ class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
             - ``R`` -- integer; Number of rounds (default: 16)
 
             - ``key_schedule`` -- :class:`civerly.keyschedule.KeySchedule`
-              (optional); Key schedule instance used by ``set_round_keys``.
-              Noekeon reuses the same master key ``key`` directly in every
-              round, so no key schedule is needed for correctness; this
-              parameter only exists for custom ``KeySchedule`` subclass
-              instances. Defaults to ``None`` (no key schedule).
+              (optional); Key schedule instance used to derive round keys from
+              ``key`` via ``set_round_keys``. Pass a
+              :class:`NOEKEON_KeySchedule_CVL` instance (with the same ``R``)
+              to use the Noekeon direct-key schedule (the master key words
+              ``K0..K3`` in every theta), a custom ``KeySchedule`` subclass
+              instance, or :class:`civerly.keyschedule.DefaultKeySchedule_CVL`
+              to pass explicit round keys (``4 * R`` 32-bit words, ``4 * R +
+              4`` for ``R == 16``, ordered ``K0, K1, K2, K3`` per theta).
+              Defaults to ``None`` (no key schedule, all-zero round keys).
 
-            - ``key`` -- integer (128-bit, optional); Master key. ``None``
-              (default) is treated as ``0x0``. When given, the round keys are
-              derived and injected immediately.
+            - ``key`` -- integer or list of integers (optional); The master
+              key passed to ``key_schedule``, immediately expanded and
+              injected via ``set_round_keys`` when both are given. Has no
+              effect when ``key_schedule`` is ``None``. When using
+              :class:`civerly.keyschedule.DefaultKeySchedule_CVL`, this is the
+              list of round keys (round key 0 first).
 
             - ``name`` -- string; The name of the cipher (default: "Noekeon").
               This will be used to name the cipher and the corresponding file
@@ -48,29 +133,52 @@ class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
 
         TESTS::
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: from civerly.cipher_implementations.noekeon import NOEKEON_CVL
+            sage: from civerly.cipher_implementations.noekeon import (
+            ....:   NOEKEON_CVL, NOEKEON_KeySchedule_CVL)
             sage: P = 0x00000000000000000000000000000000
             sage: K = 0x00000000000000000000000000000000
             sage: C = 0xb1656851699e29fa24b70148503d2dfc
-            sage: cipher = NOEKEON_CVL(key=K)
+            sage: cipher = NOEKEON_CVL(key=K, key_schedule=NOEKEON_KeySchedule_CVL())
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: from civerly.cipher_implementations.noekeon import NOEKEON_CVL
+            sage: from civerly.cipher_implementations.noekeon import (
+            ....:   NOEKEON_CVL, NOEKEON_KeySchedule_CVL)
             sage: K = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             sage: P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             sage: C = 0x2a78421b87c7d0924f26113f1d1349b2
-            sage: cipher = NOEKEON_CVL(key=K)
+            sage: cipher = NOEKEON_CVL(key=K, key_schedule=NOEKEON_KeySchedule_CVL())
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
             sage: from civerly.util import int_to_vec, vec_to_int
-            sage: from civerly.cipher_implementations.noekeon import NOEKEON_CVL
+            sage: from civerly.cipher_implementations.noekeon import (
+            ....:   NOEKEON_CVL, NOEKEON_KeySchedule_CVL)
             sage: K = 0xb1656851699e29fa24b70148503d2dfc
             sage: P = 0x2a78421b87c7d0924f26113f1d1349b2
             sage: C = 0xe2f687e07b75660ffc372233bc47532c
+            sage: cipher = NOEKEON_CVL(key=K, key_schedule=NOEKEON_KeySchedule_CVL())
+            sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
+            True
+
+        Without a key schedule, ``key`` has no effect (all-zero round keys)::
+
             sage: cipher = NOEKEON_CVL(key=K)
+            sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
+            False
+            sage: vec_to_int(cipher(int_to_vec(P, 128))) == \
+            ....:   vec_to_int(NOEKEON_CVL()(int_to_vec(P, 128)))
+            True
+
+        Explicit round keys via
+        :class:`civerly.keyschedule.DefaultKeySchedule_CVL` (here the
+        direct-key words of ``K``, repeated for all 17 thetas)::
+
+            sage: from civerly.keyschedule import DefaultKeySchedule_CVL
+            sage: rks = [(K >> (96 - 32 * i)) & 0xFFFFFFFF for i in range(4)] * 17
+            sage: cipher = NOEKEON_CVL(
+            ....:   key=rks, key_schedule=DefaultKeySchedule_CVL(32, 68))
             sage: vec_to_int(cipher(int_to_vec(P, 128))) == C
             True
 
@@ -162,15 +270,7 @@ class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
         """
         super().__init__(32, 4, 4, R=R, key_schedule=key_schedule, key=key, name=name)
 
-        k = 0x0 if self.key is None else self.key
-        assert 0 <= k < (1 << 128)
         assert 0 <= self.R <= 16
-
-        # computing the subkeys based on the paper's specifications
-        K0 = (k >> 96) & 0xFFFFFFFF
-        K1 = (k >> 64) & 0xFFFFFFFF
-        K2 = (k >> 32) & 0xFFFFFFFF
-        K3 = k & 0xFFFFFFFF
         # xor operation
         xor = XOR_CVL(32, name="xor")
         # AND operation
@@ -180,11 +280,12 @@ class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
         # rotation operation
         rotL8 = RotateLayer_CVL(32, 8, name="rotl8")
         rotL24 = RotateLayer_CVL(32, 24, name="rotl24")
-        # subkeys addition
-        kx0 = RoundkeyXOR_CVL(32, K0, name="k0")
-        kx1 = RoundkeyXOR_CVL(32, K1, name="k1")
-        kx2 = RoundkeyXOR_CVL(32, K2, name="k2")
-        kx3 = RoundkeyXOR_CVL(32, K3, name="k3")
+        # subkeys addition (working key words K0..K3); the actual values are
+        # injected via ``set_round_keys`` (all zero without a key schedule)
+        kx0 = RoundkeyXOR_CVL(32, 0x0, name="k0")
+        kx1 = RoundkeyXOR_CVL(32, 0x0, name="k1")
+        kx2 = RoundkeyXOR_CVL(32, 0x0, name="k2")
+        kx3 = RoundkeyXOR_CVL(32, 0x0, name="k3")
 
         # THETA
         theta = AndRX(32, 4, 4, name="theta")
@@ -311,10 +412,12 @@ class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
         self._node_rc = node_rc
 
         node = self.IN
+        round_nodes = []
         for r in range(self.R):
             rc_word = int(rc1[r]) & 0xFF
             round_cipher.nodes[node_rc].const = rc_word
             node = self.add_subcipher(round_cipher, [(node, (i, i)) for i in range(4)])
+            round_nodes.append(node)
 
         # finalization: a0 ^= (RC_FINAL<<24), then theta(key,state)
         final_node = node
@@ -327,3 +430,21 @@ class NOEKEON_CVL(CipherImplementation_CVL, AndRX):
             )
 
         self.add_output([(final_node, (i, i)) for i in range(4)])
+
+        # Collect references to the key-word additions K0..K3 inside theta,
+        # one set per round (in round order), followed by the set inside the
+        # final theta (only present for R == 16). ``not1`` is a fixed
+        # constant (bitwise NOT) and is not key material.
+        key_nodes = [a0k, a1k, a2k, a3k]
+        self._rk_components = [
+            self.nodes[rn].nodes[node_theta].nodes[kn]
+            for rn in round_nodes
+            for kn in key_nodes
+        ]
+        if self.R == 16:
+            self._rk_components += [
+                self.nodes[final_node].nodes[kn] for kn in key_nodes
+            ]
+
+        if key_schedule is not None and key is not None:
+            self.set_round_keys(key)

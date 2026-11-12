@@ -21,13 +21,14 @@ from civerly.sboxcipher import SBoxCipher
 
 
 class HALFLOOP_CVL(CipherImplementation_CVL, SBoxCipher):
-    def __init__(self, R, key_schedule=None, key=None, name="HALFLOOP-24") -> None:
+    def __init__(self, R=10, key_schedule=None, key=None, name="HALFLOOP-24") -> None:
         r"""
         Implementation of HALFLOOP-24 in CiVerLy, together with its key schedule.
 
         INPUT:
 
-            - ``R`` -- integer; Number of rounds (must be <= 10)
+            - ``R`` -- integer (default: ``10``); Number of rounds (must be
+              <= 10). Full HALFLOOP-24 has 10 rounds (MIL-STD-188-141D).
 
             - ``key_schedule`` -- Unused, since HALFLOOP-24 implements its
               key schedule as part of the cipher graph (default: None).
