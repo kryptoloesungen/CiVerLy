@@ -9,7 +9,6 @@ from civerly.aeslike import AESlike
 from civerly.cipher import Cipher
 from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
-    I_CVL,
     XOR_CVL,
     LinearLayer_CVL,
     PermuteLayer_CVL,
@@ -351,7 +350,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            22752 variables and 23505 constraints were written to '...'
+            15264 variables and 16017 constraints were written to '...'
             32
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -367,7 +366,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            7136 variables and 7361 constraints were written to '...'
+            4796 variables and 5021 constraints were written to '...'
             46
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -384,7 +383,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            9312 variables and 9585 constraints were written to '...'
+            6504 variables and 6777 constraints were written to '...'
             10
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -454,7 +453,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19553 clauses were written to '...'
+            6168 variables and 13937 clauses were written to '...'
             10
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -473,7 +472,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     solve_range=(10, 20),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19553 clauses were written to '...'
+            6168 variables and 13937 clauses were written to '...'
             10
 
         Modeling linear cryptanalysis::
@@ -491,7 +490,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            7136 variables and 7521 constraints were written to '...'
+            4796 variables and 5181 constraints were written to '...'
             43
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -527,7 +526,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            9264 variables and 10161 constraints were written to '...'
+            6456 variables and 7353 constraints were written to '...'
             5
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -546,7 +545,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19313 clauses were written to '...'
+            6168 variables and 13697 clauses were written to '...'
             5
 
             sage: from civerly.cipher_implementations.skinny import SKINNY_CVL
@@ -565,7 +564,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             ....:     solve_range=(4, 10),
             ....:     path=Path(tmpdir))
             ....:   skinny.analyse(model_options)
-            8976 variables and 19313 clauses were written to '...'
+            6168 variables and 13697 clauses were written to '...'
             5
 
         """
@@ -652,20 +651,8 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
         )
         addconstants.add_output([(node_xorconst, (i, 4 * i)) for i in range(3)])
 
-        node_I = addconstants.add_subcipher(
-            I_CVL(13 * s, name="I"),
-            [
-                (addconstants.IN, (i, i - 1 - i // 4 + i // 12))
-                for i in range(16)
-                if i not in [0, 4, 8]
-            ],
-        )
         addconstants.add_output(
-            [
-                (node_I, (i - 1 - i // 4 + i // 12, i))
-                for i in range(16)
-                if i not in [0, 4, 8]
-            ]
+            [(addconstants.IN, (i, i)) for i in range(16) if i not in [0, 4, 8]]
         )
         # ------------------------------------------------------------
 
@@ -682,27 +669,16 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             atk2, [(addroundtweakey.IN, (i + 4, i)) for i in range(4)]
         )
 
-        node_I2 = addroundtweakey.add_subcipher(
-            I_CVL(8 * s, name="I"), [(addroundtweakey.IN, (i + 8, i)) for i in range(8)]
-        )
-        addroundtweakey.add_output([(node_I2, (i, i + 8)) for i in range(8)])
+        addroundtweakey.add_output([(addroundtweakey.IN, (i, i)) for i in range(8, 16)])
         addroundtweakey.add_output([(node_atk1, (i, i)) for i in range(4)])
         addroundtweakey.add_output([(node_atk2, (i, i + 4)) for i in range(4)])
         # ------------------------------------------------------------
 
-        # ShiftRows
+        # ShiftRows and MixColumns
         # ------------------------------------------------------------
-        shiftrows = PermuteLayer_CVL(
-            perm=[0, 1, 2, 3, 7, 4, 5, 6, 10, 11, 8, 9, 13, 14, 15, 12],
-            word_coarseness=s,
-            name="ShiftRows",
-        ).inv()
-        # ------------------------------------------------------------
-
-        # MixColumns
-        # ------------------------------------------------------------
-        mixcolumns = AESlike(s, rows=4, cols=4, name="MixColumns")
-
+        # The state is row-major (cell 4i + j is row i, column j). ShiftRows
+        # rotates row i right by i, so MixColumns on column j reads row i from
+        # cell 4i + (j - i) % 4. Both are done by wiring ``mc`` per column.
         I = identity_matrix(GF(2), s)  # noqa: E741
         O = zero_matrix(GF(2), s)  # noqa: E741
 
@@ -713,19 +689,7 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
             branch_number_differential=2,
             name="MC",
         )
-
-        for j in range(4):
-            node = mixcolumns.add_subcipher(
-                mc, [(mixcolumns.IN, (i + 4 * j, i)) for i in range(4)]
-            )
-            mixcolumns.add_output([(node, (i, i + 4 * j)) for i in range(4)])
         # ------------------------------------------------------------
-        # Transpose for correct alignment
-        TR = PermuteLayer_CVL(
-            perm=[0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15],
-            word_coarseness=s,
-            name="Transpose",
-        )
 
         skinny_round = AESlike(s, rows=4, cols=4, name="SKINNY-round")
 
@@ -738,21 +702,12 @@ class SKINNY_CVL(CipherImplementation_CVL, AESlike):
         node_round_tweakey = skinny_round.add_subcipher(
             addroundtweakey, [(node_round_const, (i, i)) for i in range(16)]
         )
-        node_round = skinny_round.add_subcipher(
-            shiftrows, [(node_round_tweakey, (i, i)) for i in range(16)]
-        )
-
-        node_round = skinny_round.add_subcipher(
-            TR, [(node_round, (i, i)) for i in range(16)]
-        )  # Transpose
-        node_round = skinny_round.add_subcipher(
-            mixcolumns, [(node_round, (i, i)) for i in range(16)]
-        )
-        node_round = skinny_round.add_subcipher(
-            TR, [(node_round, (i, i)) for i in range(16)]
-        )  # Transpose
-
-        skinny_round.add_output([(node_round, (i, i)) for i in range(16)])
+        for j in range(4):
+            node_mc = skinny_round.add_subcipher(
+                mc,
+                [(node_round_tweakey, (4 * i + (j - i) % 4, i)) for i in range(4)],
+            )
+            skinny_round.add_output([(node_mc, (i, 4 * i + j)) for i in range(4)])
 
         node_cipher = self.IN
         for r in range(R):

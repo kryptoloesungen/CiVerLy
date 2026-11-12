@@ -14,8 +14,8 @@ objects. All six published variants are supported:
 
 The internal state is organised as a rectangular array of 4-bit nibbles with
 4 rows. The cipher is built on ``WordSBoxCipher`` (wordsize 4); MixColumn is
-a single full-state linear layer (see ``_mix_columns``) and the shuffle layer
-acts on the whole state. The (Toeplitz-hash based) tweakey schedule is
+applied column by column (see ``_mix_column``) and the shuffle layer acts on
+the whole state. The (Toeplitz-hash based) tweakey schedule is
 implemented as a CiVerLy DAG by :class:`BLINK_KeySchedule_CVL`, which yields
 the whitening keys, round keys and tweak hashes that are injected into the
 cipher's round-key components via ``set_round_keys``.
@@ -23,6 +23,7 @@ cipher's round-key components via ``set_round_keys``.
 
 from sage.crypto.sbox import SBox
 from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import identity_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.cipher import Cipher
@@ -253,46 +254,19 @@ def _bytes_to_int(byte_list):
 # ---------------------------------------------------------------------------
 
 
-def _mix_columns(state_bytes):
-    r"""Build the full-state MixColumn LinearLayer.
+def _mix_column():
+    r"""Build the MixColumn LinearLayer acting on a single column.
 
-    Blink stores its state *row-major* (the ``j``-th nibble of the ``r``-th
-    row is at flat index ``j + (n/16) * r``), which is the transpose of the
-    ``AESlike`` column-major convention. To avoid any confusion we do *not*
-    use the ``AESlike`` column assumption and instead build a single
-    ``LinearLayer_CVL`` spanning the whole state. Concretely, the matrix is
-    the Kronecker product ``N \otimes I_4`` where ``N`` is the nibble-wise
-    mixing matrix (``M`` applied column by column in the reference order).
-
-    CiVerLy represents state vectors MSB-first (vector index ``0`` is the
-    most significant bit of the integer), so the bit positions are placed
-    accordingly: nibble ``x`` bit ``b`` lives at vector index
-    ``total_bits - 1 - (4*x + b)``.
+    The column consists of 4 nibbles, one per row. Each output nibble is the
+    XOR of the three other input nibbles (Midori's matrix ``M``), so the
+    binary matrix is ``M \otimes I_4``. Since ``M`` is invariant under
+    reversing the row and column order, it does not matter whether nibbles
+    are numbered MSB-first or LSB-first.
     """
-    s = 4
-    cols = state_bytes // 2  # n/16 (the number of MixColumn columns)
-    state_nibbles = state_bytes * 2
-    total_bits = state_nibbles * s
-    # N[o][i] = M[r][c] when o = col + cols*r and i = col + cols*c (same col)
-    N = [[0] * state_nibbles for _ in range(state_nibbles)]
-    for col in range(cols):
-        for r in range(4):
-            o = col + cols * r
-            for c in range(4):
-                i = col + cols * c
-                N[o][i] = M_MATRIX[r][c]
-    mat = matrix(GF(2), total_bits, total_bits, 0)
-    for o in range(state_nibbles):
-        for i in range(state_nibbles):
-            if N[o][i]:
-                for b in range(s):
-                    row = total_bits - 1 - (4 * o + b)
-                    col = total_bits - 1 - (4 * i + b)
-                    mat[row, col] = 1
-    mc = LinearLayer_CVL(
-        mat, branch_number_differential=4, branch_number_linear=4, name="MixColumns"
+    mat = matrix(GF(2), M_MATRIX).tensor_product(identity_matrix(GF(2), 4))
+    return LinearLayer_CVL(
+        mat, branch_number_differential=4, branch_number_linear=4, name="MixColumn"
     )
-    return mc
 
 
 def _vec_perm(pbox, state_nibbles):
@@ -717,7 +691,7 @@ class BLINK_CVL(CipherImplementation_CVL, WordSBoxCipher):
         # Blink works on nibbles (4-bit words). We use ``WordSBoxCipher`` with
         # ``wordsize = 4`` so that wordwise MILP modeling stays available while
         # avoiding the ``AESlike`` column-major / Blink row-major transpose
-        # mismatch. MixColumns is a single full-state LinearLayer.
+        # mismatch.
 
         # SubCells: S-box applied to every nibble.
         sbox = SBox_CVL(SBOX, name="SBox")
@@ -726,15 +700,18 @@ class BLINK_CVL(CipherImplementation_CVL, WordSBoxCipher):
             node = subcells.add_subcipher(sbox, [(subcells.IN, (i, 0))])
             subcells.add_output([(node, (0, i))])
 
-        # MixColumns: full-state application of M (see ``_mix_columns``).
+        # MixColumns: M applied to every column. The state is row-major, so
+        # the nibbles of column ``col`` are at ``col + cols * r``, r = 0..3.
         mixcolumns = WordSBoxCipher(
             word, state_nibbles, state_nibbles, name="MixColumns"
         )
-        mc = _mix_columns(state_bytes)
-        node = mixcolumns.add_subcipher(
-            mc, [(mixcolumns.IN, (i, i)) for i in range(state_nibbles)]
-        )
-        mixcolumns.add_output([(node, (i, i)) for i in range(state_nibbles)])
+        mc = _mix_column()
+        cols = state_nibbles // 4
+        for col in range(cols):
+            node = mixcolumns.add_subcipher(
+                mc, [(mixcolumns.IN, (col + cols * r, r)) for r in range(4)]
+            )
+            mixcolumns.add_output([(node, (r, col + cols * r)) for r in range(4)])
 
         # Shuffle P and its inverse. The paper defines the shuffle as
         # ``output[i] = input[pbox[i]]`` in LSB-first nibble order; we convert

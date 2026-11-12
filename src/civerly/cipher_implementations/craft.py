@@ -5,9 +5,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from civerly.aeslike import AESlike
 from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import (
-    I_CVL,
     LinearLayer_CVL,
-    PermuteLayer_CVL,
     RoundkeyXOR_CVL,
     SBox_CVL,
 )
@@ -71,7 +69,7 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
-            5896 variables and 6121 constraints were written to '...'
+            2736 variables and 2961 constraints were written to '...'
             10
 
         Now the improved modeling::
@@ -89,7 +87,7 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
-            5856 variables and 6041 constraints were written to '...'
+            2696 variables and 2881 constraints were written to '...'
             36
 
         Indeed, 36 active S-boxes is a much better bound.
@@ -112,7 +110,7 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
-            7440 variables and 9057 constraints were written to '...'
+            3648 variables and 5265 constraints were written to '...'
             8
 
         Here the objective value is :math:`- \log_2(p)`, with :math:`p` being
@@ -136,7 +134,7 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.analyse(model_options)
-            7728 variables and 8001 constraints were written to '...'
+            3936 variables and 4209 constraints were written to '...'
             8
 
         It is also possible to use SAT to model the cipher. The results should
@@ -160,7 +158,7 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             ....:   craft.generate_report(model_options)
             ....:   trail = str(craft.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            7440 variables and 17201 clauses were written to '...'
+            3648 variables and 9617 clauses were written to '...'
             8
             Output file in: ...
 
@@ -184,7 +182,7 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             ....:   craft.generate_report(model_options)
             ....:   trail = str(craft.get_trail(model_options))
             ....:   assert "Unnamed Component" not in trail
-            7440 variables and 17201 clauses were written to '...'
+            3648 variables and 9617 clauses were written to '...'
             8
             Output file in: ...
 
@@ -219,14 +217,6 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             sboxlayer.add_output([(node, (0, i))])
         # ------------------------------------------------------------------- #
 
-        # PermuteNibbles
-        tr = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15]
-        transpose = PermuteLayer_CVL(tr, word_coarseness=4, name="Transpose")
-
-        craft_perm = [15, 12, 13, 14, 10, 9, 8, 11, 6, 5, 4, 7, 1, 2, 3, 0]
-        craft_perm = [tr[craft_perm[tr[i]]] for i in range(16)]
-        pn = PermuteLayer_CVL(craft_perm, word_coarseness=4, name="PermuteNibbles")
-
         # Generation of the binary matrix of CRAFT-MixColumn
         # ------------------------------------------------------------------- #
         I = identity_matrix(GF(2), 4)  # noqa: E741
@@ -240,53 +230,37 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
             name="MixColumn",
         )
 
-        # mc_layer = 4x mc in parallel
-        mc_layer = AESlike(4, 4, 4, name="MixColumnLayer")
-        for j in range(4):
-            node = mc_layer.add_subcipher(
-                mc, [(mc_layer.IN, (k + 4 * j, k)) for k in range(4)]
-            )
-            mc_layer.add_output([(node, (k, k + 4 * j)) for k in range(4)])
-
-        # AddRoundConstants, done with RoundkeyXOR_CVL component
-        arc_layer = AESlike(4, 4, 4, name="ARC-layer")
-        arc = RoundkeyXOR_CVL(8, 0x0, name="AddRoundConstant")
-
-        id1 = I_CVL(4, name="Identity1(4)")
-        id2 = I_CVL(12, name="Identity2(12)")
-        id3 = I_CVL(40, name="Identity3(40)")
-
-        node_id1 = arc_layer.add_subcipher(id1, [(arc_layer.IN, (0, 0))])
-        arc_layer.add_output([(node_id1, (0, 0))])
-        node_arc = arc_layer.add_subcipher(
-            arc, [(arc_layer.IN, (1, 0)), (arc_layer.IN, (5, 1))]
-        )
-        arc_layer.add_output([(node_arc, (0, 1)), (node_arc, (1, 5))])
-        node_id2 = arc_layer.add_subcipher(
-            id2, [(arc_layer.IN, (i, i - 2)) for i in range(2, 5)]
-        )
-        arc_layer.add_output([(node_id2, (i - 2, i)) for i in range(2, 5)])
-        node_id3 = arc_layer.add_subcipher(
-            id3, [(arc_layer.IN, (i, i - 6)) for i in range(6, 16)]
-        )
-        arc_layer.add_output([(node_id3, (i - 6, i)) for i in range(6, 16)])
-
         # Implementation of CRAFT round
         # ------------------------------------------------------------------- #
+        # The state is row-major (cell 4i + j is row i, column j), as in the
+        # specification. ``state[c]`` is the (node, word) currently holding
+        # cell ``c``; MixColumn, the round constants and PermuteNibbles are
+        # done by wiring.
         craft_round = AESlike(4, 4, 4, name="CRAFT-round")
-        node = craft_round.IN
-        node = craft_round.add_subcipher(transpose, [(node, (i, i)) for i in range(16)])
-        node = craft_round.add_subcipher(mc_layer, [(node, (i, i)) for i in range(16)])
+        state = {c: (craft_round.IN, c) for c in range(16)}
 
-        node_arclayer = craft_round.add_subcipher(
-            arc_layer, [(node, (i, i)) for i in range(16)]
+        # MixColumn on every column j = cells (j, 4 + j, 8 + j, 12 + j)
+        for j in range(4):
+            node = craft_round.add_subcipher(
+                mc, [(state[4 * i + j][0], (state[4 * i + j][1], i)) for i in range(4)]
+            )
+            for i in range(4):
+                state[4 * i + j] = (node, i)
+
+        # AddRoundConstants on cells 4 and 5; the constant is set per round
+        arc = RoundkeyXOR_CVL(8, 0x0, name="AddRoundConstant")
+        node_arc = craft_round.add_subcipher(
+            arc, [(state[c][0], (state[c][1], k)) for k, c in enumerate((4, 5))]
         )
+        state[4], state[5] = (node_arc, 0), (node_arc, 1)
+
+        # PermuteNibbles: cell i moves to cell craft_perm[i]
+        craft_perm = [15, 12, 13, 14, 10, 9, 8, 11, 6, 5, 4, 7, 1, 2, 3, 0]
+        state = {craft_perm[c]: state[c] for c in range(16)}
+
         node = craft_round.add_subcipher(
-            pn, [(node_arclayer, (i, i)) for i in range(16)]
+            sboxlayer, [(state[c][0], (state[c][1], c)) for c in range(16)]
         )
-
-        node = craft_round.add_subcipher(sboxlayer, [(node, (i, i)) for i in range(16)])
-        node = craft_round.add_subcipher(transpose, [(node, (i, i)) for i in range(16)])
         craft_round.add_output([(node, (i, i)) for i in range(16)])
         # ------------------------------------------------------------------- #
 
@@ -295,7 +269,7 @@ class CRAFT_CVL(CipherImplementation_CVL, AESlike):
         node_cipher = self.IN
 
         for r in range(self.R):
-            craft_round.nodes[node_arclayer].nodes[node_arc].const = CRAFT_CVL.RC[r]
+            craft_round.nodes[node_arc].const = CRAFT_CVL.RC[r]
 
             node_cipher = self.add_subcipher(
                 craft_round, [(node_cipher, (i, i)) for i in range(16)]

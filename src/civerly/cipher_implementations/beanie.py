@@ -8,6 +8,7 @@ from sage.rings.finite_rings.finite_field_constructor import GF
 from civerly.aeslike import AESlike
 from civerly.cipher import Cipher
 from civerly.cipher_implementations.base import CipherImplementation_CVL
+from civerly.cipher_implementations.prince import prince_m_hat
 from civerly.component import (
     XOR_CVL,
     ConstXOR_CVL,
@@ -52,25 +53,6 @@ def _to_int128(value):
             "master_key and tweak must be 128-bit integers or pairs of 64-bit integers"
         ) from exc
     return (int(left) & _MASK64) | ((int(right) & _MASK64) << 64)
-
-
-def _prince_m_matrix(shift):
-    r"""
-    Return the :math:`16 \times 16` binary matrix of the PRINCE block
-    :math:`\hat{M}^{(0)}` (``shift=0``) or :math:`\hat{M}^{(1)}` (``shift=1``)
-    in the MSB-first bit order of :func:`civerly.util.int_to_vec`.
-    """
-    masks = (0x7, 0xB, 0xD, 0xE)
-    blocks = [
-        [
-            matrix.diagonal(
-                GF(2), [(masks[(i + j + shift) % 4] >> (3 - b)) & 1 for b in range(4)]
-            )
-            for j in range(4)
-        ]
-        for i in range(4)
-    ]
-    return block_matrix(GF(2), blocks, subdivide=False)
 
 
 class BEANIE_KeySchedule_CVL(KeySchedule):
@@ -216,8 +198,8 @@ class BEANIE_KeySchedule_CVL(KeySchedule):
 
         # PRINCE M' on each 64-bit half: the four 16-bit columns (MSB first)
         # are multiplied with M^(0), M^(1), M^(1), M^(0).
-        m_0 = LinearLayer_CVL(_prince_m_matrix(0), name="M0")
-        m_1 = LinearLayer_CVL(_prince_m_matrix(1), name="M1")
+        m_0 = LinearLayer_CVL(prince_m_hat(0), name="M0")
+        m_1 = LinearLayer_CVL(prince_m_hat(1), name="M1")
         m_nodes = [
             step.add_subcipher(
                 (m_0, m_1, m_1, m_0)[c % 4],
