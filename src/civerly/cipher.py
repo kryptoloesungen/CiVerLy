@@ -58,7 +58,12 @@ from civerly.model_options import (
 )
 from civerly.problem import SAT_CVL
 from civerly.trail import TrailNode
-from civerly.util import suppress_output, translate_sat_clause
+from civerly.util import (
+    _json_default,
+    _json_object_hook,
+    suppress_output,
+    translate_sat_clause,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -298,15 +303,27 @@ class Cipher:
         def _copy_over_dictionaries_recursively(self, prev, model_options):
             return
 
-        def _to_dict(self):
-            return {"type": "__Special_Node"}
-
         def _to_tikz(self, _comps=None):
             return ""
 
     # --------- static variables
     # placeholder for the indices of outputs that not connected yet.
     NOT_SET = None
+
+    # Attributes set by the modeling, which are needed to solve a model again
+    # and to translate its solutions into trails.
+    _MODEL_ATTRIBUTES = (
+        "milp",
+        "sat",
+        "sum_arr_milp",
+        "sum_arr_sat",
+        "dictionaries_milp",
+        "inv_dictionaries_milp",
+        "dictionaries_sat",
+        "inv_dictionaries_sat",
+        "SAT_IN",
+        "SAT_OUT",
+    )
 
     def __init__(self, input_length, output_length, name, key_schedule=None):
         r"""
@@ -1494,6 +1511,7 @@ class Cipher:
         """
         assert isinstance(sat, SAT_CVL)
         assert isinstance(_first_iter, bool)
+        model_options.path.mkdir(parents=True, exist_ok=True)
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
         file_name = model_options.path / self.name.replace(" ", "_")
@@ -1521,7 +1539,9 @@ class Cipher:
             sat.add_clause(tup)
 
         if model_options.write_to_file:
-            sat.write()
+            # pass the file name explicitly, as a loaded sat (see :meth:`load`)
+            # does not know it
+            sat.write(model_options.path / (self.name + ".cnf"))
             logger.info(
                 f"{sat.nvars()} variables and {len(sat.clauses())} clauses "
                 "were written to "
@@ -2057,180 +2077,187 @@ class Cipher:
                 tn.verify_correctness()
             return list(self.trail_nodes)
 
-    def _to_dict(self):
+    @staticmethod
+    def _model_state(obj) -> dict:
         r"""
-        Return a JSON-serializable dictionary representation of ``self``.
+        Return a dictionary of the model of ``obj``, a cipher or a
+        component: the attributes in :attr:`_MODEL_ATTRIBUTES` (including the
+        problems ``milp`` and ``sat``) and, for a cipher, recursively the
+        model state of each of its nodes.
 
-        Used internally by :meth:`export` and :meth:`load`.
+        As the modeling makes equal nodes share one object, a node which is
+        the same object as an earlier one is stored as a reference to it.
         """
-        out_idx = len(self.nodes) - 1 if self.is_valid else None
+        state = {"type": type(obj).__name__}
+        for attr in Cipher._MODEL_ATTRIBUTES:
+            if getattr(obj, attr, None) is not None:
+                state[attr] = getattr(obj, attr)
+        if isinstance(obj, Cipher):
+            state["nodes"] = []
+            for i, node in enumerate(obj.nodes):
+                first = next(j for j, n in enumerate(obj.nodes) if n is node)
+                if first < i:
+                    state["nodes"].append({"same_as": first})
+                else:
+                    state["nodes"].append(Cipher._model_state(node))
+        return state
 
-        node_dicts = [
-            {**n._to_dict(), "results": n.results}
-            for i, n in enumerate(self.nodes)
-            if out_idx is None or i != out_idx
-        ]
-
-        edge_dicts = [
-            ((a, b), (x, y))
-            for (a, b), (x, y) in self.edges
-            if out_idx is None or b != out_idx
-        ]
-
-        output_dicts = [
-            list(entry) if entry is not None else None for entry in self.outputs
-        ]
-
-        return {
-            "type": "Cipher",
-            "name": self.name,
-            "input_length": self.input_length,
-            "output_length": self.output_length,
-            "nodes": node_dicts,
-            "edges": edge_dicts,
-            "outputs": output_dicts,
-            "results": self.results,
-        }
+    @staticmethod
+    def _restore_model_state(obj, state):
+        r"""
+        Restore the output of :meth:`_model_state` into ``obj``, which has to
+        be the same cipher or component the state was taken from.
+        """
+        if state["type"] != type(obj).__name__:
+            raise ValueError(
+                f"Expected {state['type']}, but got {type(obj).__name__}: the "
+                "exported model belongs to a different cipher."
+            )
+        for attr in Cipher._MODEL_ATTRIBUTES:
+            if attr in state:
+                setattr(obj, attr, state[attr])
+        if isinstance(obj, Cipher):
+            if len(state["nodes"]) != len(obj.nodes):
+                raise ValueError(
+                    f"{obj.name} has {len(obj.nodes)} nodes, but the exported "
+                    f"model has {len(state['nodes'])}: the exported model "
+                    "belongs to a different cipher."
+                )
+            for i, node_state in enumerate(state["nodes"]):
+                if "same_as" in node_state:
+                    obj.nodes[i] = obj.nodes[node_state["same_as"]]
+                else:
+                    Cipher._restore_model_state(obj.nodes[i], node_state)
 
     def export(self, path):
         r"""
-        Write ``self`` to a JSON file at ``path``.
+        Write the model of ``self`` (see :meth:`model`) and the results of
+        :meth:`analyse` to the JSON file ``path``.
 
-        The file can be loaded back with :meth:`Cipher.load`.
+        The structure of the cipher itself is not exported, as it is given by
+        the code constructing it. Use :meth:`load` on a newly constructed,
+        identical cipher to restore the model and the results.
 
         INPUT:
 
-            - ``path`` -- string or path-like; Destination file path.
-              The ``.json`` extension is conventional but not enforced.
+            - ``path`` -- string or path-like; the destination file
 
-        EXAMPLES:: TODO
+        EXAMPLES::
 
+            sage: # optional - scip espresso
+            sage: from civerly.cipher_implementations.present import PRESENT_CVL
+            sage: from civerly.model_options import *
+            sage: import tempfile
+            sage: tmpdir = Path(tempfile.mkdtemp())
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.MILP,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     milp_solver=SOLVER.SCIP,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=tmpdir)
+            sage: cipher = PRESENT_CVL(R=4)
+            sage: cipher.analyse(model_options)
+            5312 variables and 8641 constraints were written to ...
+            12
+            sage: cipher.export(tmpdir / "present.json")
+
+        The model and the results are restored into a new ``PRESENT_CVL``,
+        whose trail can be read without solving again::
+
+            sage: loaded = PRESENT_CVL(R=4).load(tmpdir / "present.json")
+            sage: loaded.milp == cipher.milp
+            True
+            sage: loaded.result == cipher.result
+            True
+            sage: loaded.get_trail(model_options).input == cipher.get_trail(model_options).input
+            True
+
+        Analysing the loaded cipher solves the loaded model, instead of
+        modeling the cipher again::
+
+            sage: from dataclasses import replace
+            sage: loaded.analyse(replace(model_options, path=tmpdir / "loaded"))
+            Using existing MILP model, make sure it is up to date!
+            5312 variables and 8641 constraints were written to ...
+            12
+
+        The same for SAT::
+
+            sage: # optional - cryptominisat espresso
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     path=tmpdir / "sat")
+            sage: cipher = PRESENT_CVL(R=3)
+            sage: cipher.analyse(model_options)
+            ... variables and ... clauses were written to ...
+            8
+            sage: cipher.export(tmpdir / "present_sat.json")
+            sage: loaded = PRESENT_CVL(R=3).load(tmpdir / "present_sat.json")
+            sage: loaded.sat == cipher.sat
+            True
+            sage: loaded.get_trail(model_options).input == cipher.get_trail(model_options).input
+            True
+            sage: loaded.analyse(replace(model_options, path=tmpdir / "sat_loaded"))
+            Using existing SAT model, make sure it is up to date!
+            ... variables and ... clauses were written to ...
+            8
+
+        Loading into a different cipher fails::
+
+            sage: PRESENT_CVL(R=2).load(tmpdir / "present.json")
+            Traceback (most recent call last):
+            ...
+            ValueError: ... the exported model belongs to a different cipher.
+            sage: import shutil
+            sage: shutil.rmtree(tmpdir)
         """
-        with Path(path).open("w") as f:
-            json.dump(self._to_dict(), f, default=lambda obj: int(obj))
-        logger.info(f"Object '{self.name}' has been exported to {path}.")
-
-    @classmethod
-    def _init_from_dict(cls, d):
-        r"""
-        Construct a new empty cipher shell from a dictionary produced by
-        :meth:`_to_dict`. Override in subclasses that have a different
-        constructor signature.
-        """
-        return cls(d["input_length"], d["output_length"], name=d["name"])
-
-    @staticmethod
-    def _populate_from_dict(cipher, d):
-        r"""
-        Restore nodes, edges, outputs and results onto an empty cipher shell
-        using data from a dictionary produced by :meth:`_to_dict`.
-        """
-        from civerly.addrx import AddRX
-        from civerly.aeslike import AESlike
-        from civerly.andrx import AndRX
-        from civerly.component import (
-            AND_CVL,
-            C_CVL,
-            I_CVL,
-            RK_CVL,
-            ROT_AND_CVL,
-            XOR_CVL,
-            ConstXOR_CVL,
-            LinearLayer_CVL,
-            ModAdd_CVL,
-            PermuteLayer_CVL,
-            RotateLayer_CVL,
-            RoundkeyXOR_CVL,
-            SBox_CVL,
-        )
-        from civerly.sboxcipher import SBoxCipher
-        from civerly.wordbasedcipher import WordBasedCipher
-        from civerly.wordsboxcipher import WordSBoxCipher
-
-        _TYPE_MAP = {
-            "Cipher": Cipher,
-            "SBoxCipher": SBoxCipher,
-            "WordBasedCipher": WordBasedCipher,
-            "WordSBoxCipher": WordSBoxCipher,
-            "AESlike": AESlike,
-            "AddRX": AddRX,
-            "AndRX": AndRX,
-            "I_CVL": I_CVL,
-            "C_CVL": C_CVL,
-            "RK_CVL": RK_CVL,
-            "ConstXOR_CVL": ConstXOR_CVL,
-            "RoundkeyXOR_CVL": RoundkeyXOR_CVL,
-            "XOR_CVL": XOR_CVL,
-            "ModAdd_CVL": ModAdd_CVL,
-            "AND_CVL": AND_CVL,
-            "LinearLayer_CVL": LinearLayer_CVL,
-            "PermuteLayer_CVL": PermuteLayer_CVL,
-            "RotateLayer_CVL": RotateLayer_CVL,
-            "SBox_CVL": SBox_CVL,
-            "ROT_AND_CVL": ROT_AND_CVL,
+        data = {
+            "name": self.name,
+            "input_length": self.input_length,
+            "output_length": self.output_length,
+            "model": Cipher._model_state(self),
+            "results": self.results,
         }
+        with Path(path).open("w") as f:
+            json.dump(data, f, default=_json_default)
 
-        def node_from_dict(nd):
-            class_var = _TYPE_MAP[nd["type"]]
-            if class_var is None:
-                raise ValueError(f"Unknown node type {nd['type']!r} in JSON")
-            return class_var._from_dict(nd)
-
-        # Restore the IN node's result (index 0)
-        cipher.nodes[0].results = d["nodes"][0]["results"]
-        w = 1 if type(cipher) is Cipher else cipher.wordsize
-
-        for node_idx, nd in enumerate(d["nodes"][1:], start=1):
-            component = node_from_dict(nd)
-            incoming = list(
-                {
-                    (a, (x // w, y // w))
-                    for (a, b), (x, y) in d["edges"]
-                    if b == node_idx
-                }
-            )
-            cipher.add_subcipher(component, incoming)
-            if not isinstance(component, Cipher):
-                cipher.nodes[node_idx].results = nd["results"]
-
-        output_edges = list(
-            {
-                (a, (x // w, y // w))
-                for y, entry in enumerate(d["outputs"])
-                if entry is not None
-                for a, x in [entry]
-            }
-        )
-        if output_edges:
-            cipher.add_output(output_edges)
-
-        cipher.results = d["results"]
-
-    @classmethod
-    def _from_dict(cls, d):
+    def load(self, path):
         r"""
-        Reconstruct a :class:`Cipher` from a dictionary produced by
-        :meth:`_to_dict`.
-        """
-        cipher = cls._init_from_dict(d)
-        Cipher._populate_from_dict(cipher, d)
-        return cipher
-
-    @classmethod
-    def load(cls, path):
-        r"""
-        Load and return a :class:`Cipher` from the JSON file at ``path``
-        that was previously written by :meth:`export`.
+        Restore the model and the results written to the JSON file ``path``
+        by :meth:`export` into ``self``, which has to be constructed exactly
+        like the exported cipher. See :meth:`export` for examples.
 
         INPUT:
 
-            - ``path`` -- string or path-like; Path to the JSON file.
+            - ``path`` -- string or path-like; the file written by :meth:`export`
 
-        OUTPUT: A reconstructed :class:`Cipher` instance.
+        OUTPUT: ``self``
         """
         with Path(path).open() as f:
-            d = json.load(f)
-        return cls._from_dict(d)
+            data = json.load(f, object_hook=_json_object_hook)
+        if (data["name"], data["input_length"], data["output_length"]) != (
+            self.name,
+            self.input_length,
+            self.output_length,
+        ):
+            raise ValueError(
+                f"Expected {self.name} ({self.input_length} -> "
+                f"{self.output_length}), but got {data['name']} "
+                f"({data['input_length']} -> {data['output_length']}): "
+                "the exported model belongs to a different cipher."
+            )
+        Cipher._restore_model_state(self, data["model"])
+        self._model = self.milp if self.milp is not None else self.sat
+        self.results = data["results"]
+        self.trail_nodes = []
+        return self
 
     def _latex_header(self, model_options, objective_value) -> str:
         r"""
