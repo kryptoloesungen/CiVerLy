@@ -1680,20 +1680,13 @@ class Cipher:
                     trail_vars=trail_vars,
                     time_limit=model_options.solve_time_limit,
                 )
-                self._solve_time = 0
-                weights = []
-                for r in all_results:
-                    self._solve_time = self._solve_time + r["solve_time"]
-                    if r["objective_value"] is None:
-                        continue
-                    TrailNode(
-                        self,
-                        model_options,
-                        (r["assignment"], r["objective_value"]),
-                    )
-                    weights.append(r["objective_value"])
+                self._solve_time = sum(r["solve_time"] for r in all_results)
+                self.results = [
+                    r for r in all_results if r["objective_value"] is not None
+                ]
+                self._multiple_trail_nodes(model_options)
                 self._analyse_time = time.perf_counter() - start_time_analyse
-                return weights
+                return [r["objective_value"] for r in self.results]
             else:
                 result = model_options.milp_solver.solve(
                     input_file,
@@ -1733,20 +1726,13 @@ class Cipher:
                     precision=model_options.sat_precision,
                     time_limit=model_options.solve_time_limit,
                 )
-                self._solve_time = 0
-                weights = []
-                for r in all_results:
-                    self._solve_time = self._solve_time + r["solve_time"]
-                    if r["objective_value"] is None:
-                        continue
-                    TrailNode(
-                        self,
-                        model_options,
-                        (r["assignment"], r["objective_value"]),
-                    )
-                    weights.append(r["objective_value"])
+                self._solve_time = sum(r["solve_time"] for r in all_results)
+                self.results = [
+                    r for r in all_results if r["objective_value"] is not None
+                ]
+                self._multiple_trail_nodes(model_options)
                 self._analyse_time = time.perf_counter() - start_time_analyse
-                return weights
+                return [r["objective_value"] for r in self.results]
             else:
                 # if no sat_solver has been selected, we generate all cnf-files
                 # for the given solve_range
@@ -1971,19 +1957,12 @@ class Cipher:
             self._write_and_compile_tex(string, model_options)
         else:
             # ---- multi-solution path ---------------------------------------
-            if not self.trail_nodes:
-                raise RuntimeError(
-                    "generate_report() with number_of_solutions > 1 requires "
-                    "analyse() to have been called first with the same "
-                    "model_options."
-                )
-            for i, (tn, sol) in enumerate(
-                zip(self.trail_nodes, self.results, strict=True)
-            ):
+            trail_nodes = self._multiple_trail_nodes(model_options)
+            for i, (tn, sol) in enumerate(zip(trail_nodes, self.results, strict=True)):
                 # 3. Verify correctness
                 tn.verify_correctness()
                 # 4. Generate LaTeX string
-                string = self._latex_header(model_options, sol["weight"])
+                string = self._latex_header(model_options, sol["objective_value"])
                 string += tn.to_latex(model_options)
                 string += "\\end{document}\n"
                 # 5. Write to .tex file and compile to pdf
@@ -2067,15 +2046,27 @@ class Cipher:
             root_node.verify_correctness()
             return root_node
         else:
-            if not self.trail_nodes:
-                raise RuntimeError(
-                    "get_trail() with number_of_solutions > 1 requires "
-                    "analyse() to have been called first with the same "
-                    "model_options."
-                )
-            for tn in self.trail_nodes:
+            trail_nodes = self._multiple_trail_nodes(model_options)
+            for tn in trail_nodes:
                 tn.verify_correctness()
-            return list(self.trail_nodes)
+            return trail_nodes
+
+    def _multiple_trail_nodes(self, model_options):
+        r"""
+        Return the trails of all solutions in :attr:`results`, best first, as
+        a list of :class:`civerly.trail.TrailNode`. They are built once and
+        stored in :attr:`trail_nodes`, also after :meth:`load`.
+        """
+        if len(self.trail_nodes) != len(self.results):
+            self.trail_nodes = []
+            for r in self.results:
+                TrailNode(self, model_options, (r["assignment"], r["objective_value"]))
+        if not self.trail_nodes:
+            raise RuntimeError(
+                "number_of_solutions > 1 requires analyse() to have been called "
+                "first (or load() of its export) with the same model_options."
+            )
+        return list(self.trail_nodes)
 
     @staticmethod
     def _model_state(obj) -> dict:
@@ -2114,8 +2105,7 @@ class Cipher:
                 "exported model belongs to a different cipher."
             )
         for attr in Cipher._MODEL_ATTRIBUTES:
-            if attr in state:
-                setattr(obj, attr, state[attr])
+            setattr(obj, attr, state.get(attr))
         if isinstance(obj, Cipher):
             if len(state["nodes"]) != len(obj.nodes):
                 raise ValueError(
@@ -2217,6 +2207,48 @@ class Cipher:
             Using existing SAT model, make sure it is up to date!
             ... variables and ... clauses were written to ...
             8
+            sage: shutil.rmtree(tmpdir)
+
+        With several solutions, all of them and their trails are restored.
+        Exporting the loaded cipher again gives the same file::
+
+            sage: # optional - cryptominisat espresso
+            sage: from civerly.cipher_implementations.toy_ciphers.toy3 import Toy3
+            sage: from civerly.model_options import *
+            sage: import shutil, tempfile
+            sage: tmpdir = Path(tempfile.mkdtemp())
+            sage: model_options = MODEL_OPTIONS(
+            ....:     cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:     optimization=OPTIMIZATION.SAT,
+            ....:     granularity=GRANULARITY.BITWISE,
+            ....:     sbox_modeling=SBOX_MODELING.LOGICAL_COND_ESPRESSO,
+            ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.MORE_DUMMIES,
+            ....:     sat_solver=SOLVER.CRYPTOMINISAT,
+            ....:     logic_minimizer=SOLVER.ESPRESSO,
+            ....:     number_of_solutions=2,
+            ....:     solve_range=(0, 10),
+            ....:     path=tmpdir)
+            sage: cipher = Toy3()
+            sage: cipher.analyse(model_options)
+            812 variables and 3563 clauses were written to ...
+            [8, 8]
+            sage: cipher.export(tmpdir / "toy3.json")
+            sage: loaded = Toy3().load(tmpdir / "toy3.json")
+            sage: loaded.get_trail(model_options) == cipher.get_trail(model_options)
+            True
+            sage: loaded.export(tmpdir / "toy3_again.json")
+            sage: (tmpdir / "toy3.json").read_text() == (tmpdir / "toy3_again.json").read_text()
+            True
+
+        Loading replaces the whole model of a cipher, so nothing of a previous
+        model is left (here, the exported cipher has no model at all)::
+
+            sage: # optional - cryptominisat espresso
+            sage: Toy3().export(tmpdir / "unmodeled.json")
+            sage: cipher.load(tmpdir / "unmodeled.json")
+            Toy3...
+            sage: cipher.sat is None and cipher.results == []
+            True
             sage: shutil.rmtree(tmpdir)
 
         Loading into a different cipher fails. This needs no model, as an
