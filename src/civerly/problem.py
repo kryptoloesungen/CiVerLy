@@ -246,7 +246,7 @@ class Problem_CVL(ABC):
             18970 records were written
             sage: # optional - scip
             sage: scip = SCIP_CVL()
-            sage: result = scip.solve(model_options.path / "milp.mps")
+            sage: result = scip.solve(model_options.path / "milp.mps", milp=milp)
             sage: result['assignment'] == gift.result['assignment']
             True
             sage: import shutil

@@ -340,7 +340,7 @@ def reduction_algorithm_ST17(comp, posset, model_options, PROB=None):
     with suppress_output():
         milp_to_minimize_milp.write(file_mps)
 
-    result = model_options.milp_solver.solve(file_mps)
+    result = model_options.milp_solver.solve(file_mps, milp=milp_to_minimize_milp)
     results = result["assignment"]
     final_choices = []  # solution of reduction algorithm
 

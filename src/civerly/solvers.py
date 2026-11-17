@@ -53,25 +53,6 @@ def _float_or_int(value):
     return value
 
 
-def _to_dict(flat_results):
-    r"""
-    Convert a flat results dict to a nested one, grouping by variable
-    name and using the bracket index as an integer key.
-
-    EXAMPLES::
-
-        sage: from civerly.solvers import _to_dict
-        sage: _to_dict({'Z[0]': 1, 'Z[1]': 2})
-        {'Z': {0: 1, 1: 2}}
-    """
-    nested = {}
-    for variable, value in flat_results.items():
-        var_name, rest = variable.split("[", 1)
-        var_index = int(rest.rstrip("]"))
-        nested.setdefault(var_name, {})[var_index] = value
-    return nested
-
-
 def _content_hash(path, length=8):
     r"""
     Return the first ``length`` hex digits of the SHA-256 of the file at
@@ -219,7 +200,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         status = super().invoke(input_file, solution_file, log_file, time_limit)
         return self._check_timeout(log_file, time_limit, status)
 
-    def solve(self, input_file, time_limit=None):
+    def solve(self, input_file, milp, time_limit=None):
         """
         Solve the model in the given file.
 
@@ -227,7 +208,36 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - ``input_file`` -- path to the file containing the model
 
+            - ``milp`` -- :class:`civerly.problem.MILP_CVL`; the model written
+              to ``input_file``, which is needed to translate the columns of
+              the solution back to its variables (see
+              :meth:`civerly.problem.MILP_CVL.column_name`)
+
             - ``time_limit`` -- float or ``None`` (default ``None``); time limit in seconds
+
+        TESTS:
+
+        Variables whose names are too long for the MPS format, like
+        ``X10[1234]`` (see issue #35), are translated back::
+
+            sage: # optional - scip glpk
+            sage: import tempfile
+            sage: from civerly.model_options import SOLVER
+            sage: from civerly.problem import MILP_CVL
+            sage: from civerly.util import suppress_output
+            sage: milp = MILP_CVL(maximization=False)
+            sage: X10 = milp.new_variable(name="X10", binary=True)
+            sage: milp.add_constraint(X10[1234] + X10[5] >= 1)
+            sage: milp.add_constraint(X10[5] == 0)
+            sage: milp.set_objective(X10[1234] + X10[5])
+            sage: for solver in (SOLVER.SCIP, SOLVER.GLPK):
+            ....:     with tempfile.TemporaryDirectory() as tmpdir:
+            ....:         with suppress_output():
+            ....:             milp.write(Path(tmpdir) / "long.mps")
+            ....:         result = solver.solve(Path(tmpdir) / "long.mps", milp=milp)
+            ....:         print(result["objective_value"], result["assignment"]["X10"][1234])
+            1 1
+            1 1
 
         OUTPUT:
 
@@ -251,7 +261,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             logger.info(
                 f"Using existing file {solution_file}, make sure it is up to date!"
             )
-            objective_value, assignment = self._process_solution_file(solution_file)
+            objective_value, assignment = self._read_solution(solution_file, milp)
             return {
                 "status": SOLVING_STATUS.SUCCESS,
                 "objective_value": objective_value,
@@ -265,11 +275,11 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         solve_time = time.perf_counter() - start_time
 
         if status == SOLVING_STATUS.SUCCESS:
-            objective_value, assignment = self._process_solution_file(solution_file)
+            objective_value, assignment = self._read_solution(solution_file, milp)
             objective_bounds = (objective_value, objective_value)
         elif status == SOLVING_STATUS.TIMEOUT:
             if solution_file.exists():
-                objective_value, assignment = self._process_solution_file(solution_file)
+                objective_value, assignment = self._read_solution(solution_file, milp)
             else:
                 objective_value, assignment = None, {}
 
@@ -371,8 +381,8 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
             - ``milp`` -- in-memory :class:`MILP_CVL` whose
               state matches ``input_file``
             - ``number_of_solutions`` -- maximum number of solutions to find
-            - ``trail_vars`` -- optional iterable of MPS variable names that
-              define "the trail". When provided, exclusion constraints only
+            - ``trail_vars`` -- optional iterable of the backend indices of
+              the variables that define "the trail". When provided, exclusion constraints only
               involve these variables; assignments that differ only on
               helper variables are treated as the same solution. When
               ``None``, every variable in the assignment is used.
@@ -423,7 +433,7 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         """
         results = []
         for i in range(number_of_solutions):
-            r = self.solve(input_file, time_limit=time_limit)
+            r = self.solve(input_file, time_limit=time_limit, milp=milp)
             results.append(r)
             done = r["status"] != SOLVING_STATUS.SUCCESS or r["objective_value"] is None
             if done or i == number_of_solutions - 1:
@@ -444,40 +454,40 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
         .. math::
             \sum_{x_i = 0} x_i + \sum_{x_i = 1} (1 - x_i) \geq 1
 
-        If ``trail_vars`` is provided, only variables whose MPS name is in
-        ``trail_vars`` participate in the constraint; helpers are ignored.
+        If ``trail_vars`` is provided, only variables whose backend index is
+        in ``trail_vars`` participate in the constraint; helpers are ignored.
         Otherwise every variable in ``assignment`` is constrained.
         """
-        # Flatten the nested ``{name: {idx: val}}`` shape (as produced by
-        # ``_to_dict`` in every ``_process_solution_file`` implementation)
-        # back to the flat MPS variable names.
-        flat = {
-            f"{name}[{idx}]": val
-            for name, sub in assignment.items()
-            for idx, val in sub.items()
-        }
-
         if trail_vars is not None:
             trail_vars = set(trail_vars)
-            flat = {name: val for name, val in flat.items() if name in trail_vars}
 
-        b = milp.get_backend()
         coefs = []
         n_ones = 0
-        for i in range(b.ncols()):
-            name = b.col_name(i)
-            if name not in flat:
-                continue
-            val = flat[name]
-            n_ones += val
-            coefs.append((i, 1.0 if val == 0 else -1.0))
+        for name, sub in assignment.items():
+            for idx, val in sub.items():
+                i = milp.vars[name].get_index(idx)
+                if trail_vars is not None and i not in trail_vars:
+                    continue
+                n_ones += val
+                coefs.append((i, 1.0 if val == 0 else -1.0))
+        b = milp.get_backend()
         # sum_{x_i=0} x_i - sum_{x_i=1} x_i >= 1 - n_ones
         b.add_linear_constraint(coefs, 1 - n_ones, None)
+
+    def _read_solution(self, solution_file, milp):
+        """
+        Return the objective value and the assignment ``{name: {index:
+        value}}`` of the solution in ``solution_file``, translating its
+        columns to the variables of ``milp`` (see :meth:`solve`).
+        """
+        objective_value, column_values = self._process_solution_file(solution_file)
+        return objective_value, milp.assignment_from_columns(column_values)
 
     @abstractmethod
     def _process_solution_file(self, solution_file):
         """
-        Extract the objective value and the variable assignment of the solution.
+        Extract the objective value and the values of the columns of the
+        solution, see :meth:`_read_solution`.
 
         INPUT:
 
@@ -487,7 +497,8 @@ class MILP_SOLVER_CVL(SOLVER_CVL, ABC):
 
             - ``objective_value`` -- float; the objective value of the solution
 
-            - ``assignment`` -- dictionary; the assignment of the variables in the solution
+            - ``column_values`` -- dictionary; the value of each column (by
+              its name in the MPS file) in the solution
         """
         pass
 
@@ -1066,7 +1077,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
             name = line[: line.index(" ")]
             value = __string_to_int_gurobi(line[line.index(" ") + 1 :])
             assignment[name] = value
-        return objective_value, _to_dict(assignment)
+        return objective_value, assignment
 
     def solve_multiple(
         self, input_file, milp, number_of_solutions, trail_vars=None, time_limit=None
@@ -1213,7 +1224,7 @@ class GUROBI_CVL(MILP_SOLVER_CVL):
         results = []
         for sol_idx in range(num_solutions):
             sol_file = solution_file.parent / f"{solution_file.stem}_{sol_idx}.sol"
-            objective_value, assignment = self._process_solution_file(sol_file)
+            objective_value, assignment = self._read_solution(sol_file, milp)
             results.append(
                 {
                     "status": status,
@@ -1248,7 +1259,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             ....:       milp_solver=SOLVER.SCIP,
             ....:       path=Path(tmpdir))
             ....:   aes.model(model_options)
-            ....:   SOLVER.SCIP.solve(model_options.path / "AES.mps")
+            ....:   SOLVER.SCIP.solve(model_options.path / "AES.mps", milp=aes.milp)
             2884 variables and 3085 constraints were written to ...
             Boolean Program (minimization, 2884 variables, 3085 constraints)
             {'status': <SOLVING_STATUS.SUCCESS: 1>,
@@ -1285,7 +1296,7 @@ class SCIP_CVL(MILP_SOLVER_CVL):
             ....:     milp_solver=SOLVER.SCIP,
             ....:     path=Path(tmpdir))
             ....:   craft.model(model_options)
-            ....:   SOLVER.SCIP.solve(model_options.path / "CRAFT.mps", time_limit=5)
+            ....:   SOLVER.SCIP.solve(model_options.path / "CRAFT.mps", time_limit=5, milp=craft.milp)
             8736 variables and 9021 constraints were written to ...
             Boolean Program (minimization, 8736 variables, 9021 constraints)
             {'status': <SOLVING_STATUS.TIMEOUT: 2>,
@@ -1364,12 +1375,10 @@ class SCIP_CVL(MILP_SOLVER_CVL):
 
         assignment = {}
         for line in file_content[2:-1]:
-            line = line[: line.index("(")].replace(" ", "")
-            value = round(float(line[line.index("]") + 1 :]))
-            name = line[: line.index("]") + 1]
-            assignment[name] = value
+            name, value = line.split()[:2]
+            assignment[name] = round(float(value))
 
-        return objective_value, _to_dict(assignment)
+        return objective_value, assignment
 
 
 class GLPK_CVL(MILP_SOLVER_CVL):
@@ -1444,23 +1453,16 @@ class GLPK_CVL(MILP_SOLVER_CVL):
                 be = True
             if bs and be:
                 break
-        file_content = file_content[ind_start + 2 : ind_end]
-
-        file_content = [
-            line.replace(" ", "").replace("*", "")[:-2] for line in file_content
-        ][:-1]
-        file_content = [
-            line[re.search(r"[A-Za-z]", line).start() :] for line in file_content
-        ]
-        file_content = [line.replace(" ", "") for line in file_content]
-
+        # Each column is listed as "No. Column-name [*] Activity Lower-bound
+        # Upper-bound", where "*" marks integer columns.
         assignment = {}
-        for line in file_content:
-            i = line.index("]")
-            name = line[: i + 1]
-            value = line[i + 1 : i + 2]
-            assignment[name] = value
-        return objective_value, _to_dict(assignment)
+        for line in file_content[ind_start + 2 : ind_end]:
+            tokens = line.split()
+            if len(tokens) < 3 or not tokens[0].isdigit():
+                continue
+            name, value = [t for t in tokens[1:] if t != "*"][:2]
+            assignment[name] = round(float(value))
+        return objective_value, assignment
 
 
 class CRYPTOMINISAT_CVL(SAT_SOLVER_CVL):
@@ -1713,7 +1715,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "MixColumn51845.mps",
-            ....:     model_options.path / "MixColumn51845.0ea31e4f.sol",
+            ....:     model_options.path / "MixColumn51845.285dc805.sol",
             ....:     model_options.path / "MixColumn51845.log")
             <SOLVING_STATUS.SUCCESS: 1>
             sage: aes.analyse(model_options)
@@ -1723,7 +1725,7 @@ class EXTERNAL_MILP_SOLVER_CVL(MILP_SOLVER_CVL):
             solve ... externally and place the result at ..., then re-run.
             sage: SOLVER.SCIP.invoke(
             ....:     model_options.path / "AES.mps",
-            ....:     model_options.path / "AES.6017446a.sol",
+            ....:     model_options.path / "AES.32b262f3.sol",
             ....:     model_options.path / "AES.log")
             <SOLVING_STATUS.SUCCESS: 1>
             sage: aes.analyse(model_options)
