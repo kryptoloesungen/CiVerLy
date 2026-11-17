@@ -436,11 +436,11 @@ def translate_var(cipher, node, local_var):
         ....:     logic_minimizer=SOLVER.ESPRESSO,
         ....:     path=Path(tmpdir))
         ....:   craft.model(model_options)
-        7488 variables and 17201 clauses were written to ...
+        3696 variables and 9617 clauses were written to ...
         sage: from civerly.util import translate_var
-        sage: node = craft.nodes[1].nodes[2].nodes[1]
+        sage: node = craft.nodes[1].nodes[1]
         sage: translate_var(craft, node, node.SAT_IN[2])
-        643
+        259
 
 
     """
