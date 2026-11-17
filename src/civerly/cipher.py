@@ -47,7 +47,6 @@ from pathlib import Path
 from sage.modules.free_module_element import vector
 from sage.modules.vector_mod2_dense import Vector_mod2_dense
 from sage.rings.finite_rings.finite_field_constructor import GF
-from sage.sat.solvers.dimacs import DIMACS
 
 from civerly.component import Component
 from civerly.log import analysis_log
@@ -57,6 +56,7 @@ from civerly.model_options import (
     OPTIMIZATION,
     InvalidModelOptionError,
 )
+from civerly.problem import SAT_CVL
 from civerly.trail import TrailNode
 from civerly.util import suppress_output, translate_sat_clause
 
@@ -1219,6 +1219,22 @@ class Cipher:
             ....:     cipher.add_output(edges)
             sage: cipher._dfs_traversal()
             [0, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 3]
+
+        Components without inputs, such as ``RK_CVL`` or ``C_CVL``, are not
+        reachable from ``IN``. They get depth 1, as if ``IN`` fed them, even
+        if their first consumer reads ``IN`` directly. Only ``IN`` has depth 0::
+
+            sage: from civerly.component import C_CVL, RK_CVL, XOR_CVL
+            sage: for const in (RK_CVL, C_CVL):
+            ....:     cipher = Cipher(4, 4, name="round")
+            ....:     node_k = cipher.add_subcipher(const(4, 0x3), [])
+            ....:     edges = [(cipher.IN, (i, i)) for i in range(4)]
+            ....:     edges += [(node_k, (i, 4 + i)) for i in range(4)]
+            ....:     node = cipher.add_subcipher(XOR_CVL(4), edges)
+            ....:     cipher.add_output([(node, (i, i)) for i in range(4)])
+            ....:     print(cipher._dfs_traversal())
+            [0, 1, 2, 3]
+            [0, 1, 2, 3]
         """
         if not self.is_valid:
             raise CipherNotValidError()
@@ -1230,13 +1246,13 @@ class Cipher:
             self.nodes.index(self.IN), visited, dfs_order, depths, 0
         )
 
-        # handle components like ``C_CVL`` that are unreachable using
-        # conventional DFS-search
-        for (a, b), (_x, _y) in self.edges:
-            if not visited[a] and visited[b]:
-                depths[a] = depths[b] - 1
-                visited[a] = True
-                dfs_order.append(a)
+        # Components without inputs (e.g. ``C_CVL``, ``RK_CVL``) are not
+        # reachable from IN. Treat them as if fed by IN, i.e. continue the DFS
+        # from them at depth 1, which also pushes their consumers deeper.
+        # Only IN may have depth 0, see :class:`civerly.trail.TrailNode`.
+        for a in range(len(self.nodes)):
+            if not visited[a] and any(x == a for (x, _), _ in self.edges):
+                self._dfs_traversal_help(a, visited, dfs_order, depths, 1)
 
         e = (
             f"{self.name}.OUT doesn't have the highest depth "
@@ -1291,10 +1307,11 @@ class Cipher:
 
         We first generate a ``master_sat``, recursively iterate over
         ``self.nodes`` (and its subciphers) and collect the sub-SATs in
-        order to relabel and connect them correctly to one big SAT formula. To
-        avoid redundancy, a caching-mechanism is implemented which checks if
-        the currently modeled component was modeled before. If yes, the SAT
-        will be copied over instead of being generated from scratch again.
+        order to relabel and connect them correctly to one big SAT formula
+        (see :meth:`civerly.problem.SAT_CVL.append`). To avoid redundancy, a
+        caching-mechanism is implemented which checks if the currently
+        modeled component was modeled before. If yes, the SAT will be copied
+        over instead of being generated from scratch again.
 
         .. WARNING::
 
@@ -1318,17 +1335,22 @@ class Cipher:
         # ------------------------------------------------------------------------
         cnf_file_name = model_options.path / (f"{self.name.replace(' ', '_')}.cnf")
         if model_options.path is not None:
-            master_sat = DIMACS(filename=cnf_file_name)
+            master_sat = SAT_CVL(filename=cnf_file_name)
         else:
-            master_sat = DIMACS()
-        self.SAT_IN = [master_sat.var() for _ in range(self.input_length)]
-        self.SAT_OUT = [master_sat.var() for _ in range(self.output_length)]
+            master_sat = SAT_CVL()
+        # create the in- and output variables first, so that they occupy the
+        # first indices
+        self.SAT_IN = [master_sat.VAR_IN[i] for i in range(self.input_length)]
+        self.SAT_OUT = [master_sat.VAR_OUT[i] for i in range(self.output_length)]
 
-        sats = []
+        # VAR_MODEL[i] is the namespace the SAT of self.nodes[i] is copied into
+        VAR_MODEL = [
+            master_sat.new_variable(name=f"X{i}") for i in range(len(self.nodes))
+        ]
         self.sum_arr_sat = []
         # ------------------------------------------------------------------------
 
-        # dictionaries for translating variables in sage and the mps file
+        # dictionaries for translating variables in sage and the cnf file
         self.dictionaries_sat = [{} for _ in range(len(self.nodes))]
         self.inv_dictionaries_sat = [{} for _ in range(len(self.nodes))]
 
@@ -1340,75 +1362,29 @@ class Cipher:
                     comp = prev
                     self.nodes[i_comp] = self.nodes[i_prev]
 
-                    # copy the component sat programs
-                    sats.append(comp.sat)
-
-                    # copy the dictionaries
-                    self.dictionaries_sat[i_comp] = {
-                        master_sat.var(): val
-                        for _, val in sorted(
-                            self.dictionaries_sat[i_prev].items(),
-                            key=lambda _tup: _tup[0],
-                        )
-                    }
-                    self.inv_dictionaries_sat[i_comp] = {
-                        v: k for k, v in self.dictionaries_sat[i_comp].items()
-                    }
-
                     # recursively copy component dictionaries
                     comp._copy_over_dictionaries_recursively(prev, model_options)
-                    # copy the objective variables
-                    self.sum_arr_sat += [
-                        (factor, self.inv_dictionaries_sat[i_comp][entry])
-                        for factor, entry in prev.sum_arr_sat
-                    ]
-
-                    for asg in sats[i_comp].clauses():
-                        # copy the (translated) clauses
-                        clause = []
-                        for variable in asg[0]:
-                            assert variable != 0, (
-                                "During translation, a variable appears tohave value 0!"
-                            )
-                            clause.append(
-                                (-1) ** (variable < 0)
-                                * self.inv_dictionaries_sat[i_comp][abs(variable)]
-                            )
-                        master_sat.add_clause(tuple(clause))
+                    comp_sat = comp.sat
                     break
             else:
                 # model the components that have not been modeled before
                 comp_sat = comp.model(model_options, _first_iter=False)
-                sats.append(comp_sat)
 
-                ##############################################################
-                # parse the component SAT and adopt it into the master sat   #
-                ##############################################################
-                for variable in range(1, comp_sat.nvars() + 1):
-                    new_index = master_sat.var()
-                    self.dictionaries_sat[i_comp][new_index] = variable
-                self.inv_dictionaries_sat[i_comp] = {
-                    v: k for k, v in self.dictionaries_sat[i_comp].items()
-                }
+            ##############################################################
+            # parse the component SAT and adopt it into the master sat   #
+            ##############################################################
+            self.dictionaries_sat[i_comp] = master_sat.append(
+                comp_sat, VAR_MODEL[i_comp]
+            )
+            self.inv_dictionaries_sat[i_comp] = {
+                v: k for k, v in self.dictionaries_sat[i_comp].items()
+            }
 
-                for asg in comp_sat.clauses():
-                    # copy the (translated) clauses
-                    clause = []
-                    for variable in asg[0]:
-                        assert variable != 0, (
-                            "During translation, a variable appears tohave value 0!"
-                        )
-                        clause.append(
-                            (-1) ** (variable < 0)
-                            * self.inv_dictionaries_sat[i_comp][abs(variable)]
-                        )
-                    master_sat.add_clause(tuple(clause))
-
-                # copy over sum_arr_sat
-                self.sum_arr_sat += [
-                    (factor, self.inv_dictionaries_sat[i_comp][entry])
-                    for factor, entry in comp.sum_arr_sat
-                ]
+            # translate the objective variables
+            self.sum_arr_sat += [
+                (factor, self.inv_dictionaries_sat[i_comp][entry])
+                for factor, entry in comp.sum_arr_sat
+            ]
 
         # Connect the SATs with each other
         # --------------- set SAT_IN and SAT_OUT variables ---------------- #
@@ -1504,6 +1480,8 @@ class Cipher:
 
         model_options, model_options_ = model_options_, model_options
 
+        master_sat.VAR_MODEL = VAR_MODEL
+
         return self._finish_sat(model_options, master_sat, _first_iter=_first_iter)
 
     def _finish_sat(self, model_options, sat, _first_iter=False):
@@ -1514,7 +1492,7 @@ class Cipher:
         given probability, then the CNF model is UNSAT, if there exists at
         least one such trail, then it is SAT.
         """
-        assert isinstance(sat, DIMACS)
+        assert isinstance(sat, SAT_CVL)
         assert isinstance(_first_iter, bool)
         # store the sum_arr_sat into a ``.json`` file to be able to retrieve it
         # later on
@@ -2006,6 +1984,58 @@ class Cipher:
         :class:`civerly.trail.TrailNode` objects is returned (one per
         solution, best first).  The stored :attr:`trail_nodes` (populated by
         the preceding :meth:`analyse` call) are returned directly.
+
+        TESTS:
+
+        A round starting with the XOR of its input and a component without
+        inputs (``RK_CVL`` or ``C_CVL``). The trail of each round has the width
+        of the round, and the rounds chain::
+
+            sage: import tempfile
+            sage: from civerly.cipher import Cipher
+            sage: from civerly.component import C_CVL, RK_CVL, XOR_CVL, ModAdd_CVL
+            sage: from civerly.model_options import *
+            sage: def two_rounds(const):
+            ....:     rnd = Cipher(8, 8, name="round")
+            ....:     node_k = rnd.add_subcipher(const(4, 0x3, name="K"), [])
+            ....:     edges = [(rnd.IN, (i, i)) for i in range(4)]
+            ....:     edges += [(node_k, (i, 4 + i)) for i in range(4)]
+            ....:     node_x = rnd.add_subcipher(XOR_CVL(4), edges)
+            ....:     edges = [(node_x, (i, i)) for i in range(4)]
+            ....:     edges += [(rnd.IN, (4 + i, 4 + i)) for i in range(4)]
+            ....:     node_a = rnd.add_subcipher(ModAdd_CVL(4), edges)
+            ....:     edges = [(node_a, (i, i)) for i in range(4)]
+            ....:     edges += [(rnd.IN, (i, 4 + i)) for i in range(4)]
+            ....:     rnd.add_output(edges)
+            ....:     cipher = Cipher(8, 8, name="cipher")
+            ....:     node = cipher.IN
+            ....:     for _ in range(2):
+            ....:         edges = [(node, (i, i)) for i in range(8)]
+            ....:         node = cipher.add_subcipher(rnd, edges)
+            ....:     cipher.add_output([(node, (i, i)) for i in range(8)])
+            ....:     return cipher
+            sage: # optional - cadical
+            sage: trails = {}
+            sage: for const in (RK_CVL, C_CVL):
+            ....:     with tempfile.TemporaryDirectory() as tmpdir:
+            ....:         cipher = two_rounds(const)
+            ....:         model_options = MODEL_OPTIONS(
+            ....:             cryptanalysis=CRYPTANALYSIS.DIFFERENTIAL,
+            ....:             optimization=OPTIMIZATION.SAT,
+            ....:             granularity=GRANULARITY.BITWISE,
+            ....:             sat_solver=SOLVER.CADICAL,
+            ....:             path=Path(tmpdir))
+            ....:         weight = cipher.analyse(model_options)
+            ....:         trails[const.__name__] = (weight, cipher.get_trail(model_options))
+            206 variables and 463 clauses were written to '...'
+            206 variables and 463 clauses were written to '...'
+            sage: for name, (weight, trail) in trails.items():
+            ....:     first, second = trail.children
+            ....:     print(name, weight, len(first.input), len(first.output),
+            ....:           len(second.input), len(second.output),
+            ....:           first.output == second.input)
+            RK_CVL 0 8 8 8 8 True
+            C_CVL 0 8 8 8 8 True
         """
 
         if model_options.number_of_solutions == 1:
@@ -2611,7 +2641,7 @@ class Cipher:
             (-v if results.get(v, 0) == 1 else v) for v in blocking_var_list
         )
 
-        sat = DIMACS()
+        sat = SAT_CVL()
         sat.read(str(input_file))
         sat.add_clause(blocking_clause)
         sat.write(input_file)
