@@ -298,17 +298,6 @@ class I_CVL(Component):
             return self.name
         return f"Identity({self.input_length})"
 
-    def _to_dict(self):
-        return {
-            "type": "I_CVL",
-            "name": self.name,
-            "input_length": int(self.input_length),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["input_length"], name=d.get("name"))
-
     def _model_milp(self, model_options):
         r"""
         Model this component in MILP.
@@ -384,18 +373,6 @@ class C_CVL(Component):
         if self.name is not None:
             return self.name
         return f"Constant({self.output_length})"
-
-    def _to_dict(self):
-        return {
-            "type": "C_CVL",
-            "name": self.name,
-            "output_length": int(self.output_length),
-            "const": int(self.const),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["output_length"], d["const"], name=d.get("name"))
 
     def _model_milp(self, model_options):
         self._init_model(model_options)
@@ -476,18 +453,6 @@ class RK_CVL(C_CVL):
             return self.name
         return f"Roundkey({self.output_length})"
 
-    def _to_dict(self):
-        return {
-            "type": "RK_CVL",
-            "name": self.name,
-            "output_length": int(self.output_length),
-            "const": int(self.const),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["output_length"], d["const"], name=d.get("name"))
-
 
 class ConstXOR_CVL(Component):
     r"""
@@ -556,18 +521,6 @@ class ConstXOR_CVL(Component):
         if self.name is not None:
             return self.name
         return f"ConstantXOR({self.output_length})"
-
-    def _to_dict(self):
-        return {
-            "type": "ConstXOR_CVL",
-            "name": self.name,
-            "output_length": int(self.output_length),
-            "const": int(self.const),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["output_length"], d["const"], name=d.get("name"))
 
     def _model_milp(self, model_options):
         self._init_model(model_options)
@@ -648,18 +601,6 @@ class RoundkeyXOR_CVL(ConstXOR_CVL):
             return self.name
         return f"RoundkeyXOR({self.output_length})"
 
-    def _to_dict(self):
-        return {
-            "type": "RoundkeyXOR_CVL",
-            "name": self.name,
-            "output_length": int(self.output_length),
-            "const": int(self.const),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["output_length"], d["const"], name=d.get("name"))
-
 
 class XOR_CVL(Component):
     r"""
@@ -705,17 +646,6 @@ class XOR_CVL(Component):
         if self.name is not None:
             return self.name
         return f"XOR({(self.word_length)})"
-
-    def _to_dict(self):
-        return {
-            "type": "XOR_CVL",
-            "name": self.name,
-            "word_length": int(self.word_length),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["word_length"], name=d.get("name"))
 
     def _model_milp(self, model_options):
         """
@@ -904,17 +834,6 @@ class ModAdd_CVL(Component):
         if self.name is not None:
             return self.name
         return f"ModAdd({self.word_length})"
-
-    def _to_dict(self):
-        return {
-            "type": "ModAdd_CVL",
-            "name": self.name,
-            "word_length": int(self.word_length),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["word_length"], name=d.get("name"))
 
     def _model_milp(self, model_options):
         raise InvalidModelOptionError(
@@ -1178,17 +1097,6 @@ class AND_CVL(Component):
             return self.name
         return f"And({self.word_length})"
 
-    def _to_dict(self):
-        return {
-            "type": "AND_CVL",
-            "name": self.name,
-            "word_length": int(self.word_length),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["word_length"], name=d.get("name"))
-
     @property
     def word_length(self):
         return self.__word_length
@@ -1401,32 +1309,6 @@ class LinearLayer_CVL(Component):
         if self.name is not None:
             return self.name
         return f"LL({self.input_length} -> {self.output_length})"
-
-    def _to_dict(self):
-        def _int_or_none(x):
-            return int(x) if x is not None else None
-
-        return {
-            "type": "LinearLayer_CVL",
-            "name": self.name,
-            "binary_matrix": [
-                [int(x) for x in row] for row in self.binary_matrix.rows()
-            ],
-            "branch_number_differential": _int_or_none(self.branch_number_differential),
-            "branch_number_linear": _int_or_none(self.branch_number_linear),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        from sage.matrix.constructor import Matrix as matrix
-
-        mat = matrix(GF(2), d["binary_matrix"])
-        return cls(
-            mat,
-            branch_number_differential=d["branch_number_differential"],
-            branch_number_linear=d["branch_number_linear"],
-            name=d.get("name"),
-        )
 
     def inv(self):
         r"""Create the inverse of the current instance."""
@@ -1911,18 +1793,6 @@ class PermuteLayer_CVL(LinearLayer_CVL):
             return self.name
         return f"PL({self.input_length})"
 
-    def _to_dict(self):
-        return {
-            "type": "PermuteLayer_CVL",
-            "name": self.name,
-            "perm": [int(x) for x in self.perm],
-            "word_coarseness": int(self.word_coarseness),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["perm"], word_coarseness=d["word_coarseness"], name=d.get("name"))
-
     def inv(self):
         r"""
         Creates an inverse instance of ``self``.
@@ -2083,24 +1953,6 @@ class RotateLayer_CVL(PermuteLayer_CVL):
             return self.name
         return f"RL({self.input_length})"
 
-    def _to_dict(self):
-        return {
-            "type": "RotateLayer_CVL",
-            "name": self.name,
-            "input_length": int(self.input_length),
-            "r": int(self.r),
-            "word_coarseness": int(self.word_coarseness),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(
-            d["input_length"],
-            d["r"],
-            word_coarseness=d["word_coarseness"],
-            name=d.get("name"),
-        )
-
     def inv(self):
         r"""
         Creates an inverse instance of ``self``.
@@ -2166,17 +2018,6 @@ class SBox_CVL(Component):
         if self.name is not None:
             return self.name
         return f"SBox({self.S.input_size()} -> {self.S.output_size()})"
-
-    def _to_dict(self):
-        return {
-            "type": "SBox_CVL",
-            "name": self.name,
-            "S": [int(x) for x in self.S],
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(SBox(d["S"]), name=d.get("name"))
 
     def _model_milp(self, model_options):
         self._init_model(model_options)
@@ -2783,18 +2624,6 @@ class ROT_AND_CVL(Component):
         if self.name is not None:
             return self.name
         return f"ROT_AND({self.word_length}, {self.r})"
-
-    def _to_dict(self):
-        return {
-            "type": "ROT_AND_CVL",
-            "name": self.name,
-            "word_length": int(self.word_length),
-            "r": int(self.r),
-        }
-
-    @classmethod
-    def _from_dict(cls, d):
-        return cls(d["word_length"], d["r"], name=d.get("name"))
 
     def _model_milp(self, model_options) -> MILP_CVL:
         raise InvalidModelOptionError(

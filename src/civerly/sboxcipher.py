@@ -75,11 +75,6 @@ class SBoxCipher(Cipher):
                 "not allowed in SBoxCiphers."
             )
 
-    def _to_dict(self):
-        d = super()._to_dict()
-        d["type"] = "SBoxCipher"
-        return d
-
     def _master_var(self, master_milp, node, port, index):
         r"""
         Return the variable of ``master_milp`` that corresponds to the ``port``
@@ -430,6 +425,7 @@ class SBoxCipher(Cipher):
         """
         if model_options.optimization != OPTIMIZATION.MILP:
             raise InvalidModelOptionError(model_options.optimization, OPTIMIZATION)
+        model_options.path.mkdir(parents=True, exist_ok=True)
 
         summation_result = 0  # Construct the objective
         # sum_arr contains:

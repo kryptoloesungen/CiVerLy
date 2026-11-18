@@ -18,7 +18,7 @@ from civerly.wordbasedcipher import WordBasedCipher
 
 
 class WordSBoxCipher(WordBasedCipher, SBoxCipher):
-    def _to_dict(self):
-        d = super()._to_dict()
-        d["type"] = "WordSBoxCipher"
-        return d
+    r"""
+    A cipher that is both a ``WordBasedCipher`` and an ``SBoxCipher``, see the
+    module documentation.
+    """

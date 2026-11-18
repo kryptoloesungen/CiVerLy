@@ -461,6 +461,68 @@ def translate_var(cipher, node, local_var):
     return var
 
 
+def _json_default(obj):
+    r"""
+    Make the objects occurring in the model and the results of a cipher
+    json-serializable (see :meth:`Cipher.export`). Problems are stored via
+    :meth:`Problem_CVL.to_dict`, tagged with their type, which
+    :func:`_json_object_hook` uses to restore them.
+    """
+    from civerly.problem import Problem_CVL
+    from civerly.solvers import SOLVING_STATUS
+
+    if isinstance(obj, Problem_CVL):
+        return {"__problem__": type(obj).__name__, **obj.to_dict()}
+    if isinstance(obj, SOLVING_STATUS):
+        return {"__status__": obj.name}
+    if int(obj) == obj:
+        return int(obj)
+    return float(obj)
+
+
+def _json_object_hook(d):
+    r"""
+    Undo :func:`_json_default` (see :meth:`Cipher.load`): restore problems and
+    solving statuses, turn numeric keys back into numbers, and the
+    ``objective_bounds`` of a result back into a tuple.
+
+    EXAMPLES::
+
+        sage: import json
+        sage: from civerly.util import _json_default, _json_object_hook
+        sage: from civerly.problem import SAT_CVL
+        sage: from civerly.solvers import SOLVING_STATUS
+        sage: sat = SAT_CVL()
+        sage: sat.add_clause((sat.VAR_IN[0], -sat.VAR_OUT[0]))
+        sage: d = {"status": SOLVING_STATUS.SUCCESS, "objective_bounds": (2, 2),
+        ....:      "assignment": {"X3": {int(12): 1}}, "model": sat}
+        sage: s = json.dumps(d, default=_json_default)
+        sage: json.loads(s, object_hook=_json_object_hook) == d
+        True
+    """
+    from civerly.problem import MILP_CVL, SAT_CVL
+    from civerly.solvers import SOLVING_STATUS
+
+    _PROBLEM_TYPES = {cls.__name__: cls for cls in (MILP_CVL, SAT_CVL)}
+    if "__problem__" in d:
+        return _PROBLEM_TYPES[d["__problem__"]].from_dict(d)
+    if "__status__" in d:
+        return SOLVING_STATUS[d["__status__"]]
+    if "objective_bounds" in d:
+        d["objective_bounds"] = tuple(d["objective_bounds"])
+
+    def key(k):
+        try:
+            return int(k)
+        except ValueError:
+            try:
+                return float(k)
+            except ValueError:
+                return k
+
+    return {key(k): v for k, v in d.items()}
+
+
 @contextlib.contextmanager
 def suppress_output():
     r"""
