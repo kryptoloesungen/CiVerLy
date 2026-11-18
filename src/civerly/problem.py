@@ -246,7 +246,7 @@ class Problem_CVL(ABC):
             18970 records were written
             sage: # optional - scip
             sage: scip = SCIP_CVL()
-            sage: result = scip.solve(model_options.path / "milp.mps")
+            sage: result = scip.solve(model_options.path / "milp.mps", milp=milp)
             sage: result['assignment'] == gift.result['assignment']
             True
             sage: import shutil
@@ -542,6 +542,11 @@ class MILP_CVL(Problem_CVL, MixedIntegerLinearProgram):
         # 'real' is the default
         var_type = var_types.index(True) if any(var_types) else 0
 
+        # The name is only kept in ``self.vars``, the columns in the backend
+        # stay unnamed. Thus, they are written as ``C0000001``, ``C0000002``,
+        # ... to MPS files (see :meth:`column_name`), as the names of the
+        # form ``X10[1234]`` may be too long for the MPS format.
+        kwargs.pop("name", None)
         var = MixedIntegerLinearProgram.new_variable(self, *args, **kwargs)
         # add new attributes + methods
         var.type = var_type
@@ -554,9 +559,79 @@ class MILP_CVL(Problem_CVL, MixedIntegerLinearProgram):
     def write(self, filename):
         """
         Write ``self`` to the MPS file ``filename``, see
-        :meth:``MixedIntegerLinearProgram.write_mps``.
+        :meth:``MixedIntegerLinearProgram.write_mps``. The columns are named
+        by :meth:`column_name`.
         """
         self.write_mps(str(filename))
+
+    @staticmethod
+    def column_name(backend_index):
+        r"""
+        Return the name of the column with index ``backend_index`` inside
+        the MPS files written by :meth:`write`.
+
+        The MPS format allows names of at most 8 characters, which names like
+        ``X10[1234]`` exceed. Hence, the columns are not named after the
+        variables, but after their backend index (GLPK's default for unnamed
+        columns), which works for up to :math:`10^7` columns.
+
+        EXAMPLES::
+
+            sage: import tempfile
+            sage: from civerly.problem import MILP_CVL
+            sage: milp = MILP_CVL()
+            sage: X10 = milp.new_variable(name="X10", binary=True)
+            sage: milp.add_constraint(X10[1234] + X10[5] >= 1)
+            sage: with tempfile.NamedTemporaryFile(suffix=".mps") as f:
+            ....:     milp.write(f.name)
+            ....:     columns = [line.split()[0] for line in open(f.name)
+            ....:                if line.startswith("    C")]
+            Writing problem data to ...
+            sage: columns == [MILP_CVL.column_name(X10.get_index(i)) for i in (1234, 5)]
+            True
+            sage: columns
+            ['C0000001', 'C0000002']
+        """
+        return f"C{backend_index + 1:07d}"
+
+    def assignment_from_columns(self, column_values):
+        r"""
+        Translate ``column_values``, a dictionary mapping the column names of
+        :meth:`column_name` to their values (as read from a solution file),
+        into the assignment ``{name: {index: value}}`` of the variables of
+        ``self``.
+
+        EXAMPLES:
+
+        Long variable names, which do not fit into the MPS format (see
+        issue #35), are restored::
+
+            sage: from civerly.problem import MILP_CVL
+            sage: milp = MILP_CVL()
+            sage: X10 = milp.new_variable(name="X10", binary=True)
+            sage: Z = milp.new_variable(name="Z", binary=True)
+            sage: milp.add_constraint(X10[1234] + Z[123456] >= 1)
+            sage: milp.assignment_from_columns({"C0000001": 1, "C0000002": 0})
+            {'X10': {1234: 1}, 'Z': {123456: 0}}
+            sage: milp.assignment_from_columns({"X10[1234]": 1})
+            Traceback (most recent call last):
+            ...
+            ValueError: Unknown column X10[1234], expected a name of the form C0000001
+        """
+        variables = {
+            self.column_name(backend_index): (name, index)
+            for name, index, backend_index, _ in self._variables_to_list()
+        }
+        assignment = {}
+        for column, value in column_values.items():
+            if column not in variables:
+                raise ValueError(
+                    f"Unknown column {column}, expected a name of the form "
+                    f"{self.column_name(0)}"
+                )
+            name, index = variables[column]
+            assignment.setdefault(name, {})[index] = value
+        return assignment
 
     def _backend_indices(self):
         """

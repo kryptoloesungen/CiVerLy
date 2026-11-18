@@ -89,7 +89,7 @@ As we rely on an external solver, we can simply put it to ``None`` in the
     ...
     civerly.solvers.ExternalSolveRequiredError: ExternalMILPSolver: solve
     DOCTEST-AES-Models/MixColumn51845.mps externally and place the result
-    at DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol, then re-run.
+    at DOCTEST-AES-Models/MixColumn51845.285dc805.sol, then re-run.
 
 As the output states, you have to provide a solution to the MILP for
 MixColumn to continue the modeling. You would copy the ``.mps`` file to
@@ -100,7 +100,7 @@ we simulate it to continue::
     sage: # optional - scip
     sage: from pathlib import Path
     sage: input_file = Path("DOCTEST-AES-Models/MixColumn51845.mps")
-    sage: solution_file = Path("DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol")
+    sage: solution_file = Path("DOCTEST-AES-Models/MixColumn51845.285dc805.sol")
     sage: log_file = Path("DOCTEST-AES-Models/MixColumn51845.log")
     sage: SOLVER.SCIP.invoke(input_file, solution_file, log_file)
     <SOLVING_STATUS.SUCCESS: 1>
@@ -126,7 +126,7 @@ Next, we finish the model::
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
     ....:     path=Path("./DOCTEST-AES-Models/"))
     sage: aes.model(model_options)
-    Using existing file DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol,
+    Using existing file DOCTEST-AES-Models/MixColumn51845.285dc805.sol,
     make sure it is up to date!
     3200 variables and 3329 constraints were written to
     'DOCTEST-AES-Models/AES.mps'
@@ -176,7 +176,7 @@ the corresponding activity pattern, we can generate a PDF report::
     ....:     linear_layer_modeling=LINEAR_LAYER_MODELING.GENERALIZED_WORDWISE,
     ....:     path=Path("./DOCTEST-AES-Models/"))
     sage: aes.model(model_options) # optional - scip
-    Using existing file DOCTEST-AES-Models/MixColumn51845.0ea31e4f.sol,
+    Using existing file DOCTEST-AES-Models/MixColumn51845.285dc805.sol,
     make sure it is up to date!
     3200 variables and 3329 constraints were written to
     'DOCTEST-AES-Models/AES.mps'

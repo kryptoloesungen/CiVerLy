@@ -1664,14 +1664,14 @@ class Cipher:
                 self._finish_milp(model_options, self.milp)
             input_file = model_options.path / (self.name + ".mps")
             if model_options.number_of_solutions > 1:
-                # Trail vars are the per-node X<i>[j] columns; IN/OUT and any
-                # helper/dummy variables are excluded so that two solutions
-                # are considered the same when they agree on the trail.
-                b = self.milp.backend
+                # Trail vars are the per-node X<i>[j] variables (given by their
+                # backend index); IN/OUT and any helper/dummy variables are
+                # excluded so that two solutions are considered the same when
+                # they agree on the trail.
                 trail_vars = {
-                    b.col_name(i)
-                    for i in range(b.ncols())
-                    if b.col_name(i).startswith("X")
+                    backend_index
+                    for name, _, backend_index, _ in self.milp._variables_to_list()
+                    if name.startswith("X")
                 }
                 all_results = model_options.milp_solver.solve_multiple(
                     input_file=input_file,
@@ -1691,6 +1691,7 @@ class Cipher:
                 result = model_options.milp_solver.solve(
                     input_file,
                     time_limit=model_options.solve_time_limit,
+                    milp=self.milp,
                 )
                 self.results.append(result)
                 self._solve_time = result["solve_time"]
@@ -1910,8 +1911,8 @@ class Cipher:
         # otherwise read from file (assuming the right name)
         if model_options.optimization == OPTIMIZATION.MILP:
             solution_file = model_options.path / (self.name + ".sol")
-            objective_value, assignment = (
-                model_options.milp_solver._process_solution_file(solution_file)
+            objective_value, assignment = model_options.milp_solver._read_solution(
+                solution_file, self.milp
             )
             return (assignment, objective_value)
         elif model_options.optimization == OPTIMIZATION.SAT:
