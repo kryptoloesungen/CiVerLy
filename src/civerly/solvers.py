@@ -791,7 +791,7 @@ class SAT_SOLVER_CVL(SOLVER_CVL, ABC):
                 ....:         model_options.path / "SKINNY.cnf",
                 ....:         model_options.path / "SKINNYsum.json",
                 ....:         model_options.solve_range, 5)
-                8976 variables and 19313 clauses were written to ...
+                6168 variables and 13697 clauses were written to ...
                 sage: len(r)
                 5
                 sage: r[0] # random

@@ -4,7 +4,6 @@ from civerly.component import (
     C_CVL,
     XOR_CVL,
     ModAdd_CVL,
-    PermuteLayer_CVL,
     RotateLayer_CVL,
 )
 
@@ -168,7 +167,7 @@ class Chacha_CVL(CipherImplementation_CVL, AddRX):
             ....:     solve_range=(0, 4),
             ....:     path=Path(tmpdir))
             ....:   cipher.analyse(model_options=model_options)
-            22240 variables and 53601 clauses were written to '...'
+            12512 variables and 34145 clauses were written to '...'
             2
 
 
@@ -188,84 +187,38 @@ class Chacha_CVL(CipherImplementation_CVL, AddRX):
         # which is 16 words x 32 bits.
         # ------------------------------------------------------------------- #
 
-        # permute_..._round is used for switching between columns and diagonals
-        permute_even_round = PermuteLayer_CVL(
-            [0, 13, 10, 7, 4, 1, 14, 11, 8, 5, 2, 15, 12, 9, 6, 3],
-            word_coarseness=32,
-            name="perm-odd",
+        # The state is kept row-major, as in the specification: word 4i + j is
+        # row i, column j. ``state[w]`` is the (node, word) currently holding
+        # word ``w``. Odd rounds apply the QRF to the columns
+        # (j, 4 + j, 8 + j, 12 + j), even rounds to the diagonals
+        # (j, 4 + (j + 1) % 4, 8 + (j + 2) % 4, 12 + (j + 3) % 4).
+        constants = self.add_subcipher(
+            C_CVL(128, 0x61707865_3320646E_79622D32_6B206574, name="Chacha-const"),
+            [],
         )
-        permute_odd_round = PermuteLayer_CVL(
-            [0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11],
-            word_coarseness=32,
-            name="perm-even",
-        )
-        initial_perm = PermuteLayer_CVL(
-            [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15],
-            word_coarseness=32,
-            name="transpose",
-        )
-        # initial_perm is used for transposing (since the QRF is applied
-        # on columns, while we read the input row by row)
+        initial = {w: (constants, w) for w in range(4)}
+        initial |= {w: (self.IN, w - 4) for w in range(4, 16)}
 
-        # 4x QRF in parallel
-        # ------------------------------------------------------------------- #
-
-        fourtimes_qr = AddRX(32, 16, 16, name="4xQRF")
-        for j in range(4):
-            output_node = fourtimes_qr.add_subcipher(
-                chacha_qr, [(fourtimes_qr.IN, (i + 4 * j, i)) for i in range(4)]
-            )
-            fourtimes_qr.add_output([(output_node, (i, i + 4 * j)) for i in range(4)])
-        # ------------------------------------------------------------------- #
-
-        constants = C_CVL(
-            128, 0x61707865_3320646E_79622D32_6B206574, name="Chacha-const"
-        )
-
-        # ------------------------------------------------------------------- #
-        final_add = AddRX(32, 32, 16, name="final-add")
-        for j in range(16):
-            node = final_add.add_subcipher(
-                ModAdd_CVL(32, name="add"),
-                [(final_add.IN, (j, 0)), (final_add.IN, (j + 16, 1))],
-            )
-            final_add.add_output([(node, (0, j))])
-        # ------------------------------------------------------------------- #
-
-        # ------------------------------------------------------------------- #
-        current_node = self.add_subcipher(constants, [])
-        current_node = self.add_subcipher(
-            initial_perm,
-            [(current_node, (i, i)) for i in range(4)]
-            + [(self.IN, (i, i + 4)) for i in range(12)],
-        )
-        initial_node = current_node
+        state = dict(initial)
         for r in range(1, self.R + 1):
-            if r & 1 == 0:
-                current_node = self.add_subcipher(
-                    permute_even_round, [(current_node, (i, i)) for i in range(16)]
+            diagonal = 1 if r % 2 == 0 else 0
+            for j in range(4):
+                words = [4 * i + (j + diagonal * i) % 4 for i in range(4)]
+                node = self.add_subcipher(
+                    chacha_qr,
+                    [(state[w][0], (state[w][1], i)) for i, w in enumerate(words)],
                 )
-            elif r != 1:
-                current_node = self.add_subcipher(
-                    permute_odd_round, [(current_node, (i, i)) for i in range(16)]
-                )
-            current_node = self.add_subcipher(
-                fourtimes_qr, [(current_node, (i, i)) for i in range(16)]
-            )
+                for i, w in enumerate(words):
+                    state[w] = (node, i)
 
-        # Fix the alignment at the end (from diagonal to columns)
-        if self.R & 1 == 0 and self.R > 0:
-            current_node = self.add_subcipher(
-                permute_odd_round, [(current_node, (i, i)) for i in range(16)]
+        # Final addition of the initial state
+        add = ModAdd_CVL(32, name="add")
+        for w in range(16):
+            node = self.add_subcipher(
+                add,
+                [
+                    (initial[w][0], (initial[w][1], 0)),
+                    (state[w][0], (state[w][1], 1)),
+                ],
             )
-
-        current_node = self.add_subcipher(
-            final_add,
-            [(initial_node, (i, i)) for i in range(16)]
-            + [(current_node, (i, i + 16)) for i in range(16)],
-        )
-        current_node = self.add_subcipher(
-            initial_perm, [(current_node, (i, i)) for i in range(16)]
-        )
-        self.add_output([(current_node, (i, i)) for i in range(16)])
-        # ------------------------------------------------------------------- #
+            self.add_output([(node, (0, w))])

@@ -710,7 +710,7 @@ class MILP_CVL(Problem_CVL, MixedIntegerLinearProgram):
             ....:     logic_minimizer=SOLVER.ESPRESSO,
             ....:     path=Path(tmpdir))
             ....:   cipher.model(model_options)
-            10176 variables and 12929 constraints were written to...
+            5120 variables and 7873 constraints were written to...
             sage: data = cipher.milp.to_dict()
             sage: from civerly.problem import MILP_CVL
             sage: milp = MILP_CVL.from_dict(data)

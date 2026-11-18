@@ -1,94 +1,43 @@
 from sage.crypto.sboxes import PRINCE as prince_S
-from sage.matrix.special import zero_matrix
+from sage.matrix.constructor import Matrix as matrix
+from sage.matrix.special import block_matrix
 from sage.rings.finite_rings.finite_field_constructor import GF
 
 from civerly.cipher_implementations.base import CipherImplementation_CVL
 from civerly.component import LinearLayer_CVL, RoundkeyXOR_CVL, SBox_CVL
 from civerly.wordsboxcipher import WordSBoxCipher
 
-F2 = GF(2)
 
-# The matrix M' is 16x16 matrix over GF(2) acting on 16 nibbles in hex format
-# each entry is a 4x4 binary submatrix
-# M' is constructed following the method depicted in the original paper
-M_ = [
-    [
-        0x0111, 0x2220, 0x4404, 0x8088,
-        0x1011, 0x0222, 0x4440, 0x8808,
-        0x1101, 0x2022, 0x0444, 0x8880,
-        0x1110, 0x2202, 0x4044, 0x0888,
-    ],
-    [
-        0x1110, 0x2202, 0x4044, 0x0888,
-        0x0111, 0x2220, 0x4404, 0x8088,
-        0x1011, 0x0222, 0x4440, 0x8808,
-        0x1101, 0x2022, 0x0444, 0x8880,
-    ],
-]  # fmt: skip
+def prince_m_hat(shift):
+    r"""
+    Return the :math:`16 \times 16` binary matrix of the PRINCE block
+    :math:`\hat{M}^{(0)}` (``shift=0``) or :math:`\hat{M}^{(1)}` (``shift=1``)
+    in the MSB-first bit order of :func:`civerly.util.int_to_vec`.
 
-
-# This helper function performs a multiplication over GF(2)
-# of a 16-bit vector with a 16x16 binary matrix
-# For correctness purposes, out & 0xFFFF ensures that length of
-# the output is 16-bit, while converting to LSB-indexing to match the
-# original paper specifications and test vectors
-def vec_mat_mult(vec, mat):
-    out = 0
-    for i in range(16):
-        if (vec >> i) & 1:
-            out ^= mat[i]
-    return out & 0xFFFF
+    Output nibble ``i`` is the XOR of the input nibbles ``j``, masked bitwise
+    with ``0x7, 0xB, 0xD, 0xE`` rotated by ``i + j + shift``.
+    """
+    masks = (0x7, 0xB, 0xD, 0xE)
+    blocks = [
+        [
+            matrix.diagonal(
+                GF(2), [(masks[(i + j + shift) % 4] >> (3 - b)) & 1 for b in range(4)]
+            )
+            for j in range(4)
+        ]
+        for i in range(4)
+    ]
+    return block_matrix(GF(2), blocks, subdivide=False)
 
 
-# This function implements M' by computing each column of the matrix.
-# To this end, we multiply M_ with a internal state column
-def m_prime_layer(x):
-    M_0 = vec_mat_mult((x >> 0) & 0xFFFF, M_[0])
-    M_1 = vec_mat_mult((x >> 16) & 0xFFFF, M_[1])
-    M_2 = vec_mat_mult((x >> 32) & 0xFFFF, M_[1])
-    M_3 = vec_mat_mult((x >> 48) & 0xFFFF, M_[0])
-    return (M_3 << 48) | (M_2 << 32) | (M_1 << 16) | M_0
+def _shift_rows(w):
+    r"""
+    Return the nibble that PRINCE's ShiftRows moves nibble ``w`` to.
 
-
-# This function applies a shift row, similar to AES shift
-# Each row is shifted by its row index
-# Since the internal state is a 4x4 nibble, where each nibble is 16 bits
-# Shifting one row means shifting by 16 bits x row index
-# First row is not shifted, the second row is shifted by 1x16 bits
-# Third row is shifted by 2x16 bits, the last row is shifted by 3x16 bits
-def shift_rows(x, inverse=False):
-    row_mask = 0xF000F000F000F000
-    out = x & row_mask
-    for i in range(1, 4):
-        row = x & (row_mask >> (4 * i))
-        shift = i * 16 if inverse else (64 - i * 16)
-        shift %= 64
-        out |= ((row >> shift) | (row << (64 - shift))) & ((1 << 64) - 1)
-    return out
-
-
-def m_layer(x):
-    return shift_rows(m_prime_layer(x), inverse=False)
-
-
-def m_inv_layer(x):
-    return m_prime_layer(shift_rows(x, inverse=True))
-
-
-# This function builds a 64x64 matrix by converting back to MSB-indexing
-def build_matrix(f):
-    A = zero_matrix(F2, 64, 64)
-    for j in range(64):
-        x = 1 << (63 - j)
-        y = f(x)
-        for i in range(64):
-            A[i, j] = (y >> (63 - i)) & 1
-    return A
-
-
-Mprime_ = build_matrix(m_prime_layer)
-M_layer = build_matrix(m_layer)
-Minv_ = build_matrix(m_inv_layer)
+    The state is a 4x4 array of nibbles stored column by column, so nibble
+    ``w`` is in row ``w % 4``, and row ``r`` is rotated left by ``r`` columns.
+    """
+    return (w - 4 * (w % 4)) % 16
 
 
 class PRINCE_CVL(CipherImplementation_CVL, WordSBoxCipher):
@@ -289,37 +238,63 @@ class PRINCE_CVL(CipherImplementation_CVL, WordSBoxCipher):
             n = s_layer_inv.add_subcipher(sb_inv, [(s_layer_inv.IN, (j, 0))])
             s_layer_inv.add_output([(n, (0, j))])
 
-        # Linear layers: M, M' and inverse M
-        M = LinearLayer_CVL(M_layer, name="M")
-        Mprime = LinearLayer_CVL(Mprime_, name="Mprime")
-        Minv = LinearLayer_CVL(Minv_, name="Minv")
+        # Linear layers. M' applies M^(0), M^(1), M^(1), M^(0) to the four
+        # columns (nibbles 4c..4c+3). M = ShiftRows o M' and
+        # M^{-1} = M' o ShiftRows^{-1}; ShiftRows is done by the wiring.
+        m_hat = [
+            LinearLayer_CVL(
+                prince_m_hat(shift),
+                branch_number_differential=4,
+                branch_number_linear=4,
+                name=f"M{shift}",
+            )
+            for shift in (0, 1)
+        ]
+
+        def add_m(cipher, src, shift_in=False, shift_out=False):
+            # ``src[w]`` is the (node, word) feeding state nibble ``w``; returns
+            # the same for the output of the linear layer.
+            out = {}
+            for c, shift in enumerate((0, 1, 1, 0)):
+                words = range(4 * c, 4 * c + 4)
+                edges = []
+                for w in words:
+                    node_in, word_in = src[_shift_rows(w) if shift_in else w]
+                    edges.append((node_in, (word_in, w % 4)))
+                node = cipher.add_subcipher(m_hat[shift], edges)
+                for w in words:
+                    out[_shift_rows(w) if shift_out else w] = (node, w % 4)
+            return out
+
+        def whole(node):
+            return {i: (node, i) for i in range(16)}
+
+        def edges_from(src):
+            return [(n, (x, i)) for i, (n, x) in sorted(src.items())]
 
         # The round key addition layer
         xor_mask = RoundkeyXOR_CVL(64, 0x0, name="XOR")
 
         # Each forward round: S -> M -> XOR
         fwd_round = WordSBoxCipher(4, 16, 16, name="PRINCE_round_fwd")
-        x = fwd_round.IN
-        x = fwd_round.add_subcipher(s_layer, [(x, (i, i)) for i in range(16)])
-        x = fwd_round.add_subcipher(M, [(x, (i, i)) for i in range(16)])
-        n_xor_fwd = fwd_round.add_subcipher(xor_mask, [(x, (i, i)) for i in range(16)])
-        fwd_round.add_output([(n_xor_fwd, (i, i)) for i in range(16)])
+        x = fwd_round.add_subcipher(s_layer, edges_from(whole(fwd_round.IN)))
+        x = add_m(fwd_round, whole(x), shift_out=True)
+        n_xor_fwd = fwd_round.add_subcipher(xor_mask, edges_from(x))
+        fwd_round.add_output(edges_from(whole(n_xor_fwd)))
 
         # Middle round uses S -> M' -> S^{-1}
         mid_round = WordSBoxCipher(4, 16, 16, name="PRINCE_round_mid")
-        x = mid_round.IN
-        x = mid_round.add_subcipher(s_layer, [(x, (i, i)) for i in range(16)])
-        x = mid_round.add_subcipher(Mprime, [(x, (i, i)) for i in range(16)])
-        x = mid_round.add_subcipher(s_layer_inv, [(x, (i, i)) for i in range(16)])
-        mid_round.add_output([(x, (i, i)) for i in range(16)])
+        x = mid_round.add_subcipher(s_layer, edges_from(whole(mid_round.IN)))
+        x = add_m(mid_round, whole(x))
+        x = mid_round.add_subcipher(s_layer_inv, edges_from(x))
+        mid_round.add_output(edges_from(whole(x)))
 
         # Each backward round: XOR -> M^{-1} -> S^{-1}
         bwd_round = WordSBoxCipher(4, 16, 16, name="PRINCE_round_bwd")
-        x = bwd_round.IN
-        n_xor_bwd = bwd_round.add_subcipher(xor_mask, [(x, (i, i)) for i in range(16)])
-        x = bwd_round.add_subcipher(Minv, [(n_xor_bwd, (i, i)) for i in range(16)])
-        x = bwd_round.add_subcipher(s_layer_inv, [(x, (i, i)) for i in range(16)])
-        bwd_round.add_output([(x, (i, i)) for i in range(16)])
+        n_xor_bwd = bwd_round.add_subcipher(xor_mask, edges_from(whole(bwd_round.IN)))
+        x = add_m(bwd_round, whole(n_xor_bwd), shift_in=True)
+        x = bwd_round.add_subcipher(s_layer_inv, edges_from(x))
+        bwd_round.add_output(edges_from(whole(x)))
 
         # PRINCE core
         st = self.IN
