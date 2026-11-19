@@ -3,6 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # SCIP 10.0.3 (nixpkgs as of 2026-11) returns infeasible "optimal"
+    # solutions on some models (e.g. Toy7 with number_of_solutions=30),
+    # so SCIP is taken from an older nixpkgs revision with SCIP 10.0.0.
+    nixpkgs-scip.url = "github:NixOS/nixpkgs/80e4adbcf8992d3fd27ad4964fbb84907f9478b0";
     flake-utils.url = "github:numtide/flake-utils";
     nix-appimage = {
       url = "github:ralismark/nix-appimage";
@@ -19,6 +23,7 @@
     {
       self,
       nixpkgs,
+      nixpkgs-scip,
       flake-utils,
       nix-appimage,
       espresso,
@@ -36,6 +41,8 @@
             })
           ];
         };
+
+        scip = nixpkgs-scip.legacyPackages.${system}.scipopt-scip;
 
         pyproject = builtins.fromTOML (builtins.readFile ./pyproject.toml);
         project = pyproject.project;
@@ -145,7 +152,7 @@
              * - SageMath
                - ${pkgs.sage.version}
              * - SCIP
-               - ${pkgs.scipopt-scip.version}
+               - ${scip.version}
              * - CryptoMiniSat
                - ${pkgs.cryptominisat.version}
              * - CaDiCaL
@@ -218,7 +225,7 @@
         runtimeDeps = [
           sageWithCiverly
           pkgs.glpk
-          pkgs.scipopt-scip
+          scip
           pkgs.cryptominisat
           pkgs.cadical
           pkgs.espresso

@@ -1,7 +1,7 @@
 import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as get_version
 from pathlib import Path
-
-from pkg_resources import DistributionNotFound, get_distribution
 
 try:
     import sage.all  # noqa: F401
@@ -66,8 +66,8 @@ master_doc = "index"
 #
 # The full version, including alpha/beta/rc tags.
 try:
-    release = get_distribution("civerly").version
-except DistributionNotFound:
+    release = get_version("civerly")
+except PackageNotFoundError:
     release = "X.X.X"
 # The short X.Y version.
 version = ".".join(release.split(".")[:2])
